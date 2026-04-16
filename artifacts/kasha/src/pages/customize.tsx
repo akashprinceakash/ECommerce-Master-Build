@@ -13,7 +13,7 @@ import { ModelViewerCustomizer } from "@/components/3d/ModelViewerCustomizer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Save, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Loader2, Save, ShoppingBag, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatPrice } from "@/lib/format";
 import { Show } from "@clerk/react";
@@ -29,6 +29,7 @@ export default function CustomizePage() {
   const [size, setSize] = useState("M");
   const [designName, setDesignName] = useState("");
   const [parts, setParts] = useState<Record<string, boolean>>({});
+  const [studioKey, setStudioKey] = useState(0);
 
   const { data: product, isLoading: isLoadingProduct } = useGetProduct(id, {
     query: {
@@ -186,6 +187,21 @@ export default function CustomizePage() {
             placeholder="Name your design..."
             className="hidden md:block w-48 bg-transparent border-t-0 border-l-0 border-r-0 border-b border-white/20 rounded-none focus-visible:ring-0 focus-visible:border-white/60 px-0 h-8 text-sm text-white placeholder:text-white/30"
           />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setStudioKey(k => k + 1);
+              setColor(product.defaultColor || "#ffffff");
+              setParts({});
+              setDesignName("");
+            }}
+            className="text-[10px] tracking-wider text-white/40 hover:text-white/80 hover:bg-white/5 flex items-center gap-1.5"
+            title="Start a fresh design"
+          >
+            <RefreshCw className="w-3 h-3" />
+            <span className="hidden sm:inline">Start Fresh</span>
+          </Button>
           <Show when="signed-out">
             <Link href="/sign-in">
               <Button variant="outline" className="text-xs tracking-wider rounded-none border-white/20 text-white hover:bg-white/10">
@@ -226,6 +242,7 @@ export default function CustomizePage() {
       {/* Main Customizer */}
       <div className="flex-1" style={{ height: "calc(100vh - 64px)" }}>
         <ModelViewerCustomizer
+          key={studioKey}
           modelUrl={product.modelUrl}
           thumbnailUrl={product.thumbnailUrl}
           initialColor={product.defaultColor || "#ffffff"}
