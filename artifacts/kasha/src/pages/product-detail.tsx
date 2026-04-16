@@ -4,11 +4,12 @@ import { useGetProduct, getGetProductQueryKey, useAddToCart, getGetCartQueryKey 
 import { useParams, Link, useLocation } from "wouter";
 import { formatPrice } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Minus, Plus, ShoppingBag, Wand2, ChevronRight, ShieldCheck, RotateCcw, Truck, ChevronDown } from "lucide-react";
+import { Minus, Plus, ShoppingBag, Wand2, ChevronRight, ShieldCheck, RotateCcw, Truck, ChevronDown, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { useCart } from "@/contexts/CartContext";
+import { useCustomization } from "@/contexts/CustomizationContext";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -18,6 +19,7 @@ export default function ProductDetailPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { openCart } = useCart();
+  const { getCustomization, clearCustomization, hasCustomization } = useCustomization();
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
@@ -104,7 +106,8 @@ export default function ProductDetailPage() {
     );
   }
 
-  const productImage = product.thumbnailUrl || "/images/product-tshirt.png";
+  const customization = getCustomization(id);
+  const productImage = customization?.previewUrl || product.thumbnailUrl || "/images/tshirt-default.jpeg";
 
   return (
     <Layout>
@@ -132,11 +135,17 @@ export default function ProductDetailPage() {
                 src={productImage}
                 alt={product.name}
                 onLoad={() => setImgLoaded(true)}
-                className={`w-full h-full object-cover object-center transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+                className={`w-full h-full object-cover object-center transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"} ${customization ? "bg-[#e8e8e8]" : ""}`}
               />
               {!product.available && (
                 <div className="absolute top-4 left-4 bg-black text-white text-[10px] font-bold tracking-[0.15em] px-3 py-1">
                   SOLD OUT
+                </div>
+              )}
+              {customization && (
+                <div className="absolute top-4 right-4 bg-black text-white text-[10px] font-bold tracking-[0.12em] px-3 py-1.5 flex items-center gap-1.5">
+                  <Sparkles className="w-3 h-3" />
+                  CUSTOMISED
                 </div>
               )}
             </div>
@@ -244,9 +253,18 @@ export default function ProductDetailPage() {
               <Link href={`/products/${product.id}/customize`}>
                 <button className="w-full border border-gray-300 text-black text-[12px] font-bold tracking-[0.12em] py-4 hover:border-black transition-all flex items-center justify-center gap-2 mt-1 hover:bg-gray-50">
                   <Wand2 className="w-4 h-4" />
-                  CUSTOMISE THIS PIECE
+                  {customization ? "EDIT YOUR DESIGN" : "CUSTOMISE THIS PIECE"}
                 </button>
               </Link>
+              {customization && (
+                <button
+                  onClick={() => { clearCustomization(id); setImgLoaded(false); }}
+                  className="w-full border border-gray-200 text-gray-400 text-[11px] font-medium tracking-[0.1em] py-2.5 hover:border-gray-300 hover:text-gray-600 transition-all flex items-center justify-center gap-1.5"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Reset to original design
+                </button>
+              )}
             </div>
 
             {/* Trust Badges */}

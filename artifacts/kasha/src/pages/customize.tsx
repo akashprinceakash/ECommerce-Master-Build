@@ -1,22 +1,18 @@
-import { useState, useEffect, useRef } from "react";
-import { Layout } from "@/components/layout/Layout";
+import { useState } from "react";
 import {
   useGetProduct,
   getGetProductQueryKey,
   useCreateCustomization,
-  useGetLatestCustomizationForProduct,
-  getGetLatestCustomizationForProductQueryKey,
   useAddToCart,
+  getGetCartQueryKey,
 } from "@workspace/api-client-react";
 import { useParams, Link, useLocation } from "wouter";
-import { ModelViewerCustomizer } from "@/components/3d/ModelViewerCustomizer";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { TshirtCustomizer, type TshirtConfig } from "@/components/customizer/TshirtCustomizer";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Save, ShoppingBag, RefreshCw } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { formatPrice } from "@/lib/format";
-import { Show } from "@clerk/react";
+import { useCustomization } from "@/contexts/CustomizationContext";
+import { useUser } from "@clerk/react";
 
 export default function CustomizePage() {
   const params = useParams();
@@ -24,230 +20,129 @@ export default function CustomizePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { setCustomization } = useCustomization();
+  const { user } = useUser();
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [color, setColor] = useState("#ffffff");
-  const [size, setSize] = useState("M");
-  const [designName, setDesignName] = useState("");
-  const [parts, setParts] = useState<Record<string, boolean>>({});
-  const [studioKey, setStudioKey] = useState(0);
-
-  const { data: product, isLoading: isLoadingProduct } = useGetProduct(id, {
-    query: {
-      enabled: !!id,
-      queryKey: getGetProductQueryKey(id),
-    },
+  const { data: product, isLoading } = useGetProduct(id, {
+    query: { enabled: !!id, queryKey: getGetProductQueryKey(id) },
   });
-
-  const { data: latestCustomization } = useGetLatestCustomizationForProduct(id, {
-    query: {
-      enabled: !!id,
-      queryKey: getGetLatestCustomizationForProductQueryKey(id),
-    },
-  });
-
-  useEffect(() => {
-    if (product && !latestCustomization) {
-      setColor(product.defaultColor || "#ffffff");
-    }
-  }, [product, latestCustomization]);
-
-  useEffect(() => {
-    if (latestCustomization) {
-      setColor(latestCustomization.color);
-      setSize(latestCustomization.size);
-      setDesignName(latestCustomization.name);
-      setParts((latestCustomization.partsEnabled as Record<string, boolean>) || {});
-    }
-  }, [latestCustomization]);
 
   const createCustomization = useCreateCustomization();
   const addToCart = useAddToCart();
 
-  const handleSaveDesign = async () => {
-    if (!designName.trim()) {
-      toast({
-        title: "Design Name Required",
-        description: "Please enter a name for your design before saving.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleSaveAndAddToCart = async (config: TshirtConfig, previewUrl: string, designName: string) => {
+    setIsSaving(true);
     try {
-      await createCustomization.mutateAsync({
-        data: {
-          productId: id,
-          name: designName,
-          color,
-          size,
-          partsEnabled: parts,
-          canvasData: null,
-          previewImageUrl: null,
-        },
+      // Save customized design preview to context (visible everywhere)
+      setCustomization({
+        productId: id,
+        previewUrl,
+        color: config.color,
+        sleeves: config.sleeves,
+        collar: config.collar,
+        designName,
+        savedAt: Date.now(),
       });
 
-      toast({
-        title: "Design Saved",
-        description: "Your bespoke design has been saved to your profile.",
-      });
+      // Persist to API if signed in
+      let customizationId: number | undefined;
+      if (user) {
+        try {
+          const saved = await createCustomization.mutateAsync({
+            data: {
+              productId: id,
+              name: designName || `${product?.name} — Custom`,
+              color: config.color,
+              size: config.size,
+              partsEnabled: { sleeves: config.sleeves, collar: config.collar } as any,
+              canvasData: null,
+              previewImageUrl: previewUrl,
+            },
+          });
+          customizationId = saved.id;
+        } catch {
+          // API save failed — continue anyway
+        }
 
-      queryClient.invalidateQueries({ queryKey: getGetLatestCustomizationForProductQueryKey(id) });
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to save design. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleAddToCart = async () => {
-    try {
-      let customizationId = latestCustomization?.id;
-
-      if (
-        !customizationId ||
-        latestCustomization?.color !== color ||
-        latestCustomization?.size !== size ||
-        JSON.stringify(latestCustomization?.partsEnabled) !== JSON.stringify(parts)
-      ) {
-        const newCust = await createCustomization.mutateAsync({
+        await addToCart.mutateAsync({
           data: {
             productId: id,
-            name: designName || `${product?.name} - Custom`,
-            color,
-            size,
-            partsEnabled: parts,
-            canvasData: null,
-            previewImageUrl: null,
+            customizationId,
+            quantity: 1,
+            size: config.size,
           },
         });
-        customizationId = newCust.id;
+
+        queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+
+        toast({
+          title: "Design saved!",
+          description: "Your custom t-shirt has been added to your cart.",
+        });
+      } else {
+        toast({
+          title: "Design saved!",
+          description: "Your customization is saved. Sign in to add to cart.",
+        });
       }
 
-      await addToCart.mutateAsync({
-        data: { productId: id, customizationId, quantity: 1, size },
-      });
-
-      toast({
-        title: "Added to Cart",
-        description: "Your customized item has been added to your bag.",
-      });
-
-      setLocation("/cart");
+      // Navigate back to product to see the customized design
+      setLocation(`/products/${id}`);
     } catch {
       toast({
         title: "Error",
-        description: "Failed to add to cart. Please sign in or try again.",
+        description: "Could not save design. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  if (isLoadingProduct) {
+  if (isLoading) {
     return (
-      <Layout>
-        <div className="min-h-[calc(100vh-64px)] flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-      </Layout>
+      <div className="min-h-screen bg-[#111] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-white/40" />
+      </div>
     );
   }
 
   if (!product) return null;
 
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{ background: "radial-gradient(circle at center, #1f232e 0%, #100d0b 100%)", color: "#f8f9fa" }}
-    >
+    <div className="min-h-screen flex flex-col bg-[#111]">
       {/* Studio Header */}
       <header
-        className="h-16 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-50 backdrop-blur-md"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(16,13,11,0.9)" }}
+        className="h-14 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-50"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.07)", background: "rgba(14,14,14,0.97)" }}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Link href={`/products/${id}`}>
-            <Button variant="ghost" size="icon" className="rounded-full text-white/70 hover:text-white hover:bg-white/10">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
+            <button className="w-9 h-9 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/8 transition-colors">
+              <ArrowLeft className="w-4 h-4" />
+            </button>
           </Link>
           <div>
-            <h1 className="font-serif font-medium text-lg hidden sm:block text-white">
-              Bespoke Studio: {product.name}
-            </h1>
-            <p className="text-xs text-white/40">{formatPrice(product.priceInPaise)}</p>
+            <p className="text-white font-semibold text-sm leading-none">{product.name}</p>
+            <p className="text-white/30 text-[10px] mt-0.5 tracking-wider">Bespoke Studio</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Input
-            value={designName}
-            onChange={(e) => setDesignName(e.target.value)}
-            placeholder="Name your design..."
-            className="hidden md:block w-48 bg-transparent border-t-0 border-l-0 border-r-0 border-b border-white/20 rounded-none focus-visible:ring-0 focus-visible:border-white/60 px-0 h-8 text-sm text-white placeholder:text-white/30"
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setStudioKey(k => k + 1);
-              setColor(product.defaultColor || "#ffffff");
-              setParts({});
-              setDesignName("");
-            }}
-            className="text-[10px] tracking-wider text-white/40 hover:text-white/80 hover:bg-white/5 flex items-center gap-1.5"
-            title="Start a fresh design"
-          >
-            <RefreshCw className="w-3 h-3" />
-            <span className="hidden sm:inline">Start Fresh</span>
-          </Button>
-          <Show when="signed-out">
-            <Link href="/sign-in">
-              <Button variant="outline" className="text-xs tracking-wider rounded-none border-white/20 text-white hover:bg-white/10">
-                Sign In to Save
-              </Button>
-            </Link>
-          </Show>
-          <Show when="signed-in">
-            <Button
-              variant="outline"
-              onClick={handleSaveDesign}
-              disabled={createCustomization.isPending}
-              className="text-xs tracking-wider rounded-none border-white/20 text-white hover:bg-white/10 flex items-center gap-2"
-            >
-              {createCustomization.isPending ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <Save className="w-3 h-3" />
-              )}
-              <span className="hidden sm:inline">Save</span>
-            </Button>
-          </Show>
-          <Button
-            onClick={handleAddToCart}
-            disabled={addToCart.isPending}
-            className="text-xs tracking-wider rounded-none flex items-center gap-2 bg-emerald-400/90 text-black hover:bg-emerald-300"
-          >
-            {addToCart.isPending ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <ShoppingBag className="w-3 h-3" />
-            )}
-            Add to Cart
-          </Button>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-white/25 tracking-wider hidden sm:block">
+            Customize → Save & Add to Cart
+          </span>
         </div>
       </header>
 
-      {/* Main Customizer */}
-      <div className="flex-1" style={{ height: "calc(100vh - 64px)" }}>
-        <ModelViewerCustomizer
-          key={studioKey}
-          modelUrl={product.modelUrl}
-          thumbnailUrl={product.thumbnailUrl}
-          initialColor={product.defaultColor || "#ffffff"}
-          onColorChange={(c) => setColor(c)}
-          onPartsChange={(p) => setParts(p)}
+      {/* Customizer */}
+      <div className="flex-1">
+        <TshirtCustomizer
+          productId={id}
+          productName={product.name}
+          onSaveAndAddToCart={handleSaveAndAddToCart}
+          isSaving={isSaving}
         />
       </div>
     </div>

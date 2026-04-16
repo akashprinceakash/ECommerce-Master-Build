@@ -4,12 +4,14 @@ import { Link, useSearch } from "wouter";
 import { formatPrice } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Sparkles } from "lucide-react";
+import { useCustomization } from "@/contexts/CustomizationContext";
 
 export default function ProductsPage() {
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
   const category = searchParams.get("category") || undefined;
+  const { getCustomization } = useCustomization();
 
   const { data: products, isLoading, error } = useListProducts(
     { category },
@@ -84,22 +86,30 @@ export default function ProductsPage() {
               >
                 <Link href={`/products/${product.id}`} className="group block">
                   <div className="relative aspect-[3/4] overflow-hidden bg-gray-100 mb-3">
-                    {product.thumbnailUrl || product.modelUrl ? (
-                      <img
-                        src={product.thumbnailUrl || product.modelUrl || undefined}
-                        alt={product.name}
-                        className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-gray-300 font-black tracking-widest text-xl">KA.SHA</span>
+                    {(() => {
+                      const cust = getCustomization(product.id);
+                      const img = cust?.previewUrl || product.thumbnailUrl || product.modelUrl;
+                      return img ? (
+                        <img
+                          src={img}
+                          alt={product.name}
+                          className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-gray-300 font-black tracking-widest text-xl">KA.SHA</span>
+                        </div>
+                      );
+                    })()}
+                    {getCustomization(product.id) ? (
+                      <div className="absolute top-2 right-2 bg-black text-white text-[9px] font-bold tracking-[0.1em] px-2 py-0.5 flex items-center gap-1">
+                        <Sparkles className="w-2.5 h-2.5" />CUSTOM
                       </div>
-                    )}
-                    {!product.available && (
+                    ) : !product.available ? (
                       <div className="absolute top-2 right-2 bg-black text-white text-[9px] font-bold tracking-[0.1em] px-2 py-0.5">
                         SOLD OUT
                       </div>
-                    )}
+                    ) : null}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
                   </div>
                   <h3 className="text-[13px] font-semibold text-black mb-0.5 group-hover:underline">{product.name}</h3>
