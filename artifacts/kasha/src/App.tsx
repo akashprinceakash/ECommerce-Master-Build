@@ -3,7 +3,6 @@ import { ClerkProvider, SignIn, SignUp, Show, useClerk } from '@clerk/react';
 import { Switch, Route, useLocation, Redirect, Router as WouterRouter } from 'wouter';
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-import { CustomizationProvider } from "@/contexts/CustomizationContext";
 
 import Home from "@/pages/home";
 import SignInPage from "@/pages/sign-in";
@@ -107,12 +106,10 @@ function ClerkProviderWithRoutes() {
 
 function App() {
   return (
-    <CustomizationProvider>
-      <WouterRouter base={basePath}>
-        <ClerkProviderWithRoutes />
-        <Toaster />
-      </WouterRouter>
-    </CustomizationProvider>
+    <WouterRouter base={basePath}>
+      <ClerkProviderWithRoutes />
+      <Toaster />
+    </WouterRouter>
   );
 }
 

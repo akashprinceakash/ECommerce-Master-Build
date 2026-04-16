@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Link } from "wouter";
-import { ArrowRight, ChevronRight, Sparkles } from "lucide-react";
+import { ArrowRight, ChevronRight } from "lucide-react";
 import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
 import { formatPrice } from "@/lib/format";
 import { useCart } from "@/contexts/CartContext";
-import { useCustomization } from "@/contexts/CustomizationContext";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"MEN" | "WOMEN" | "KIDS">("MEN");
   const { openCart } = useCart();
-  const { getCustomization } = useCustomization();
 
   const { data: products } = useListProducts(
     {},
@@ -145,15 +143,12 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-            {topSellers.length > 0 ? topSellers.map(product => {
-              const cust = getCustomization(product.id);
-              const img = cust?.previewUrl || product.thumbnailUrl;
-              return (
+            {topSellers.length > 0 ? topSellers.map(product => (
               <Link key={product.id} href={`/products/${product.id}`} className="group block">
-                <div className={`relative aspect-[3/4] overflow-hidden mb-3 ${img ? "bg-gray-100" : "bg-gray-200"}`}>
-                  {img ? (
+                <div className="relative aspect-[3/4] overflow-hidden bg-gray-200 mb-3">
+                  {product.thumbnailUrl ? (
                     <img
-                      src={img}
+                      src={product.thumbnailUrl}
                       alt={product.name}
                       className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
                     />
@@ -162,12 +157,7 @@ export default function Home() {
                       <span className="text-gray-300 font-black tracking-widest text-xl">KA.SHA</span>
                     </div>
                   )}
-                  {cust && (
-                    <div className="absolute top-2 right-2 bg-black text-white text-[9px] font-bold tracking-[0.1em] px-2 py-0.5 flex items-center gap-1">
-                      <Sparkles className="w-2.5 h-2.5" />CUSTOM
-                    </div>
-                  )}
-                  {!product.available && !cust && (
+                  {!product.available && (
                     <div className="absolute top-2 right-2 bg-black text-white text-[9px] font-bold tracking-[0.1em] px-2 py-0.5">
                       SOLD OUT
                     </div>
@@ -176,7 +166,7 @@ export default function Home() {
                 <h3 className="text-[13px] font-semibold text-black mb-0.5 group-hover:underline">{product.name}</h3>
                 <p className="text-[12px] text-gray-500">{formatPrice(product.priceInPaise)}</p>
               </Link>
-            );}) : (
+            )) : (
               [1,2,3,4].map(i => (
                 <div key={i} className="group block">
                   <div className="relative aspect-[3/4] bg-gray-200 mb-3 animate-pulse" />
@@ -237,15 +227,12 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-            {newArrivals.length > 0 ? newArrivals.map(product => {
-              const cust = getCustomization(product.id);
-              const img = cust?.previewUrl || product.thumbnailUrl;
-              return (
+            {newArrivals.length > 0 ? newArrivals.map(product => (
               <Link key={product.id} href={`/products/${product.id}`} className="group block">
                 <div className="relative aspect-[3/4] overflow-hidden bg-gray-100 mb-3">
-                  {img ? (
+                  {product.thumbnailUrl ? (
                     <img
-                      src={img}
+                      src={product.thumbnailUrl}
                       alt={product.name}
                       className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
                     />
@@ -254,20 +241,14 @@ export default function Home() {
                       <span className="text-gray-300 font-black tracking-widest text-xl">KA.SHA</span>
                     </div>
                   )}
-                  {cust ? (
-                    <div className="absolute top-2 right-2 bg-black text-white text-[9px] font-bold tracking-[0.1em] px-2 py-0.5 flex items-center gap-1">
-                      <Sparkles className="w-2.5 h-2.5" />CUSTOM
-                    </div>
-                  ) : (
-                    <div className="absolute top-2 left-2 bg-black text-white text-[9px] font-bold tracking-[0.1em] px-2 py-0.5">
-                      NEW
-                    </div>
-                  )}
+                  <div className="absolute top-2 left-2 bg-black text-white text-[9px] font-bold tracking-[0.1em] px-2 py-0.5">
+                    NEW
+                  </div>
                 </div>
                 <h3 className="text-[13px] font-semibold text-black mb-0.5 group-hover:underline">{product.name}</h3>
                 <p className="text-[12px] text-gray-500">{formatPrice(product.priceInPaise)}</p>
               </Link>
-            );}) : (
+            )) : (
               [1,2,3,4].map(i => (
                 <div key={i} className="group block">
                   <div className="relative aspect-[3/4] bg-gray-200 mb-3 animate-pulse" />
