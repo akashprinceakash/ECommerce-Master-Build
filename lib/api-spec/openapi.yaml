@@ -3,13 +3,24 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: KA.SHA Luxury Fashion eCommerce API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: products
+    description: Product operations
+  - name: customizations
+    description: Product customization operations
+  - name: cart
+    description: Cart operations
+  - name: orders
+    description: Order operations
+  - name: users
+    description: User profile operations
+
 paths:
   /healthz:
     get:
@@ -24,7 +35,454 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List all products
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get a single product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /customizations:
+    get:
+      operationId: listCustomizations
+      tags: [customizations]
+      summary: List user's saved customizations
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of customizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Customization"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createCustomization
+      tags: [customizations]
+      summary: Save a product customization
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomizationBody"
+      responses:
+        "201":
+          description: Customization created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customization"
+        "400":
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /customizations/{id}:
+    get:
+      operationId: getCustomization
+      tags: [customizations]
+      summary: Get a single customization
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Customization found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customization"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateCustomization
+      tags: [customizations]
+      summary: Update a customization
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCustomizationBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customization"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteCustomization
+      tags: [customizations]
+      summary: Delete a customization
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /customizations/product/{productId}/latest:
+    get:
+      operationId: getLatestCustomizationForProduct
+      tags: [customizations]
+      summary: Get latest customization for a product by current user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Latest customization or null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomizationOrNull"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /cart:
+    get:
+      operationId: getCart
+      tags: [cart]
+      summary: Get current user's cart
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cart with items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /cart/items:
+    post:
+      operationId: addToCart
+      tags: [cart]
+      summary: Add item to cart
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCartItemBody"
+      responses:
+        "201":
+          description: Item added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartItem"
+        "400":
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /cart/items/{id}:
+    patch:
+      operationId: updateCartItem
+      tags: [cart]
+      summary: Update cart item quantity
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCartItemBody"
+      responses:
+        "200":
+          description: Updated cart item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartItem"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: removeCartItem
+      tags: [cart]
+      summary: Remove item from cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Removed
+
+  /cart/clear:
+    delete:
+      operationId: clearCart
+      tags: [cart]
+      summary: Clear all items from cart
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Cart cleared
+
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [orders]
+      summary: Get user's order history
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Place an order from cart
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderBody"
+      responses:
+        "201":
+          description: Order placed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          description: Invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get a single order
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/profile:
+    get:
+      operationId: getUserProfile
+      tags: [users]
+      summary: Get current user profile with stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/profile/upsert:
+    post:
+      operationId: upsertUserProfile
+      tags: [users]
+      summary: Create or update user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertUserProfileBody"
+      responses:
+        "200":
+          description: Profile upserted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +492,370 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        priceInPaise:
+          type: integer
+        modelUrl:
+          type: string
+        thumbnailUrl:
+          type: ["string", "null"]
+        available:
+          type: boolean
+        sizes:
+          type: array
+          items:
+            type: string
+        defaultColor:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - description
+        - category
+        - priceInPaise
+        - modelUrl
+        - available
+        - sizes
+        - defaultColor
+        - createdAt
+
+    Customization:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        productId:
+          type: integer
+        name:
+          type: string
+        color:
+          type: string
+        size:
+          type: string
+        partsEnabled:
+          type: object
+          additionalProperties:
+            type: boolean
+        canvasData:
+          type: ["string", "null"]
+        previewImageUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - productId
+        - name
+        - color
+        - size
+        - partsEnabled
+        - createdAt
+        - updatedAt
+
+    CustomizationOrNull:
+      oneOf:
+        - $ref: "#/components/schemas/Customization"
+        - type: "null"
+
+    CreateCustomizationBody:
+      type: object
+      properties:
+        productId:
+          type: integer
+        name:
+          type: string
+        color:
+          type: string
+        size:
+          type: string
+        partsEnabled:
+          type: object
+          additionalProperties:
+            type: boolean
+        canvasData:
+          type: ["string", "null"]
+        previewImageUrl:
+          type: ["string", "null"]
+      required:
+        - productId
+        - name
+        - color
+        - size
+        - partsEnabled
+
+    UpdateCustomizationBody:
+      type: object
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+        size:
+          type: string
+        partsEnabled:
+          type: object
+          additionalProperties:
+            type: boolean
+        canvasData:
+          type: ["string", "null"]
+        previewImageUrl:
+          type: ["string", "null"]
+
+    CartItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        cartId:
+          type: integer
+        productId:
+          type: integer
+        customizationId:
+          type: ["integer", "null"]
+        quantity:
+          type: integer
+        size:
+          type: string
+        product:
+          $ref: "#/components/schemas/Product"
+        customization:
+          oneOf:
+            - $ref: "#/components/schemas/Customization"
+            - type: "null"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - cartId
+        - productId
+        - quantity
+        - size
+        - product
+        - createdAt
+
+    Cart:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartItem"
+        totalInPaise:
+          type: integer
+        itemCount:
+          type: integer
+      required:
+        - id
+        - userId
+        - items
+        - totalInPaise
+        - itemCount
+
+    AddCartItemBody:
+      type: object
+      properties:
+        productId:
+          type: integer
+        customizationId:
+          type: ["integer", "null"]
+        quantity:
+          type: integer
+        size:
+          type: string
+      required:
+        - productId
+        - quantity
+        - size
+
+    UpdateCartItemBody:
+      type: object
+      properties:
+        quantity:
+          type: integer
+      required:
+        - quantity
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        productId:
+          type: integer
+        customizationId:
+          type: ["integer", "null"]
+        quantity:
+          type: integer
+        size:
+          type: string
+        priceInPaise:
+          type: integer
+        product:
+          $ref: "#/components/schemas/Product"
+        customization:
+          oneOf:
+            - $ref: "#/components/schemas/Customization"
+            - type: "null"
+      required:
+        - id
+        - orderId
+        - productId
+        - quantity
+        - size
+        - priceInPaise
+        - product
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        status:
+          type: string
+          enum: [pending, confirmed, processing, shipped, delivered, cancelled]
+        totalInPaise:
+          type: integer
+        shippingName:
+          type: string
+        shippingAddress:
+          type: string
+        shippingCity:
+          type: string
+        shippingState:
+          type: string
+        shippingPostalCode:
+          type: string
+        shippingPhone:
+          type: string
+        paymentId:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - status
+        - totalInPaise
+        - shippingName
+        - shippingAddress
+        - shippingCity
+        - shippingState
+        - shippingPostalCode
+        - shippingPhone
+        - items
+        - createdAt
+        - updatedAt
+
+    CreateOrderBody:
+      type: object
+      properties:
+        shippingName:
+          type: string
+        shippingAddress:
+          type: string
+        shippingCity:
+          type: string
+        shippingState:
+          type: string
+        shippingPostalCode:
+          type: string
+        shippingPhone:
+          type: string
+        paymentId:
+          type: ["string", "null"]
+      required:
+        - shippingName
+        - shippingAddress
+        - shippingCity
+        - shippingState
+        - shippingPostalCode
+        - shippingPhone
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        displayName:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        defaultShippingAddress:
+          type: ["string", "null"]
+        totalOrders:
+          type: integer
+        totalSpentInPaise:
+          type: integer
+        savedDesignsCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - totalOrders
+        - totalSpentInPaise
+        - savedDesignsCount
+        - createdAt
+
+    UpsertUserProfileBody:
+      type: object
+      properties:
+        displayName:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        defaultShippingAddress:
+          type: ["string", "null"]

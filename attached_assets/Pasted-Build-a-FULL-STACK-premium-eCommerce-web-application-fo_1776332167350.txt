@@ -1,0 +1,205 @@
+Build a FULL-STACK premium eCommerce web application for a luxury fashion brand named **KA.SHA**.
+
+🎯 OBJECTIVE:
+Create a high-end, visually stunning eCommerce experience similar in quality, layout, and branding feel to https://malbon.com/, with **advanced REALISTIC 3D product customization** as the core feature.
+
+This is NOT a demo or single-product app. It must support multiple products (T-shirts, pants, etc.) with production-level quality.
+
+---
+
+## 🎨 DESIGN & BRANDING
+
+- Premium luxury UI (minimal, elegant, high-end fashion feel)
+
+- Smooth transitions (no cheap animations)
+- Clean modern typography (fashion brand style)
+- Fully responsive (mobile + desktop)
+- High-end visual polish (should feel like a real luxury brand)
+- Use KA.SHA logo (I will provide)
+
+---
+
+## 🏠 HOMEPAGE
+
+- Strong hero section with brand identity
+- Product listing (NOT just one product)
+- Include multiple products:
+  - T-Shirts
+  - Pants
+  - (Structure should support more later)
+
+Each product card must:
+- Display a **high-quality 3D model preview (.glb)**
+- Use realistic lighting and shadows
+- NO cartoon-like or cheap animation
+- NO unnecessary auto-rotation
+- On hover:
+  - Subtle lighting or camera shift (premium feel)
+- On click:
+  - Navigate to product page
+
+---
+
+## 👕 PRODUCT PAGE
+
+- Large, high-quality 3D viewer
+- Smooth interaction:
+  - Drag to rotate
+  - Scroll to zoom
+- Realistic rendering (studio lighting, proper shadows)
+- NO auto-rotate (must feel premium, not animated)
+- Prominent button: **"Customize"**
+
+---
+
+## 🎛️ 3D CUSTOMIZATION (CORE FEATURE)
+
+Clicking "Customize" opens a full-screen premium customization interface.
+
+### ✅ Color Customization
+- Change base color
+- Preset colors + custom color picker
+- Real-time update on 3D model
+
+### ✅ Part Control (Dynamic)
+- Toggle parts ON/OFF:
+  - Collar
+  - Left Sleeve
+  - Right Sleeve
+- Changes must reflect instantly on 3D model
+
+### ✅ Size Control
+- S / M / L / XL
+- Dynamically scale the 3D model
+
+### ✅ Design Customization (Advanced)
+- Add custom text
+  - Change font, color, size
+- Upload logos/images
+- Drag, resize, rotate elements
+- Add shapes:
+  - Lines
+  - Curves
+  - Stripes
+- Use a 2D canvas mapped onto 3D model surface
+
+### ✅ Live Preview
+- All changes must instantly reflect on the 3D model in real time
+
+---
+
+## 💾 SAVE CUSTOM DESIGN
+
+When user clicks **"Update Design"**:
+
+Store:
+- Selected colors
+- Enabled/disabled parts
+- Size/scale
+- Canvas design data (text, images, layout)
+
+Each design must be linked to the logged-in user.
+
+---
+
+## 🔄 PERSISTENCE (VERY IMPORTANT)
+
+- When user revisits:
+  → Automatically load their last customized design
+- Same design must appear in:
+  - Product page
+  - Cart
+  - Checkout
+- Must persist after refresh or logout/login
+
+---
+
+## 🛒 CART SYSTEM
+
+- Add customized product to cart
+- Store full customization data
+- Show preview image of customized product
+
+---
+
+## 💳 CHECKOUT FLOW
+
+- Shipping details form
+- Payment step (test mode is fine)
+- Place order
+
+---
+
+## 📦 ORDER MANAGEMENT
+
+- Store orders with full customization data
+- User can view order history
+
+---
+
+## 👤 USER SYSTEM
+
+- Register / Login
+- Each user has:
+  - Saved designs
+  - Cart
+  - Order history
+
+---
+
+## 📁 DATA STRUCTURE (IMPORTANT)
+
+Design proper data models for:
+- Users
+- Products
+- Customizations
+- Cart
+- Orders
+
+---
+
+## 🧪 DEMO CONTENT
+
+- Include multiple products:
+  - T-shirt (with shirt.glb)
+  - Pants (with pants.glb or placeholder)
+- Default designs should be clean and minimal
+
+---
+
+## ✨ EXPERIENCE REQUIREMENTS
+
+- Premium loading animations (no cheap loaders)
+- Skeleton loaders while loading content
+- Smooth UI transitions
+- Fast and optimized performance
+- Clean, modular, production-ready code
+
+---
+
+## ⚠️ IMPORTANT RULES
+
+- Do NOT build a basic UI
+- Do NOT use cheap animations or auto-rotating models
+- 3D models must feel realistic and premium
+- Customization must be fully functional
+- Data persistence must work correctly
+- Code must be clean and scalable
+
+---
+
+## 🎯 FINAL EXPECTATION
+
+The final application should:
+
+- Feel like a real luxury fashion brand website
+- Support multiple customizable products
+- Provide realistic 3D interaction (not animated toy models)
+- Allow full product customization
+- Save and persist user designs
+- Support full eCommerce flow:
+  → Browse → Customize → Cart → Checkout → Orders
+
+
+iamount should be based on indian rupees add payment gateways 
+

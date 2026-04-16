@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "zUBNgx-DXsBH-MOAvS4rj"
+uri = "file://artifacts/kasha/public/images/product-tshirt.png"
+type = "image"
+title = "Luxury T-Shirt Product Shot"
+
+[[generated]]
+id = "L7Z4D3-FNlQQnOI6YkgT5"
+uri = "file://artifacts/kasha/public/images/product-trousers.png"
+type = "image"
+title = "Luxury Trousers Product Shot"
+
+[[generated]]
+id = "BG9Ws87GkjSPQeknOx9TA"
+uri = "file://artifacts/kasha/public/images/product-jacket.png"
+type = "image"
+title = "Luxury Jacket Product Shot"

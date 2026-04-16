@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "KA.SHA — Luxury Fashion"
+version = "1.0.0"
+id = "artifacts/kasha"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24612
+
+[services.development]
+run = "pnpm --filter @workspace/kasha run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/kasha", "run", "build" ]
+publicDir = "artifacts/kasha/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24612"
+BASE_PATH = "/"
