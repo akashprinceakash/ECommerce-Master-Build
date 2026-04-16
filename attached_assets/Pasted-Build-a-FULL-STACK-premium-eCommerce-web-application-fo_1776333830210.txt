@@ -1,0 +1,190 @@
+Build a FULL-STACK premium eCommerce web application for a luxury golf wear brand named **KA.SHA**.
+
+🎯 OBJECTIVE:
+Create a high-end, visually stunning eCommerce experience similar in quality, layout, and branding feel to https://malbon.com/, but with advanced **3D product customization** as the core feature.
+
+---
+
+## 🎨 DESIGN & BRANDING
+
+* Premium luxury UI (minimal, elegant, high-end fashion feel)
+* Dark theme with subtle gradients and glassmorphism
+* Smooth animations and transitions
+* Clean typography (modern fashion style)
+* Fully responsive (mobile + desktop)
+* Use KA.SHA logo (I will upload it)
+
+---
+
+## 🏠 HOMEPAGE
+
+* Hero section with strong brand identity (KA.SHA)
+* Featured product section
+* Only ONE product initially:
+  → Golf T-Shirt
+* Instead of static image → display a rotating 3D T-shirt model
+* On hover → subtle animation
+* On click → navigate to product page
+
+---
+
+## 👕 PRODUCT PAGE
+
+* Large interactive 3D T-shirt viewer
+* Smooth rotation and zoom
+* Prominent button: **"Customize"**
+
+---
+
+## 🎛️ 3D CUSTOMIZATION (CORE FEATURE)
+
+When user clicks "Customize", open a full-screen customization interface.
+
+REQUIREMENTS:
+
+✅ Color Customization
+
+* Change base color of T-shirt
+* Provide preset colors + custom color picker
+
+✅ Part Control (Dynamic)
+
+* Ability to:
+
+  * Add/Remove Collar
+  * Add/Remove Right Sleeve
+  * Add/Remove Left Sleeve
+* These must visually update on the 3D model
+
+✅ Size Control
+
+* S / M / L / XL
+* Scale the T-shirt dynamically
+
+✅ Design Customization
+
+* Add custom text
+
+  * Change font, color, size
+* Upload logos/images
+* Drag, resize, and reposition elements
+* Add shapes (lines, curves, stripes)
+
+✅ Live Preview
+
+* All changes should instantly reflect on the 3D model
+
+---
+
+## 💾 SAVE CUSTOM DESIGN
+
+When user clicks **"Update Design"**:
+
+* Save full customization data including:
+
+  * Colors
+  * Enabled parts (collar/sleeves)
+  * Size/scale
+  * Design elements (text, images, layout)
+* Link this design to the user
+* Store it permanently
+
+---
+
+## 🔄 PERSISTENCE (VERY IMPORTANT)
+
+* When user revisits the app:
+  → Load their last customized T-shirt automatically
+* Same customized design must appear in:
+
+  * Product page
+  * Cart
+  * Checkout
+* Even after refresh or returning later
+
+---
+
+## 🛒 CART SYSTEM
+
+* Add customized product to cart
+* Store full customization details
+* Show preview of customized T-shirt
+
+---
+
+## 💳 CHECKOUT FLOW
+
+* User enters shipping details
+* Payment step (basic or test mode)
+* Place order
+
+---
+
+## 📦 ORDER MANAGEMENT
+
+* Store order details with customization data
+* User can view past orders
+
+---
+
+## 👤 USER SYSTEM
+
+* Register / Login
+* Each user has:
+
+  * Saved designs
+  * Cart
+  * Order history
+
+---
+
+## ✨ ADVANCED EXPERIENCE
+
+* Smooth loading animations for 3D models
+* Premium hover effects
+* Skeleton loaders while loading content
+* Fast and optimized performance
+* Clean, modular, maintainable code
+
+---
+
+## 📁 DATA STRUCTURE (IMPORTANT)
+
+Ensure the system properly handles:
+
+* Users
+* Products
+* Customizations
+* Cart
+* Orders
+
+---
+
+## 🧪 DEMO CONTENT
+
+* Include one product:
+  → Golf T-Shirt
+* Use a sample 3D model file (shirt.glb)
+* Default design should be simple and clean
+
+---
+
+## 🎯 FINAL EXPECTATION
+
+The final application should:
+
+* Feel like a premium fashion brand website
+* Allow full 3D customization of a T-shirt
+* Save and persist user designs
+* Support full eCommerce flow (browse → customize → cart → checkout)
+* Maintain the customized product throughout the entire journey
+
+---
+
+IMPORTANT:
+
+* Do NOT create a basic UI
+* Focus on premium look and experience
+* Ensure 3D customization is fully functional
+* Ensure data persistence works correctly
+* Code should be clean and production-ready
