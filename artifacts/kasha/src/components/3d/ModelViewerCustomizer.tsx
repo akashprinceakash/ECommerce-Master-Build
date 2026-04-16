@@ -15,8 +15,6 @@ interface ModelViewerCustomizerProps {
   initialColor?: string;
   onPartsChange?: (parts: Record<string, boolean>) => void;
   onColorChange?: (color: string) => void;
-  onSaveDesign?: (previewUrl: string, selectedSize: string, primaryColor: string) => Promise<void>;
-  isSaving?: boolean;
 }
 
 declare global {
@@ -62,8 +60,6 @@ export function ModelViewerCustomizer({
   initialColor = "#ffffff",
   onPartsChange,
   onColorChange,
-  onSaveDesign,
-  isSaving = false,
 }: ModelViewerCustomizerProps) {
   const [webglAvailable] = useState<boolean>(() => {
     try { return isWebGLAvailable(); } catch { return false; }
@@ -454,47 +450,6 @@ export function ModelViewerCustomizer({
     setModelLoaded(false);
     setModelError(false);
     setMaterials([]);
-  };
-
-  const handleSave = async () => {
-    if (!onSaveDesign) return;
-    const fc = fabricCanvasRef.current;
-    let previewUrl = "";
-
-    if (uploadedImageUrl && !uploadedModelUrl) {
-      // 2D image mode — composite design canvas over the image
-      previewUrl = await new Promise<string>((resolve) => {
-        const img = new Image();
-        img.onload = () => {
-          const W = 800, H = Math.round(800 * (img.naturalHeight / img.naturalWidth));
-          const offscreen = document.createElement("canvas");
-          offscreen.width = W;
-          offscreen.height = H;
-          const ctx = offscreen.getContext("2d")!;
-          ctx.fillStyle = "#e8e8e8";
-          ctx.fillRect(0, 0, W, H);
-          ctx.drawImage(img, 0, 0, W, H);
-          if (fc && fc.getObjects().length > 0) {
-            const fcDataUrl = fc.toDataURL({ multiplier: 1, format: "png", quality: 0.92 });
-            const fcImg = new Image();
-            fcImg.onload = () => {
-              ctx.drawImage(fcImg, W * 0.25, H * 0.2, W * 0.5, W * 0.5);
-              resolve(offscreen.toDataURL("image/png"));
-            };
-            fcImg.src = fcDataUrl;
-          } else {
-            resolve(offscreen.toDataURL("image/png"));
-          }
-        };
-        img.onerror = () => resolve("");
-        img.src = uploadedImageUrl;
-      });
-    } else if (fc) {
-      previewUrl = fc.toDataURL({ multiplier: 1, format: "png", quality: 0.92 });
-    }
-
-    const primaryColor = materials[0]?.color || "#ffffff";
-    await onSaveDesign(previewUrl, selectedSize, primaryColor);
   };
 
   const noModel = !effectiveModelUrl || modelError;
@@ -983,23 +938,6 @@ export function ModelViewerCustomizer({
                 </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* ── SAVE BUTTON — sticky at the bottom of the panel ── */}
-        {onSaveDesign && (
-          <div
-            className="sticky bottom-0 z-20 p-4 mt-auto"
-            style={{ background: "linear-gradient(to top, #111 70%, transparent)", borderTop: "1px solid rgba(255,255,255,0.06)" }}
-          >
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="w-full py-4 font-bold tracking-[0.15em] text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: isSaving ? "#333" : "#fff", color: isSaving ? "#888" : "#000", borderRadius: "4px" }}
-            >
-              {isSaving ? "SAVING DESIGN…" : "SAVE & ADD TO CART"}
-            </button>
           </div>
         )}
       </div>
