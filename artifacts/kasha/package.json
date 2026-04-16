@@ -79,6 +79,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "@clerk/react": "^6.4.0"
+    "@clerk/react": "^6.4.0",
+    "fabric": "7.2.0"
   }
 }

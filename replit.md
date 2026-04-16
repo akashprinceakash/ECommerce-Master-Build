@@ -19,7 +19,7 @@ KA.SHA is a full-stack premium Indian luxury fashion eCommerce web application b
 - **Frontend**: React + Vite, Tailwind CSS, shadcn/ui
 - **Fonts**: Cormorant Garamond (serif headings), DM Sans (body)
 - **Auth**: Clerk (VITE_CLERK_PUBLISHABLE_KEY + CLERK_SECRET_KEY)
-- **3D Viewer**: react-three/fiber + drei (with WebGL detection fallback)
+- **3D Viewer**: Google `model-viewer` web component (dynamically loaded; with WebGL detection fallback) + Fabric.js v7 canvas for texture design
 - **API**: Express 5 + Zod validation + Drizzle ORM
 - **Database**: PostgreSQL (DATABASE_URL)
 - **API Codegen**: Orval (from OpenAPI spec → React Query hooks + Zod)
