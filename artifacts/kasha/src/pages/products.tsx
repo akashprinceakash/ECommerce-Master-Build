@@ -4,6 +4,7 @@ import { Link, useSearch } from "wouter";
 import { formatPrice } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
+import { ChevronRight } from "lucide-react";
 
 export default function ProductsPage() {
   const searchString = useSearch();
@@ -15,66 +16,94 @@ export default function ProductsPage() {
     { query: { queryKey: getListProductsQueryKey({ category }) } }
   );
 
+  const filterLinks = [
+    { label: "All", href: "/products", key: null },
+    { label: "Clothing", href: "/products?category=clothing", key: "clothing" },
+    { label: "Accessories", href: "/products?category=accessories", key: "accessories" },
+    { label: "Bespoke", href: "/products?category=bespoke", key: "bespoke" },
+  ];
+
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-16">
-        <div className="mb-12">
-          <h1 className="text-4xl md:text-5xl font-serif font-medium mb-4">
-            {category ? `${category.charAt(0).toUpperCase() + category.slice(1)}` : "The Collection"}
-          </h1>
-          <div className="flex gap-6 text-sm">
-            <Link href="/products" className={`hover:text-primary transition-colors ${!category ? 'text-primary font-medium border-b border-primary' : 'text-muted-foreground'}`}>All</Link>
-            <Link href="/products?category=clothing" className={`hover:text-primary transition-colors ${category === 'clothing' ? 'text-primary font-medium border-b border-primary' : 'text-muted-foreground'}`}>Clothing</Link>
-            <Link href="/products?category=accessories" className={`hover:text-primary transition-colors ${category === 'accessories' ? 'text-primary font-medium border-b border-primary' : 'text-muted-foreground'}`}>Accessories</Link>
+      {/* Page Header */}
+      <div className="bg-gray-50 border-b border-gray-200 py-10 px-6">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="flex items-center gap-2 text-[11px] text-gray-400 font-medium mb-4">
+            <Link href="/" className="hover:text-black transition-colors">HOME</Link>
+            <ChevronRight className="w-3 h-3" />
+            <span className="text-black">
+              {category ? category.charAt(0).toUpperCase() + category.slice(1) : "All Products"}
+            </span>
           </div>
+          <h1 className="text-4xl md:text-5xl font-black text-black">
+            {category ? category.charAt(0).toUpperCase() + category.slice(1) : "The Collection"}
+          </h1>
+        </div>
+      </div>
+
+      <div className="max-w-[1400px] mx-auto px-6 py-10">
+        {/* Filter Bar */}
+        <div className="flex items-center gap-0 mb-8 border-b border-gray-200">
+          {filterLinks.map(f => (
+            <Link
+              key={f.label}
+              href={f.href}
+              className={`text-[12px] font-bold tracking-[0.1em] px-5 py-3 border-b-2 -mb-px transition-colors ${
+                (f.key === null ? !category : category === f.key)
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-400 hover:text-gray-700"
+              }`}
+            >
+              {f.label}
+            </Link>
+          ))}
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
               <ProductSkeleton key={i} />
             ))}
           </div>
         ) : error ? (
-          <div className="py-20 text-center text-muted-foreground">
+          <div className="py-20 text-center text-gray-500">
             <p>Failed to load products. Please try again later.</p>
           </div>
         ) : products?.length === 0 ? (
-          <div className="py-20 text-center text-muted-foreground">
+          <div className="py-20 text-center text-gray-500">
             <p>No products found in this category.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
             {products?.map((product, i) => (
-              <motion.div 
+              <motion.div
                 key={product.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: i * 0.05 }}
+                transition={{ duration: 0.4, delay: i * 0.05 }}
               >
                 <Link href={`/products/${product.id}`} className="group block">
-                  <div className="relative aspect-[3/4] overflow-hidden bg-secondary/50 mb-4">
+                  <div className="relative aspect-[3/4] overflow-hidden bg-gray-100 mb-3">
                     {product.thumbnailUrl || product.modelUrl ? (
-                      <img 
-                        src={product.thumbnailUrl || product.modelUrl} 
+                      <img
+                        src={product.thumbnailUrl || product.modelUrl || undefined}
                         alt={product.name}
                         className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-muted-foreground font-serif italic bg-secondary">
-                        KA.SHA
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-gray-300 font-black tracking-widest text-xl">KA.SHA</span>
                       </div>
                     )}
                     {!product.available && (
-                      <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-sm px-3 py-1 text-xs font-medium tracking-wider">
+                      <div className="absolute top-2 right-2 bg-black text-white text-[9px] font-bold tracking-[0.1em] px-2 py-0.5">
                         SOLD OUT
                       </div>
                     )}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
                   </div>
-                  <div className="space-y-1">
-                    <h3 className="font-serif font-medium text-lg group-hover:text-primary transition-colors">{product.name}</h3>
-                    <p className="text-muted-foreground text-sm">{formatPrice(product.priceInPaise)}</p>
-                  </div>
+                  <h3 className="text-[13px] font-semibold text-black mb-0.5 group-hover:underline">{product.name}</h3>
+                  <p className="text-[12px] text-gray-500">{formatPrice(product.priceInPaise)}</p>
                 </Link>
               </motion.div>
             ))}
@@ -87,12 +116,10 @@ export default function ProductsPage() {
 
 function ProductSkeleton() {
   return (
-    <div className="space-y-4">
-      <Skeleton className="aspect-[3/4] w-full rounded-none bg-secondary" />
-      <div className="space-y-2">
-        <Skeleton className="h-5 w-2/3 bg-secondary" />
-        <Skeleton className="h-4 w-1/3 bg-secondary" />
-      </div>
+    <div className="space-y-3">
+      <Skeleton className="aspect-[3/4] w-full rounded-none bg-gray-100" />
+      <Skeleton className="h-4 w-2/3 bg-gray-100" />
+      <Skeleton className="h-3 w-1/3 bg-gray-100" />
     </div>
   );
 }

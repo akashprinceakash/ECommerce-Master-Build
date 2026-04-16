@@ -89,6 +89,9 @@ export function ModelViewerCustomizer({
   const [modelLoaded, setModelLoaded] = useState(false);
   const [modelError, setModelError] = useState(false);
   const [selectedSize, setSelectedSize] = useState("M");
+  const [uploadedModelUrl, setUploadedModelUrl] = useState<string | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const uploadedBlobRef = useRef<string | null>(null);
   const [bgColor, setBgColor] = useState("#ffffff");
   const [textInput, setTextInput] = useState("");
   const [textColor, setTextColor] = useState("#000000");
@@ -112,7 +115,7 @@ export function ModelViewerCustomizer({
     const pm = printMaterialRef.current;
     if (!mv || !fc || !pm) return;
     try {
-      const dataUrl = fc.toDataURL({ format: "png", quality: 0.9 });
+      const dataUrl = fc.toDataURL({ multiplier: 1, format: "png", quality: 0.9 });
       const texture = await mv.createTexture(dataUrl);
       pm.pbrMetallicRoughness.baseColorTexture.setTexture(texture);
     } catch {
@@ -381,13 +384,39 @@ export function ModelViewerCustomizer({
     syncTexture();
   };
 
-  const noModel = !modelUrl || modelError;
+  const effectiveModelUrl = uploadedModelUrl || modelUrl;
+  const noModel = !effectiveModelUrl || modelError;
+
+  const handleModelFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (uploadedBlobRef.current) URL.revokeObjectURL(uploadedBlobRef.current);
+    const blobUrl = URL.createObjectURL(file);
+    uploadedBlobRef.current = blobUrl;
+    setUploadedModelUrl(blobUrl);
+    setModelLoaded(false);
+    setModelError(false);
+    setMaterials([]);
+    e.target.value = "";
+  };
+
+  const handleGarmentImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setUploadedImageUrl(ev.target?.result as string);
+      setUploadedModelUrl(null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
 
   return (
     <div className="flex flex-col lg:flex-row h-full w-full" style={{ minHeight: "600px" }}>
       {/* 3D Viewer */}
       <div className="flex-1 relative bg-[#100d0b] flex items-center justify-center rounded-none overflow-hidden" style={{ minHeight: "400px" }}>
-        {!modelLoaded && modelUrl && webglAvailable && (
+        {!modelLoaded && effectiveModelUrl && webglAvailable && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#100d0b] z-10">
             <div className="w-10 h-10 border-2 border-white/10 border-t-emerald-300 rounded-full animate-spin" />
             <p className="mt-4 text-sm text-white/40 tracking-wider">Loading Model...</p>
@@ -396,14 +425,16 @@ export function ModelViewerCustomizer({
 
         {(noModel || !webglAvailable || !mvScriptLoaded) ? (
           <div className="flex flex-col items-center justify-center w-full h-full gap-4 p-8">
-            {thumbnailUrl ? (
+            {uploadedImageUrl ? (
+              <img src={uploadedImageUrl} alt="Uploaded garment" className="max-h-[500px] object-contain rounded-lg" />
+            ) : thumbnailUrl ? (
               <img src={thumbnailUrl} alt="Product" className="max-h-[400px] object-contain rounded-lg" />
             ) : (
               <div className="text-center text-white/30">
                 <div className="w-24 h-32 mx-auto mb-4 rounded-sm bg-white/10" />
-                <p className="text-xs tracking-widest uppercase">{noModel ? "No 3D Model" : "3D Preview"}</p>
+                <p className="text-xs tracking-widest uppercase">{noModel ? "Upload a Model or Image" : "3D Preview"}</p>
                 <p className="text-xs mt-1 opacity-60">
-                  {noModel ? "Assign a .glb model URL to this product" : "Use your browser for the 3D preview"}
+                  {noModel ? "Use the upload button below to load your design" : "Use your browser for the 3D preview"}
                 </p>
               </div>
             )}
@@ -411,7 +442,7 @@ export function ModelViewerCustomizer({
         ) : (
           <model-viewer
             ref={viewerRef as any}
-            src={modelUrl!}
+            src={effectiveModelUrl!}
             id="kasha-model-viewer"
             camera-controls
             auto-rotate
@@ -470,6 +501,37 @@ export function ModelViewerCustomizer({
         {/* Tab: Parts & Colors */}
         {activeTab === "parts" && (
           <div className="flex flex-col gap-6 p-6">
+
+            {/* Upload 3D Model or Image */}
+            <div>
+              <p className="text-[11px] tracking-[3px] uppercase text-white/40 font-semibold mb-3">Upload Your Own Model / Image</p>
+              <div className="flex flex-col gap-2">
+                <label
+                  className="flex flex-col items-center justify-center w-full py-4 rounded-xl cursor-pointer text-sm transition-all gap-1"
+                  style={{ background: "rgba(110,231,183,0.08)", border: "2px dashed rgba(110,231,183,0.3)", color: "#6ee7b7" }}
+                >
+                  <span className="font-bold tracking-wider text-xs">↑ Upload 3D Model</span>
+                  <span className="text-[10px] text-white/30">.glb or .gltf files supported</span>
+                  <input type="file" accept=".glb,.gltf" onChange={handleModelFileUpload} className="hidden" />
+                </label>
+                <label
+                  className="flex flex-col items-center justify-center w-full py-4 rounded-xl cursor-pointer text-sm transition-all gap-1"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "2px dashed rgba(255,255,255,0.12)", color: "#8b949e" }}
+                >
+                  <span className="font-bold tracking-wider text-xs">↑ Upload 2D Image / Design</span>
+                  <span className="text-[10px] text-white/30">PNG, JPG, WebP, SVG</span>
+                  <input type="file" accept="image/*" onChange={handleGarmentImageUpload} className="hidden" />
+                </label>
+                {(uploadedModelUrl || uploadedImageUrl) && (
+                  <button
+                    onClick={() => { setUploadedModelUrl(null); setUploadedImageUrl(null); setModelLoaded(false); setModelError(false); setMaterials([]); }}
+                    className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors text-center"
+                  >
+                    × Clear uploaded file
+                  </button>
+                )}
+              </div>
+            </div>
 
             {/* Materials */}
             <div>

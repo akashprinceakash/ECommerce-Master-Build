@@ -1,8 +1,8 @@
-# KA.SHA — Luxury Indian Fashion eCommerce
+# KA.SHA — Golf & Sportswear Fashion eCommerce
 
 ## Overview
 
-KA.SHA is a full-stack premium Indian luxury fashion eCommerce web application built as a pnpm monorepo. Features include product browsing, a 3D Bespoke Customization Studio, Clerk authentication, cart, Indian Rupee (₹) checkout, saved designs, order history, and user profiles.
+KA.SHA is a full-stack luxury golf/sportswear fashion eCommerce web application built as a pnpm monorepo. Features include product browsing, a Bespoke Customization Studio (supporting 3D model + 2D image upload), Clerk authentication, slide-out cart drawer, Indian Rupee (₹) checkout, saved designs, order history, and user profiles.
 
 ## Architecture
 
@@ -24,12 +24,24 @@ KA.SHA is a full-stack premium Indian luxury fashion eCommerce web application b
 - **Database**: PostgreSQL (DATABASE_URL)
 - **API Codegen**: Orval (from OpenAPI spec → React Query hooks + Zod)
 - **State**: TanStack Query (React Query)
+- **Cart**: Slide-out drawer via CartContext + CartDrawer component
 
 ## Design System
-- **Background**: Warm ivory (`hsl(16 10% 97%)`)
-- **Primary**: Deep amber/gold (`hsl(35 45% 30%)`)
+- **Theme**: Clean white/minimal golf sportswear aesthetic
+- **Background**: White (`#ffffff`)
+- **Primary**: Near-black (`hsl(0 0% 9%)`) — for buttons, CUSTOMISE badge
+- **Accent/CTA**: Red (`#dc2626`) — for Checkout and Subscribe buttons
+- **Navbar**: White, flat, black text — SHOP / TAILOR YOUR PLAY / PRINTS / ABOUT | MEN / WOMEN / KIDS | CUSTOMISE button
+- **Footer**: Black background with column layout (Shop, Support, Newsletter)
+- **Newsletter**: Dark olive/forest green (`#3d4a33`)
 - **Radius**: 0.25rem (minimal, editorial)
 - **Prices**: Stored in paise (integer), displayed as ₹ with Indian number formatting
+
+## Key Components
+- `src/components/layout/Navbar.tsx` — New design with category nav + CUSTOMISE button + cart icon
+- `src/components/layout/CartDrawer.tsx` — Slide-out cart panel from right
+- `src/contexts/CartContext.tsx` — Global open/close state for cart drawer
+- `src/components/3d/ModelViewerCustomizer.tsx` — Bespoke Studio with 3D/2D upload support
 
 ## Pages / Routes
 | Route | Component | Auth |
