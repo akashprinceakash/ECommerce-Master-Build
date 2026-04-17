@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "zUBNgx-DXsBH-MOAvS4rj"
@@ -18,3 +17,9 @@ id = "BG9Ws87GkjSPQeknOx9TA"
 uri = "file://artifacts/kasha/public/images/product-jacket.png"
 type = "image"
 title = "Luxury Jacket Product Shot"
+
+[[outputs]]
+id = "WicUZAl5xj8pkA_wEYvjt"
+uri = "file://kasha-project.tar.gz"
+type = "unspecified"
+title = "KA.SHA — Full Project (tar.gz)"
