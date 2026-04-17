@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
-import { db, productsTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
+import { db, productsTable, customizationsTable } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import { clerkClient } from "@clerk/express";
 import multer from "multer";
@@ -184,6 +184,61 @@ router.post("/admin/upload/thumbnail", requireAuth, (req, res, next) => {
       res.json({ url, filename: req.file.filename });
     });
   });
+});
+
+router.get("/admin/customizations", requireAuth, async (req, res): Promise<void> => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+
+  const customizations = await db
+    .select({
+      id: customizationsTable.id,
+      userId: customizationsTable.userId,
+      productId: customizationsTable.productId,
+      name: customizationsTable.name,
+      color: customizationsTable.color,
+      size: customizationsTable.size,
+      canvasData: customizationsTable.canvasData,
+      previewImageUrl: customizationsTable.previewImageUrl,
+      createdAt: customizationsTable.createdAt,
+      updatedAt: customizationsTable.updatedAt,
+      productName: productsTable.name,
+      productModelUrl: productsTable.modelUrl,
+      productThumbnailUrl: productsTable.thumbnailUrl,
+    })
+    .from(customizationsTable)
+    .leftJoin(productsTable, eq(customizationsTable.productId, productsTable.id))
+    .orderBy(desc(customizationsTable.updatedAt));
+
+  const userIds = [...new Set(customizations.map(c => c.userId))];
+  const userMap: Record<string, { email: string; name: string }> = {};
+
+  await Promise.all(
+    userIds.map(async (uid) => {
+      try {
+        const user = await clerkClient.users.getUser(uid);
+        const email = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress ?? uid;
+        const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || email;
+        userMap[uid] = { email, name };
+      } catch {
+        userMap[uid] = { email: uid, name: uid };
+      }
+    })
+  );
+
+  const result = customizations.map(c => ({
+    ...c,
+    userEmail: userMap[c.userId]?.email ?? c.userId,
+    userName: userMap[c.userId]?.name ?? c.userId,
+  }));
+
+  res.json(result);
+});
+
+router.get("/admin/check", requireAuth, async (req, res): Promise<void> => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  res.json({ isAdmin: true });
 });
 
 export default router;

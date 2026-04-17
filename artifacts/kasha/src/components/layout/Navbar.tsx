@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Show, useClerk, useUser } from "@clerk/react";
-import { ShoppingBag, X, Menu, User as UserIcon } from "lucide-react";
+import { ShoppingBag, X, Menu, User as UserIcon, ShieldCheck } from "lucide-react";
+import { getApiUrl } from "@/lib/api";
 import { useGetCart, getGetCartQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,22 @@ export function Navbar() {
   const { openCart, isCartOpen, closeCart } = useCart();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    const checkAdmin = async () => {
+      try {
+        const clerk = (window as any).Clerk;
+        const token = clerk?.session ? await clerk.session.getToken() : null;
+        const headers: Record<string, string> = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        const res = await fetch(`${getApiUrl()}/api/admin/check`, { headers });
+        setIsAdmin(res.ok);
+      } catch { setIsAdmin(false); }
+    };
+    checkAdmin();
+  }, [user]);
 
   const { data: cart } = useGetCart({
     query: {
@@ -100,6 +117,13 @@ export function Navbar() {
                 ))}
               </div>
 
+              {isAdmin && (
+                <Link href="/admin">
+                  <button className="hidden md:flex items-center gap-1.5 bg-emerald-600 text-white text-[10px] font-bold tracking-[0.12em] px-4 py-2 hover:bg-emerald-700 transition-colors whitespace-nowrap">
+                    <ShieldCheck className="w-3 h-3" /> ADMIN
+                  </button>
+                </Link>
+              )}
               <Link href="/products/1/customize">
                 <button className="hidden md:flex items-center bg-black text-white text-[10px] font-bold tracking-[0.12em] px-4 py-2 hover:bg-gray-900 transition-colors whitespace-nowrap">
                   CUSTOMISE
@@ -124,6 +148,16 @@ export function Navbar() {
                     <DropdownMenuItem asChild>
                       <Link href="/orders" className="w-full cursor-pointer text-sm">Orders</Link>
                     </DropdownMenuItem>
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin" className="w-full cursor-pointer text-sm font-semibold text-emerald-700 flex items-center gap-2">
+                            <ShieldCheck className="w-3.5 h-3.5" /> Admin Panel
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="cursor-pointer text-sm text-red-600 focus:text-red-600"
