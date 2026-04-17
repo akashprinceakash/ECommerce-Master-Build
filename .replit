@@ -41,8 +41,3 @@ externalPort = 3001
 
 [nix]
 channel = "stable-25_05"
-
-[userenv]
-
-[userenv.shared]
-ADMIN_EMAILS = "akashprinceakash9986@gmail.com"
