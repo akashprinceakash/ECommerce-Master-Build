@@ -5,6 +5,8 @@ import { clerkMiddleware } from "@clerk/express";
 import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import path from "path";
+import fs from "fs";
 
 const app: Express = express();
 
@@ -35,6 +37,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(clerkMiddleware());
+
+const publicDir = path.join(process.cwd(), "public");
+if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
+app.use("/api/public", express.static(publicDir));
 
 app.use("/api", router);
 

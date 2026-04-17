@@ -5,6 +5,7 @@ import customizationsRouter from "./customizations";
 import cartRouter from "./cart";
 import ordersRouter from "./orders";
 import usersRouter from "./users";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(customizationsRouter);
 router.use(cartRouter);
 router.use(ordersRouter);
 router.use(usersRouter);
+router.use(adminRouter);
 
 export default router;

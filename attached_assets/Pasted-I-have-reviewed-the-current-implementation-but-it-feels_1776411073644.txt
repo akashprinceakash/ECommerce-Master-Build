@@ -1,0 +1,85 @@
+I have reviewed the current implementation, but it feels like a prototype and does not fully meet client-level production requirements.
+
+Please upgrade the application to match a modern, production-ready 3D clothing customization platform. Use the current UI only as a visual reference, not as the final structure.
+
+### 1. Core Requirement: Advanced 3D Customization
+
+The current 3D implementation is limited.
+
+Upgrade to:
+
+* Fully interactive 3D customization (prefer Three.js instead of only model-viewer if needed)
+* Ability to customize individual garment parts (collar, sleeves, body separately)
+* Real-time texture updates (fabric, patterns, logos)
+* Smooth camera control (rotate, zoom, pan)
+* High-quality lighting and environment
+
+### 2. Design Editor (Upgrade Existing Fabric.js)
+
+Enhance current design system:
+
+* Proper drag-and-drop logo placement on 3D model
+* Front / Back / Sleeve switching views
+* Save and reload designs
+* Layer management (text, image, shapes)
+* Export final design
+
+### 3. Admin Panel (Critical Missing Feature)
+
+The system currently has no admin control, which is not acceptable.
+
+Add:
+
+* Admin login dashboard
+* Product management:
+
+  * Add/edit/delete clothing products
+  * Upload 3D models (.glb)
+  * Configure customizable parts (materials)
+  * Set pricing and variants
+* View user designs/orders
+
+### 4. Backend System (Mandatory)
+
+Convert this from frontend-only to full-stack:
+
+* Create APIs:
+
+  * Products CRUD
+  * Designs save/load
+  * Orders
+* Use database (MongoDB or PostgreSQL)
+* Store:
+
+  * Product data
+  * 3D model URLs
+  * User customizations
+
+### 5. User Experience (Make it Premium)
+
+Upgrade UI to feel like a premium brand (similar to luxury eCommerce):
+
+* Smooth animations
+* Clean product pages
+* Separate pages:
+
+  * Home
+  * Product listing
+  * Product customization
+  * Cart / checkout
+
+### 6. Fix Current Issues
+
+* Ensure .glb files render in browser (not download)
+* Remove hardcoded data
+* Improve performance and loading states
+
+### Final Expectation:
+
+This should not look like a demo tool. It must feel like a real product platform where:
+
+* Admin manages products
+* Users customize in 3D
+* Designs can be saved and ordered
+
+Please implement this as a complete, production-ready system.

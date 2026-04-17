@@ -16,6 +16,7 @@ import OrdersPage from "@/pages/orders";
 import OrderDetailPage from "@/pages/order-detail";
 import ProfilePage from "@/pages/profile";
 import HeritagePage from "@/pages/heritage";
+import AdminPage from "@/pages/admin";
 
 const queryClient = new QueryClient();
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -82,6 +83,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/products/:id" component={ProductDetailPage} />
           <Route path="/products/:id/customize" component={CustomizePage} />
           <Route path="/heritage" component={HeritagePage} />
+          <Route path="/admin" component={AdminPage} />
           
           <ProtectedRoute path="/cart" component={CartPage} />
           <ProtectedRoute path="/checkout" component={CheckoutPage} />

@@ -43,6 +43,28 @@ KA.SHA is a full-stack luxury golf/sportswear fashion eCommerce web application 
 - `src/contexts/CartContext.tsx` — Global open/close state for cart drawer
 - `src/components/3d/ModelViewerCustomizer.tsx` — Bespoke Studio with 3D/2D upload support
 
+## Admin Panel
+- Route: `/admin`
+- Protected: requires Clerk `publicMetadata.role === "admin"` OR email matching `ADMIN_EMAILS` env var (comma-separated)
+- Features: Product CRUD (create, edit, delete), .glb model file upload, thumbnail upload
+- API routes: `GET/POST /api/admin/products`, `PUT/DELETE /api/admin/products/:id`, `POST /api/admin/upload/model`, `POST /api/admin/upload/thumbnail`
+- Uploaded files stored in `artifacts/api-server/public/models/` and `public/thumbnails/`
+- Served at `/api/public/models/*` and `/api/public/thumbnails/*`
+
+To grant admin access to a user: In the Clerk Dashboard, find the user → Metadata → Public Metadata → set `{"role": "admin"}`
+
+## Bespoke Studio
+- Full-screen dark studio (radial dark gradient: `#1f232e` → `#100d0b`)
+- Left: `model-viewer` with fading loading overlay, WebGL fallback to product thumbnail
+- Right: Glassmorphic panel (450px, rounded 24px, backdrop blur)
+  - "Craft Your Style" header with gradient text
+  - Tabs: "Parts & Colors" | "Design (Front)"
+  - Parts tab: Upload .glb model, dynamic material list with per-part color pickers, S/M/L/XL size buttons
+  - Design tab: Add Text (color+font picker), upload graphic/logo, add shapes (Line/Curve/Stripes), tweaks panel (layer selector, scale/posX/posY sliders), visible Fabric.js canvas (print area, 1024×1024)
+- Canvas data (JSON) + preview image (data URL) saved to `customizations` table per user
+- CartDrawer + Cart page show user's custom preview image with "CUSTOM" badge when set
+- Canvas state auto-restored when user revisits the same product's studio
+
 ## Pages / Routes
 | Route | Component | Auth |
 |-------|-----------|------|
