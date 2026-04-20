@@ -204,8 +204,9 @@ export default function CustomizePage() {
     fcRef.current = fc;
 
     const scaleCanvas = () => {
-      const w = document.getElementById("fc-wrapper")?.clientWidth;
-      if (!w) return;
+      // clientWidth is 0 when the wrapper is off-screen (position:fixed left:-9999px)
+      // Fall back to 272px so the canvas always initialises at a usable resolution
+      const w = document.getElementById("fc-wrapper")?.clientWidth || 272;
       fc.setZoom(w / 1024); fc.setWidth(w); fc.setHeight(w);
     };
     window.addEventListener("resize", scaleCanvas);
@@ -233,6 +234,18 @@ export default function CustomizePage() {
       fcRef.current = null;
     };
   }, []);
+
+  // ── Re-scale canvas when CANVAS tab becomes visible ──────────────────────
+  useEffect(() => {
+    if (rightTab !== "canvas") return;
+    const fc = fcRef.current; if (!fc) return;
+    // Give the DOM a frame to render the wrapper at full width, then scale
+    requestAnimationFrame(() => {
+      const w = document.getElementById("fc-wrapper")?.clientWidth || 272;
+      fc.setZoom(w / 1024); fc.setWidth(w); fc.setHeight(w);
+      fc.renderAll();
+    });
+  }, [rightTab]);
 
   // ── Texture sync: Fabric canvas → PNG → model-viewer material ─────────────
   const syncTexture = useCallback(async () => {
@@ -1253,15 +1266,29 @@ export default function CustomizePage() {
                 <button onClick={clearCanvas} style={{ ...btnStyle("secondary"),flex:1,padding:"6px 0",fontSize:"11px" }}>Clear All</button>
                 <button onClick={removeSel} style={{ ...btnStyle("danger"),flex:1,padding:"6px 0",fontSize:"11px" }}>Remove Sel.</button>
               </div>
-              {/* Live Fabric canvas preview */}
+              {/* Live Fabric canvas preview — always-mounted canvas is shown here */}
               <div>
                 <div style={{ ...sl,marginBottom:"8px" }}>Live Canvas — drag elements to reposition</div>
-                <div id="fc-wrapper" style={{ background:"#fff",borderRadius:"9px",overflow:"hidden",border:`1px solid ${V.bd2}`,width:"100%",aspectRatio:"1/1",position:"relative" }}>
-                  <canvas ref={canvasElRef} />
-                </div>
               </div>
             </div>
           )}
+
+          {/*
+           * ALWAYS-MOUNTED FABRIC CANVAS
+           * This div must NEVER be conditionally rendered.
+           * When off the canvas tab it sits off-screen so the DOM element
+           * (and therefore fcRef.current) is always valid, making save /
+           * export / color-sync work from every tab.
+           */}
+          <div
+            id="fc-wrapper"
+            style={rightTab === "canvas"
+              ? { background:"#fff",borderRadius:"9px",overflow:"hidden",border:`1px solid ${V.bd2}`,width:"100%",aspectRatio:"1/1",position:"relative",margin:"0 0 14px 0" }
+              : { position:"fixed",left:"-9999px",top:0,width:"272px",height:"272px",overflow:"hidden",pointerEvents:"none",visibility:"hidden" }
+            }
+          >
+            <canvas ref={canvasElRef} />
+          </div>
         </div>
       </div>
 
