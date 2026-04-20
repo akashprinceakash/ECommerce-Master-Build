@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golf T-Shirt 3D Customizer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@400;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f2ee;
+    --surface: #ffffff;
+    --surface2: #f0ece6;
+    --text: #1a1a18;
+    --text2: #6b6860;
+    --accent: #362223;
+    --accent2: #576043;
+    --border: #e0dbd3;
+    --active: #362223;
+    --r: 10px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: var(--accent);
+    color: #f8f4e9;
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+  }
+
+  header .badge {
+    background: #f8f4e9;
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .main-layout {
+    display: flex;
+    flex: 1;
+    height: calc(100vh - 52px);
+    overflow: hidden;
+  }
+
+  /* ─── Left Sidebar ─── */
+  .sidebar-left {
+    width: 260px;
+    min-width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .sidebar-left::-webkit-scrollbar { width: 4px; }
+  .sidebar-left::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ─── Viewport ─── */
+  .viewport {
+    flex: 1;
+    position: relative;
+    background: linear-gradient(145deg, #e8e4dc 0%, #d9d5cc 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  #canvas-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+  #canvas-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    cursor: grab;
+  }
+
+  #canvas-container canvas:active {
+    cursor: grabbing;
+  }
+
+  .viewport-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    padding: 6px 14px;
+  }
+
+  .view-btn {
+    background: none;
+    border: none;
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text2);
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 20px;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+
+  .view-btn:hover, .view-btn.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  .style-badge {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .style-badge span {
+    color: var(--text2);
+    font-size: 11px;
+    display: block;
+  }
+
+  /* ─── Right Sidebar ─── */
+  .sidebar-right {
+    width: 300px;
+    min-width: 300px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .sidebar-right::-webkit-scrollbar { width: 4px; }
+  .sidebar-right::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ─── Section ─── */
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 10px;
+  }
+
+  /* ─── Style Grid ─── */
+  .style-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .style-card {
+    border: 1.5px solid var(--border);
+    border-radius: var(--r);
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    background: var(--bg);
+  }
+
+  .style-card:hover {
+    border-color: var(--accent);
+  }
+
+  .style-card.active {
+    border-color: var(--accent);
+    background: #f8f2ee;
+  }
+
+  .style-card .preview {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    margin-bottom: 5px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .style-card .label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text2);
+  }
+
+  /* ─── Color Swatches ─── */
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+  }
+
+  .swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.12s, border-color 0.12s;
+    position: relative;
+  }
+
+  .swatch:hover { transform: scale(1.15); }
+  .swatch.active { border-color: var(--accent); transform: scale(1.1); }
+  .swatch.white { border: 2px solid var(--border); }
+
+  /* ─── Two-tone toggle ─── */
+  .tone-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .tone-label {
+    font-size: 12px;
+    color: var(--text2);
+    width: 70px;
+    flex-shrink: 0;
+  }
+
+  .tone-swatch-row {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+
+  .tone-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.12s;
+  }
+
+  .tone-swatch:hover { transform: scale(1.15); }
+  .tone-swatch.active { border-color: var(--accent); transform: scale(1.1); }
+
+  /* ─── Toggle ─── */
+  .toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .toggle-row:last-child { border-bottom: none; }
+
+  .toggle-name {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .toggle-desc {
+    font-size: 11px;
+    color: var(--text2);
+  }
+
+  .toggle {
+    width: 38px;
+    height: 20px;
+    background: var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+    border: none;
+    outline: none;
+  }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  .toggle.on {
+    background: var(--accent);
+  }
+
+  .toggle.on::after {
+    transform: translateX(18px);
+  }
+
+  /* ─── Text Input ─── */
+  .text-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .text-input-group input,
+  .text-input-group select {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .text-input-group input:focus,
+  .text-input-group select:focus {
+    border-color: var(--accent);
+  }
+
+  .text-placement {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .place-btn {
+    padding: 7px 0;
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text2);
+  }
+
+  .place-btn:hover, .place-btn.active {
+    border-color: var(--accent);
+    background: #f8f2ee;
+    color: var(--text);
+  }
+
+  /* ─── Logo Upload ─── */
+  .upload-area {
+    border: 1.5px dashed var(--border);
+    border-radius: var(--r);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--bg);
+  }
+
+  .upload-area:hover {
+    border-color: var(--accent);
+    background: #f8f2ee;
+  }
+
+  .upload-icon {
+    font-size: 24px;
+    margin-bottom: 6px;
+    color: var(--text2);
+  }
+
+  .upload-area p {
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .upload-area strong {
+    color: var(--accent);
+    font-size: 12px;
+  }
+
+  #logo-input { display: none; }
+
+  /* ─── Design Presets ─── */
+  .preset-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .preset-card {
+    aspect-ratio: 0.8;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 0.15s;
+    position: relative;
+  }
+
+  .preset-card:hover {
+    border-color: var(--accent);
+  }
+
+  .preset-card.active {
+    border-color: var(--accent);
+    border-width: 2px;
+  }
+
+  .preset-canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ─── Save Button ─── */
+  .save-btn {
+    width: 100%;
+    padding: 13px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--r);
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    letter-spacing: 0.02em;
+  }
+
+  .save-btn:hover { opacity: 0.88; }
+
+  .save-btn.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1.5px solid var(--accent);
+    margin-top: 8px;
+  }
+
+  /* ─── Style Selector Tabs ─── */
+  .tab-row {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    padding: 4px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 7px 0;
+    border: none;
+    background: none;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 7px;
+    color: var(--text2);
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+
+  .tab.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+
+  /* ─── Size bar ─── */
+  .size-grid {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .size-pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--bg);
+    transition: all 0.15s;
+  }
+
+  .size-pill:hover, .size-pill.active {
+    border-color: var(--accent);
+    background: #f8f2ee;
+  }
+
+  /* ─── Model selector ─── */
+  .model-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .model-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .model-item:hover, .model-item.active {
+    border-color: var(--accent);
+    background: #f8f2ee;
+  }
+
+  .model-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    border: 1px solid var(--border);
+  }
+
+  .model-info { flex: 1; }
+  .model-name { font-size: 13px; font-weight: 500; }
+  .model-type { font-size: 11px; color: var(--text2); }
+
+  /* ─── Quantity ─── */
+  .qty-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .qty-btn {
+    width: 32px;
+    height: 32px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+  }
+
+  .qty-btn:hover { border-color: var(--accent); }
+
+  .qty-val {
+    font-size: 16px;
+    font-weight: 500;
+    min-width: 30px;
+    text-align: center;
+  }
+
+  /* ─── Divider ─── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 2px 0;
+  }
+
+  /* ─── Toast ─── */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--accent);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 9999;
+    transition: transform 0.3s;
+    white-space: nowrap;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ─── Color text label ─── */
+  .color-val {
+    font-size: 11px;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+
+  /* ─── Admin panel indicator ─── */
+  .admin-tag {
+    font-size: 10px;
+    background: #e8f4e8;
+    color: #2d6b2d;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* Slider range */
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .slider-val {
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 28px;
+    text-align: right;
+  }
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Golf Collection — Studio Customizer</h1>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <div class="badge">3D Preview</div>
+    <div class="badge" style="background:#4a6741;color:white;">Live</div>
+  </div>
+</header>
+
+<div class="main-layout">
+
+  <!-- ─── Left Panel ─── -->
+  <div class="sidebar-left">
+
+    <div>
+      <div class="section-label" style="display:flex;justify-content:space-between;align-items:center;">
+        3D Models <span class="admin-tag">Admin</span>
+      </div>
+      <div class="model-list" id="model-list">
+        <div class="model-item active" data-model="0" onclick="selectModel(0)">
+          <div class="model-thumb">👕</div>
+          <div class="model-info">
+            <div class="model-name">Classic Polo</div>
+            <div class="model-type">GT001–GT005 Series</div>
+          </div>
+        </div>
+        <div class="model-item" data-model="1" onclick="selectModel(1)">
+          <div class="model-thumb">🏌️</div>
+          <div class="model-info">
+            <div class="model-name">Sport Panel Polo</div>
+            <div class="model-type">GT006–GT012 Series</div>
+          </div>
+        </div>
+        <div class="model-item" data-model="2" onclick="selectModel(2)">
+          <div class="model-thumb">⛳</div>
+          <div class="model-info">
+            <div class="model-name">Wave Panel Polo</div>
+            <div class="model-type">GT013–GT018 Series</div>
+          </div>
+        </div>
+        <div class="model-item" data-model="3" onclick="selectModel(3)">
+          <div class="model-thumb">🎽</div>
+          <div class="model-info">
+            <div class="model-name">Curve Panel Polo</div>
+            <div class="model-type">GT019–GT024 Series</div>
+          </div>
+        </div>
+        <div class="model-item" data-model="4" onclick="selectModel(4)">
+          <div class="model-thumb">✨</div>
+          <div class="model-info">
+            <div class="model-name">Raglan Polo</div>
+            <div class="model-type">GT025–GT032 Series</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <div class="section-label">Style Presets</div>
+      <div class="preset-grid" id="preset-grid"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <div class="section-label">Size</div>
+      <div class="size-grid">
+        <div class="size-pill" onclick="setSize(this,'XS')">XS</div>
+        <div class="size-pill" onclick="setSize(this,'S')">S</div>
+        <div class="size-pill active" onclick="setSize(this,'M')">M</div>
+        <div class="size-pill" onclick="setSize(this,'L')">L</div>
+        <div class="size-pill" onclick="setSize(this,'XL')">XL</div>
+        <div class="size-pill" onclick="setSize(this,'XXL')">XXL</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Quantity</div>
+      <div class="qty-row">
+        <button class="qty-btn" onclick="changeQty(-1)">−</button>
+        <span class="qty-val" id="qty">1</span>
+        <button class="qty-btn" onclick="changeQty(1)">+</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─── 3D Viewport ─── -->
+  <div class="viewport">
+    <div id="canvas-container"></div>
+    <div class="style-badge">
+      <span>Style</span>
+      <strong id="current-style">GT001</strong>
+    </div>
+    <div class="viewport-controls">
+      <button class="view-btn active" onclick="setView('front',this)">Front</button>
+      <button class="view-btn" onclick="setView('back',this)">Back</button>
+      <button class="view-btn" onclick="setView('side',this)">Side</button>
+      <button class="view-btn" onclick="setView('rotate',this)">⟳ Auto</button>
+    </div>
+  </div>
+
+  <!-- ─── Right Panel ─── -->
+  <div class="sidebar-right">
+
+    <!-- Tabs -->
+    <div class="tab-row">
+      <button class="tab active" onclick="switchTab('colors',this)">Colors</button>
+      <button class="tab" onclick="switchTab('design',this)">Design</button>
+      <button class="tab" onclick="switchTab('text',this)">Text</button>
+      <button class="tab" onclick="switchTab('logo',this)">Logo</button>
+    </div>
+
+    <!-- COLORS TAB -->
+    <div id="tab-colors">
+      <div style="margin-bottom:16px;">
+        <div class="section-label">Primary Color</div>
+        <div class="color-grid" id="primary-colors"></div>
+        <div class="color-val" id="primary-val">#C5D3DE</div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div class="section-label">Secondary / Trim Color</div>
+        <div class="color-grid" id="secondary-colors"></div>
+        <div class="color-val" id="secondary-val">#362223</div>
+      </div>
+      <div>
+        <div class="section-label">Custom Color</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="color" id="custom-primary" value="#C5D3DE"
+            style="width:44px;height:36px;border:1px solid var(--border);border-radius:8px;cursor:pointer;padding:2px;"
+            onchange="applyCustomColor('primary',this.value)">
+          <span style="font-size:12px;color:var(--text2);">Primary</span>
+          <input type="color" id="custom-secondary" value="#362223"
+            style="width:44px;height:36px;border:1px solid var(--border);border-radius:8px;cursor:pointer;padding:2px;margin-left:8px;"
+            onchange="applyCustomColor('secondary',this.value)">
+          <span style="font-size:12px;color:var(--text2);">Trim</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- DESIGN TAB -->
+    <div id="tab-design" style="display:none;">
+      <div class="section-label">Garment Options</div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-name">Sleeves</div>
+          <div class="toggle-desc">Short / sleeveless</div>
+        </div>
+        <button class="toggle on" id="toggle-sleeves" onclick="toggleFeature('sleeves')"></button>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-name">Collar</div>
+          <div class="toggle-desc">Polo collar style</div>
+        </div>
+        <button class="toggle on" id="toggle-collar" onclick="toggleFeature('collar')"></button>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-name">Button Placket</div>
+          <div class="toggle-desc">Front 3-button placket</div>
+        </div>
+        <button class="toggle on" id="toggle-placket" onclick="toggleFeature('placket')"></button>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-name">Side Panel</div>
+          <div class="toggle-desc">Contrast color panel</div>
+        </div>
+        <button class="toggle on" id="toggle-panel" onclick="toggleFeature('panel')"></button>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-name">Chest Stripe</div>
+          <div class="toggle-desc">Diagonal accent stripe</div>
+        </div>
+        <button class="toggle" id="toggle-stripe" onclick="toggleFeature('stripe')"></button>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div class="section-label">Pattern Overlay</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
+          <div class="preset-card" onclick="setPattern(this,'none')" style="display:flex;align-items:center;justify-content:center;background:#f5f2ee;" title="None">
+            <span style="font-size:10px;color:var(--text2);">None</span>
+          </div>
+          <div class="preset-card" onclick="setPattern(this,'stripes')" style="background:repeating-linear-gradient(45deg,#e8e4dc,#e8e4dc 4px,#d9d5cc 4px,#d9d5cc 8px);" title="Stripes"></div>
+          <div class="preset-card" onclick="setPattern(this,'grid')" style="background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:12px 12px;background-color:#f5f2ee;" title="Grid"></div>
+          <div class="preset-card" onclick="setPattern(this,'dots')" style="background-color:#f5f2ee;background-image:radial-gradient(circle,#ccc 1px,transparent 1px);background-size:10px 10px;" title="Dots"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEXT TAB -->
+    <div id="tab-text" style="display:none;">
+      <div class="text-input-group">
+        <div class="section-label">Add Text</div>
+        <input type="text" id="text-content" placeholder="e.g. GOLF CLUB 2024" maxlength="30">
+        <select id="text-font">
+          <option value="Arial">Arial (Clean)</option>
+          <option value="'Times New Roman'">Serif Classic</option>
+          <option value="'Courier New'">Monospace</option>
+          <option value="Impact">Impact Bold</option>
+          <option value="'Comic Sans MS'">Casual</option>
+        </select>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <label style="font-size:12px;color:var(--text2);flex-shrink:0;">Color</label>
+          <input type="color" id="text-color" value="#FFFFFF"
+            style="width:36px;height:30px;border:1px solid var(--border);border-radius:6px;cursor:pointer;padding:2px;">
+          <label style="font-size:12px;color:var(--text2);flex-shrink:0;margin-left:6px;">Size</label>
+          <div class="slider-row" style="flex:1;">
+            <input type="range" id="text-size" min="10" max="60" value="24" oninput="document.getElementById('text-size-val').textContent=this.value">
+            <span class="slider-val" id="text-size-val">24</span>
+          </div>
+        </div>
+        <div class="section-label" style="margin-top:4px;">Placement</div>
+        <div class="text-placement">
+          <div class="place-btn active" onclick="setTextPos(this,'front-chest')">Front Chest</div>
+          <div class="place-btn" onclick="setTextPos(this,'front-center')">Front Center</div>
+          <div class="place-btn" onclick="setTextPos(this,'back-top')">Back Top</div>
+          <div class="place-btn" onclick="setTextPos(this,'back-center')">Back Center</div>
+          <div class="place-btn" onclick="setTextPos(this,'sleeve-left')">Left Sleeve</div>
+          <div class="place-btn" onclick="setTextPos(this,'sleeve-right')">Right Sleeve</div>
+        </div>
+        <button class="save-btn" style="margin-top:4px;" onclick="applyText()">Apply Text to Shirt</button>
+        <button class="save-btn secondary" onclick="removeText()">Remove Text</button>
+      </div>
+    </div>
+
+    <!-- LOGO TAB -->
+    <div id="tab-logo" style="display:none;">
+      <div class="section-label">Upload Logo</div>
+      <div class="upload-area" onclick="document.getElementById('logo-input').click()">
+        <div class="upload-icon">⬆</div>
+        <p><strong>Click to upload</strong></p>
+        <p>PNG, SVG, JPG (max 2MB)</p>
+      </div>
+      <input type="file" id="logo-input" accept="image/*" onchange="handleLogoUpload(this)">
+
+      <div id="logo-preview-wrap" style="display:none;margin-top:12px;">
+        <img id="logo-preview" style="max-width:100%;border-radius:8px;border:1px solid var(--border);">
+      </div>
+
+      <div style="margin-top:14px;">
+        <div class="section-label">Logo Placement</div>
+        <div class="text-placement">
+          <div class="place-btn active" onclick="setLogoPos(this,'front-chest')">Front Chest</div>
+          <div class="place-btn" onclick="setLogoPos(this,'front-center')">Front Center</div>
+          <div class="place-btn" onclick="setLogoPos(this,'back-top')">Back Top</div>
+          <div class="place-btn" onclick="setLogoPos(this,'back-center')">Back Center</div>
+          <div class="place-btn" onclick="setLogoPos(this,'sleeve-left')">Left Sleeve</div>
+          <div class="place-btn" onclick="setLogoPos(this,'sleeve-right')">Right Sleeve</div>
+        </div>
+        <div style="margin-top:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <label style="font-size:12px;color:var(--text2);">Logo Size</label>
+            <span class="slider-val" id="logo-size-val">80px</span>
+          </div>
+          <input type="range" id="logo-size" min="20" max="150" value="80"
+            oninput="updateLogoSize(this.value)">
+        </div>
+        <button class="save-btn" style="margin-top:10px;" onclick="applyLogo()">Apply Logo</button>
+        <button class="save-btn secondary" onclick="removeLogo()">Remove Logo</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Save / Export -->
+    <div>
+      <div class="section-label" style="display:flex;justify-content:space-between;align-items:center;">
+        Save Design <span class="admin-tag">Admin View</span>
+      </div>
+      <button class="save-btn" onclick="saveDesign()">💾 Save Customer Design</button>
+      <button class="save-btn secondary" onclick="exportDesign()">Export PNG Mockup</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Summary -->
+    <div id="summary">
+      <div class="section-label">Design Summary</div>
+      <div style="font-size:12px;color:var(--text2);display:flex;flex-direction:column;gap:5px;" id="summary-content">
+        <div style="display:flex;justify-content:space-between;"><span>Style</span><span style="color:var(--text);font-weight:500;" id="sum-style">GT001</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Primary</span><span style="color:var(--text);font-weight:500;" id="sum-primary">#C5D3DE</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Trim</span><span style="color:var(--text);font-weight:500;" id="sum-secondary">#362223</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Sleeves</span><span style="color:var(--text);font-weight:500;" id="sum-sleeves">Yes</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Text</span><span style="color:var(--text);font-weight:500;" id="sum-text">None</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Logo</span><span style="color:var(--text);font-weight:500;" id="sum-logo">None</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Size / Qty</span><span style="color:var(--text);font-weight:500;" id="sum-size">M × 1</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast">Design saved!</div>
+
+<script>
+/* ═══════════════════════════════════════
+   STATE
+═══════════════════════════════════════ */
+const state = {
+  modelIdx: 0,
+  primaryColor: '#C5D3DE',
+  secondaryColor: '#362223',
+  sleeves: true,
+  collar: true,
+  placket: true,
+  panel: true,
+  stripe: false,
+  pattern: 'none',
+  text: '',
+  textFont: 'Arial',
+  textColor: '#FFFFFF',
+  textSize: 24,
+  textPos: 'front-chest',
+  logoUrl: null,
+  logoPos: 'front-chest',
+  logoSize: 80,
+  size: 'M',
+  qty: 1,
+  presetIdx: 0,
+  autoRotate: false,
+  currentStyle: 'GT001',
+};
+
+/* ═══════════════════════════════════════
+   COLOR PALETTE (from PDF)
+═══════════════════════════════════════ */
+const PALETTE = [
+  '#C5D3DE','#F8F4E9','#ACB1A1','#F0CED2',
+  '#E9DAC3','#FFFFFF','#585858','#576043',
+  '#DA1F26','#273878','#243C2F','#362223',
+  '#000000','#F8F4E9',
+];
+
+const PRESETS = [
+  {name:'GT001', primary:'#C5D3DE', secondary:'#362223'},
+  {name:'GT002', primary:'#F0CED2', secondary:'#362223'},
+  {name:'GT003', primary:'#ACB1A1', secondary:'#362223'},
+  {name:'GT004', primary:'#E9DAC3', secondary:'#362223'},
+  {name:'GT005', primary:'#FFFFFF', secondary:'#273878'},
+  {name:'GT006', primary:'#576043', secondary:'#000000'},
+  {name:'GT007', primary:'#DA1F26', secondary:'#000000'},
+  {name:'GT008', primary:'#273878', secondary:'#000000'},
+  {name:'GT009', primary:'#F0CED2', secondary:'#585858'},
+  {name:'GT010', primary:'#F0CED2', secondary:'#000000'},
+  {name:'GT011', primary:'#000000', secondary:'#585858'},
+  {name:'GT012', primary:'#ACB1A1', secondary:'#576043'},
+];
+
+/* ═══════════════════════════════════════
+   THREE.JS SETUP
+═══════════════════════════════════════ */
+let scene, camera, renderer, shirtGroup;
+let bodyMesh, sleevesMesh, collarMesh, placketMesh, panelMesh, stripeMesh;
+let textCanvas, textTexture, textSprite;
+let logoImg = null, logoSprite = null;
+let isDragging = false, prevMouse = {x:0, y:0};
+let autoRotateInterval = null;
+let targetY = 0, currentY = 0;
+
+function initThree() {
+  const container = document.getElementById('canvas-container');
+  const W = container.clientWidth, H = container.clientHeight;
+
+  scene = new THREE.Scene();
+  scene.background = null;
+
+  camera = new THREE.PerspectiveCamera(45, W/H, 0.1, 100);
+  camera.position.set(0, 0.3, 3.2);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(W, H);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.shadowMap.enabled = true;
+  container.appendChild(renderer.domElement);
+
+  // Lighting
+  const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+  scene.add(ambient);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(2, 4, 3);
+  dirLight.castShadow = true;
+  scene.add(dirLight);
+  const rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
+  rimLight.position.set(-2, 1, -2);
+  scene.add(rimLight);
+  const fillLight = new THREE.PointLight(0xfff0e0, 0.4, 10);
+  fillLight.position.set(0, 2, 3);
+  scene.add(fillLight);
+
+  shirtGroup = new THREE.Group();
+  scene.add(shirtGroup);
+
+  buildShirt();
+  setupDrag();
+  animate();
+}
+
+function buildShirt() {
+  if (shirtGroup) {
+    while(shirtGroup.children.length) shirtGroup.remove(shirtGroup.children[0]);
+  }
+
+  const pColor = new THREE.Color(state.primaryColor);
+  const sColor = new THREE.Color(state.secondaryColor);
+
+  // ── Body ──
+  const bodyGeo = createBodyGeometry();
+  const bodyMat = new THREE.MeshLambertMaterial({ color: pColor, side: THREE.DoubleSide });
+  bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+  bodyMesh.receiveShadow = true;
+  bodyMesh.castShadow = true;
+  shirtGroup.add(bodyMesh);
+
+  // ── Side Panels ──
+  if (state.panel) {
+    const panelGeo = createPanelGeometry();
+    const panelMat = new THREE.MeshLambertMaterial({ color: sColor, side: THREE.DoubleSide });
+    panelMesh = new THREE.Mesh(panelGeo, panelMat);
+    shirtGroup.add(panelMesh);
+  }
+
+  // ── Collar ──
+  if (state.collar) {
+    const collarGeo = createCollarGeometry();
+    const collarMat = new THREE.MeshLambertMaterial({ color: sColor, side: THREE.DoubleSide });
+    collarMesh = new THREE.Mesh(collarGeo, collarMat);
+    shirtGroup.add(collarMesh);
+  }
+
+  // ── Sleeves ──
+  if (state.sleeves) {
+    const sleeveMat = new THREE.MeshLambertMaterial({ color: pColor, side: THREE.DoubleSide });
+    const sleeveGeo = createSleevesGeometry();
+    sleevesMesh = new THREE.Mesh(sleeveGeo, sleeveMat);
+    shirtGroup.add(sleevesMesh);
+
+    // Sleeve cuffs
+    const cuffMat = new THREE.MeshLambertMaterial({ color: sColor, side: THREE.DoubleSide });
+    const cuffGeo = createCuffGeometry();
+    const cuffMesh = new THREE.Mesh(cuffGeo, cuffMat);
+    shirtGroup.add(cuffMesh);
+  }
+
+  // ── Placket ──
+  if (state.placket) {
+    const placketGeo = createPlacketGeometry();
+    const placketMat = new THREE.MeshLambertMaterial({ color: sColor, side: THREE.DoubleSide });
+    placketMesh = new THREE.Mesh(placketGeo, placketMat);
+    shirtGroup.add(placketMesh);
+    addButtons();
+  }
+
+  // ── Diagonal stripe ──
+  if (state.stripe) {
+    const stripeGeo = createStripeGeometry();
+    const stripeMat = new THREE.MeshLambertMaterial({ color: sColor, side: THREE.DoubleSide });
+    stripeMesh = new THREE.Mesh(stripeGeo, stripeMat);
+    shirtGroup.add(stripeMesh);
+  }
+
+  // ── Bottom hem ──
+  const hemGeo = new THREE.TorusGeometry(0.52, 0.015, 8, 60, Math.PI);
+  const hemMat = new THREE.MeshLambertMaterial({ color: sColor });
+  const hemMesh = new THREE.Mesh(hemGeo, hemMat);
+  hemMesh.position.set(0, -0.88, 0);
+  hemMesh.rotation.x = Math.PI/2;
+  shirtGroup.add(hemMesh);
+
+  // Text & Logo overlays
+  if (state.text) applyText();
+  if (state.logoUrl) applyLogo();
+}
+
+/* ─── Geometry helpers ─── */
+function createBodyGeometry() {
+  const shape = new THREE.Shape();
+  shape.moveTo(-0.52, -0.88);
+  shape.lineTo(-0.52, 0.55);
+  shape.bezierCurveTo(-0.52, 0.7, -0.38, 0.78, -0.28, 0.78);
+  shape.lineTo(0.28, 0.78);
+  shape.bezierCurveTo(0.38, 0.78, 0.52, 0.7, 0.52, 0.55);
+  shape.lineTo(0.52, -0.88);
+  shape.lineTo(-0.52, -0.88);
+
+  const geo = new THREE.ShapeGeometry(shape);
+  geo.computeVertexNormals();
+
+  // Give it thickness
+  const extruded = new THREE.ExtrudeGeometry(shape, { depth: 0.05, bevelEnabled: false });
+  return extruded;
+}
+
+function createPanelGeometry() {
+  const modelType = state.modelIdx;
+  let panels = [];
+
+  if (modelType <= 1) {
+    // Simple side bands (GT001-GT012)
+    const leftShape = new THREE.Shape();
+    leftShape.moveTo(-0.52, -0.88);
+    leftShape.lineTo(-0.35, -0.88);
+    leftShape.lineTo(-0.35, 0.55);
+    leftShape.bezierCurveTo(-0.35, 0.65, -0.42, 0.72, -0.52, 0.72);
+    leftShape.lineTo(-0.52, -0.88);
+    panels.push(new THREE.ExtrudeGeometry(leftShape, { depth: 0.06, bevelEnabled: false }));
+
+    const rightShape = new THREE.Shape();
+    rightShape.moveTo(0.52, -0.88);
+    rightShape.lineTo(0.35, -0.88);
+    rightShape.lineTo(0.35, 0.55);
+    rightShape.bezierCurveTo(0.35, 0.65, 0.42, 0.72, 0.52, 0.72);
+    rightShape.lineTo(0.52, -0.88);
+    panels.push(new THREE.ExtrudeGeometry(rightShape, { depth: 0.06, bevelEnabled: false }));
+  } else if (modelType <= 3) {
+    // Wave panels (GT013–GT024)
+    const lShape = new THREE.Shape();
+    lShape.moveTo(-0.52, -0.88);
+    lShape.lineTo(-0.15, -0.88);
+    lShape.bezierCurveTo(-0.32, -0.3, -0.32, 0.3, -0.18, 0.55);
+    lShape.bezierCurveTo(-0.26, 0.7, -0.42, 0.78, -0.52, 0.72);
+    lShape.lineTo(-0.52, -0.88);
+    panels.push(new THREE.ExtrudeGeometry(lShape, { depth: 0.06, bevelEnabled: false }));
+
+    const rShape = new THREE.Shape();
+    rShape.moveTo(0.52, -0.88);
+    rShape.lineTo(0.15, -0.88);
+    rShape.bezierCurveTo(0.32, -0.3, 0.32, 0.3, 0.18, 0.55);
+    rShape.bezierCurveTo(0.26, 0.7, 0.42, 0.78, 0.52, 0.72);
+    rShape.lineTo(0.52, -0.88);
+    panels.push(new THREE.ExtrudeGeometry(rShape, { depth: 0.06, bevelEnabled: false }));
+  } else {
+    // Raglan shoulder (GT025–GT032)
+    const lShape = new THREE.Shape();
+    lShape.moveTo(-0.52, -0.88);
+    lShape.lineTo(-0.35, -0.88);
+    lShape.lineTo(-0.35, 0.1);
+    lShape.bezierCurveTo(-0.28, 0.5, -0.1, 0.7, 0.0, 0.78);
+    lShape.bezierCurveTo(-0.22, 0.8, -0.42, 0.76, -0.52, 0.65);
+    lShape.lineTo(-0.52, -0.88);
+    panels.push(new THREE.ExtrudeGeometry(lShape, { depth: 0.06, bevelEnabled: false }));
+
+    const rShape = new THREE.Shape();
+    rShape.moveTo(0.52, -0.88);
+    rShape.lineTo(0.35, -0.88);
+    rShape.lineTo(0.35, 0.1);
+    rShape.bezierCurveTo(0.28, 0.5, 0.1, 0.7, 0.0, 0.78);
+    rShape.bezierCurveTo(0.22, 0.8, 0.42, 0.76, 0.52, 0.65);
+    rShape.lineTo(0.52, -0.88);
+    panels.push(new THREE.ExtrudeGeometry(rShape, { depth: 0.06, bevelEnabled: false }));
+  }
+
+  // Merge into one geometry
+  const merged = mergeGeos(panels);
+  return merged;
+}
+
+function mergeGeos(geos) {
+  if (geos.length === 1) return geos[0];
+  const { BufferGeometry, BufferAttribute } = THREE;
+  const merged = new BufferGeometry();
+  let totalVerts = 0;
+  for (const g of geos) totalVerts += g.attributes.position.count;
+  const positions = new Float32Array(totalVerts * 3);
+  const normals = new Float32Array(totalVerts * 3);
+  let offset = 0;
+  for (const g of geos) {
+    positions.set(g.attributes.position.array, offset * 3);
+    if (g.attributes.normal) normals.set(g.attributes.normal.array, offset * 3);
+    offset += g.attributes.position.count;
+  }
+  merged.setAttribute('position', new BufferAttribute(positions, 3));
+  merged.setAttribute('normal', new BufferAttribute(normals, 3));
+  return merged;
+}
+
+function createCollarGeometry() {
+  const shape = new THREE.Shape();
+  shape.moveTo(-0.26, 0.78);
+  shape.lineTo(-0.08, 0.78);
+  shape.lineTo(-0.08, 0.95);
+  shape.bezierCurveTo(-0.08, 1.1, -0.26, 1.08, -0.28, 0.95);
+  shape.lineTo(-0.26, 0.78);
+
+  const rightShape = new THREE.Shape();
+  rightShape.moveTo(0.26, 0.78);
+  rightShape.lineTo(0.08, 0.78);
+  rightShape.lineTo(0.08, 0.95);
+  rightShape.bezierCurveTo(0.08, 1.1, 0.26, 1.08, 0.28, 0.95);
+  rightShape.lineTo(0.26, 0.78);
+
+  const g1 = new THREE.ExtrudeGeometry(shape, { depth: 0.05, bevelEnabled: false });
+  const g2 = new THREE.ExtrudeGeometry(rightShape, { depth: 0.05, bevelEnabled: false });
+  return mergeGeos([g1, g2]);
+}
+
+function createSleevesGeometry() {
+  // Left sleeve
+  const lShape = new THREE.Shape();
+  lShape.moveTo(-0.52, 0.55);
+  lShape.lineTo(-0.52, 0.78);
+  lShape.lineTo(-0.9, 0.7);
+  lShape.lineTo(-0.92, 0.45);
+  lShape.lineTo(-0.52, 0.45);
+  lShape.lineTo(-0.52, 0.55);
+
+  const rShape = new THREE.Shape();
+  rShape.moveTo(0.52, 0.55);
+  rShape.lineTo(0.52, 0.78);
+  rShape.lineTo(0.9, 0.7);
+  rShape.lineTo(0.92, 0.45);
+  rShape.lineTo(0.52, 0.45);
+  rShape.lineTo(0.52, 0.55);
+
+  const g1 = new THREE.ExtrudeGeometry(lShape, { depth: 0.05, bevelEnabled: false });
+  const g2 = new THREE.ExtrudeGeometry(rShape, { depth: 0.05, bevelEnabled: false });
+  return mergeGeos([g1, g2]);
+}
+
+function createCuffGeometry() {
+  const lShape = new THREE.Shape();
+  lShape.moveTo(-0.9, 0.7);
+  lShape.lineTo(-0.92, 0.45);
+  lShape.lineTo(-0.98, 0.45);
+  lShape.lineTo(-0.96, 0.7);
+  lShape.lineTo(-0.9, 0.7);
+
+  const rShape = new THREE.Shape();
+  rShape.moveTo(0.9, 0.7);
+  rShape.lineTo(0.92, 0.45);
+  rShape.lineTo(0.98, 0.45);
+  rShape.lineTo(0.96, 0.7);
+  rShape.lineTo(0.9, 0.7);
+
+  const g1 = new THREE.ExtrudeGeometry(lShape, { depth: 0.05, bevelEnabled: false });
+  const g2 = new THREE.ExtrudeGeometry(rShape, { depth: 0.05, bevelEnabled: false });
+  return mergeGeos([g1, g2]);
+}
+
+function createPlacketGeometry() {
+  const shape = new THREE.Shape();
+  shape.moveTo(-0.06, 0.45);
+  shape.lineTo(0.06, 0.45);
+  shape.lineTo(0.06, 0.78);
+  shape.lineTo(-0.06, 0.78);
+  shape.lineTo(-0.06, 0.45);
+  return new THREE.ExtrudeGeometry(shape, { depth: 0.07, bevelEnabled: false });
+}
+
+function createStripeGeometry() {
+  const shape = new THREE.Shape();
+  shape.moveTo(-0.3, 0.6);
+  shape.lineTo(-0.1, 0.78);
+  shape.lineTo(0.0, 0.78);
+  shape.lineTo(-0.18, 0.55);
+  shape.lineTo(-0.3, 0.6);
+
+  const rShape = new THREE.Shape();
+  rShape.moveTo(0.3, 0.6);
+  rShape.lineTo(0.1, 0.78);
+  rShape.lineTo(0.0, 0.78);
+  rShape.lineTo(0.18, 0.55);
+  rShape.lineTo(0.3, 0.6);
+
+  const g1 = new THREE.ExtrudeGeometry(shape, { depth: 0.08, bevelEnabled: false });
+  const g2 = new THREE.ExtrudeGeometry(rShape, { depth: 0.08, bevelEnabled: false });
+  return mergeGeos([g1, g2]);
+}
+
+function addButtons() {
+  const btnMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(state.primaryColor) });
+  const btnGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.015, 12);
+  [0.72, 0.63, 0.54].forEach(y => {
+    const btn = new THREE.Mesh(btnGeo, btnMat.clone());
+    btn.rotation.x = Math.PI/2;
+    btn.position.set(0, y, 0.08);
+    shirtGroup.add(btn);
+  });
+}
+
+/* ─── Text overlay ─── */
+function applyText() {
+  const txt = document.getElementById('text-content').value;
+  state.text = txt;
+  state.textFont = document.getElementById('text-font').value;
+  state.textColor = document.getElementById('text-color').value;
+  state.textSize = parseInt(document.getElementById('text-size').value);
+
+  // Remove old sprite
+  if (textSprite) { shirtGroup.remove(textSprite); textSprite = null; }
+  if (!txt) { updateSummary(); return; }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 512, 128);
+  ctx.font = `bold ${state.textSize * 3}px ${state.textFont}`;
+  ctx.fillStyle = state.textColor;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(txt, 256, 64);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+  textSprite = new THREE.Sprite(mat);
+  textSprite.scale.set(0.6, 0.15, 1);
+  textSprite.position.copy(getPlacementPos(state.textPos));
+  shirtGroup.add(textSprite);
+  updateSummary();
+}
+
+function removeText() {
+  if (textSprite) { shirtGroup.remove(textSprite); textSprite = null; }
+  document.getElementById('text-content').value = '';
+  state.text = '';
+  updateSummary();
+}
+
+/* ─── Logo overlay ─── */
+function handleLogoUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    state.logoUrl = e.target.result;
+    const img = document.getElementById('logo-preview');
+    img.src = e.target.result;
+    document.getElementById('logo-preview-wrap').style.display = 'block';
+    updateSummary();
+    showToast('Logo uploaded! Click "Apply Logo" to place it.');
+  };
+  reader.readAsDataURL(file);
+}
+
+function applyLogo() {
+  if (!state.logoUrl) { showToast('Please upload a logo first.'); return; }
+  if (logoSprite) { shirtGroup.remove(logoSprite); logoSprite = null; }
+
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 256, 256);
+    ctx.drawImage(img, 0, 0, 256, 256);
+    const tex = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+    logoSprite = new THREE.Sprite(mat);
+    const sz = state.logoSize / 256;
+    logoSprite.scale.set(sz, sz, 1);
+    logoSprite.position.copy(getPlacementPos(state.logoPos));
+    shirtGroup.add(logoSprite);
+    updateSummary();
+  };
+  img.src = state.logoUrl;
+}
+
+function removeLogo() {
+  if (logoSprite) { shirtGroup.remove(logoSprite); logoSprite = null; }
+  state.logoUrl = null;
+  document.getElementById('logo-preview-wrap').style.display = 'none';
+  updateSummary();
+}
+
+function updateLogoSize(val) {
+  state.logoSize = parseInt(val);
+  document.getElementById('logo-size-val').textContent = val + 'px';
+  if (logoSprite) {
+    const sz = state.logoSize / 256;
+    logoSprite.scale.set(sz, sz, 1);
+  }
+}
+
+function getPlacementPos(pos) {
+  const positions = {
+    'front-chest': new THREE.Vector3(-0.16, 0.55, 0.08),
+    'front-center': new THREE.Vector3(0, 0.1, 0.08),
+    'back-top': new THREE.Vector3(0, 0.55, -0.08),
+    'back-center': new THREE.Vector3(0, 0.1, -0.08),
+    'sleeve-left': new THREE.Vector3(-0.72, 0.58, 0.05),
+    'sleeve-right': new THREE.Vector3(0.72, 0.58, 0.05),
+  };
+  return positions[pos] || positions['front-chest'];
+}
+
+/* ─── Animate ─── */
+function animate() {
+  requestAnimationFrame(animate);
+  currentY += (targetY - currentY) * 0.08;
+  shirtGroup.rotation.y = currentY;
+  if (state.autoRotate) {
+    targetY += 0.008;
+  }
+  renderer.render(scene, camera);
+}
+
+/* ─── Drag to rotate ─── */
+function setupDrag() {
+  const el = renderer.domElement;
+  el.addEventListener('mousedown', e => { isDragging = true; prevMouse = {x:e.clientX, y:e.clientY}; });
+  el.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    const dx = e.clientX - prevMouse.x;
+    targetY += dx * 0.01;
+    prevMouse = {x:e.clientX, y:e.clientY};
+  });
+  el.addEventListener('mouseup', () => isDragging = false);
+  el.addEventListener('mouseleave', () => isDragging = false);
+
+  // Touch
+  el.addEventListener('touchstart', e => { isDragging = true; prevMouse = {x:e.touches[0].clientX, y:e.touches[0].clientY}; });
+  el.addEventListener('touchmove', e => {
+    if (!isDragging) return;
+    const dx = e.touches[0].clientX - prevMouse.x;
+    targetY += dx * 0.01;
+    prevMouse = {x:e.touches[0].clientX, y:e.touches[0].clientY};
+  });
+  el.addEventListener('touchend', () => isDragging = false);
+}
+
+/* ─── Camera views ─── */
+function setView(view, btn) {
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.autoRotate = false;
+  if (view === 'front') { targetY = 0; }
+  else if (view === 'back') { targetY = Math.PI; }
+  else if (view === 'side') { targetY = Math.PI / 2; }
+  else if (view === 'rotate') { state.autoRotate = true; }
+}
+
+/* ─── Model selector ─── */
+function selectModel(idx) {
+  state.modelIdx = idx;
+  document.querySelectorAll('.model-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`[data-model="${idx}"]`).classList.add('active');
+  buildShirt();
+}
+
+/* ─── Color selection ─── */
+function buildColorSwatches() {
+  const pc = document.getElementById('primary-colors');
+  const sc = document.getElementById('secondary-colors');
+  pc.innerHTML = sc.innerHTML = '';
+
+  PALETTE.forEach(hex => {
+    const sp = document.createElement('div');
+    sp.className = 'swatch' + (hex === '#FFFFFF' ? ' white' : '') + (hex === state.primaryColor ? ' active' : '');
+    sp.style.background = hex;
+    sp.title = hex;
+    sp.onclick = () => setPrimaryColor(hex);
+    pc.appendChild(sp);
+
+    const ss = document.createElement('div');
+    ss.className = 'swatch' + (hex === '#FFFFFF' ? ' white' : '') + (hex === state.secondaryColor ? ' active' : '');
+    ss.style.background = hex;
+    ss.title = hex;
+    ss.onclick = () => setSecondaryColor(hex);
+    sc.appendChild(ss);
+  });
+}
+
+function setPrimaryColor(hex) {
+  state.primaryColor = hex;
+  document.getElementById('primary-val').textContent = hex;
+  document.getElementById('custom-primary').value = hex;
+  document.querySelectorAll('#primary-colors .swatch').forEach(s => {
+    s.classList.toggle('active', s.title === hex);
+  });
+  buildShirt();
+  updateSummary();
+}
+
+function setSecondaryColor(hex) {
+  state.secondaryColor = hex;
+  document.getElementById('secondary-val').textContent = hex;
+  document.getElementById('custom-secondary').value = hex;
+  document.querySelectorAll('#secondary-colors .swatch').forEach(s => {
+    s.classList.toggle('active', s.title === hex);
+  });
+  buildShirt();
+  updateSummary();
+}
+
+function applyCustomColor(which, hex) {
+  if (which === 'primary') setPrimaryColor(hex);
+  else setSecondaryColor(hex);
+}
+
+/* ─── Toggles ─── */
+function toggleFeature(feature) {
+  state[feature] = !state[feature];
+  const btn = document.getElementById('toggle-' + feature);
+  btn.classList.toggle('on', state[feature]);
+  buildShirt();
+  updateSummary();
+}
+
+/* ─── Pattern ─── */
+function setPattern(el, pattern) {
+  state.pattern = pattern;
+  document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+/* ─── Text placement ─── */
+function setTextPos(el, pos) {
+  state.textPos = pos;
+  document.querySelectorAll('#tab-text .place-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function setLogoPos(el, pos) {
+  state.logoPos = pos;
+  document.querySelectorAll('#tab-logo .place-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+/* ─── Size / Qty ─── */
+function setSize(el, sz) {
+  state.size = sz;
+  document.querySelectorAll('.size-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  updateSummary();
+}
+
+function changeQty(delta) {
+  state.qty = Math.max(1, state.qty + delta);
+  document.getElementById('qty').textContent = state.qty;
+  updateSummary();
+}
+
+/* ─── Tabs ─── */
+function switchTab(tab, btn) {
+  ['colors','design','text','logo'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+/* ─── Presets ─── */
+function buildPresets() {
+  const grid = document.getElementById('preset-grid');
+  grid.innerHTML = '';
+  PRESETS.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'preset-card' + (i === 0 ? ' active' : '');
+    card.title = p.name;
+    card.style.background = p.primary;
+    card.style.border = `2px solid ${p.secondary}`;
+    card.innerHTML = `<div style="position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:8px;font-weight:600;color:${p.secondary};background:rgba(255,255,255,0.7);padding:1px;">${p.name}</div>`;
+    card.onclick = () => applyPreset(i, card);
+    grid.appendChild(card);
+  });
+}
+
+function applyPreset(idx, cardEl) {
+  const p = PRESETS[idx];
+  state.presetIdx = idx;
+  state.currentStyle = p.name;
+  document.getElementById('current-style').textContent = p.name;
+  document.getElementById('sum-style').textContent = p.name;
+  document.querySelectorAll('#preset-grid .preset-card').forEach(c => c.classList.remove('active'));
+  cardEl.classList.add('active');
+  setPrimaryColor(p.primary);
+  setSecondaryColor(p.secondary);
+}
+
+/* ─── Summary ─── */
+function updateSummary() {
+  document.getElementById('sum-primary').textContent = state.primaryColor;
+  document.getElementById('sum-secondary').textContent = state.secondaryColor;
+  document.getElementById('sum-sleeves').textContent = state.sleeves ? 'Yes' : 'No';
+  document.getElementById('sum-text').textContent = state.text || 'None';
+  document.getElementById('sum-logo').textContent = state.logoUrl ? 'Applied' : 'None';
+  document.getElementById('sum-size').textContent = `${state.size} × ${state.qty}`;
+  document.getElementById('sum-style').textContent = state.currentStyle;
+}
+
+/* ─── Save / Export ─── */
+function saveDesign() {
+  const design = {
+    id: 'DES-' + Date.now(),
+    timestamp: new Date().toISOString(),
+    model: state.modelIdx,
+    style: state.currentStyle,
+    primaryColor: state.primaryColor,
+    secondaryColor: state.secondaryColor,
+    sleeves: state.sleeves,
+    collar: state.collar,
+    placket: state.placket,
+    panel: state.panel,
+    stripe: state.stripe,
+    text: state.text,
+    textFont: state.textFont,
+    textColor: state.textColor,
+    textPos: state.textPos,
+    hasLogo: !!state.logoUrl,
+    logoPos: state.logoPos,
+    size: state.size,
+    qty: state.qty,
+  };
+  console.log('Customer Design Saved:', JSON.stringify(design, null, 2));
+  showToast('✓ Design saved to admin dashboard!');
+}
+
+function exportDesign() {
+  renderer.render(scene, camera);
+  const dataURL = renderer.domElement.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = dataURL;
+  a.download = `tshirt-${state.currentStyle}-${Date.now()}.png`;
+  a.click();
+  showToast('📥 Mockup exported!');
+}
+
+/* ─── Toast ─── */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ─── Resize ─── */
+window.addEventListener('resize', () => {
+  const container = document.getElementById('canvas-container');
+  const W = container.clientWidth, H = container.clientHeight;
+  camera.aspect = W / H;
+  camera.updateProjectionMatrix();
+  renderer.setSize(W, H);
+});
+
+/* ─── Init ─── */
+window.addEventListener('load', () => {
+  initThree();
+  buildColorSwatches();
+  buildPresets();
+  updateSummary();
+});
+</script>
+</body>
+</html>

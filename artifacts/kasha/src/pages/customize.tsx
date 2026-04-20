@@ -76,6 +76,27 @@ async function apiFetch(path: string, opts?: RequestInit): Promise<any> {
 }
 
 // ── Dark studio theme ────────────────────────────────────────────────────────
+// Fabric v7 stores backgroundColor as a property — there's no setBackgroundColor()
+// helper. Use this to set + render in one call.
+function setFabricBg(fc: any, hex: string) {
+  if (!fc) {
+    console.warn("[customize] setFabricBg: no canvas yet, skipping bg=", hex);
+    return;
+  }
+  fc.backgroundColor = hex;
+  fc.renderAll();
+  console.debug("[customize] setFabricBg ->", hex, "objects:", fc.getObjects().length);
+}
+
+// model-viewer's setBaseColorFactor expects an RGBA float array (0..1), not a hex string.
+function hexToRgba(hex: string): [number, number, number, number] {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16) / 255;
+  const g = parseInt(h.substring(2, 4), 16) / 255;
+  const b = parseInt(h.substring(4, 6), 16) / 255;
+  return [isNaN(r) ? 1 : r, isNaN(g) ? 1 : g, isNaN(b) ? 1 : b, 1];
+}
+
 const V = {
   bg:"#0e0c0a", sf:"rgba(255,255,255,0.04)", sf2:"rgba(255,255,255,0.08)",
   bd:"rgba(255,255,255,0.09)", bd2:"rgba(255,255,255,0.15)",
@@ -105,8 +126,13 @@ export default function CustomizePage() {
   const [modelLoaded, setModelLoaded] = useState(false);
 
   // Fabric canvas
-  const canvasElRef  = useRef<HTMLCanvasElement | null>(null);
   const fcRef        = useRef<fabric.Canvas | null>(null);
+  // Stable holder for the resize listener so we can clean it up on detach.
+  const resizeListenerRef = useRef<(() => void) | null>(null);
+  // Always points to the latest syncTexture closure — Fabric event handlers
+  // are registered once at canvas-init, so without this ref they'd capture
+  // a stale syncTexture (with empty mats) forever.
+  const syncTextureRef = useRef<(() => void) | null>(null);
   const logoObjRef   = useRef<any>(null);
 
   // Materials from model
@@ -181,69 +207,93 @@ export default function CustomizePage() {
     document.head.appendChild(s);
   }, [webglAvailable]);
 
-  // ── Init Fabric canvas ────────────────────────────────────────────────────
-  useEffect(() => {
-    const el = canvasElRef.current;
-    if (!el || fcRef.current) return;
+  // ── Init Fabric canvas (ref callback so it fires whenever the canvas DOM
+  //    element is attached — the component returns a spinner first while the
+  //    product is loading, so a useEffect([]) runs *before* the canvas exists
+  //    and never re-runs.) ────────────────────────────────────────────────────
+  const canvasElRef = useCallback((el: HTMLCanvasElement | null) => {
+    // Detach: dispose any existing Fabric canvas
+    if (!el) {
+      if (resizeListenerRef.current) {
+        window.removeEventListener("resize", resizeListenerRef.current);
+        resizeListenerRef.current = null;
+      }
+      if (fcRef.current) {
+        try {
+          // dispose() may be sync OR Promise-returning depending on Fabric build
+          const r: any = fcRef.current.dispose();
+          if (r && typeof r.catch === "function") r.catch(() => {});
+        } catch (e) {
+          console.warn("[customize] dispose threw:", e);
+        }
+        fcRef.current = null;
+      }
+      return;
+    }
+    // Already initialised on this element → nothing to do
+    if (fcRef.current) return;
 
-    // Chrome textBaseline patch
+    // Chrome textBaseline patch (Fabric occasionally feeds the deprecated value)
     try {
-      const d = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype,"textBaseline");
-      if (d?.set) Object.defineProperty(CanvasRenderingContext2D.prototype,"textBaseline",{
-        configurable:true,
-        set(v){d.set!.call(this, v==="alphabetical"?"alphabetic":v);},
-        get(){return d.get!.call(this);},
-      });
+      const d = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, "textBaseline");
+      if (d?.set) {
+        Object.defineProperty(CanvasRenderingContext2D.prototype, "textBaseline", {
+          configurable: true,
+          set(v) { d.set!.call(this, v === "alphabetical" ? "alphabetic" : v); },
+          get() { return d.get!.call(this); },
+        });
+      }
     } catch {}
 
     const fc = new fabric.Canvas(el, {
-      width:1024, height:1024,
-      preserveObjectStacking:true,
-      backgroundColor:"#C5D3DE",
+      width: 1024, height: 1024,
+      preserveObjectStacking: true,
+      backgroundColor: "#C5D3DE",
     });
     fcRef.current = fc;
+    console.debug("[customize] Fabric canvas initialised");
 
     const scaleCanvas = () => {
-      // clientWidth is 0 when the wrapper is off-screen (position:fixed left:-9999px)
-      // Fall back to 272px so the canvas always initialises at a usable resolution
       const w = document.getElementById("fc-wrapper")?.clientWidth || 272;
       fc.setZoom(w / 1024); fc.setWidth(w); fc.setHeight(w);
     };
+    resizeListenerRef.current = scaleCanvas;
     window.addEventListener("resize", scaleCanvas);
     setTimeout(scaleCanvas, 100);
 
-    fc.on("object:modified",  () => syncTexture());
-    fc.on("object:added",     () => syncTexture());
-    fc.on("object:removed",   () => syncTexture());
-    fc.on("selection:created",(e:any) => {
+    fc.on("object:modified",  () => syncTextureRef.current?.());
+    fc.on("object:added",     () => syncTextureRef.current?.());
+    fc.on("object:removed",   () => syncTextureRef.current?.());
+    fc.on("selection:created", (e: any) => {
       const o = e.selected?.[0]; if (!o) return;
       setElScale(o.scaleX ?? 1);
       setElX(Math.round(o.left ?? 512));
       setElY(Math.round(o.top  ?? 512));
     });
-    fc.on("selection:updated",(e:any) => {
+    fc.on("selection:updated", (e: any) => {
       const o = e.selected?.[0]; if (!o) return;
       setElScale(o.scaleX ?? 1);
       setElX(Math.round(o.left ?? 512));
       setElY(Math.round(o.top  ?? 512));
     });
-
-    return () => {
-      window.removeEventListener("resize", scaleCanvas);
-      fc.dispose().catch(()=>{});
-      fcRef.current = null;
-    };
   }, []);
 
   // ── Re-scale canvas when CANVAS tab becomes visible ──────────────────────
   useEffect(() => {
     if (rightTab !== "canvas") return;
-    const fc = fcRef.current; if (!fc) return;
-    // Give the DOM a frame to render the wrapper at full width, then scale
+    // Give the DOM a frame to render the wrapper at full width, then scale.
+    // We re-read fcRef *inside* rAF so HMR / dispose races can't hand us a
+    // stale reference whose methods have been stripped.
     requestAnimationFrame(() => {
+      const fc: any = fcRef.current;
+      if (!fc || typeof fc.setWidth !== "function") return;
       const w = document.getElementById("fc-wrapper")?.clientWidth || 272;
-      fc.setZoom(w / 1024); fc.setWidth(w); fc.setHeight(w);
-      fc.renderAll();
+      try {
+        fc.setZoom(w / 1024); fc.setWidth(w); fc.setHeight(w);
+        fc.renderAll();
+      } catch (e) {
+        console.warn("[customize] tab-switch rescale skipped:", e);
+      }
     });
   }, [rightTab]);
 
@@ -255,9 +305,17 @@ export default function CustomizePage() {
     try {
       const url = fc.toDataURL({ format:"png", quality:0.95, multiplier:1 });
       const tex = await mv.createTexture(url);
-      mats[0].mat.pbrMetallicRoughness.baseColorTexture.setTexture(tex);
-    } catch {}
+      const target = mats[0]?.mat?.pbrMetallicRoughness?.baseColorTexture;
+      if (target?.setTexture) target.setTexture(tex);
+    } catch (e) {
+      // Surface texture-sync errors so we can see the real failure mode
+      console.error("[customize] syncTexture failed:", e);
+    }
   }, [mats]);
+
+  // Keep the ref pointing at the latest syncTexture so canvas event handlers
+  // (registered once at init) always call the current closure.
+  useEffect(() => { syncTextureRef.current = syncTexture; }, [syncTexture]);
 
   useEffect(() => { if (mats.length) syncTexture(); }, [mats, syncTexture]);
 
@@ -300,19 +358,20 @@ export default function CustomizePage() {
         setGStripe(g.stripe ?? false); setPattern(g.pattern ?? "none");
       }
       const fc = fcRef.current;
-      fc.setBackgroundColor(bg, () => {});
+      setFabricBg(fc, bg);
       fc.loadFromJSON(typeof canvasJSON === "string" ? JSON.parse(canvasJSON) : canvasJSON).then(() => {
         fc.renderAll(); syncTexture();
-      }).catch(()=>{});
+      }).catch((e: any) => console.error("[customize] loadFromJSON failed:", e));
       if (parsed.matColors?.length && mats.length) {
         const updated = [...mats];
         parsed.matColors.forEach((hex:string, i:number) => {
           if (!updated[i]) return;
           updated[i] = { ...updated[i], color:hex };
           if (i === 0) {
-            fc.setBackgroundColor(hex, () => { fc.renderAll(); });
+            setFabricBg(fc, hex);
           } else {
-            updated[i].mat.pbrMetallicRoughness.setBaseColorFactor(hex);
+            try { updated[i].mat.pbrMetallicRoughness.setBaseColorFactor(hexToRgba(hex)); }
+            catch (e) { console.error("[customize] setBaseColorFactor failed:", e); }
           }
         });
         setMats(updated);
@@ -477,10 +536,15 @@ export default function CustomizePage() {
       if (!next[idx]) return prev;
       next[idx] = { ...next[idx], color:hex };
       if (idx === 0) {
-        if (fc) { fc.setBackgroundColor(hex, () => { fc.renderAll(); syncTexture(); }); }
-        next[0].mat.pbrMetallicRoughness.setBaseColorFactor("#ffffff");
+        // Body — paint the canvas background so the texture carries the color
+        setFabricBg(fc, hex);
+        syncTexture();
+        try { next[0].mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1, 1, 1, 1]); }
+        catch (e) { console.error("[customize] setBaseColorFactor (body white) failed:", e); }
       } else {
-        next[idx].mat.pbrMetallicRoughness.setBaseColorFactor(hex);
+        // Other parts (collar, sleeves, etc) — apply color directly to the material
+        try { next[idx].mat?.pbrMetallicRoughness?.setBaseColorFactor?.(hexToRgba(hex)); }
+        catch (e) { console.error("[customize] setBaseColorFactor failed:", e); }
       }
       return next;
     });
@@ -497,7 +561,8 @@ export default function CustomizePage() {
   const applyPrimary = (hex: string) => {
     setPrimaryColor(hex); setCanvasBg(hex);
     const fc = fcRef.current;
-    if (fc) { fc.setBackgroundColor(hex, () => { fc.renderAll(); syncTexture(); }); }
+    setFabricBg(fc, hex);
+    syncTexture();
     if (mats[0]) { applyPartColor(0, hex); }
   };
 
@@ -527,21 +592,40 @@ export default function CustomizePage() {
   const setFcBg = (hex: string) => {
     setCanvasBg(hex); setPrimaryColor(hex);
     const fc = fcRef.current;
-    if (fc) { fc.setBackgroundColor(hex, () => { fc.renderAll(); syncTexture(); }); }
+    setFabricBg(fc, hex);
+    syncTexture();
     if (mats[0]) applyPartColor(0, hex);
   };
 
   // ── Text ─────────────────────────────────────────────────────────────────
   const addText = async () => {
-    const fc = fcRef.current; if (!fc) return;
-    await document.fonts.ready;
+    const fc = fcRef.current;
+    if (!fc) {
+      console.error("[customize] addText: canvas not initialised");
+      toast({ title:"Canvas not ready", description:"Try again in a moment.", variant:"destructive" });
+      return;
+    }
+    // document.fonts.ready can hang in some browsers/environments — guard with timeout
+    try {
+      await Promise.race([
+        document.fonts.ready,
+        new Promise(r => setTimeout(r, 300)),
+      ]);
+    } catch {}
     const pos = PLACEMENTS[txtPlacement] || { left:512, top:512 };
-    const t = new fabric.FabricText(txtVal || "Your Text", {
-      left:pos.left, top:pos.top, originX:"center", originY:"center",
-      fontFamily:txtFont, fontSize:txtSize, fill:txtColor, fontWeight:700,
+    const TextCtor = (fabric as any).FabricText || (fabric as any).Text;
+    const t = new TextCtor(txtVal || "Your Text", {
+      left: pos.left, top: pos.top,
+      originX: "center", originY: "center",
+      fontFamily: txtFont, fontSize: txtSize, fill: txtColor,
+      fontWeight: "bold",
     });
-    fc.add(t); fc.setActiveObject(t); fc.renderAll(); syncTexture();
-    toast({ title:"Text added", description:"Drag on Canvas tab to fine-tune position." });
+    fc.add(t);
+    fc.setActiveObject(t);
+    fc.renderAll();
+    syncTexture();
+    console.debug("[customize] addText:", { text: txtVal, pos, totalObjects: fc.getObjects().length });
+    toast({ title:"Text added", description:"Switch to the Canvas tab to drag it." });
   };
   const removeText = () => {
     const fc = fcRef.current; if (!fc) return;
