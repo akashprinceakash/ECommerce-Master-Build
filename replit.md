@@ -53,17 +53,28 @@ KA.SHA is a full-stack luxury golf/sportswear fashion eCommerce web application 
 
 To grant admin access to a user: In the Clerk Dashboard, find the user → Metadata → Public Metadata → set `{"role": "admin"}`
 
-## Bespoke Studio
-- Full-screen dark studio (radial dark gradient: `#1f232e` → `#100d0b`)
-- Left: `model-viewer` with fading loading overlay, WebGL fallback to product thumbnail
-- Right: Glassmorphic panel (450px, rounded 24px, backdrop blur)
-  - "Craft Your Style" header with gradient text
-  - Tabs: "Parts & Colors" | "Design (Front)"
-  - Parts tab: Upload .glb model, dynamic material list with per-part color pickers, S/M/L/XL size buttons
-  - Design tab: Add Text (color+font picker), upload graphic/logo, add shapes (Line/Curve/Stripes), tweaks panel (layer selector, scale/posX/posY sliders), visible Fabric.js canvas (print area, 1024×1024)
-- Canvas data (JSON) + preview image (data URL) saved to `customizations` table per user
-- CartDrawer + Cart page show user's custom preview image with "CUSTOM" badge when set
-- Canvas state auto-restored when user revisits the same product's studio
+## Bespoke Studio (`/products/:id/customize`)
+Full unified studio combining model-viewer 3D rendering with Fabric.js design canvas, per the client PDF specs.
+
+### Layout
+- **Header**: Back link, design name input, Save + Add to Cart buttons
+- **Left panel**: Garment Parts (dynamic from .glb materials, per-part color pickers), Color Palette (13 luxury swatches), Auto Rotate toggle, Size (XS–XXL), Quantity, Save/Export
+- **Center**: Google `model-viewer` web component for live 3D preview; WebGL fallback shows product thumbnail
+- **Right panel (6 tabs)**: COLORS | DESIGN | TEXT | LOGO | SHAPES | CANVAS
+
+### Right Panel Tabs
+- **COLORS**: GT001–GT012 design presets with primary/secondary color chips; Primary Color swatch grid + custom picker (→ canvas bg + mat[0]); Secondary/Trim swatch grid + custom picker (→ mat[1] + garment overlays); live Design Summary panel
+- **DESIGN**: Garment option toggles (Sleeves, Collar, Button Placket, Side Panel, Chest Stripe) → drawn as Fabric.js overlay shapes in Trim color; Pattern Overlay selector (None, Stripes, Grid, Dots)
+- **TEXT**: content input, color + font picker (6 fonts), size slider (20–200), 6 placement buttons (Front Chest, Front Center, Back Top, Back Center, Left Sleeve, Right Sleeve), Add/Remove
+- **LOGO**: file upload (PNG/SVG/JPG), 6 placement buttons, size slider, Apply/Remove
+- **SHAPES**: shape/stroke color, stroke width, add Line/Curve/Rectangle/Circle/Stripe Pattern, Remove Selected
+- **CANVAS**: texture background color, selected element scale/posX/posY sliders, Clear All, live Fabric.js canvas preview (drag to reposition elements)
+
+### Persistence
+Full design state saved per user per product: `canvasJSON` (with `data.garmentType` tags preserved via `fc.toJSON(["data"])`), `matColors`, `canvasBg`, `primaryColor`, `secondaryColor`, `garmentState` (5 booleans + pattern), `presetName`. PNG snapshot baked for admin viewer and cart preview.
+
+### Texture Pipeline
+Fabric.js 1024×1024 canvas → `toDataURL()` PNG → `model-viewer.createTexture()` → applied to mat[0] baseColorTexture. Syncs on every canvas change, material change, or garment toggle.
 
 ## Pages / Routes
 | Route | Component | Auth |
