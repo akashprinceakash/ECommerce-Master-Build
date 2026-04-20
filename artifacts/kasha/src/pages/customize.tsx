@@ -254,8 +254,16 @@ export default function CustomizePage() {
     console.debug("[customize] Fabric canvas initialised");
 
     const scaleCanvas = () => {
+      // Always read the current ref — the captured `fc` may have been
+      // disposed (HMR / unmount) which strips its methods.
+      const f: any = fcRef.current;
+      if (!f || typeof f.setWidth !== "function") return;
       const w = document.getElementById("fc-wrapper")?.clientWidth || 272;
-      fc.setZoom(w / 1024); fc.setWidth(w); fc.setHeight(w);
+      try {
+        f.setZoom(w / 1024); f.setWidth(w); f.setHeight(w);
+      } catch (e) {
+        console.warn("[customize] resize rescale skipped:", e);
+      }
     };
     resizeListenerRef.current = scaleCanvas;
     window.addEventListener("resize", scaleCanvas);
