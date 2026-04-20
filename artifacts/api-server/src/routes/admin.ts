@@ -198,6 +198,7 @@ router.get("/admin/customizations", requireAuth, async (req, res): Promise<void>
       name: customizationsTable.name,
       color: customizationsTable.color,
       size: customizationsTable.size,
+      partsEnabled: customizationsTable.partsEnabled,
       canvasData: customizationsTable.canvasData,
       previewImageUrl: customizationsTable.previewImageUrl,
       createdAt: customizationsTable.createdAt,

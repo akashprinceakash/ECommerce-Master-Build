@@ -37,6 +37,7 @@ interface UserDesign {
   name: string;
   color: string;
   size: string;
+  partsEnabled: Record<string, any> | null;
   canvasData: string | null;
   previewImageUrl: string | null;
   updatedAt: string;
@@ -78,7 +79,7 @@ async function apiFetch(path: string, opts?: RequestInit): Promise<any> {
 
 // ── Design Viewer Modal ───────────────────────────────────────────────────────
 function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: () => void }) {
-  const [mvLoaded, setMvLoaded] = useState(false);
+  const [mvReady, setMvReady] = useState(false);
   const viewerRef = useRef<any>(null);
 
   useEffect(() => {
@@ -87,29 +88,62 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
       s.type = "module";
       s.setAttribute("data-mv-loader", "1");
       s.src = "https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js";
-      s.onload = () => setMvLoaded(true);
+      s.onload = () => setMvReady(true);
       document.head.appendChild(s);
     } else {
-      setMvLoaded(true);
+      setMvReady(true);
     }
   }, []);
 
-  // Apply canvas texture to model after it loads
+  // Restore exact design on model load
   useEffect(() => {
-    if (!design.previewImageUrl || !viewerRef.current) return;
+    if (!viewerRef.current || !mvReady) return;
     const mv = viewerRef.current;
+
     const handleLoad = async () => {
       const model = mv.model;
       if (!model?.materials?.length) return;
+
+      // Parse saved canvasData for matColors
+      let matColors: string[] = [];
+      let canvasBg: string | null = null;
       try {
-        const texture = await mv.createTexture(design.previewImageUrl!);
-        const printMat = model.materials.find((_: any, i: number) => i === (model.materials.length > 1 ? 1 : 0));
-        if (printMat) printMat.pbrMetallicRoughness.baseColorTexture.setTexture(texture);
+        if (design.canvasData) {
+          const parsed = JSON.parse(design.canvasData);
+          if (parsed.matColors) matColors = parsed.matColors;
+          if (parsed.canvasBg) canvasBg = parsed.canvasBg;
+        }
       } catch {}
+
+      // Also check partsEnabled field
+      if (!matColors.length) {
+        try {
+          const pe = design.partsEnabled as any;
+          if (pe?.matColors) matColors = pe.matColors;
+        } catch {}
+      }
+
+      // Apply material colors to all non-print materials
+      model.materials.forEach((mat: any, i: number) => {
+        if (i === 0 && canvasBg) {
+          mat.pbrMetallicRoughness.setBaseColorFactor("#ffffff");
+        } else if (matColors[i]) {
+          mat.pbrMetallicRoughness.setBaseColorFactor(matColors[i]);
+        }
+      });
+
+      // Apply the full-res canvas texture (exact visual match)
+      if (design.previewImageUrl && model.materials[0]) {
+        try {
+          const tex = await mv.createTexture(design.previewImageUrl);
+          model.materials[0].pbrMetallicRoughness.baseColorTexture.setTexture(tex);
+        } catch {}
+      }
     };
+
     mv.addEventListener("load", handleLoad);
     return () => mv.removeEventListener("load", handleLoad);
-  }, [design.previewImageUrl, mvLoaded]);
+  }, [design, mvReady]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -126,7 +160,7 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
 
         {/* 3D Viewer */}
         <div className="flex-1 min-h-[300px] md:min-h-[500px] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
-          {design.productModelUrl && mvLoaded ? (
+          {design.productModelUrl && mvReady ? (
             <model-viewer
               ref={viewerRef}
               src={design.productModelUrl}
