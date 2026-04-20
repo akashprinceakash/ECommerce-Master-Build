@@ -306,17 +306,32 @@ export default function CustomizePage() {
   }, [rightTab]);
 
   // ── Texture sync: Fabric canvas → PNG → model-viewer material ─────────────
+  // The Fabric canvas is the t-shirt's UV map. We bake it into a PNG and apply
+  // it to every material that has a baseColorTexture slot on the GLB. We also
+  // reset that material's baseColorFactor to white so the texture isn't tinted.
   const syncTexture = useCallback(async () => {
     const mv = mvRef.current;
     const fc = fcRef.current;
     if (!mv || !fc || !mats.length) return;
     try {
-      const url = fc.toDataURL({ format:"png", quality:0.95, multiplier:1 });
+      const url = fc.toDataURL({ format: "png", quality: 0.95, multiplier: 1 });
       const tex = await mv.createTexture(url);
-      const target = mats[0]?.mat?.pbrMetallicRoughness?.baseColorTexture;
-      if (target?.setTexture) target.setTexture(tex);
+      let applied = 0;
+      for (const entry of mats) {
+        const pbr = entry?.mat?.pbrMetallicRoughness;
+        const slot = pbr?.baseColorTexture;
+        if (slot?.setTexture) {
+          slot.setTexture(tex);
+          try { pbr.setBaseColorFactor([1, 1, 1, 1]); } catch {}
+          applied++;
+        }
+      }
+      if (!applied) {
+        console.warn("[customize] syncTexture: no material on this GLB exposes a baseColorTexture slot — design cannot bind. mats=", mats.map(m=>m.name));
+      } else {
+        console.debug(`[customize] syncTexture: applied design to ${applied}/${mats.length} material(s)`);
+      }
     } catch (e) {
-      // Surface texture-sync errors so we can see the real failure mode
       console.error("[customize] syncTexture failed:", e);
     }
   }, [mats]);
@@ -335,6 +350,12 @@ export default function CustomizePage() {
       const ov = document.getElementById("mv-overlay");
       if (ov) { ov.style.opacity = "0"; setTimeout(()=>{ if(ov) ov.style.display="none"; }, 500); }
       const model = mv.model;
+      console.debug("[customize] model loaded. materials:", model?.materials?.length ?? 0,
+        model?.materials?.map((m:any) => ({
+          name: m.name,
+          hasBaseColorTexture: !!m?.pbrMetallicRoughness?.baseColorTexture,
+          hasSetTexture: typeof m?.pbrMetallicRoughness?.baseColorTexture?.setTexture === "function",
+        })));
       if (!model?.materials?.length) { setModelLoaded(true); return; }
       const entries: MatEntry[] = model.materials.map((m:any, i:number) => ({
         idx:i, name:m.name||`Part ${i+1}`, mat:m, color:"#ffffff",
@@ -732,14 +753,39 @@ export default function CustomizePage() {
     if (k==="left") setElX(v); else setElY(v);
   };
 
-  // ── Export canvas ─────────────────────────────────────────────────────────
-  const exportCanvas = () => {
-    const fc = fcRef.current; if (!fc) return;
-    const a = document.createElement("a");
-    a.href = fc.toDataURL({ format:"png", quality:0.95, multiplier:1 });
-    a.download = `kasha-design-${Date.now()}.png`;
-    a.click();
-    toast({ title:"Design exported" });
+  // ── Snapshot the 3D model (the customer-facing view, with the design
+  //     baked onto the t-shirt) — falls back to the flat canvas if model-
+  //     viewer isn't ready yet.
+  const snapshotModel = useCallback(async (): Promise<string> => {
+    const mv: any = mvRef.current;
+    const fc = fcRef.current;
+    // Make sure the latest design is on the model before we snapshot
+    try { await syncTexture(); } catch {}
+    // Give the renderer one frame to commit the texture update
+    await new Promise(r => requestAnimationFrame(() => r(null)));
+    if (mv && typeof mv.toDataURL === "function") {
+      try {
+        return mv.toDataURL("image/png", 1.0);
+      } catch (e) {
+        console.warn("[customize] mv.toDataURL failed, falling back to canvas snapshot", e);
+      }
+    }
+    if (fc) return fc.toDataURL({ format: "png", quality: 0.95, multiplier: 1 });
+    throw new Error("Nothing to snapshot");
+  }, [syncTexture]);
+
+  // ── Export the customized 3D t-shirt as a PNG ────────────────────────────
+  const exportCanvas = async () => {
+    try {
+      const dataUrl = await snapshotModel();
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `kasha-design-${Date.now()}.png`;
+      a.click();
+      toast({ title: "Design exported" });
+    } catch (e: any) {
+      toast({ title: "Export failed", description: e.message, variant: "destructive" });
+    }
   };
 
   // ── Save mutation ──────────────────────────────────────────────────────────
@@ -751,7 +797,9 @@ export default function CustomizePage() {
       const matColors = mats.map(m => m.color);
       const garmentState = { sleeves:gSleeves, collar:gCollar, placket:gPlacket, panel:gPanel, stripe:gStripe, pattern };
       const canvasJSON = JSON.stringify(fc.toJSON(["data"]));
-      const snap = fc.toDataURL({ format:"png", quality:0.92, multiplier:1 });
+      // Preview thumbnail = snapshot of the 3D model (with the design baked
+      // onto the t-shirt), not the flat 2D canvas.
+      const snap = await snapshotModel();
       return apiFetch("/api/customizations", { method:"POST", body: JSON.stringify({
         productId: id,
         name: designName,
@@ -775,7 +823,8 @@ export default function CustomizePage() {
       const fc = fcRef.current; if (!fc) throw new Error("Canvas not ready");
       const matColors = mats.map(m => m.color);
       const garmentState = { sleeves:gSleeves, collar:gCollar, placket:gPlacket, panel:gPanel, stripe:gStripe, pattern };
-      const snap = fc.toDataURL({ format:"png", quality:0.92, multiplier:1 });
+      // Cart preview = snapshot of the 3D model with design baked on.
+      const snap = await snapshotModel();
       const cust = await apiFetch("/api/customizations", { method:"POST", body: JSON.stringify({
         productId: id,
         name: designName || `${product?.name} Custom`,
