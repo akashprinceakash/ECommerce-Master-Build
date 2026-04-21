@@ -260,16 +260,14 @@ export default function CustomizePage() {
     console.debug("[customize] Fabric canvas initialised");
 
     const scaleCanvas = () => {
-      // Always read the current ref — the captured `fc` may have been
-      // disposed (HMR / unmount) which strips its methods.
-      const f: any = fcRef.current;
-      if (!f || typeof f.setWidth !== "function") return;
-      const w = document.getElementById("fc-wrapper")?.clientWidth || 272;
-      try {
-        f.setZoom(w / 1024); f.setWidth(w); f.setHeight(w);
-      } catch (e) {
-        console.warn("[customize] resize rescale skipped:", e);
-      }
+      // CSS-only scale: keep the underlying Fabric canvas at 1024×1024 (so the
+      // texture sent to the 3D model is always full-resolution) and scale the
+      // host element via transform for the visible preview.
+      const host = document.getElementById("fc-scale-host");
+      const wrapper = document.getElementById("fc-wrapper");
+      if (!host || !wrapper) return;
+      const w = wrapper.clientWidth || 1024;
+      host.style.transform = `scale(${w / 1024})`;
     };
     resizeListenerRef.current = scaleCanvas;
     window.addEventListener("resize", scaleCanvas);
@@ -299,15 +297,12 @@ export default function CustomizePage() {
     // We re-read fcRef *inside* rAF so HMR / dispose races can't hand us a
     // stale reference whose methods have been stripped.
     requestAnimationFrame(() => {
-      const fc: any = fcRef.current;
-      if (!fc || typeof fc.setWidth !== "function") return;
-      const w = document.getElementById("fc-wrapper")?.clientWidth || 272;
-      try {
-        fc.setZoom(w / 1024); fc.setWidth(w); fc.setHeight(w);
-        fc.renderAll();
-      } catch (e) {
-        console.warn("[customize] tab-switch rescale skipped:", e);
-      }
+      const host = document.getElementById("fc-scale-host");
+      const wrapper = document.getElementById("fc-wrapper");
+      if (!host || !wrapper) return;
+      const w = wrapper.clientWidth || 1024;
+      host.style.transform = `scale(${w / 1024})`;
+      fcRef.current?.renderAll();
     });
   }, [rightTab]);
 
@@ -1498,14 +1493,24 @@ export default function CustomizePage() {
            * (and therefore fcRef.current) is always valid, making save /
            * export / color-sync work from every tab.
            */}
+          {/*
+           * The Fabric canvas MUST stay 1024×1024 internally and the wrapper
+           * MUST remain visible to the browser (opacity 0.01, NOT hidden) —
+           * otherwise toDataURL() returns a blank PNG and the texture sent
+           * to the 3D model is empty. We display the visible preview via a
+           * CSS transform-scale on a child wrapper so the underlying pixel
+           * buffer is never resized.
+           */}
           <div
             id="fc-wrapper"
             style={rightTab === "canvas"
               ? { background:"#fff",borderRadius:"9px",overflow:"hidden",border:`1px solid ${V.bd2}`,width:"100%",aspectRatio:"1/1",position:"relative",margin:"0 0 14px 0" }
-              : { position:"fixed",left:"-9999px",top:0,width:"272px",height:"272px",overflow:"hidden",pointerEvents:"none",visibility:"hidden" }
+              : { position:"fixed",left:"-9999px",top:0,width:"1024px",height:"1024px",pointerEvents:"none",opacity:0.01,zIndex:-1 }
             }
           >
-            <canvas ref={canvasElRef} />
+            <div id="fc-scale-host" style={{ position:"absolute", left:0, top:0, width:"1024px", height:"1024px", transformOrigin:"top left" }}>
+              <canvas ref={canvasElRef} />
+            </div>
           </div>
         </div>
       </div>
