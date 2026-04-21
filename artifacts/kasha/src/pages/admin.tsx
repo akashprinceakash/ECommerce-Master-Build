@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { useUser } from "@clerk/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -95,55 +95,81 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
     }
   }, []);
 
-  // Restore exact design on model load
+  // Parse all the rich design data we now persist alongside each customization
+  const parsedDesign = useMemo(() => {
+    try {
+      const parsed = design.canvasData ? JSON.parse(design.canvasData) : {};
+      const canvasJSON = (() => {
+        try {
+          return typeof parsed.canvasJSON === "string"
+            ? JSON.parse(parsed.canvasJSON)
+            : parsed.canvasJSON;
+        } catch { return null; }
+      })();
+      const objects: any[] = canvasJSON?.objects ?? [];
+      const counts: Record<string, number> = {};
+      const texts: string[] = [];
+      let logoCount = 0;
+      let shapeCount = 0;
+      for (const o of objects) {
+        const t = o.type || "object";
+        counts[t] = (counts[t] ?? 0) + 1;
+        if (t === "i-text" || t === "text" || t === "textbox" || t === "Text" || t === "FabricText" || t === "IText") {
+          if (o.text) texts.push(o.text);
+        }
+        if (t === "image" || t === "Image" || t === "FabricImage") logoCount++;
+        if (["rect","circle","triangle","polygon","line","path","Rect","Circle","Triangle","Polygon","Line","Path"].includes(t)) shapeCount++;
+      }
+      return {
+        textureUrl: parsed.textureUrl as string | undefined,
+        matColors: (parsed.matColors as string[] | undefined) ?? (design.partsEnabled as any)?.matColors ?? [],
+        canvasBg: parsed.canvasBg as string | undefined,
+        primaryColor: parsed.primaryColor as string | undefined,
+        secondaryColor: parsed.secondaryColor as string | undefined,
+        presetName: parsed.presetName as string | undefined ?? (design.partsEnabled as any)?.presetName,
+        garmentState: parsed.garmentState as Record<string, any> | undefined,
+        objectCount: objects.length,
+        counts, texts, logoCount, shapeCount,
+      };
+    } catch {
+      return { matColors: [], objectCount: 0, counts: {}, texts: [], logoCount: 0, shapeCount: 0 } as any;
+    }
+  }, [design]);
+
+  // Restore exact design on model load — uses the SAME robust iterate-all
+  // pattern as the customizer so it works on arbitrary GLBs.
   useEffect(() => {
     if (!viewerRef.current || !mvReady) return;
     const mv = viewerRef.current;
-
     const handleLoad = async () => {
       const model = mv.model;
       if (!model?.materials?.length) return;
-
-      // Parse saved canvasData for matColors
-      let matColors: string[] = [];
-      let canvasBg: string | null = null;
-      try {
-        if (design.canvasData) {
-          const parsed = JSON.parse(design.canvasData);
-          if (parsed.matColors) matColors = parsed.matColors;
-          if (parsed.canvasBg) canvasBg = parsed.canvasBg;
-        }
-      } catch {}
-
-      // Also check partsEnabled field
-      if (!matColors.length) {
-        try {
-          const pe = design.partsEnabled as any;
-          if (pe?.matColors) matColors = pe.matColors;
-        } catch {}
-      }
-
-      // Apply material colors to all non-print materials
-      model.materials.forEach((mat: any, i: number) => {
-        if (i === 0 && canvasBg) {
-          mat.pbrMetallicRoughness.setBaseColorFactor("#ffffff");
-        } else if (matColors[i]) {
-          mat.pbrMetallicRoughness.setBaseColorFactor(matColors[i]);
+      const mats: any[] = Array.from(model.materials);
+      // Per-material colors first (non-body trims, sleeves, collars, etc.)
+      mats.forEach((mat: any, i: number) => {
+        const hex = parsedDesign.matColors?.[i];
+        if (hex && i > 0) {
+          try { mat.pbrMetallicRoughness.setBaseColorFactor(hex); } catch {}
         }
       });
-
-      // Apply the full-res canvas texture (exact visual match)
-      if (design.previewImageUrl && model.materials[0]) {
+      // Then bake the design texture onto the first material that accepts one.
+      const texSrc = parsedDesign.textureUrl || design.previewImageUrl;
+      if (texSrc) {
         try {
-          const tex = await mv.createTexture(design.previewImageUrl);
-          model.materials[0].pbrMetallicRoughness.baseColorTexture.setTexture(tex);
+          const tex = await mv.createTexture(texSrc);
+          for (const mat of mats) {
+            try {
+              mat.pbrMetallicRoughness.baseColorTexture.setTexture(tex);
+              mat.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]);
+              break;
+            } catch {}
+          }
         } catch {}
       }
     };
-
     mv.addEventListener("load", handleLoad);
     return () => mv.removeEventListener("load", handleLoad);
-  }, [design, mvReady]);
+  }, [design, mvReady, parsedDesign]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -214,18 +240,102 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
             </div>
           </div>
 
-          {/* Canvas Preview */}
-          {design.previewImageUrl && (
+          {/* Material Colors */}
+          {parsedDesign.matColors?.length > 0 && (
             <div className="mt-5">
-              <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Design Canvas</p>
-              <div className="rounded-lg overflow-hidden border border-white/10">
-                <img src={design.previewImageUrl} alt="Customer Design" className="w-full aspect-square object-cover" />
+              <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Material Colors</p>
+              <div className="flex flex-wrap gap-2">
+                {parsedDesign.matColors.map((c: string, i: number) => (
+                  <div key={i} className="flex items-center gap-1.5 bg-white/5 rounded px-2 py-1">
+                    <div className="w-4 h-4 rounded-full border border-white/20" style={{ background: c }} />
+                    <span className="text-white/70 text-[10px] font-mono">{c}</span>
+                  </div>
+                ))}
               </div>
-              <p className="text-white/30 text-xs mt-1 text-center">Design texture applied to 3D model ↑</p>
             </div>
           )}
 
-          {!design.previewImageUrl && (
+          {/* Preset */}
+          {parsedDesign.presetName && (
+            <div className="mt-4">
+              <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Preset</p>
+              <p className="text-white text-sm">{parsedDesign.presetName}</p>
+            </div>
+          )}
+
+          {/* Garment State */}
+          {parsedDesign.garmentState && (
+            <div className="mt-4">
+              <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Garment Parts</p>
+              <div className="grid grid-cols-2 gap-1.5 text-xs">
+                {(["sleeves","collar","placket","panel","stripe"] as const).map(k => (
+                  <div key={k} className="flex items-center justify-between bg-white/5 rounded px-2 py-1">
+                    <span className="text-white/60 capitalize">{k}</span>
+                    <span className={parsedDesign.garmentState?.[k] ? "text-emerald-400" : "text-white/30"}>
+                      {parsedDesign.garmentState?.[k] ? "ON" : "off"}
+                    </span>
+                  </div>
+                ))}
+                {parsedDesign.garmentState?.pattern && parsedDesign.garmentState.pattern !== "none" && (
+                  <div className="col-span-2 flex items-center justify-between bg-white/5 rounded px-2 py-1">
+                    <span className="text-white/60">Pattern</span>
+                    <span className="text-white">{parsedDesign.garmentState.pattern}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Design Elements summary */}
+          {parsedDesign.objectCount > 0 && (
+            <div className="mt-4">
+              <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Design Elements ({parsedDesign.objectCount})</p>
+              <div className="space-y-1 text-xs">
+                {parsedDesign.texts?.length > 0 && (
+                  <div className="bg-white/5 rounded px-2 py-1.5">
+                    <span className="text-white/40">Text: </span>
+                    <span className="text-white">{parsedDesign.texts.map((t: string) => `"${t}"`).join(", ")}</span>
+                  </div>
+                )}
+                {parsedDesign.logoCount > 0 && (
+                  <div className="bg-white/5 rounded px-2 py-1">
+                    <span className="text-white/40">Logos / Images: </span>
+                    <span className="text-white">{parsedDesign.logoCount}</span>
+                  </div>
+                )}
+                {parsedDesign.shapeCount > 0 && (
+                  <div className="bg-white/5 rounded px-2 py-1">
+                    <span className="text-white/40">Shapes: </span>
+                    <span className="text-white">{parsedDesign.shapeCount}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Canvas Preview thumbnails */}
+          {(design.previewImageUrl || parsedDesign.textureUrl) && (
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              {design.previewImageUrl && (
+                <div>
+                  <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">3D Preview</p>
+                  <div className="rounded-lg overflow-hidden border border-white/10 bg-black/40">
+                    <img src={design.previewImageUrl} alt="3D Preview" className="w-full aspect-square object-contain" />
+                  </div>
+                </div>
+              )}
+              {parsedDesign.textureUrl && (
+                <div>
+                  <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Flat Texture</p>
+                  <div className="rounded-lg overflow-hidden border border-white/10" style={{ background: parsedDesign.canvasBg ?? "#222" }}>
+                    <img src={parsedDesign.textureUrl} alt="Flat Texture" className="w-full aspect-square object-contain" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!design.previewImageUrl && !parsedDesign.textureUrl && (
             <div className="mt-5 p-4 rounded-lg border border-white/10 text-center">
               <p className="text-white/40 text-xs">No canvas design saved yet</p>
             </div>

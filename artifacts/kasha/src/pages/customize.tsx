@@ -133,6 +133,12 @@ export default function CustomizePage() {
   // are registered once at canvas-init, so without this ref they'd capture
   // a stale syncTexture (with empty mats) forever.
   const syncTextureRef = useRef<(() => void) | null>(null);
+  // Indices of materials that actually accept textures (probed on model load).
+  // GLBs vary wildly — some only the body, some all parts, some none.
+  const texturableMatsRef = useRef<number[]>([]);
+  // Latest baked texture data URL (used for save/restore so admin can rebuild
+  // the customer's exact look on a fresh model-viewer).
+  const lastTextureUrlRef = useRef<string>("");
   const logoObjRef   = useRef<any>(null);
 
   // Materials from model
@@ -306,35 +312,103 @@ export default function CustomizePage() {
   }, [rightTab]);
 
   // ── Texture sync: Fabric canvas → PNG → model-viewer material ─────────────
-  // The Fabric canvas is the t-shirt's UV map. We bake it into a PNG and apply
-  // it to every material that has a baseColorTexture slot on the GLB. We also
-  // reset that material's baseColorFactor to white so the texture isn't tinted.
+  // Strategy borrowed from a tested reference impl that works on arbitrary GLBs:
+  //   1. Force TWO render passes + animation frames so fonts/images commit.
+  //   2. Read the raw HTMLCanvasElement (Fabric's wrapper sometimes lies).
+  //   3. Iterate ALL materials and try setTexture; break on FIRST success
+  //      (one shared UV-mapped material covers most t-shirts).
+  //   4. Fall back to the undocumented `info.texture = tex` path for stubborn
+  //      materials that throw on setTexture.
+  // We probe materials at load time (probeTexturability) and store the indices
+  // that are confirmed texturable.
+  const raf = () => new Promise<void>(r => requestAnimationFrame(() => r()));
+
   const syncTexture = useCallback(async () => {
-    const mv = mvRef.current;
-    const fc = fcRef.current;
+    const mv: any = mvRef.current;
+    const fc: any = fcRef.current;
     if (!mv || !fc || !mats.length) return;
     try {
-      const url = fc.toDataURL({ format: "png", quality: 0.95, multiplier: 1 });
-      const tex = await mv.createTexture(url);
+      // Two render passes + RAFs — required for fonts and images to render
+      fc.renderAll(); await raf();
+      fc.renderAll(); await raf();
+
+      // Use the underlying HTMLCanvasElement (more reliable than fc.toDataURL)
+      const rawEl: HTMLCanvasElement | undefined =
+        typeof fc.getElement === "function" ? fc.getElement() : undefined;
+      const dataUrl = rawEl
+        ? rawEl.toDataURL("image/png", 1.0)
+        : fc.toDataURL({ format: "png", quality: 1.0, multiplier: 1 });
+      if (!dataUrl || dataUrl.length < 100) {
+        console.warn("[customize] syncTexture: empty canvas data");
+        return;
+      }
+      lastTextureUrlRef.current = dataUrl;
+
+      const tex = await mv.createTexture(dataUrl);
       let applied = 0;
       for (const entry of mats) {
-        const pbr = entry?.mat?.pbrMetallicRoughness;
-        const slot = pbr?.baseColorTexture;
-        if (slot?.setTexture) {
-          slot.setTexture(tex);
+        const mat: any = entry?.mat;
+        const pbr = mat?.pbrMetallicRoughness;
+        if (!pbr) continue;
+        const slot = pbr.baseColorTexture;
+        // Path 1: documented setTexture
+        try {
+          slot?.setTexture?.(tex);
           try { pbr.setBaseColorFactor([1, 1, 1, 1]); } catch {}
           applied++;
+          break;
+        } catch {
+          // Path 2: undocumented direct assignment
+          try {
+            if (slot && typeof slot.texture !== "undefined") {
+              slot.texture = tex;
+              try { pbr.setBaseColorFactor([1, 1, 1, 1]); } catch {}
+              applied++;
+              break;
+            }
+          } catch {}
         }
       }
       if (!applied) {
-        console.warn("[customize] syncTexture: no material on this GLB exposes a baseColorTexture slot — design cannot bind. mats=", mats.map(m=>m.name));
+        console.warn(
+          "[customize] syncTexture: this GLB has no UV-mapped texture slot. The design appears in the canvas preview but cannot bake onto the 3D mesh. (Re-export the GLB with a baseColorTexture map.)"
+        );
       } else {
-        console.debug(`[customize] syncTexture: applied design to ${applied}/${mats.length} material(s)`);
+        console.debug(`[customize] syncTexture: applied texture (${dataUrl.length}b)`);
       }
     } catch (e) {
       console.error("[customize] syncTexture failed:", e);
     }
   }, [mats]);
+
+  // Probe materials with a 1×1 test texture to learn which ones accept textures.
+  // We don't use the result to gate writes (we always try all), but it gives us
+  // diagnostic info and a future hook for partial failures.
+  const probeTexturability = useCallback(async (model: any) => {
+    texturableMatsRef.current = [];
+    const mv: any = mvRef.current;
+    if (!mv || !model?.materials?.length) return;
+    try {
+      const c = document.createElement("canvas");
+      c.width = c.height = 1;
+      c.getContext("2d")!.fillStyle = "#ffffff";
+      c.getContext("2d")!.fillRect(0, 0, 1, 1);
+      const testTex = await mv.createTexture(c.toDataURL("image/png"));
+      model.materials.forEach((m: any, i: number) => {
+        try {
+          m.pbrMetallicRoughness.baseColorTexture.setTexture(testTex);
+          m.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]);
+          texturableMatsRef.current.push(i);
+        } catch {}
+      });
+      console.debug(
+        `[customize] probe: ${texturableMatsRef.current.length}/${model.materials.length} material(s) accept textures →`,
+        texturableMatsRef.current.map(i => model.materials[i].name || `Part ${i + 1}`)
+      );
+    } catch (e) {
+      console.warn("[customize] probe failed:", e);
+    }
+  }, []);
 
   // Keep the ref pointing at the latest syncTexture so canvas event handlers
   // (registered once at init) always call the current closure.
@@ -346,22 +420,22 @@ export default function CustomizePage() {
   useEffect(() => {
     if (!mvReady || !product?.modelUrl) return;
     const mv = mvRef.current; if (!mv) return;
-    const onLoad = () => {
+    const onLoad = async () => {
       const ov = document.getElementById("mv-overlay");
       if (ov) { ov.style.opacity = "0"; setTimeout(()=>{ if(ov) ov.style.display="none"; }, 500); }
       const model = mv.model;
-      console.debug("[customize] model loaded. materials:", model?.materials?.length ?? 0,
-        model?.materials?.map((m:any) => ({
-          name: m.name,
-          hasBaseColorTexture: !!m?.pbrMetallicRoughness?.baseColorTexture,
-          hasSetTexture: typeof m?.pbrMetallicRoughness?.baseColorTexture?.setTexture === "function",
-        })));
+      console.debug("[customize] model loaded. materials:", model?.materials?.length ?? 0);
       if (!model?.materials?.length) { setModelLoaded(true); return; }
       const entries: MatEntry[] = model.materials.map((m:any, i:number) => ({
         idx:i, name:m.name||`Part ${i+1}`, mat:m, color:"#ffffff",
       }));
       setMats(entries);
       setModelLoaded(true);
+      // Discover which materials accept textures, then push the current canvas
+      await probeTexturability(model);
+      // syncTexture closes over `mats` state which hasn't flushed yet — call
+      // it through the ref so we get the next-tick (post-setState) closure.
+      requestAnimationFrame(() => syncTextureRef.current?.());
     };
     mv.addEventListener("load", onLoad);
     return () => mv.removeEventListener("load", onLoad);
@@ -796,17 +870,19 @@ export default function CustomizePage() {
       if (!designName.trim()) throw new Error("Enter a design name first");
       const matColors = mats.map(m => m.color);
       const garmentState = { sleeves:gSleeves, collar:gCollar, placket:gPlacket, panel:gPanel, stripe:gStripe, pattern };
-      const canvasJSON = JSON.stringify(fc.toJSON(["data"]));
+      const canvasJSON = JSON.stringify((fc as any).toJSON(["data"]));
       // Preview thumbnail = snapshot of the 3D model (with the design baked
-      // onto the t-shirt), not the flat 2D canvas.
+      // onto the t-shirt). textureUrl = full 1024px PNG, used by the admin
+      // viewer to re-apply the exact design on a fresh model-viewer.
       const snap = await snapshotModel();
+      const textureUrl = lastTextureUrlRef.current;
       return apiFetch("/api/customizations", { method:"POST", body: JSON.stringify({
         productId: id,
         name: designName,
         color: primaryColor,
         size,
         partsEnabled: { qty, matColors, canvasBg, presetName },
-        canvasData: JSON.stringify({ canvasJSON, matColors, canvasBg, primaryColor, secondaryColor, garmentState, presetName }),
+        canvasData: JSON.stringify({ canvasJSON, textureUrl, matColors, canvasBg, primaryColor, secondaryColor, garmentState, presetName }),
         previewImageUrl: snap,
       })});
     },
@@ -825,12 +901,13 @@ export default function CustomizePage() {
       const garmentState = { sleeves:gSleeves, collar:gCollar, placket:gPlacket, panel:gPanel, stripe:gStripe, pattern };
       // Cart preview = snapshot of the 3D model with design baked on.
       const snap = await snapshotModel();
+      const textureUrl = lastTextureUrlRef.current;
       const cust = await apiFetch("/api/customizations", { method:"POST", body: JSON.stringify({
         productId: id,
         name: designName || `${product?.name} Custom`,
         color: primaryColor, size,
         partsEnabled: { qty, matColors, canvasBg, presetName },
-        canvasData: JSON.stringify({ canvasJSON:JSON.stringify(fc.toJSON(["data"])), matColors, canvasBg, primaryColor, secondaryColor, garmentState, presetName }),
+        canvasData: JSON.stringify({ canvasJSON:JSON.stringify((fc as any).toJSON(["data"])), textureUrl, matColors, canvasBg, primaryColor, secondaryColor, garmentState, presetName }),
         previewImageUrl: snap,
       })});
       return apiFetch("/api/cart", { method:"POST", body: JSON.stringify({
