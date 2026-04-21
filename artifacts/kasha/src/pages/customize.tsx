@@ -910,7 +910,7 @@ export default function CustomizePage() {
         canvasData: JSON.stringify({ canvasJSON:JSON.stringify((fc as any).toJSON(["data"])), textureUrl, matColors, canvasBg, primaryColor, secondaryColor, garmentState, presetName }),
         previewImageUrl: snap,
       })});
-      return apiFetch("/api/cart", { method:"POST", body: JSON.stringify({
+      return apiFetch("/api/cart/items", { method:"POST", body: JSON.stringify({
         productId:id, customizationId:cust.id, quantity:qty, size,
       })});
     },
