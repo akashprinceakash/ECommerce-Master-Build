@@ -44,10 +44,31 @@ KA.SHA is a full-stack luxury golf/sportswear fashion eCommerce web application 
 - `src/components/3d/ModelViewerCustomizer.tsx` — Bespoke Studio with 3D/2D upload support
 
 ## Admin Panel
-- Route: `/admin`
+- Route: `/admin` (single page with five tabs)
 - Protected: requires Clerk `publicMetadata.role === "admin"` OR email matching `ADMIN_EMAILS` env var (comma-separated)
-- Features: Product CRUD (create, edit, delete), .glb model file upload, thumbnail upload
-- API routes: `GET/POST /api/admin/products`, `PUT/DELETE /api/admin/products/:id`, `POST /api/admin/upload/model`, `POST /api/admin/upload/thumbnail`
+- **Dashboard tab**: KPI cards (revenue, orders, products, designs, customers, users), order status breakdown, recent orders feed (auto-refresh 30s)
+- **Products tab**: Full product CRUD, .glb model + thumbnail upload
+- **Orders tab**: List/filter all orders by status, expand to see line items + customer + shipping + payment IDs, update status (pending → confirmed → shipped → delivered → cancelled)
+- **Users tab**: List all Clerk users with order/spend stats, grant/revoke admin via Clerk metadata, delete users (with confirmation)
+- **Designs tab**: Browse all customer customizations with rich preview modal
+- API routes:
+  - Products: `GET/POST /api/admin/products`, `PUT/DELETE /api/admin/products/:id`
+  - Uploads: `POST /api/admin/upload/model`, `POST /api/admin/upload/thumbnail`
+  - Dashboard: `GET /api/admin/dashboard`
+  - Orders: `GET /api/admin/orders`, `PATCH /api/admin/orders/:id/status`
+  - Users: `GET /api/admin/users`, `PATCH /api/admin/users/:id/admin`, `DELETE /api/admin/users/:id`
+  - Designs: `GET /api/admin/customizations`
+
+## Payments — Razorpay
+- Real Razorpay integration replacing the previous mock checkout
+- Required secrets: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`
+- Razorpay Checkout JS loaded via CDN in `index.html`
+- Two-step server flow guards against tampering and replay:
+  1. `POST /api/payment/order` — server snapshots cart into a `pending` DB order with `order_items`, creates a Razorpay order, returns `{ orderId, amount, currency, keyId }`
+  2. `POST /api/payment/verify` — validates HMAC signature, fetches the payment from Razorpay API, asserts amount + order_id match the snapshotted DB order and `status === "captured"`, then marks the order `confirmed` and clears the cart
+- Idempotent: replaying the same `razorpay_payment_id` returns the existing confirmed order instead of duplicating
+- Legacy `POST /api/orders` is disabled (returns 410); orders can only be created via the verified payment flow
+- Schema additions on `orders`: `razorpay_order_id`, `razorpay_signature` (alongside existing `payment_id`)
 - Uploaded files stored in `artifacts/api-server/public/models/` and `public/thumbnails/`
 - Served at `/api/public/models/*` and `/api/public/thumbnails/*`
 

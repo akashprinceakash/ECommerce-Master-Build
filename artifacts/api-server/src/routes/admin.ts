@@ -117,7 +117,7 @@ router.put("/admin/products/:id", requireAuth, async (req, res): Promise<void> =
   const adminId = await requireAdmin(req, res);
   if (!adminId) return;
 
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
 
   const { name, description, category, priceInPaise, modelUrl, thumbnailUrl, available, sizes, defaultColor } = req.body;
@@ -141,7 +141,7 @@ router.delete("/admin/products/:id", requireAuth, async (req, res): Promise<void
   const adminId = await requireAdmin(req, res);
   if (!adminId) return;
 
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
 
   await db.delete(productsTable).where(eq(productsTable.id, id));

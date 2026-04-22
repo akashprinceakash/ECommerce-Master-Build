@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, desc } from "drizzle-orm";
-import { db, ordersTable, orderItemsTable, cartsTable, cartItemsTable, productsTable, customizationsTable } from "@workspace/db";
+import { db, ordersTable, orderItemsTable, productsTable, customizationsTable } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -37,72 +37,13 @@ router.get("/orders", requireAuth, async (req, res): Promise<void> => {
   res.json(ordersWithItems);
 });
 
-router.post("/orders", requireAuth, async (req, res): Promise<void> => {
-  const userId = (req as AuthenticatedRequest).userId;
-  const { shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone, paymentId } = req.body;
-
-  if (!shippingName || !shippingAddress || !shippingCity || !shippingState || !shippingPostalCode || !shippingPhone) {
-    res.status(400).json({ error: "Missing required shipping fields" });
-    return;
-  }
-
-  const [cart] = await db.select().from(cartsTable).where(eq(cartsTable.userId, userId));
-  if (!cart) {
-    res.status(400).json({ error: "Cart is empty" });
-    return;
-  }
-
-  const cartItems = await db.select().from(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id));
-  if (cartItems.length === 0) {
-    res.status(400).json({ error: "Cart is empty" });
-    return;
-  }
-
-  const cartItemsWithProducts = await Promise.all(
-    cartItems.map(async (item) => {
-      const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId));
-      return { ...item, product };
-    })
-  );
-
-  const totalInPaise = cartItemsWithProducts.reduce(
-    (sum, item) => sum + (item.product?.priceInPaise ?? 0) * item.quantity,
-    0
-  );
-
-  const [order] = await db
-    .insert(ordersTable)
-    .values({
-      userId,
-      status: "confirmed",
-      totalInPaise,
-      shippingName,
-      shippingAddress,
-      shippingCity,
-      shippingState,
-      shippingPostalCode,
-      shippingPhone,
-      paymentId: paymentId ?? null,
-    })
-    .returning();
-
-  await Promise.all(
-    cartItemsWithProducts.map((item) =>
-      db.insert(orderItemsTable).values({
-        orderId: order.id,
-        productId: item.productId,
-        customizationId: item.customizationId ?? null,
-        quantity: item.quantity,
-        size: item.size,
-        priceInPaise: item.product?.priceInPaise ?? 0,
-      })
-    )
-  );
-
-  await db.delete(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id));
-
-  const fullOrder = await buildOrderResponse(order);
-  res.status(201).json(fullOrder);
+// POST /orders has been removed. All orders must now be created through the
+// Razorpay payment flow (POST /payment/order → checkout → POST /payment/verify)
+// to guarantee that confirmed orders are backed by a captured payment.
+router.post("/orders", requireAuth, (_req, res): void => {
+  res.status(410).json({
+    error: "Direct order creation is disabled. Use POST /api/payment/order to start checkout.",
+  });
 });
 
 router.get("/orders/:id", requireAuth, async (req, res): Promise<void> => {

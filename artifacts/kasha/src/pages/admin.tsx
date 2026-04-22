@@ -5,8 +5,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Plus, Pencil, Trash2, Upload, X, Check,
-  ShieldCheck, Package, Users, Eye, ArrowLeft,
+  ShieldCheck, Package, Users, Eye, ArrowLeft, BarChart3, ShoppingBag, UserCog,
 } from "lucide-react";
+import { AdminDashboard } from "@/components/admin/AdminDashboard";
+import { AdminOrders } from "@/components/admin/AdminOrders";
+import { AdminUsers } from "@/components/admin/AdminUsers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/format";
@@ -354,7 +357,7 @@ export default function AdminPage() {
   const modelFileRef = useRef<HTMLInputElement>(null);
   const thumbFileRef = useRef<HTMLInputElement>(null);
 
-  const [activeTab, setActiveTab] = useState<"products" | "designs">("products");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "orders" | "users" | "designs">("dashboard");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
@@ -506,8 +509,11 @@ export default function AdminPage() {
         {/* Tabs */}
         <div className="flex gap-1 border-b border-border mb-8">
           {[
+            { id: "dashboard", label: "Dashboard", icon: BarChart3, count: 0 },
             { id: "products", label: "Products", icon: Package, count: products.length },
-            { id: "designs", label: "User Designs", icon: Users, count: designs.length },
+            { id: "orders", label: "Orders", icon: ShoppingBag, count: 0 },
+            { id: "users", label: "Users", icon: UserCog, count: 0 },
+            { id: "designs", label: "Designs", icon: Users, count: designs.length },
           ].map(tab => (
             <button
               key={tab.id}
@@ -530,6 +536,10 @@ export default function AdminPage() {
         </div>
 
         {/* ── PRODUCTS TAB ── */}
+        {activeTab === "dashboard" && <AdminDashboard />}
+        {activeTab === "orders" && <AdminOrders />}
+        {activeTab === "users" && <AdminUsers />}
+
         {activeTab === "products" && (
           <div>
             <div className="flex items-center justify-between mb-6">

@@ -2,7 +2,6 @@ import { Layout } from "@/components/layout/Layout";
 import { 
   useGetCart, 
   getGetCartQueryKey,
-  useCreateOrder,
   useGetUserProfile,
   getGetUserProfileQueryKey
 } from "@workspace/api-client-react";
@@ -16,6 +15,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Loader2, ArrowLeft } from "lucide-react";
+import { getApiUrl } from "@/lib/api";
+
+declare global { interface Window { Razorpay?: any; Clerk?: any } }
 
 const INDIAN_STATES = [
   "Maharashtra", "Delhi", "Karnataka", "Gujarat", "Tamil Nadu", 
@@ -60,44 +62,98 @@ export default function CheckoutPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const createOrder = useCreateOrder();
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  async function getToken(): Promise<string | null> {
+    try { return (await window.Clerk?.session?.getToken?.()) ?? null; } catch { return null; }
+  }
+
+  async function authFetch(path: string, opts?: RequestInit) {
+    const token = await getToken();
+    const headers: Record<string, string> = { "Content-Type": "application/json", ...(opts?.headers as any) };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${getApiUrl()}${path}`, { ...opts, headers });
+    if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+    return res.json();
+  }
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Basic validation
-    if (!formData.shippingName || !formData.shippingAddress || !formData.shippingCity || 
+
+    if (!formData.shippingName || !formData.shippingAddress || !formData.shippingCity ||
         !formData.shippingState || !formData.shippingPostalCode || !formData.shippingPhone) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all shipping fields.",
-        variant: "destructive"
-      });
+      toast({ title: "Missing Information", description: "Please fill in all shipping fields.", variant: "destructive" });
       return;
     }
 
+    if (!window.Razorpay) {
+      toast({ title: "Payment unavailable", description: "Razorpay failed to load. Please refresh and try again.", variant: "destructive" });
+      return;
+    }
+
+    setIsProcessing(true);
     try {
-      const order = await createOrder.mutateAsync({
-        data: {
-          ...formData,
-          paymentId: `test_pay_${Date.now()}` // Mock payment ID for test environment
-        }
+      // 1) Create Razorpay order on server (with shipping snapshot)
+      const { orderId, amount, currency, keyId } = await authFetch("/api/payment/order", {
+        method: "POST",
+        body: JSON.stringify(formData),
       });
 
-      queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
-      
-      toast({
-        title: "Order Confirmed",
-        description: "Thank you for your purchase.",
+      // 2) Open Razorpay Checkout
+      await new Promise<void>((resolve, reject) => {
+        const rzp = new window.Razorpay({
+          key: keyId,
+          amount,
+          currency,
+          order_id: orderId,
+          name: "KA.SHA",
+          description: "Luxury bespoke order",
+          prefill: {
+            name: formData.shippingName,
+            email: profile?.email ?? "",
+            contact: formData.shippingPhone,
+          },
+          notes: { shipping_city: formData.shippingCity },
+          theme: { color: "#000000" },
+          handler: async (resp: any) => {
+            try {
+              // 3) Verify on server (confirms the pending order)
+              const order = await authFetch("/api/payment/verify", {
+                method: "POST",
+                body: JSON.stringify({
+                  razorpay_order_id: resp.razorpay_order_id,
+                  razorpay_payment_id: resp.razorpay_payment_id,
+                  razorpay_signature: resp.razorpay_signature,
+                }),
+              });
+              queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+              toast({ title: "Payment Successful", description: "Thank you for your purchase." });
+              setLocation(`/orders/${order.id}`);
+              resolve();
+            } catch (err: any) {
+              toast({ title: "Verification Failed", description: err.message ?? "Could not verify payment.", variant: "destructive" });
+              reject(err);
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              toast({ title: "Payment Cancelled", description: "You closed the payment window.", variant: "destructive" });
+              reject(new Error("dismissed"));
+            },
+          },
+        });
+        rzp.on("payment.failed", (resp: any) => {
+          toast({ title: "Payment Failed", description: resp?.error?.description ?? "Try again.", variant: "destructive" });
+          reject(new Error(resp?.error?.description ?? "failed"));
+        });
+        rzp.open();
       });
-
-      setLocation(`/orders/${order.id}`);
-    } catch (e) {
-      toast({
-        title: "Checkout Failed",
-        description: "There was an error processing your order.",
-        variant: "destructive"
-      });
+    } catch (e: any) {
+      if (e?.message !== "dismissed") {
+        toast({ title: "Checkout Failed", description: e?.message ?? "There was an error processing your order.", variant: "destructive" });
+      }
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -214,15 +270,15 @@ export default function CheckoutPage() {
               <div className="pt-8">
                 <h2 className="font-serif text-xl font-medium mb-6 border-b border-border/50 pb-2">Payment</h2>
                 <div className="p-4 border border-border/50 bg-secondary/5 mb-8">
-                  <p className="text-sm text-muted-foreground">This is a test environment. Clicking 'Place Order' will mock a successful payment.</p>
+                  <p className="text-sm text-muted-foreground">Secured by Razorpay. You will be redirected to complete your payment via UPI, card, or netbanking.</p>
                 </div>
                 <Button 
                   type="submit" 
                   size="lg" 
                   className="w-full h-14 text-sm tracking-widest rounded-none"
-                  disabled={createOrder.isPending}
+                  disabled={isProcessing}
                 >
-                  {createOrder.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "PLACE ORDER"}
+                  {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : "PAY & PLACE ORDER"}
                 </Button>
               </div>
             </form>

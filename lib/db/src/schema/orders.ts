@@ -16,6 +16,8 @@ export const ordersTable = pgTable("orders", {
   shippingPostalCode: text("shipping_postal_code").notNull(),
   shippingPhone: text("shipping_phone").notNull(),
   paymentId: text("payment_id"),
+  razorpayOrderId: text("razorpay_order_id"),
+  razorpaySignature: text("razorpay_signature"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
