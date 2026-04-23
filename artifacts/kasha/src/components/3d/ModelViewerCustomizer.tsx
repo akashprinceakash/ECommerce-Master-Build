@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from "react";
 import * as fabric from "fabric";
+import { PATTERNS, ZONE_PRESETS, ZONE_LABEL, patternUrl, type PatternZone, type PatternDef } from "./patterns";
 
 export interface CustomizerHandle {
   getCanvasData: () => { canvasJson: string; previewDataUrl: string } | null;
@@ -75,6 +76,11 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
   const [posX, setPosX] = useState(512);
   const [posY, setPosY] = useState(512);
   const [showTweaks, setShowTweaks] = useState(false);
+
+  // Pattern panel state
+  const [activePatternId, setActivePatternId] = useState<string | null>(null);
+  const [allOverPatternId, setAllOverPatternId] = useState<string | null>(null);
+  const baseBgColorRef = useRef<string>("#ffffff");
 
   const SIZE_SCALES: Record<string, string> = { S: "0.88 0.88 0.88", M: "1 1 1", L: "1.12 1.12 1.12", XL: "1.25 1.25 1.25" };
 
@@ -239,8 +245,11 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
     const mat = updated[idx].material;
     if (!mat) return;
     if (updated[idx].isPrintArea) {
+      baseBgColorRef.current = hex;
       const fc = fabricCanvasRef.current;
-      if (fc) { (fc as any).backgroundColor = hex; fc.renderAll(); syncTexture(); }
+      // Don't overwrite an active all-over pattern fill — the colour will be
+      // restored when the customer clears the pattern.
+      if (fc && !allOverPatternId) { (fc as any).backgroundColor = hex; fc.renderAll(); syncTexture(); }
       mat.pbrMetallicRoughness.setBaseColorFactor("#ffffff");
     } else {
       mat.pbrMetallicRoughness.setBaseColorFactor(hex);
@@ -308,6 +317,76 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
     fc.add(group); fc.setActiveObject(group); fc.renderAll();
     currentObjRef.current = group;
     updateLayerSelector(); syncTexture();
+  };
+
+  // ── PATTERN HANDLERS ────────────────────────────────────────────────
+  const loadHTMLImage = (url: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(e);
+      img.src = url;
+    });
+
+  const handleApplyAllOver = async (p: PatternDef) => {
+    const fc = fabricCanvasRef.current;
+    if (!fc) return;
+    try {
+      const img = await loadHTMLImage(patternUrl(p.file));
+      // Tile the source image so it repeats across the entire UV print area
+      const pattern = new fabric.Pattern({ source: img, repeat: "repeat" });
+      (fc as any).backgroundColor = pattern;
+      fc.renderAll();
+      setAllOverPatternId(p.id);
+      setActivePatternId(p.id);
+      syncTexture();
+    } catch {
+      // Pattern image failed to load; silently ignore so UI doesn't crash
+    }
+  };
+
+  const handleClearAllOver = () => {
+    const fc = fabricCanvasRef.current;
+    if (!fc) return;
+    (fc as any).backgroundColor = baseBgColorRef.current || "#ffffff";
+    fc.renderAll();
+    setAllOverPatternId(null);
+    syncTexture();
+  };
+
+  const handlePlacePatternOnZone = async (p: PatternDef, zone: Exclude<PatternZone, "all">) => {
+    const fc = fabricCanvasRef.current;
+    if (!fc) return;
+    try {
+      const img = await fabric.FabricImage.fromURL(patternUrl(p.file), { crossOrigin: "anonymous" });
+      const preset = ZONE_PRESETS[zone];
+      const naturalW = img.width ?? 1024;
+      const scale = preset.size / naturalW;
+      img.set({
+        left: preset.left,
+        top: preset.top,
+        originX: "center",
+        originY: "center",
+        scaleX: scale,
+        scaleY: scale,
+      });
+      (img as any).kashaZone = zone;
+      (img as any).kashaPatternId = p.id;
+      fc.add(img);
+      fc.setActiveObject(img);
+      fc.renderAll();
+      currentObjRef.current = img;
+      setActivePatternId(p.id);
+      setSelectedLayerIdx(fc.getObjects().indexOf(img));
+      setScaleVal(scale);
+      setPosX(preset.left);
+      setPosY(preset.top);
+      updateLayerSelector();
+      syncTexture();
+    } catch {
+      /* ignore image load failure */
+    }
   };
 
   const handleDeleteSelected = () => {
@@ -709,6 +788,124 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
               <span>📁</span> Choose image file...
               <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
             </label>
+          </div>
+
+          {/* ── PATTERNS / PRINTS LIBRARY ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div style={{ fontSize: "0.9rem", textTransform: "uppercase", letterSpacing: "2px", color: "#8b949e", fontWeight: 600 }}>
+              Patterns & Prints
+            </div>
+            <p style={{ margin: 0, fontSize: "0.78rem", color: "#8b949e", lineHeight: 1.5 }}>
+              Select a print, then either apply it across the whole garment or place it on a single zone. You can stack multiple prints — drag in the canvas below to reposition.
+            </p>
+
+            {/* Pattern thumbnail grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.5rem" }}>
+              {PATTERNS.map((p) => {
+                const selected = activePatternId === p.id;
+                const allOver   = allOverPatternId === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setActivePatternId(p.id)}
+                    title={p.label}
+                    style={{
+                      position: "relative",
+                      padding: 0,
+                      aspectRatio: "1/1",
+                      borderRadius: "10px",
+                      overflow: "hidden",
+                      cursor: "pointer",
+                      background: `url(${patternUrl(p.file)}) center/cover`,
+                      border: selected ? "2px solid #6ee7b7" : "1px solid rgba(255,255,255,0.12)",
+                      boxShadow: selected ? "0 0 0 2px rgba(110,231,183,0.25)" : "none",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {allOver && (
+                      <span style={{
+                        position: "absolute", top: 4, right: 4,
+                        fontSize: "0.55rem", fontWeight: 700,
+                        background: "#6ee7b7", color: "#0b0c10",
+                        padding: "2px 5px", borderRadius: "4px",
+                        letterSpacing: "0.5px",
+                      }}>ALL</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {activePatternId && (() => {
+              const p = PATTERNS.find(x => x.id === activePatternId)!;
+              return (
+                <div style={{
+                  background: "rgba(0,0,0,0.25)",
+                  padding: "0.85rem",
+                  borderRadius: "10px",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  display: "flex", flexDirection: "column", gap: "0.65rem",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 6, background: `url(${patternUrl(p.file)}) center/cover`, flexShrink: 0 }} />
+                    <div>
+                      <div style={{ color: "#f8f9fa", fontWeight: 600, fontSize: "0.9rem" }}>{p.label}</div>
+                      <div style={{ display: "flex", gap: 3, marginTop: 4 }}>
+                        {p.swatchColors.map((c) => (
+                          <span key={c} style={{ width: 12, height: 12, borderRadius: "50%", background: c, border: "1px solid rgba(255,255,255,0.2)" }} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleApplyAllOver(p)}
+                    style={{
+                      padding: "0.7rem", background: "#6ee7b7", color: "#0b0c10",
+                      border: "none", borderRadius: "8px", fontFamily: "inherit",
+                      fontWeight: 800, fontSize: "0.85rem", cursor: "pointer",
+                      textTransform: "uppercase", letterSpacing: "1px",
+                    }}
+                  >
+                    {allOverPatternId === p.id ? "✓ Applied All-Over" : "Apply to whole T-shirt"}
+                  </button>
+
+                  <div style={{ fontSize: "0.7rem", color: "#8b949e", textTransform: "uppercase", letterSpacing: "1px" }}>
+                    Or place on a zone
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.4rem" }}>
+                    {(["front", "back", "leftSleeve", "rightSleeve", "collar"] as const).map((zone) => (
+                      <button
+                        key={zone}
+                        onClick={() => handlePlacePatternOnZone(p, zone)}
+                        style={{
+                          padding: "0.55rem", background: "rgba(255,255,255,0.08)",
+                          color: "#f8f9fa", border: "1px solid rgba(255,255,255,0.12)",
+                          borderRadius: "6px", fontFamily: "inherit",
+                          fontWeight: 600, fontSize: "0.78rem", cursor: "pointer",
+                        }}
+                      >
+                        + {ZONE_LABEL[zone]}
+                      </button>
+                    ))}
+                  </div>
+
+                  {allOverPatternId && (
+                    <button
+                      onClick={handleClearAllOver}
+                      style={{
+                        padding: "0.5rem", background: "transparent",
+                        color: "rgba(209,73,91,0.8)", border: "1px solid rgba(209,73,91,0.4)",
+                        borderRadius: "6px", fontFamily: "inherit",
+                        fontWeight: 600, fontSize: "0.78rem", cursor: "pointer",
+                      }}
+                    >
+                      ✕ Remove all-over print
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Shapes */}

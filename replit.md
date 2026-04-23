@@ -41,7 +41,15 @@ KA.SHA is a full-stack luxury golf/sportswear fashion eCommerce web application 
 - `src/components/layout/Navbar.tsx` — New design with category nav + CUSTOMISE button + cart icon
 - `src/components/layout/CartDrawer.tsx` — Slide-out cart panel from right
 - `src/contexts/CartContext.tsx` — Global open/close state for cart drawer
-- `src/components/3d/ModelViewerCustomizer.tsx` — Bespoke Studio with 3D/2D upload support
+- `src/components/3d/ModelViewerCustomizer.tsx` — Bespoke Studio with 3D/2D upload support, text/shape tools, and curated **Patterns & Prints** library
+- `src/components/3d/patterns.ts` — Curated print library (id, label, file, swatch colors) + zone presets (front/back/sleeves/collar) for the customizer. Drop a new image into `public/patterns/` and append an entry here to publish a new print.
+
+### Patterns workflow (customizer)
+1. Customer opens **Design** tab → **Patterns & Prints** grid.
+2. Picks a thumbnail. They can either:
+   - **Apply to whole T-shirt** — sets the Fabric canvas background to a tiled pattern, which the model-viewer texture-maps across the entire UV print area.
+   - **Place on a zone** (Front / Back / Left Sleeve / Right Sleeve / Collar) — drops the print as a draggable Fabric image at a preset coordinate; customer can reposition/scale via the Tweak controls.
+3. Multiple zone-prints can be stacked. The all-over print is overridden by the chosen part color when removed.
 
 ## Admin Panel
 - Route: `/admin` (single page with five tabs)

@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import * as fabric from "fabric";
+import { PATTERNS, ZONE_PRESETS, ZONE_LABEL, patternUrl, type PatternZone, type PatternDef } from "@/components/3d/patterns";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -147,6 +148,11 @@ export default function CustomizePage() {
 
   // Right panel tabs: colors | design | text | logo | shapes | canvas
   const [rightTab, setRightTab]     = useState<"colors"|"design"|"text"|"logo"|"shapes"|"canvas">("colors");
+
+  // Print Library state
+  const [activePrintId, setActivePrintId]   = useState<string | null>(null);
+  const [allOverPrintId, setAllOverPrintId] = useState<string | null>(null);
+  const baseBgRef = useRef<string>("#C5D3DE");
 
   // Core design state
   const [size, setSize]             = useState("M");
@@ -449,6 +455,9 @@ export default function CustomizePage() {
       setCanvasBg(bg);
       setPrimaryColor(parsed.primaryColor || bg);
       setSecondaryColor(parsed.secondaryColor || "#362223");
+      // Initialise the print-library "restore-to" colour to the loaded body colour
+      // so Clear All-Over reverts to it instead of the hard-coded default.
+      baseBgRef.current = parsed.primaryColor || bg;
       if (parsed.garmentState) {
         const g = parsed.garmentState;
         setGSleeves(g.sleeves ?? true); setGCollar(g.collar ?? true);
@@ -635,7 +644,9 @@ export default function CustomizePage() {
       next[idx] = { ...next[idx], color:hex };
       if (idx === 0) {
         // Body — paint the canvas background so the texture carries the color
-        setFabricBg(fc, hex);
+        baseBgRef.current = hex;
+        // Don't clobber an active all-over pattern; the colour is restored when it's removed.
+        if (!allOverPrintId) setFabricBg(fc, hex);
         syncTexture();
         try { next[0].mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1, 1, 1, 1]); }
         catch (e) { console.error("[customize] setBaseColorFactor (body white) failed:", e); }
@@ -646,7 +657,7 @@ export default function CustomizePage() {
       }
       return next;
     });
-  }, [syncTexture]);
+  }, [syncTexture, allOverPrintId]);
 
   // Apply palette to active garment part
   const applyPalette = (hex: string) => {
@@ -659,10 +670,75 @@ export default function CustomizePage() {
   const applyPrimary = (hex: string) => {
     setPrimaryColor(hex); setCanvasBg(hex);
     const fc = fcRef.current;
-    setFabricBg(fc, hex);
+    baseBgRef.current = hex;
+    if (!allOverPrintId) setFabricBg(fc, hex);
     syncTexture();
     if (mats[0]) { applyPartColor(0, hex); }
   };
+
+  // ── PRINT LIBRARY ────────────────────────────────────────────────────────
+  const loadHTMLImage = (url: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(e);
+      img.src = url;
+    });
+
+  const applyAllOverPrint = useCallback(async (p: PatternDef) => {
+    const fc = fcRef.current;
+    if (!fc) return;
+    try {
+      const img = await loadHTMLImage(patternUrl(p.file));
+      const pattern = new fabric.Pattern({ source: img, repeat: "repeat" });
+      // Bypass setFabricBg (which expects a hex string) — assign Pattern directly.
+      (fc as any).backgroundColor = pattern;
+      fc.renderAll();
+      setAllOverPrintId(p.id);
+      setActivePrintId(p.id);
+      // Body material must be pure white so the texture's true colours show through.
+      try { mats[0]?.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1, 1, 1, 1]); } catch {}
+      syncTexture();
+      toast({ title: "Print applied", description: `${p.label} mapped across the whole garment.` });
+    } catch {
+      toast({ title: "Could not load print", variant: "destructive" });
+    }
+  }, [mats, syncTexture, toast]);
+
+  const clearAllOverPrint = useCallback(() => {
+    const fc = fcRef.current;
+    if (!fc) return;
+    setFabricBg(fc, baseBgRef.current || "#ffffff");
+    fc.renderAll();
+    setAllOverPrintId(null);
+    syncTexture();
+  }, [syncTexture]);
+
+  const placePrintOnZone = useCallback(async (p: PatternDef, zone: Exclude<PatternZone, "all">) => {
+    const fc = fcRef.current;
+    if (!fc) return;
+    try {
+      const img = await fabric.FabricImage.fromURL(patternUrl(p.file), { crossOrigin: "anonymous" });
+      const preset = ZONE_PRESETS[zone];
+      const naturalW = img.width ?? 1024;
+      const scale = preset.size / naturalW;
+      img.set({
+        left: preset.left, top: preset.top,
+        originX: "center", originY: "center",
+        scaleX: scale, scaleY: scale,
+      });
+      (img as any).data = { kashaZone: zone, kashaPrintId: p.id };
+      fc.add(img);
+      fc.setActiveObject(img);
+      fc.renderAll();
+      setActivePrintId(p.id);
+      syncTexture();
+      toast({ title: "Print placed", description: `${p.label} on ${ZONE_LABEL[zone]} — drag in Canvas tab to reposition.` });
+    } catch {
+      toast({ title: "Could not load print", variant: "destructive" });
+    }
+  }, [syncTexture, toast]);
 
   // Secondary color → mat[1] + redraw garment overlays that use secondary
   const applySecondary = (hex: string) => {
@@ -1318,6 +1394,91 @@ export default function CustomizePage() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Print Library */}
+              <div>
+                <div style={sl}>Print Library</div>
+                <p style={{ margin:"0 0 8px",fontSize:"10px",color:V.mu,lineHeight:1.5 }}>
+                  Pick a print, then apply it across the whole garment or place it on a single zone. You can stack multiple prints — drag them on the Canvas tab.
+                </p>
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"5px" }}>
+                  {PATTERNS.map((p) => {
+                    const sel = activePrintId === p.id;
+                    const all = allOverPrintId === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => setActivePrintId(p.id)}
+                        title={p.label}
+                        style={{
+                          position:"relative",padding:0,aspectRatio:"1/1",borderRadius:"7px",overflow:"hidden",cursor:"pointer",
+                          background:`url(${patternUrl(p.file)}) center/cover`,
+                          border:sel?`2px solid ${V.ac}`:`1px solid ${V.bd}`,
+                          boxShadow:sel?`0 0 0 2px rgba(201,168,124,.25)`:"none",
+                        }}
+                      >
+                        {all && (
+                          <span style={{
+                            position:"absolute",top:3,right:3,fontSize:"8px",fontWeight:800,
+                            background:V.ac,color:"#fff",padding:"1px 4px",borderRadius:"3px",letterSpacing:"0.5px",
+                          }}>ALL</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {activePrintId && (() => {
+                  const p = PATTERNS.find(x => x.id === activePrintId);
+                  if (!p) return null;
+                  return (
+                    <div style={{ marginTop:"10px",background:V.sf,border:`1px solid ${V.bd}`,borderRadius:"7px",padding:"10px",display:"flex",flexDirection:"column",gap:"8px" }}>
+                      <div style={{ display:"flex",alignItems:"center",gap:"8px" }}>
+                        <div style={{ width:32,height:32,borderRadius:5,background:`url(${patternUrl(p.file)}) center/cover`,flexShrink:0 }} />
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:"11px",fontWeight:600 }}>{p.label}</div>
+                          <div style={{ display:"flex",gap:3,marginTop:3 }}>
+                            {p.swatchColors.map(c => (
+                              <span key={c} style={{ width:10,height:10,borderRadius:"50%",background:c,border:`1px solid ${V.bd}` }} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => applyAllOverPrint(p)}
+                        style={{ ...btnStyle("primary"),padding:"7px 0",fontSize:"11px",fontWeight:700 }}
+                      >
+                        {allOverPrintId === p.id ? "✓ Applied All-Over" : "Apply to whole T-shirt"}
+                      </button>
+
+                      <div style={{ fontSize:"9px",color:V.mu,textTransform:"uppercase",letterSpacing:"1px",marginTop:2 }}>
+                        Or place on a zone
+                      </div>
+                      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px" }}>
+                        {(["front","back","leftSleeve","rightSleeve","collar"] as const).map(zone => (
+                          <button
+                            key={zone}
+                            onClick={() => placePrintOnZone(p, zone)}
+                            style={{ ...btnStyle("secondary"),padding:"6px 0",fontSize:"10px",fontWeight:600 }}
+                          >
+                            + {ZONE_LABEL[zone]}
+                          </button>
+                        ))}
+                      </div>
+
+                      {allOverPrintId && (
+                        <button
+                          onClick={clearAllOverPrint}
+                          style={{ ...btnStyle("danger"),padding:"6px 0",fontSize:"10px",fontWeight:600 }}
+                        >
+                          ✕ Remove all-over print
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Quick tip */}
