@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import * as fabric from "fabric";
-import { PATTERNS, ZONE_PRESETS, ZONE_LABEL, ALL_OVER_ZONES, patternUrl, type PatternZone, type PatternDef } from "@/components/3d/patterns";
+import { PATTERNS, ZONE_PRESETS, ZONE_LABEL, ALL_OVER_ZONES, DEFAULT_ZONE, zoneCenter, coverScale, patternUrl, type PatternZone, type PatternDef } from "@/components/3d/patterns";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -692,24 +692,43 @@ export default function CustomizePage() {
     return victims.length;
   }, []);
 
-  // Place one print image on one zone using the calibrated UV preset.
-  // The image keeps its natural aspect ratio; `preset.scale` is applied to
-  // both axes so the design isn't stretched.
+  // Apply UV-bounding-box cover-fit + clipping to a Fabric image so it fills
+  // the zone exactly. Keeps the artwork's aspect ratio, crops anything that
+  // would otherwise spill over onto an adjacent panel.
+  const fitImageToZone = (img: fabric.FabricImage, zone: PatternZone) => {
+    const box = ZONE_PRESETS[zone];
+    const { cx, cy } = zoneCenter(box);
+    const imgW = img.width ?? 1;
+    const imgH = img.height ?? 1;
+    const scale = coverScale(imgW, imgH, box.w, box.h);
+    img.set({
+      left: cx,
+      top: cy,
+      originX: "center",
+      originY: "center",
+      scaleX: scale,
+      scaleY: scale,
+    });
+    // absolutePositioned clipPath is in canvas coordinates — anything outside
+    // the zone box is invisible regardless of how the user resizes/drags.
+    img.clipPath = new fabric.Rect({
+      left: box.x, top: box.y,
+      width: box.w, height: box.h,
+      absolutePositioned: true,
+    });
+  };
+
+  // Load a print image and place it on the requested zone using the cover-fit
+  // logic above.
   const addZoneImage = useCallback(async (
     p: PatternDef,
     zone: PatternZone,
     opts: { allOver?: boolean; selectable?: boolean } = {},
   ) => {
     const fc = fcRef.current; if (!fc) return null;
-    const preset = ZONE_PRESETS[zone];
     const img = await fabric.FabricImage.fromURL(patternUrl(p.file), { crossOrigin: "anonymous" });
+    fitImageToZone(img, zone);
     img.set({
-      left: preset.left,
-      top: preset.top,
-      originX: "center",
-      originY: "center",
-      scaleX: preset.scale,
-      scaleY: preset.scale,
       selectable: opts.selectable ?? true,
       evented: opts.selectable ?? true,
     });
@@ -744,13 +763,8 @@ export default function CustomizePage() {
       removePrintObjects(d => d.kashaAllOver === true);
       ALL_OVER_ZONES.forEach((zone, i) => {
         const img = sources[i];
-        const preset = ZONE_PRESETS[zone];
-        img.set({
-          left: preset.left, top: preset.top,
-          originX: "center", originY: "center",
-          scaleX: preset.scale, scaleY: preset.scale,
-          selectable: false, evented: false,
-        });
+        fitImageToZone(img, zone);
+        img.set({ selectable: false, evented: false });
         (img as any).data = { kashaZone: zone, kashaPrintId: p.id, kashaAllOver: true };
         fc.add(img);
       });
@@ -798,6 +812,23 @@ export default function CustomizePage() {
     }
   }, [addZoneImage, removePrintObjects, syncTexture, toast]);
 
+  // Selecting a print thumbnail. Per spec, the FIRST print the customer picks
+  // auto-fits the default panel (Front) so there's no arbitrary blank state —
+  // but we only do this when nothing else is on Front, to avoid silently
+  // replacing existing artwork while the customer browses other prints.
+  const selectPrint = useCallback((p: PatternDef) => {
+    setActivePrintId(p.id);
+    const fc = fcRef.current; if (!fc) return;
+    const alreadyPlaced = fc.getObjects().some(o => (o as any).data?.kashaPrintId === p.id);
+    if (alreadyPlaced) return;
+    const frontOccupied = fc.getObjects().some(o => {
+      const d = (o as any).data;
+      return d?.kashaZone === DEFAULT_ZONE && !d?.kashaAllOver;
+    });
+    if (frontOccupied) return; // just preview-select, don't overwrite the user's design
+    void placePrintOnZone(p, DEFAULT_ZONE);
+  }, [placePrintOnZone]);
+
   // Upload your own design — reads the file as a data URL and registers it as
   // a custom print. The same zone/all-over actions then work on it.
   const handleUploadCustomPrint = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -822,14 +853,16 @@ export default function CustomizePage() {
         swatchColors: ["#888888"],
       };
       setCustomPrints(prev => [def, ...prev].slice(0, 12));
-      setActivePrintId(id);
-      toast({ title: "Design uploaded", description: "Pick a zone or apply it to the whole t-shirt." });
+      // Auto-place on the default panel so the customer immediately sees it
+      // sized correctly. They can still apply all-over or move panels after.
+      void placePrintOnZone(def, DEFAULT_ZONE);
+      toast({ title: "Design uploaded", description: "Placed on the front — pick another panel or apply to the whole t-shirt." });
     };
     reader.onerror = () => toast({ title: "Could not read file", variant: "destructive" });
     reader.readAsDataURL(file);
     // Reset input so the same file can be re-uploaded if needed.
     e.target.value = "";
-  }, [toast]);
+  }, [toast, placePrintOnZone]);
 
   // Secondary color → mat[1] + redraw garment overlays that use secondary
   const applySecondary = (hex: string) => {
@@ -1491,7 +1524,7 @@ export default function CustomizePage() {
               <div>
                 <div style={sl}>Print Library</div>
                 <p style={{ margin:"0 0 8px",fontSize:"10px",color:V.mu,lineHeight:1.5 }}>
-                  Pick a print, then place it on a panel or apply it to the whole t-shirt — each zone is auto-fitted, no resizing needed.
+                  Click any print to drop it on the front of the t-shirt at the right size, then use the panel buttons below to place it on the back, sleeves or collar — or apply it everywhere in one click.
                 </p>
 
                 {/* Upload your own */}
@@ -1513,7 +1546,7 @@ export default function CustomizePage() {
                         return (
                           <button
                             key={p.id}
-                            onClick={() => setActivePrintId(p.id)}
+                            onClick={() => selectPrint(p)}
                             title={p.label}
                             style={{
                               position:"relative",padding:0,aspectRatio:"1/1",borderRadius:"7px",overflow:"hidden",cursor:"pointer",
@@ -1547,7 +1580,7 @@ export default function CustomizePage() {
                     return (
                       <button
                         key={p.id}
-                        onClick={() => setActivePrintId(p.id)}
+                        onClick={() => selectPrint(p)}
                         title={p.label}
                         style={{
                           position:"relative",padding:0,aspectRatio:"1/1",borderRadius:"7px",overflow:"hidden",cursor:"pointer",
