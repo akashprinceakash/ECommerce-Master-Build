@@ -36,48 +36,28 @@ export const ZONE_LABEL: Record<PatternZone, string> = {
   collar: "Collar",
 };
 
-// UV bounding box of every garment panel on the 1024x1024 fabric texture.
-// `x`, `y` = top-left of the panel's UV island. `w`, `h` = its size.
-// Designs are placed using a "cover" fit + a clipPath rectangle equal to this
-// box, so the artwork fills the panel completely and never bleeds onto an
-// adjacent panel. Calibrated from the KA.SHA design notes (24 Apr 2026).
+// Calibrated UV placement for the t-shirt model used by /products/:id/customize.
+// `left` / `top` are the IMAGE CENTRE on the 1024x1024 fabric canvas.
+// `scale` is the literal Fabric scaleX/scaleY applied to the source bitmap.
+// Source: KA.SHA design notes (24 Apr 2026).
 export interface ZonePreset {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
+  left: number;
+  top: number;
+  scale: number;
 }
 
 export const ZONE_PRESETS: Record<PatternZone, ZonePreset> = {
-  // Sleeves and collar are compact UV islands.
-  leftSleeve:  { x: 359, y: 39,  w: 102, h: 102 },
-  rightSleeve: { x: 767, y: 44,  w: 102, h: 102 },
-  collar:      { x: 217, y: 203, w: 102, h: 102 },
-  // Torso panels carry the bulk of the artwork.
-  front:       { x: 180, y: 540, w: 220, h: 290 },
-  back:        { x: 624, y: 544, w: 305, h: 305 },
+  leftSleeve:  { left: 410, top: 90,  scale: 0.10 },
+  rightSleeve: { left: 818, top: 95,  scale: 0.10 },
+  collar:      { left: 268, top: 254, scale: 0.10 },
+  front:       { left: 280, top: 683, scale: 0.10 },
+  back:        { left: 777, top: 697, scale: 0.20 },
 };
 
-// "Apply to whole T-shirt" places the same print on every panel using the
-// per-zone bounding boxes above, so the artwork sits correctly on each panel
-// of the 3D model rather than tiling as a wallpaper.
+// "Apply to whole T-shirt" places the same print on every zone using the
+// per-zone calibrated placements above, so the artwork sits correctly on each
+// panel of the 3D model rather than tiling as a wallpaper.
 export const ALL_OVER_ZONES: PatternZone[] = ["leftSleeve", "rightSleeve", "collar", "front", "back"];
-
-// The default panel that newly-selected prints land on.
-export const DEFAULT_ZONE: PatternZone = "front";
-
-// Helper: derive the centre of a zone box.
-export function zoneCenter(z: ZonePreset): { cx: number; cy: number } {
-  return { cx: z.x + z.w / 2, cy: z.y + z.h / 2 };
-}
-
-// Helper: compute the "cover" scale that makes a source bitmap of size
-// (imgW × imgH) fully cover the box (boxW × boxH) while keeping aspect ratio.
-// One axis will overflow the box; we crop overflow with a clipPath.
-export function coverScale(imgW: number, imgH: number, boxW: number, boxH: number): number {
-  if (!imgW || !imgH) return 1;
-  return Math.max(boxW / imgW, boxH / imgH);
-}
 
 export function patternUrl(fileOrUrl: string): string {
   // Already a fully qualified URL or a data: / blob: source — return as-is.
