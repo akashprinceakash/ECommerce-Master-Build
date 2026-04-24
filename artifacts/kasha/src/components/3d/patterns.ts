@@ -8,8 +8,8 @@
 export interface PatternDef {
   id: string;
   label: string;
-  file: string;
-  swatchColors: string[]; // hint colors a designer can pair with the print
+  file: string;          // filename inside /patterns OR a full URL (for uploaded prints)
+  swatchColors: string[];
 }
 
 export const PATTERNS: PatternDef[] = [
@@ -26,10 +26,9 @@ export const PATTERNS: PatternDef[] = [
   { id: "orange-abstract", label: "Sun & Cobalt",      file: "orange-abstract.jpg", swatchColors: ["#ed7c2a", "#3552c0"] },
 ];
 
-export type PatternZone = "all" | "front" | "back" | "leftSleeve" | "rightSleeve" | "collar";
+export type PatternZone = "front" | "back" | "leftSleeve" | "rightSleeve" | "collar";
 
 export const ZONE_LABEL: Record<PatternZone, string> = {
-  all: "All-Over Print",
   front: "Front",
   back: "Back",
   leftSleeve: "Left Sleeve",
@@ -37,19 +36,33 @@ export const ZONE_LABEL: Record<PatternZone, string> = {
   collar: "Collar",
 };
 
-// Default placement on the 1024x1024 texture canvas. Real UV layouts vary by
-// model, so the customer can drag/scale after placement using the existing
-// Tweak controls.
-export const ZONE_PRESETS: Record<Exclude<PatternZone, "all">, { left: number; top: number; size: number }> = {
-  front:       { left: 320, top: 540, size: 380 },
-  back:        { left: 720, top: 540, size: 380 },
-  leftSleeve:  { left: 130, top: 180, size: 200 },
-  rightSleeve: { left: 894, top: 180, size: 200 },
-  collar:      { left: 512, top: 110, size: 180 },
+// Calibrated UV placement for the t-shirt model used by /products/:id/customize.
+// `left` / `top` are the IMAGE CENTRE on the 1024x1024 fabric canvas.
+// `scale` is the literal Fabric scaleX/scaleY applied to the source bitmap.
+// Source: KA.SHA design notes (24 Apr 2026).
+export interface ZonePreset {
+  left: number;
+  top: number;
+  scale: number;
+}
+
+export const ZONE_PRESETS: Record<PatternZone, ZonePreset> = {
+  leftSleeve:  { left: 410, top: 90,  scale: 0.10 },
+  rightSleeve: { left: 818, top: 95,  scale: 0.10 },
+  collar:      { left: 268, top: 254, scale: 0.10 },
+  front:       { left: 280, top: 683, scale: 0.10 },
+  back:        { left: 777, top: 697, scale: 0.20 },
 };
 
-export function patternUrl(file: string): string {
+// "Apply to whole T-shirt" places the same print on every zone using the
+// per-zone calibrated placements above, so the artwork sits correctly on each
+// panel of the 3D model rather than tiling as a wallpaper.
+export const ALL_OVER_ZONES: PatternZone[] = ["leftSleeve", "rightSleeve", "collar", "front", "back"];
+
+export function patternUrl(fileOrUrl: string): string {
+  // Already a fully qualified URL or a data: / blob: source — return as-is.
+  if (/^(https?:|data:|blob:)/i.test(fileOrUrl)) return fileOrUrl;
   const base = import.meta.env.BASE_URL ?? "/";
   const clean = base.endsWith("/") ? base : `${base}/`;
-  return `${clean}patterns/${file}`;
+  return `${clean}patterns/${fileOrUrl}`;
 }
