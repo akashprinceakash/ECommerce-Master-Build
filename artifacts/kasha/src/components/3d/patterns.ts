@@ -37,16 +37,29 @@ export const ZONE_LABEL: Record<PatternZone, string> = {
   collar: "Collar",
 };
 
-// Default placement on the 1024x1024 texture canvas. Real UV layouts vary by
-// model, so the customer can drag/scale after placement using the existing
-// Tweak controls.
-export const ZONE_PRESETS: Record<Exclude<PatternZone, "all">, { left: number; top: number; size: number }> = {
-  front:       { left: 320, top: 540, size: 380 },
-  back:        { left: 720, top: 540, size: 380 },
-  leftSleeve:  { left: 130, top: 180, size: 200 },
-  rightSleeve: { left: 894, top: 180, size: 200 },
-  collar:      { left: 512, top: 110, size: 180 },
+// UV-mapped placement on the 1024×1024 design canvas. (left, top) is the
+// top-left corner of the zone in texture pixels; (w, h) is its size.
+// Scale is computed at runtime from w/h so each print fully covers its zone
+// regardless of source-image dimensions.
+export interface ZonePreset {
+  left: number;
+  top: number;
+  w: number;
+  h: number;
+}
+
+export const ZONE_PRESETS: Record<Exclude<PatternZone, "all">, ZonePreset> = {
+  front:       { left: 250, top: 689, w: 538, h: 647 },
+  back:        { left: 760, top: 672, w: 482, h: 685 },
+  leftSleeve:  { left: 400, top: 116, w: 399, h: 174 },
+  rightSleeve: { left: 804, top: 116, w: 403, h: 175 },
+  collar:      { left: 262, top: 284, w: 509, h: 161 },
 };
+
+// Tile size used for the "Apply to whole T-shirt" all-over print. The source
+// image is scaled to this size before being passed to fabric.Pattern, so it
+// repeats sensibly across the 1024×1024 canvas instead of looking zoomed in.
+export const ALL_OVER_TILE_PX = 384;
 
 export function patternUrl(file: string): string {
   const base = import.meta.env.BASE_URL ?? "/";

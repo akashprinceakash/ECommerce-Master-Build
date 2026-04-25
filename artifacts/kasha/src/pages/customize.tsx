@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import * as fabric from "fabric";
-import { PATTERNS, ZONE_PRESETS, ZONE_LABEL, patternUrl, type PatternZone, type PatternDef } from "@/components/3d/patterns";
+import { PATTERNS, ZONE_PRESETS, ZONE_LABEL, ALL_OVER_TILE_PX, patternUrl, type PatternZone, type PatternDef } from "@/components/3d/patterns";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -691,7 +691,19 @@ export default function CustomizePage() {
     if (!fc) return;
     try {
       const img = await loadHTMLImage(patternUrl(p.file));
-      const pattern = new fabric.Pattern({ source: img, repeat: "repeat" });
+      // Pre-scale the source onto an offscreen canvas so the pattern repeats
+      // at a predictable tile size instead of being "zoomed in" by the
+      // source image's natural resolution.
+      const off = document.createElement("canvas");
+      off.width = ALL_OVER_TILE_PX;
+      off.height = ALL_OVER_TILE_PX;
+      const ctx = off.getContext("2d");
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, ALL_OVER_TILE_PX, ALL_OVER_TILE_PX);
+      }
+      const pattern = new fabric.Pattern({ source: off, repeat: "repeat" });
       // Bypass setFabricBg (which expects a hex string) — assign Pattern directly.
       (fc as any).backgroundColor = pattern;
       fc.renderAll();
@@ -721,12 +733,25 @@ export default function CustomizePage() {
     try {
       const img = await fabric.FabricImage.fromURL(patternUrl(p.file), { crossOrigin: "anonymous" });
       const preset = ZONE_PRESETS[zone];
-      const naturalW = img.width ?? 1024;
-      const scale = preset.size / naturalW;
+      // Remove any prior print already placed in this zone so the new one
+      // replaces it cleanly (so repeated clicks on a zone don't stack copies).
+      const existing = fc.getObjects().filter(
+        (o: any) => o?.data?.kashaZone === zone
+      );
+      if (existing.length) fc.remove(...existing);
+
+      const naturalW = img.width ?? preset.w;
+      const naturalH = img.height ?? preset.h;
+      // Stretch the print to fill the entire zone using the UV-mapped width
+      // and height — no static scale, so every print covers its zone fully
+      // regardless of source-image dimensions.
       img.set({
-        left: preset.left, top: preset.top,
-        originX: "center", originY: "center",
-        scaleX: scale, scaleY: scale,
+        left: preset.left,
+        top: preset.top,
+        originX: "left",
+        originY: "top",
+        scaleX: preset.w / naturalW,
+        scaleY: preset.h / naturalH,
       });
       (img as any).data = { kashaZone: zone, kashaPrintId: p.id };
       fc.add(img);
@@ -734,7 +759,7 @@ export default function CustomizePage() {
       fc.renderAll();
       setActivePrintId(p.id);
       syncTexture();
-      toast({ title: "Print placed", description: `${p.label} on ${ZONE_LABEL[zone]} — drag in Canvas tab to reposition.` });
+      toast({ title: "Print placed", description: `${p.label} fills the ${ZONE_LABEL[zone]} — drag in Canvas tab to reposition.` });
     } catch {
       toast({ title: "Could not load print", variant: "destructive" });
     }
