@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import * as fabric from "fabric";
-import { PATTERNS, ZONE_PRESETS, ZONE_LABEL, ALL_OVER_ZONES, fitScaleToZone, patternUrl, type PatternZone, type PatternDef } from "@/components/3d/patterns";
+import { PATTERNS, ZONE_PRESETS, ZONE_LABEL, patternUrl, type PatternZone, type PatternDef } from "@/components/3d/patterns";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -150,12 +150,9 @@ export default function CustomizePage() {
   const [rightTab, setRightTab]     = useState<"colors"|"design"|"text"|"logo"|"shapes"|"canvas">("colors");
 
   // Print Library state
-  const [activePrintId, setActivePrintId]         = useState<string | null>(null);
-  const [activeColorwayCode, setActiveColorwayCode] = useState<string | null>(null);
-  const [allOverPrintId, setAllOverPrintId]       = useState<string | null>(null);
-  const [customPrints, setCustomPrints]           = useState<PatternDef[]>([]);
+  const [activePrintId, setActivePrintId]   = useState<string | null>(null);
+  const [allOverPrintId, setAllOverPrintId] = useState<string | null>(null);
   const baseBgRef = useRef<string>("#C5D3DE");
-  const printUploadRef = useRef<HTMLInputElement | null>(null);
 
   // Core design state
   const [size, setSize]             = useState("M");
@@ -680,193 +677,68 @@ export default function CustomizePage() {
   };
 
   // ── PRINT LIBRARY ────────────────────────────────────────────────────────
-  // Remove every fabric object that was placed by the print system, optionally
-  // filtered by tag. Used both for clearing all-over and for replacing it.
-  const removePrintObjects = useCallback((filter?: (data: any) => boolean) => {
-    const fc = fcRef.current; if (!fc) return 0;
-    const victims = fc.getObjects().filter(o => {
-      const d = (o as any).data;
-      if (!d || (d.kashaZone === undefined && !d.kashaAllOver)) return false;
-      return filter ? filter(d) : true;
+  const loadHTMLImage = (url: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(e);
+      img.src = url;
     });
-    victims.forEach(o => fc.remove(o));
-    return victims.length;
-  }, []);
 
-  // Place one print image on one zone using the calibrated UV preset.
-  // AUTO-FIT: the actual scale is derived from the loaded bitmap's natural
-  // size vs the zone's w×h bounding box (see fitScaleToZone). Uniform scale,
-  // so aspect ratio is preserved; capped at 1.0 so we never magnify the
-  // design — the customer can zoom in afterwards.
-  // `fileOverride` lets the caller place a specific colorway from the
-  // pattern family rather than the default `p.file`.
-  const addZoneImage = useCallback(async (
-    p: PatternDef,
-    zone: PatternZone,
-    opts: { allOver?: boolean; selectable?: boolean; fileOverride?: string } = {},
-  ) => {
-    const fc = fcRef.current; if (!fc) return null;
-    const preset = ZONE_PRESETS[zone];
-    const sourceFile = opts.fileOverride ?? p.file;
-    const img = await fabric.FabricImage.fromURL(patternUrl(sourceFile), { crossOrigin: "anonymous" });
-    const natW = (img as any).width  ?? 1;
-    const natH = (img as any).height ?? 1;
-    const fit  = fitScaleToZone(natW, natH, preset);
-    img.set({
-      left: preset.left,
-      top: preset.top,
-      originX: "center",
-      originY: "center",
-      scaleX: fit,
-      scaleY: fit,
-      selectable: opts.selectable ?? true,
-      evented: opts.selectable ?? true,
-    });
-    (img as any).data = {
-      kashaZone: zone,
-      kashaPrintId: p.id,
-      kashaColorway: opts.fileOverride ?? null,
-      kashaAllOver: !!opts.allOver,
-    };
-    fc.add(img);
-    return img;
-  }, []);
-
-  // Sequence token so back-to-back "Apply" clicks don't interleave: only the
-  // newest call is allowed to commit objects + state.
-  const allOverSeqRef = useRef(0);
-
-  // "Apply to whole T-shirt" — drop the same print on every panel using each
-  // zone's own calibrated placement + auto-fit. No background tiling, no zoom.
-  // `fileOverride` honours the active colorway selection from the UI.
-  const applyAllOverPrint = useCallback(async (p: PatternDef, fileOverride?: string) => {
-    const fc = fcRef.current; if (!fc) return;
-    const myTicket = ++allOverSeqRef.current;
+  const applyAllOverPrint = useCallback(async (p: PatternDef) => {
+    const fc = fcRef.current;
+    if (!fc) return;
     try {
-      // Preload all 5 zone images in parallel — much snappier than sequential.
-      const sourceFile = fileOverride ?? p.file;
-      const url = patternUrl(sourceFile);
-      const sources = await Promise.all(
-        ALL_OVER_ZONES.map(() => fabric.FabricImage.fromURL(url, { crossOrigin: "anonymous" })),
-      );
-      // A newer apply landed while we were loading; bail out without touching state.
-      if (myTicket !== allOverSeqRef.current) return;
-
-      // Now commit atomically: clear previous all-over, then add fresh ones.
-      removePrintObjects(d => d.kashaAllOver === true);
-      ALL_OVER_ZONES.forEach((zone, i) => {
-        const img = sources[i];
-        const preset = ZONE_PRESETS[zone];
-        const natW = (img as any).width  ?? 1;
-        const natH = (img as any).height ?? 1;
-        const fit  = fitScaleToZone(natW, natH, preset);
-        img.set({
-          left: preset.left, top: preset.top,
-          originX: "center", originY: "center",
-          scaleX: fit, scaleY: fit,
-          selectable: false, evented: false,
-        });
-        (img as any).data = { kashaZone: zone, kashaPrintId: p.id, kashaColorway: fileOverride ?? null, kashaAllOver: true };
-        fc.add(img);
-      });
-      fc.discardActiveObject();
+      const img = await loadHTMLImage(patternUrl(p.file));
+      const pattern = new fabric.Pattern({ source: img, repeat: "repeat" });
+      // Bypass setFabricBg (which expects a hex string) — assign Pattern directly.
+      (fc as any).backgroundColor = pattern;
       fc.renderAll();
       setAllOverPrintId(p.id);
       setActivePrintId(p.id);
+      // Body material must be pure white so the texture's true colours show through.
+      try { mats[0]?.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1, 1, 1, 1]); } catch {}
       syncTexture();
-      toast({ title: "Print applied", description: `${p.label} mapped to every panel of the t-shirt.` });
+      toast({ title: "Print applied", description: `${p.label} mapped across the whole garment.` });
     } catch {
-      if (myTicket === allOverSeqRef.current) {
-        toast({ title: "Could not load print", variant: "destructive" });
-      }
+      toast({ title: "Could not load print", variant: "destructive" });
     }
-  }, [removePrintObjects, syncTexture, toast]);
+  }, [mats, syncTexture, toast]);
 
   const clearAllOverPrint = useCallback(() => {
-    const fc = fcRef.current; if (!fc) return;
-    // Invalidate any in-flight apply so it can't re-add the print after we clear.
-    allOverSeqRef.current++;
-    removePrintObjects(d => d.kashaAllOver === true);
-    // Reconcile the body background to whatever colour was last selected while
-    // the all-over print was masking it.
-    if (baseBgRef.current) setFabricBg(fc, baseBgRef.current);
+    const fc = fcRef.current;
+    if (!fc) return;
+    setFabricBg(fc, baseBgRef.current || "#ffffff");
     fc.renderAll();
     setAllOverPrintId(null);
     syncTexture();
-    toast({ title: "All-over print removed" });
-  }, [removePrintObjects, syncTexture, toast]);
+  }, [syncTexture]);
 
-  // Per-zone sequence tokens — back-to-back clicks on the same zone (e.g.
-  // user spams a colorway change while the previous image is still loading)
-  // must NOT let a stale click commit after a fresh one. One counter per zone
-  // so a click on Front doesn't invalidate an in-flight Back.
-  const zoneSeqRef = useRef<Record<PatternZone, number>>({
-    front: 0, back: 0, leftSleeve: 0, rightSleeve: 0, collar: 0,
-  });
-
-  // Single-zone placement. Stays selectable so power users can still nudge.
-  // Auto-fits the design exactly inside the chosen panel — no manual drag,
-  // no cropping, no zoom-in. `fileOverride` carries the active colorway.
-  const placePrintOnZone = useCallback(async (p: PatternDef, zone: PatternZone, fileOverride?: string) => {
-    const fc = fcRef.current; if (!fc) return;
-    const myTicket = ++zoneSeqRef.current[zone];
+  const placePrintOnZone = useCallback(async (p: PatternDef, zone: Exclude<PatternZone, "all">) => {
+    const fc = fcRef.current;
+    if (!fc) return;
     try {
-      const img = await addZoneImage(p, zone, { allOver: false, selectable: true, fileOverride });
-      // A newer click for this zone landed while we were loading — drop ours.
-      if (myTicket !== zoneSeqRef.current[zone]) {
-        if (img) fc.remove(img);
-        return;
-      }
-      // Commit: drop every other image on this zone except ours.
-      const ours = img;
-      fc.getObjects().forEach(o => {
-        const d = (o as any).data;
-        if (d?.kashaZone === zone && !d.kashaAllOver && o !== ours) fc.remove(o);
+      const img = await fabric.FabricImage.fromURL(patternUrl(p.file), { crossOrigin: "anonymous" });
+      const preset = ZONE_PRESETS[zone];
+      const naturalW = img.width ?? 1024;
+      const scale = preset.size / naturalW;
+      img.set({
+        left: preset.left, top: preset.top,
+        originX: "center", originY: "center",
+        scaleX: scale, scaleY: scale,
       });
-      if (ours) fc.setActiveObject(ours);
+      (img as any).data = { kashaZone: zone, kashaPrintId: p.id };
+      fc.add(img);
+      fc.setActiveObject(img);
       fc.renderAll();
       setActivePrintId(p.id);
       syncTexture();
-      toast({ title: "Design placed", description: `${p.label} on ${ZONE_LABEL[zone]} — auto-fitted to the panel.` });
+      toast({ title: "Print placed", description: `${p.label} on ${ZONE_LABEL[zone]} — drag in Canvas tab to reposition.` });
     } catch {
-      if (myTicket === zoneSeqRef.current[zone]) {
-        toast({ title: "Could not load design", variant: "destructive" });
-      }
+      toast({ title: "Could not load print", variant: "destructive" });
     }
-  }, [addZoneImage, removePrintObjects, syncTexture, toast]);
-
-  // Upload your own design — reads the file as a data URL and registers it as
-  // a custom print. The same zone/all-over actions then work on it.
-  const handleUploadCustomPrint = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast({ title: "Please choose an image file", variant: "destructive" });
-      return;
-    }
-    if (file.size > 8 * 1024 * 1024) {
-      toast({ title: "Image too large", description: "Please use a file under 8 MB.", variant: "destructive" });
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const url = String(reader.result || "");
-      const id = `custom-${Date.now()}`;
-      const def: PatternDef = {
-        id,
-        label: file.name.replace(/\.[^.]+$/, "").slice(0, 24) || "My Design",
-        file: url,                  // data: URL — patternUrl() returns it as-is
-        swatchColors: ["#888888"],
-      };
-      setCustomPrints(prev => [def, ...prev].slice(0, 12));
-      setActivePrintId(id);
-      toast({ title: "Design uploaded", description: "Pick a zone or apply it to the whole t-shirt." });
-    };
-    reader.onerror = () => toast({ title: "Could not read file", variant: "destructive" });
-    reader.readAsDataURL(file);
-    // Reset input so the same file can be re-uploaded if needed.
-    e.target.value = "";
-  }, [toast]);
+  }, [syncTexture, toast]);
 
   // Secondary color → mat[1] + redraw garment overlays that use secondary
   const applySecondary = (hex: string) => {
@@ -1528,55 +1400,8 @@ export default function CustomizePage() {
               <div>
                 <div style={sl}>Print Library</div>
                 <p style={{ margin:"0 0 8px",fontSize:"10px",color:V.mu,lineHeight:1.5 }}>
-                  Pick a print, then place it on a panel or apply it to the whole t-shirt — each zone is auto-fitted, no resizing needed.
+                  Pick a print, then apply it across the whole garment or place it on a single zone. You can stack multiple prints — drag them on the Canvas tab.
                 </p>
-
-                {/* Upload your own */}
-                <input ref={printUploadRef} type="file" accept="image/*" onChange={handleUploadCustomPrint} style={{ display:"none" }} />
-                <button
-                  onClick={() => printUploadRef.current?.click()}
-                  style={{ ...btnStyle("secondary"),width:"100%",padding:"8px 0",fontSize:"11px",fontWeight:600,marginBottom:"8px" }}
-                >
-                  ↑ Upload your own design
-                </button>
-
-                {customPrints.length > 0 && (
-                  <>
-                    <div style={{ fontSize:"9px",color:V.mu,textTransform:"uppercase",letterSpacing:"1px",margin:"4px 0 4px" }}>Your uploads</div>
-                    <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"5px",marginBottom:"10px" }}>
-                      {customPrints.map((p) => {
-                        const sel = activePrintId === p.id;
-                        const all = allOverPrintId === p.id;
-                        return (
-                          <button
-                            key={p.id}
-                            onClick={() => setActivePrintId(p.id)}
-                            title={p.label}
-                            style={{
-                              position:"relative",padding:0,aspectRatio:"1/1",borderRadius:"7px",overflow:"hidden",cursor:"pointer",
-                              background:`url(${patternUrl(p.file)}) center/cover`,
-                              border:sel?`2px solid ${V.ac}`:`1px solid ${V.bd}`,
-                              boxShadow:sel?`0 0 0 2px rgba(201,168,124,.25)`:"none",
-                            }}
-                          >
-                            <span style={{
-                              position:"absolute",bottom:2,left:2,fontSize:"8px",fontWeight:800,
-                              background:"rgba(0,0,0,.6)",color:"#fff",padding:"1px 4px",borderRadius:"3px",letterSpacing:"0.4px",
-                            }}>YOURS</span>
-                            {all && (
-                              <span style={{
-                                position:"absolute",top:3,right:3,fontSize:"8px",fontWeight:800,
-                                background:V.ac,color:"#fff",padding:"1px 4px",borderRadius:"3px",letterSpacing:"0.5px",
-                              }}>ALL</span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-
-                <div style={{ fontSize:"9px",color:V.mu,textTransform:"uppercase",letterSpacing:"1px",margin:"4px 0 4px" }}>Designs (GT001 – GT032)</div>
                 <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"5px" }}>
                   {PATTERNS.map((p) => {
                     const sel = activePrintId === p.id;
@@ -1584,8 +1409,8 @@ export default function CustomizePage() {
                     return (
                       <button
                         key={p.id}
-                        onClick={() => { setActivePrintId(p.id); setActiveColorwayCode(p.colorways?.[0]?.code ?? null); }}
-                        title={`${p.label}${p.range ? ` — ${p.range}` : ""}`}
+                        onClick={() => setActivePrintId(p.id)}
+                        title={p.label}
                         style={{
                           position:"relative",padding:0,aspectRatio:"1/1",borderRadius:"7px",overflow:"hidden",cursor:"pointer",
                           background:`url(${patternUrl(p.file)}) center/cover`,
@@ -1593,10 +1418,6 @@ export default function CustomizePage() {
                           boxShadow:sel?`0 0 0 2px rgba(201,168,124,.25)`:"none",
                         }}
                       >
-                        <span style={{
-                          position:"absolute",bottom:2,left:2,fontSize:"7px",fontWeight:800,
-                          background:"rgba(0,0,0,.6)",color:"#fff",padding:"1px 3px",borderRadius:"3px",letterSpacing:"0.4px",
-                        }}>{(p.range ?? "").split("–")[0].trim() || p.label}</span>
                         {all && (
                           <span style={{
                             position:"absolute",top:3,right:3,fontSize:"8px",fontWeight:800,
@@ -1609,77 +1430,37 @@ export default function CustomizePage() {
                 </div>
 
                 {activePrintId && (() => {
-                  const p = [...customPrints, ...PATTERNS].find(x => x.id === activePrintId);
+                  const p = PATTERNS.find(x => x.id === activePrintId);
                   if (!p) return null;
-                  // Resolve the active colorway (only library patterns have colorways).
-                  const colorways = (p as any).colorways as PatternDef["colorways"] | undefined;
-                  const activeCw  = colorways?.find(c => c.code === activeColorwayCode) ?? colorways?.[0];
-                  // The file actually placed on the canvas: chosen colorway's
-                  // file when present, else the pattern's default file.
-                  const placedFile = activeCw?.file ?? p.file;
                   return (
                     <div style={{ marginTop:"10px",background:V.sf,border:`1px solid ${V.bd}`,borderRadius:"7px",padding:"10px",display:"flex",flexDirection:"column",gap:"8px" }}>
                       <div style={{ display:"flex",alignItems:"center",gap:"8px" }}>
-                        <div style={{ width:36,height:36,borderRadius:5,background:`url(${patternUrl(placedFile)}) center/cover`,flexShrink:0,border:`1px solid ${V.bd}` }} />
-                        <div style={{ flex:1,minWidth:0 }}>
-                          <div style={{ fontSize:"11px",fontWeight:700 }}>{p.label}</div>
-                          {(p as any).range && (
-                            <div style={{ fontSize:"9px",color:V.mu,letterSpacing:"0.4px",marginTop:1 }}>
-                              {(p as any).range}{activeCw ? ` · ${activeCw.code}` : ""}
-                            </div>
-                          )}
+                        <div style={{ width:32,height:32,borderRadius:5,background:`url(${patternUrl(p.file)}) center/cover`,flexShrink:0 }} />
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:"11px",fontWeight:600 }}>{p.label}</div>
                           <div style={{ display:"flex",gap:3,marginTop:3 }}>
-                            {(activeCw?.colors ?? p.swatchColors).map((c, i) => (
-                              <span key={`${c}-${i}`} style={{ width:10,height:10,borderRadius:"50%",background:c,border:`1px solid ${V.bd}` }} />
+                            {p.swatchColors.map(c => (
+                              <span key={c} style={{ width:10,height:10,borderRadius:"50%",background:c,border:`1px solid ${V.bd}` }} />
                             ))}
                           </div>
                         </div>
                       </div>
 
-                      {/* Colorway picker — one thumbnail per GT code in the family */}
-                      {colorways && colorways.length > 1 && (
-                        <>
-                          <div style={{ fontSize:"9px",color:V.mu,textTransform:"uppercase",letterSpacing:"1px" }}>Pick a colorway</div>
-                          <div style={{ display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:"4px" }}>
-                            {colorways.map(cw => {
-                              const csel = activeColorwayCode === cw.code;
-                              return (
-                                <button
-                                  key={cw.code}
-                                  onClick={() => setActiveColorwayCode(cw.code)}
-                                  title={cw.code}
-                                  style={{
-                                    position:"relative",padding:0,aspectRatio:"1/1",borderRadius:"5px",overflow:"hidden",cursor:"pointer",
-                                    background:`url(${patternUrl(cw.file)}) center/cover`,
-                                    border:csel?`2px solid ${V.ac}`:`1px solid ${V.bd}`,
-                                  }}
-                                >
-                                  <span style={{
-                                    position:"absolute",bottom:1,left:0,right:0,fontSize:"6px",fontWeight:800,textAlign:"center",
-                                    background:"rgba(0,0,0,.55)",color:"#fff",padding:"1px 0",letterSpacing:"0.3px",
-                                  }}>{cw.code}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
-
                       <button
-                        onClick={() => applyAllOverPrint(p, placedFile)}
+                        onClick={() => applyAllOverPrint(p)}
                         style={{ ...btnStyle("primary"),padding:"7px 0",fontSize:"11px",fontWeight:700 }}
                       >
-                        {allOverPrintId === p.id ? "✓ Applied All-Over" : "Apply to Full Body"}
+                        {allOverPrintId === p.id ? "✓ Applied All-Over" : "Apply to whole T-shirt"}
                       </button>
 
                       <div style={{ fontSize:"9px",color:V.mu,textTransform:"uppercase",letterSpacing:"1px",marginTop:2 }}>
-                        Or place on a single panel — auto-fits, no drag needed
+                        Or place on a zone
                       </div>
                       <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px" }}>
-                        {(["front","back","leftSleeve","rightSleeve","collar"] as PatternZone[]).map(zone => (
+                        {(["front","back","leftSleeve","rightSleeve","collar"] as const).map(zone => (
                           <button
                             key={zone}
-                            onClick={() => placePrintOnZone(p, zone, placedFile)}
+                            onClick={() => placePrintOnZone(p, zone)}
                             style={{ ...btnStyle("secondary"),padding:"6px 0",fontSize:"10px",fontWeight:600 }}
                           >
                             + {ZONE_LABEL[zone]}

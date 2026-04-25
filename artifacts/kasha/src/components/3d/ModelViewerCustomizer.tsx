@@ -361,13 +361,15 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
     try {
       const img = await fabric.FabricImage.fromURL(patternUrl(p.file), { crossOrigin: "anonymous" });
       const preset = ZONE_PRESETS[zone];
+      const naturalW = img.width ?? 1024;
+      const scale = preset.size / naturalW;
       img.set({
         left: preset.left,
         top: preset.top,
         originX: "center",
         originY: "center",
-        scaleX: preset.scale,
-        scaleY: preset.scale,
+        scaleX: scale,
+        scaleY: scale,
       });
       (img as any).kashaZone = zone;
       (img as any).kashaPatternId = p.id;
@@ -377,7 +379,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
       currentObjRef.current = img;
       setActivePatternId(p.id);
       setSelectedLayerIdx(fc.getObjects().indexOf(img));
-      setScaleVal(preset.scale);
+      setScaleVal(scale);
       setPosX(preset.left);
       setPosY(preset.top);
       updateLayerSelector();
