@@ -223,6 +223,9 @@ export default function CustomizePage() {
   // GT Design Style System state
   const [activeGtStyle, setActiveGtStyle] = useState<GtStyleDef | null>(null);
   const [gtColors, setGtColors] = useState<GtColors>({ primary: "#FFFFFF", accent: "#000000" });
+  // Monotonic token to guard against race conditions when the user clicks GT
+  // styles or color swatches faster than the texture can load+recolor.
+  const gtRequestIdRef = useRef(0);
   const [gtGroupOpen, setGtGroupOpen] = useState<string | null>("classic");
 
   // Core design state
@@ -805,9 +808,10 @@ export default function CustomizePage() {
   }, [syncTexture]);
 
   // ── GT DESIGN STYLE SYSTEM ───────────────────────────────────────────────
-  const handleSelectGtStyle = useCallback((style: GtStyleDef) => {
+  const handleSelectGtStyle = useCallback(async (style: GtStyleDef) => {
     const fc = fcRef.current;
     if (!fc) return;
+    const myReq = ++gtRequestIdRef.current;
     setActiveGtStyle(style);
     const colors: GtColors = { ...style.defaultColors };
     setGtColors(colors);
@@ -817,19 +821,27 @@ export default function CustomizePage() {
       setFabricBg(fc, "#ffffff");
       setAllOverPrintId(null);
     }
-    applyGtStyle(fc, style, colors);
     // Body material must be pure white so the painted zones render true to colour.
     try { mats[0]?.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1, 1, 1, 1]); } catch {}
+    // Await — applyGtStyle loads the 1024×1024 base texture as a FabricImage,
+    // so syncTexture() must run AFTER it's added to the canvas.
+    await applyGtStyle(fc, style, colors);
+    // Race guard: if another GT request started after us, abandon this result.
+    if (myReq !== gtRequestIdRef.current) return;
     syncTexture();
     toast({ title: `${style.id} applied`, description: style.label });
   }, [allOverPrintId, mats, syncTexture, toast]);
 
-  const handleGtColorChange = useCallback((role: keyof GtColors, hex: string) => {
+  const handleGtColorChange = useCallback(async (role: keyof GtColors, hex: string) => {
     const fc = fcRef.current;
     if (!fc || !activeGtStyle) return;
+    const myReq = ++gtRequestIdRef.current;
     const updated: GtColors = { ...gtColors, [role]: hex };
     setGtColors(updated);
-    applyGtStyle(fc, activeGtStyle, updated);
+    // Await — pixel-swap recolor + re-add to canvas is async.
+    await applyGtStyle(fc, activeGtStyle, updated);
+    // Race guard: only commit if this is still the latest request.
+    if (myReq !== gtRequestIdRef.current) return;
     syncTexture();
   }, [activeGtStyle, gtColors, syncTexture]);
 
