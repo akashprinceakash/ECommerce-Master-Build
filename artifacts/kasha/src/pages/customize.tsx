@@ -7,6 +7,72 @@ import { getApiUrl } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import * as fabric from "fabric";
 import { PATTERNS, ZONE_PRESETS, ZONE_LABEL, ALL_OVER_TILE_PX, patternUrl, type PatternZone, type PatternDef } from "@/components/3d/patterns";
+import { GT_STYLES, applyGtStyle, clearGtStyle, type GtStyleDef, type GtColors } from "@/components/3d/gt-styles";
+
+const GT_GROUPS = [
+  { id: "classic",    label: "Classic"     },
+  { id: "sport-side", label: "Sport Side"  },
+  { id: "triple",     label: "Triple Tone" },
+  { id: "wave",       label: "Wave Panel"  },
+  { id: "hourglass",  label: "Hourglass"   },
+  { id: "pinstripe",  label: "Pinstripe"   },
+  { id: "raglan",     label: "Raglan"      },
+] as const;
+
+const GT_PALETTE = ["#C5D3DE","#F8F4E9","#ACB1A1","#F0CED2","#E9DAC3","#FFFFFF","#585858","#576043","#DA1F26","#273878","#243C2F","#362223","#000000"];
+
+function GtSwatch({ style, isActive, accent }: { style: GtStyleDef; isActive: boolean; accent: string }) {
+  const cRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const el = cRef.current; if (!el) return;
+    const ctx = el.getContext("2d"); if (!ctx) return;
+    const W = 60, H = 60;
+    ctx.clearRect(0, 0, W, H);
+    const { primary, accent: ac, tertiary } = style.defaultColors;
+    switch (style.group) {
+      case "classic":
+        ctx.fillStyle = primary; ctx.fillRect(0,0,W,H);
+        ctx.fillStyle = ac;
+        ctx.fillRect(0,0,W,12); ctx.fillRect(0,H-8,W,8); ctx.fillRect(0,H-22,W,6);
+        break;
+      case "sport-side": case "wave": case "triple":
+        ctx.fillStyle = primary; ctx.fillRect(0,0,W,H);
+        ctx.fillStyle = ac;
+        ctx.fillRect(0,0,14,H); ctx.fillRect(W-14,0,14,H);
+        if (tertiary) { ctx.fillStyle = tertiary; ctx.fillRect(0,0,W,10); }
+        break;
+      case "hourglass":
+        ctx.fillStyle = primary; ctx.fillRect(0,0,W,H);
+        ctx.fillStyle = ac;
+        ctx.beginPath();
+        ctx.moveTo(W*0.22,0); ctx.lineTo(W*0.78,0);
+        ctx.lineTo(W*0.62,H*0.55); ctx.lineTo(W*0.78,H);
+        ctx.lineTo(W*0.22,H); ctx.lineTo(W*0.38,H*0.55);
+        ctx.closePath(); ctx.fill();
+        break;
+      case "pinstripe":
+        ctx.fillStyle = primary; ctx.fillRect(0,0,W,H);
+        ctx.strokeStyle = ac; ctx.lineWidth = 1.5;
+        for (let x = 8; x < W; x += 10) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+        break;
+      case "raglan":
+        ctx.fillStyle = primary; ctx.fillRect(0,0,W,H);
+        ctx.fillStyle = ac;
+        ctx.beginPath();
+        ctx.moveTo(0,0); ctx.lineTo(W*0.45,0); ctx.lineTo(W*0.18,H*0.35); ctx.lineTo(0,H*0.2);
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(W,0); ctx.lineTo(W*0.55,0); ctx.lineTo(W*0.82,H*0.35); ctx.lineTo(W,H*0.2);
+        ctx.closePath(); ctx.fill();
+        ctx.fillRect(0,0,W,8); ctx.fillRect(0,H-10,W,10);
+        break;
+      default:
+        ctx.fillStyle = primary; ctx.fillRect(0,0,W,H);
+    }
+    if (isActive) { ctx.strokeStyle = accent; ctx.lineWidth = 3; ctx.strokeRect(1.5,1.5,W-3,H-3); }
+  }, [style, isActive, accent]);
+  return <canvas ref={cRef} width={60} height={60} style={{ display: "block", width: "100%", height: "auto" }} />;
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -153,6 +219,11 @@ export default function CustomizePage() {
   const [activePrintId, setActivePrintId]   = useState<string | null>(null);
   const [allOverPrintId, setAllOverPrintId] = useState<string | null>(null);
   const baseBgRef = useRef<string>("#C5D3DE");
+
+  // GT Design Style System state
+  const [activeGtStyle, setActiveGtStyle] = useState<GtStyleDef | null>(null);
+  const [gtColors, setGtColors] = useState<GtColors>({ primary: "#FFFFFF", accent: "#000000" });
+  const [gtGroupOpen, setGtGroupOpen] = useState<string | null>("classic");
 
   // Core design state
   const [size, setSize]             = useState("M");
@@ -703,6 +774,12 @@ export default function CustomizePage() {
         ctx.imageSmoothingQuality = "high";
         ctx.drawImage(img, 0, 0, ALL_OVER_TILE_PX, ALL_OVER_TILE_PX);
       }
+      // GT styles cover the whole shirt — clear them so the all-over print
+      // is actually visible and the panel state stays consistent.
+      if (activeGtStyle) {
+        clearGtStyle(fc);
+        setActiveGtStyle(null);
+      }
       const pattern = new fabric.Pattern({ source: off, repeat: "repeat" });
       // Bypass setFabricBg (which expects a hex string) — assign Pattern directly.
       (fc as any).backgroundColor = pattern;
@@ -716,7 +793,7 @@ export default function CustomizePage() {
     } catch {
       toast({ title: "Could not load print", variant: "destructive" });
     }
-  }, [mats, syncTexture, toast]);
+  }, [activeGtStyle, mats, syncTexture, toast]);
 
   const clearAllOverPrint = useCallback(() => {
     const fc = fcRef.current;
@@ -726,6 +803,46 @@ export default function CustomizePage() {
     setAllOverPrintId(null);
     syncTexture();
   }, [syncTexture]);
+
+  // ── GT DESIGN STYLE SYSTEM ───────────────────────────────────────────────
+  const handleSelectGtStyle = useCallback((style: GtStyleDef) => {
+    const fc = fcRef.current;
+    if (!fc) return;
+    setActiveGtStyle(style);
+    const colors: GtColors = { ...style.defaultColors };
+    setGtColors(colors);
+    // GT styles paint flat colour zones — clear any all-over print first so
+    // the underlying repeating pattern doesn't bleed through transparent areas.
+    if (allOverPrintId) {
+      setFabricBg(fc, "#ffffff");
+      setAllOverPrintId(null);
+    }
+    applyGtStyle(fc, style, colors);
+    // Body material must be pure white so the painted zones render true to colour.
+    try { mats[0]?.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1, 1, 1, 1]); } catch {}
+    syncTexture();
+    toast({ title: `${style.id} applied`, description: style.label });
+  }, [allOverPrintId, mats, syncTexture, toast]);
+
+  const handleGtColorChange = useCallback((role: keyof GtColors, hex: string) => {
+    const fc = fcRef.current;
+    if (!fc || !activeGtStyle) return;
+    const updated: GtColors = { ...gtColors, [role]: hex };
+    setGtColors(updated);
+    applyGtStyle(fc, activeGtStyle, updated);
+    syncTexture();
+  }, [activeGtStyle, gtColors, syncTexture]);
+
+  const handleClearGtStyle = useCallback(() => {
+    const fc = fcRef.current;
+    if (!fc) return;
+    clearGtStyle(fc);
+    fc.renderAll();
+    setActiveGtStyle(null);
+    setFabricBg(fc, baseBgRef.current || "#ffffff");
+    syncTexture();
+    toast({ title: "Design style removed" });
+  }, [syncTexture, toast]);
 
   const placePrintOnZone = useCallback(async (p: PatternDef, zone: Exclude<PatternZone, "all">) => {
     const fc = fcRef.current;
@@ -1419,6 +1536,151 @@ export default function CustomizePage() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* GT Design Style System */}
+              <div>
+                <div style={sl}>Design Styles (GT001–GT032)</div>
+                <p style={{ margin:"0 0 8px",fontSize:"10px",color:V.mu,lineHeight:1.5 }}>
+                  Pick a predefined style — it applies to the right shirt zones automatically. Then recolour to taste.
+                </p>
+
+                <div style={{ display:"flex",flexDirection:"column",gap:"6px" }}>
+                  {GT_GROUPS.map((group) => {
+                    const groupStyles = GT_STYLES.filter((s) => s.group === group.id);
+                    const isOpen = gtGroupOpen === group.id;
+                    return (
+                      <div key={group.id} style={{ border:`1px solid ${V.bd}`,borderRadius:"8px",overflow:"hidden" }}>
+                        <button
+                          onClick={() => setGtGroupOpen(isOpen ? null : group.id)}
+                          style={{
+                            width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
+                            padding:"7px 10px",
+                            background: isOpen ? "rgba(201,168,124,.10)" : V.sf,
+                            border:"none",cursor:"pointer",fontFamily:"inherit",
+                            color: isOpen ? V.ac : V.mu,
+                            fontWeight:600,fontSize:"11px",letterSpacing:"0.5px",
+                          }}
+                        >
+                          <span>{group.label}  <span style={{ opacity:0.55,fontWeight:400 }}>({groupStyles.length})</span></span>
+                          <span style={{ fontSize:"9px" }}>{isOpen ? "▲" : "▼"}</span>
+                        </button>
+                        {isOpen && (
+                          <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"4px",padding:"6px",background:V.sf }}>
+                            {groupStyles.map((style) => {
+                              const isActive = activeGtStyle?.id === style.id;
+                              return (
+                                <button
+                                  key={style.id}
+                                  onClick={() => handleSelectGtStyle(style)}
+                                  title={`${style.id} — ${style.label}`}
+                                  style={{
+                                    padding:0,borderRadius:"6px",overflow:"hidden",cursor:"pointer",
+                                    border: isActive ? `2px solid ${V.ac}` : `1px solid ${V.bd}`,
+                                    boxShadow: isActive ? `0 0 0 2px rgba(201,168,124,.25)` : "none",
+                                    background:"none",
+                                  }}
+                                >
+                                  <GtSwatch style={style} isActive={isActive} accent={V.ac} />
+                                  <div style={{
+                                    background:"rgba(0,0,0,0.55)",
+                                    color: isActive ? V.ac : "#f8f4e9",
+                                    fontSize:"9px",fontWeight:700,padding:"2px 0",textAlign:"center",letterSpacing:"0.5px",
+                                  }}>{style.id}</div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {activeGtStyle && (
+                  <div style={{
+                    marginTop:"10px",
+                    background:V.sf,border:`1px solid ${V.bd}`,borderRadius:"8px",padding:"10px",
+                    display:"flex",flexDirection:"column",gap:"9px",
+                  }}>
+                    <div style={{ fontSize:"12px",fontWeight:600,color:V.tx }}>
+                      {activeGtStyle.id} — {activeGtStyle.label}
+                    </div>
+
+                    <div style={{ display:"flex",alignItems:"center",gap:"10px" }}>
+                      <input
+                        type="color"
+                        value={gtColors.primary}
+                        onChange={(e) => handleGtColorChange("primary", e.target.value)}
+                        style={{ width:34,height:34,border:"none",cursor:"pointer",borderRadius:"6px",padding:0,background:"none" }}
+                      />
+                      <div>
+                        <div style={{ fontSize:"11px",fontWeight:600,color:V.tx }}>Primary</div>
+                        <div style={{ fontSize:"10px",color:V.mu }}>Body / main panels</div>
+                      </div>
+                    </div>
+
+                    <div style={{ display:"flex",alignItems:"center",gap:"10px" }}>
+                      <input
+                        type="color"
+                        value={gtColors.accent}
+                        onChange={(e) => handleGtColorChange("accent", e.target.value)}
+                        style={{ width:34,height:34,border:"none",cursor:"pointer",borderRadius:"6px",padding:0,background:"none" }}
+                      />
+                      <div>
+                        <div style={{ fontSize:"11px",fontWeight:600,color:V.tx }}>Accent</div>
+                        <div style={{ fontSize:"10px",color:V.mu }}>Collar / cuffs / panels</div>
+                      </div>
+                    </div>
+
+                    {activeGtStyle.defaultColors.tertiary !== undefined && (
+                      <div style={{ display:"flex",alignItems:"center",gap:"10px" }}>
+                        <input
+                          type="color"
+                          value={gtColors.tertiary ?? activeGtStyle.defaultColors.tertiary}
+                          onChange={(e) => handleGtColorChange("tertiary", e.target.value)}
+                          style={{ width:34,height:34,border:"none",cursor:"pointer",borderRadius:"6px",padding:0,background:"none" }}
+                        />
+                        <div>
+                          <div style={{ fontSize:"11px",fontWeight:600,color:V.tx }}>Third Colour</div>
+                          <div style={{ fontSize:"10px",color:V.mu }}>Collar highlight</div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <div style={{ fontSize:"10px",color:V.mu,marginBottom:"5px",letterSpacing:"0.5px",textTransform:"uppercase" }}>
+                        Quick palette → primary
+                      </div>
+                      <div style={{ display:"flex",flexWrap:"wrap",gap:"4px" }}>
+                        {GT_PALETTE.map((hex) => (
+                          <button
+                            key={hex}
+                            onClick={() => handleGtColorChange("primary", hex)}
+                            title={hex}
+                            style={{
+                              width:20,height:20,borderRadius:"50%",background:hex,
+                              border: gtColors.primary.toLowerCase() === hex.toLowerCase()
+                                ? `2px solid ${V.ac}` : `1px solid ${V.bd}`,
+                              cursor:"pointer",padding:0,flexShrink:0,
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleClearGtStyle}
+                      style={{
+                        padding:"7px",background:"transparent",
+                        color:"#c4727a",border:"1px solid rgba(196,114,122,.45)",borderRadius:"6px",
+                        fontFamily:"inherit",fontWeight:600,fontSize:"11px",cursor:"pointer",
+                      }}
+                    >
+                      ✕ Remove design style
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Print Library */}

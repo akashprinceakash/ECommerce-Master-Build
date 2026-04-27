@@ -1,0 +1,361 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// GT_STYLE_PANEL.tsx  —  Drop this section into ModelViewerCustomizer.tsx
+//
+// WHERE TO ADD:
+//   1. Add the imports at the top of ModelViewerCustomizer.tsx
+//   2. Add the state variables inside the component
+//   3. Paste the <GtStylePanel /> JSX into the Design tab, ABOVE the
+//      existing "Patterns & Prints" section
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── 1. IMPORTS — add these to the top of ModelViewerCustomizer.tsx ───────────
+import {
+  GT_STYLES,
+  applyGtStyle,
+  clearGtStyle,
+  type GtStyleDef,
+  type GtColors,
+} from "./gt-styles";  // adjust path as needed
+
+
+// ── 2. STATE — add inside the ModelViewerCustomizer component ────────────────
+const [activeGtStyle, setActiveGtStyle] = useState<GtStyleDef | null>(null);
+const [gtColors, setGtColors] = useState<GtColors>({ primary: "#ffffff", accent: "#000000" });
+const [gtGroupOpen, setGtGroupOpen] = useState<string | null>("classic");
+
+// Group order and labels
+const GT_GROUPS = [
+  { id: "classic",    label: "Classic"      },
+  { id: "sport-side", label: "Sport Side"   },
+  { id: "triple",     label: "Triple Tone"  },
+  { id: "wave",       label: "Wave Panel"   },
+  { id: "hourglass",  label: "Hourglass"    },
+  { id: "pinstripe",  label: "Pinstripe"    },
+  { id: "raglan",     label: "Raglan"       },
+];
+
+
+// ── 3. HANDLERS — add inside the component ───────────────────────────────────
+
+const handleSelectGtStyle = (style: GtStyleDef) => {
+  const fc = fabricCanvasRef.current;
+  if (!fc) return;
+  setActiveGtStyle(style);
+  const colors = { ...style.defaultColors };
+  setGtColors(colors);
+  applyGtStyle(fc, style, colors);
+  syncTexture();
+};
+
+const handleGtColorChange = (role: keyof GtColors, hex: string) => {
+  const fc = fabricCanvasRef.current;
+  if (!fc || !activeGtStyle) return;
+  const updated = { ...gtColors, [role]: hex };
+  setGtColors(updated);
+  applyGtStyle(fc, activeGtStyle, updated);
+  syncTexture();
+};
+
+const handleClearGtStyle = () => {
+  const fc = fabricCanvasRef.current;
+  if (!fc) return;
+  clearGtStyle(fc);
+  fc.renderAll();
+  setActiveGtStyle(null);
+  syncTexture();
+};
+
+// ── 4. SWATCH PREVIEW — generates a tiny 60×60 preview of each GT style ─────
+// This renders entirely in-browser, no image files needed.
+function GtSwatch({ style, isActive }: { style: GtStyleDef; isActive: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const ctx = el.getContext("2d");
+    if (!ctx) return;
+    const W = 60, H = 60;
+    ctx.clearRect(0, 0, W, H);
+
+    const { primary, accent, tertiary } = style.defaultColors;
+
+    // Simplified preview based on group
+    switch (style.group) {
+      case "classic":
+        ctx.fillStyle = primary;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = accent;
+        ctx.fillRect(0, 0, W, 12);           // collar band
+        ctx.fillRect(0, H - 8, W, 8);        // hem
+        ctx.fillRect(0, H - 22, W, 6);       // cuff
+        break;
+
+      case "sport-side":
+      case "wave":
+      case "triple":
+        ctx.fillStyle = primary;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = accent;
+        ctx.fillRect(0, 0, 14, H);           // left panel
+        ctx.fillRect(W - 14, 0, 14, H);      // right panel
+        if (tertiary) {
+          ctx.fillStyle = tertiary;
+          ctx.fillRect(0, 0, W, 10);         // collar
+        }
+        break;
+
+      case "hourglass":
+        ctx.fillStyle = primary;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = accent;
+        ctx.beginPath();
+        ctx.moveTo(W * 0.22, 0);
+        ctx.lineTo(W * 0.78, 0);
+        ctx.lineTo(W * 0.62, H * 0.55);
+        ctx.lineTo(W * 0.78, H);
+        ctx.lineTo(W * 0.22, H);
+        ctx.lineTo(W * 0.38, H * 0.55);
+        ctx.closePath();
+        ctx.fill();
+        break;
+
+      case "pinstripe":
+        ctx.fillStyle = primary;
+        ctx.fillRect(0, 0, W, H);
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 1.5;
+        for (let x = 8; x < W; x += 10) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+        }
+        break;
+
+      case "raglan":
+        ctx.fillStyle = primary;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = accent;
+        // Left diagonal yoke
+        ctx.beginPath();
+        ctx.moveTo(0, 0); ctx.lineTo(W * 0.45, 0);
+        ctx.lineTo(W * 0.18, H * 0.35); ctx.lineTo(0, H * 0.2);
+        ctx.closePath(); ctx.fill();
+        // Right diagonal yoke
+        ctx.beginPath();
+        ctx.moveTo(W, 0); ctx.lineTo(W * 0.55, 0);
+        ctx.lineTo(W * 0.82, H * 0.35); ctx.lineTo(W, H * 0.2);
+        ctx.closePath(); ctx.fill();
+        // Collar band
+        ctx.fillRect(0, 0, W, 8);
+        // Cuff band
+        ctx.fillRect(0, H - 10, W, 10);
+        break;
+
+      default:
+        ctx.fillStyle = primary;
+        ctx.fillRect(0, 0, W, H);
+        break;
+    }
+
+    // Border overlay
+    if (isActive) {
+      ctx.strokeStyle = "#6ee7b7";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
+    }
+  }, [style, isActive]);
+
+  return <canvas ref={canvasRef} width={60} height={60} style={{ display: "block" }} />;
+}
+
+
+// ── 5. JSX — paste this block into the Design tab ────────────────────────────
+// Insert ABOVE the existing "Patterns & Prints" section.
+
+const GtStylePanel = () => (
+  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+
+    {/* Section header */}
+    <div style={{ fontSize: "0.9rem", textTransform: "uppercase", letterSpacing: "2px", color: "#8b949e", fontWeight: 600 }}>
+      Design Styles
+    </div>
+    <p style={{ margin: 0, fontSize: "0.78rem", color: "#8b949e", lineHeight: 1.5 }}>
+      Select a GT design — it applies automatically to the correct shirt zones. Then customise colours.
+    </p>
+
+    {/* Group accordion */}
+    {GT_GROUPS.map((group) => {
+      const groupStyles = GT_STYLES.filter((s) => s.group === group.id);
+      const isOpen = gtGroupOpen === group.id;
+
+      return (
+        <div key={group.id} style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", overflow: "hidden" }}>
+          {/* Group header */}
+          <button
+            onClick={() => setGtGroupOpen(isOpen ? null : group.id)}
+            style={{
+              width: "100%", display: "flex", alignItems: "center",
+              justifyContent: "space-between",
+              padding: "0.6rem 0.85rem",
+              background: isOpen ? "rgba(110,231,183,0.08)" : "rgba(0,0,0,0.2)",
+              border: "none", cursor: "pointer",
+              color: isOpen ? "#6ee7b7" : "#8b949e",
+              fontFamily: "inherit", fontWeight: 600, fontSize: "0.82rem",
+            }}
+          >
+            <span>{group.label}</span>
+            <span style={{ fontSize: "0.7rem" }}>{isOpen ? "▲" : "▼"}</span>
+          </button>
+
+          {/* Style grid */}
+          {isOpen && (
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: "0.4rem",
+              padding: "0.5rem",
+              background: "rgba(0,0,0,0.15)",
+            }}>
+              {groupStyles.map((style) => {
+                const isActive = activeGtStyle?.id === style.id;
+                return (
+                  <button
+                    key={style.id}
+                    onClick={() => handleSelectGtStyle(style)}
+                    title={`${style.id} — ${style.label}`}
+                    style={{
+                      padding: 0,
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                      cursor: "pointer",
+                      border: isActive ? "2px solid #6ee7b7" : "1px solid rgba(255,255,255,0.12)",
+                      boxShadow: isActive ? "0 0 0 2px rgba(110,231,183,0.25)" : "none",
+                      background: "none",
+                    }}
+                  >
+                    <GtSwatch style={style} isActive={isActive} />
+                    <div style={{
+                      background: "rgba(0,0,0,0.6)",
+                      color: isActive ? "#6ee7b7" : "#8b949e",
+                      fontSize: "0.58rem",
+                      fontWeight: 700,
+                      padding: "2px 0",
+                      textAlign: "center",
+                      letterSpacing: "0.5px",
+                    }}>
+                      {style.id}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    })}
+
+    {/* Colour customiser — shown when a style is active */}
+    {activeGtStyle && (
+      <div style={{
+        background: "rgba(0,0,0,0.25)",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: "10px",
+        padding: "0.85rem",
+        display: "flex", flexDirection: "column", gap: "0.65rem",
+      }}>
+        <div style={{ color: "#f8f9fa", fontWeight: 600, fontSize: "0.88rem" }}>
+          {activeGtStyle.id} — {activeGtStyle.label}
+        </div>
+
+        {/* Primary colour */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <input
+            type="color"
+            value={gtColors.primary}
+            onChange={(e) => handleGtColorChange("primary", e.target.value)}
+            style={{ width: 36, height: 36, border: "none", cursor: "pointer", borderRadius: "6px", padding: 0, background: "none" }}
+          />
+          <div>
+            <div style={{ color: "#f8f9fa", fontSize: "0.82rem", fontWeight: 600 }}>Primary</div>
+            <div style={{ color: "#8b949e", fontSize: "0.72rem" }}>Body / main panels</div>
+          </div>
+        </div>
+
+        {/* Accent colour */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <input
+            type="color"
+            value={gtColors.accent}
+            onChange={(e) => handleGtColorChange("accent", e.target.value)}
+            style={{ width: 36, height: 36, border: "none", cursor: "pointer", borderRadius: "6px", padding: 0, background: "none" }}
+          />
+          <div>
+            <div style={{ color: "#f8f9fa", fontSize: "0.82rem", fontWeight: 600 }}>Accent</div>
+            <div style={{ color: "#8b949e", fontSize: "0.72rem" }}>Collar / cuffs / panels</div>
+          </div>
+        </div>
+
+        {/* Tertiary colour — only for triple-colour styles */}
+        {activeGtStyle.defaultColors.tertiary !== undefined && (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <input
+              type="color"
+              value={gtColors.tertiary ?? activeGtStyle.defaultColors.tertiary}
+              onChange={(e) => handleGtColorChange("tertiary", e.target.value)}
+              style={{ width: 36, height: 36, border: "none", cursor: "pointer", borderRadius: "6px", padding: 0, background: "none" }}
+            />
+            <div>
+              <div style={{ color: "#f8f9fa", fontSize: "0.82rem", fontWeight: 600 }}>Third Colour</div>
+              <div style={{ color: "#8b949e", fontSize: "0.72rem" }}>Collar highlight</div>
+            </div>
+          </div>
+        )}
+
+        {/* Quick palette buttons from KA.SHA brand colours */}
+        <div>
+          <div style={{ fontSize: "0.7rem", color: "#8b949e", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "1px" }}>
+            Quick palette
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
+            {["#C5D3DE","#F8F4E9","#ACB1A1","#F0CED2","#E9DAC3","#FFFFFF",
+              "#585858","#576043","#DA1F26","#273878","#243C2F","#362223","#000000"].map((hex) => (
+              <button
+                key={hex}
+                onClick={() => handleGtColorChange("primary", hex)}
+                title={hex}
+                style={{
+                  width: 22, height: 22,
+                  borderRadius: "50%",
+                  background: hex,
+                  border: gtColors.primary === hex
+                    ? "2px solid #6ee7b7"
+                    : "1px solid rgba(255,255,255,0.25)",
+                  cursor: "pointer",
+                  padding: 0,
+                  flexShrink: 0,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Clear style button */}
+        <button
+          onClick={handleClearGtStyle}
+          style={{
+            padding: "0.5rem",
+            background: "transparent",
+            color: "rgba(209,73,91,0.8)",
+            border: "1px solid rgba(209,73,91,0.4)",
+            borderRadius: "6px",
+            fontFamily: "inherit",
+            fontWeight: 600,
+            fontSize: "0.78rem",
+            cursor: "pointer",
+          }}
+        >
+          ✕ Remove design style
+        </button>
+      </div>
+    )}
+  </div>
+);

@@ -48,14 +48,21 @@ export interface ZonePreset {
   h: number;
 }
 
+// export const ZONE_PRESETS: Record<Exclude<PatternZone, "all">, ZonePreset> = {
+//   front:       { left: 250, top: 689, w: 538, h: 647 },
+//   back:        { left: 760, top: 672, w: 482, h: 685 },
+//   leftSleeve:  { left: 400, top: 116, w: 399, h: 174 },
+//   rightSleeve: { left: 804, top: 116, w: 403, h: 175 },
+//   collar:      { left: 262, top: 284, w: 509, h: 161 },
+// };
+// left/top = TOP-LEFT corner of the UV island (matches originX:"left", originY:"top")
 export const ZONE_PRESETS: Record<Exclude<PatternZone, "all">, ZonePreset> = {
-  front:       { left: 250, top: 689, w: 538, h: 647 },
-  back:        { left: 760, top: 672, w: 482, h: 685 },
-  leftSleeve:  { left: 400, top: 116, w: 399, h: 174 },
-  rightSleeve: { left: 804, top: 116, w: 403, h: 175 },
-  collar:      { left: 262, top: 284, w: 509, h: 161 },
+  front:       { left:  10, top: 341, w: 490, h: 678 },
+  back:        { left: 524, top: 188, w: 483, h: 833 },
+  collar:      { left:  12, top: 183, w: 507, h: 166 },
+  leftSleeve:  { left: 210, top:   4, w: 398, h: 170 },
+  rightSleeve: { left: 617, top:   2, w: 398, h: 171 },
 };
-
 // Tile size used for the "Apply to whole T-shirt" all-over print. The source
 // image is scaled to this size before being passed to fabric.Pattern, so it
 // repeats sensibly across the 1024×1024 canvas instead of looking zoomed in.

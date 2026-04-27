@@ -43,6 +43,7 @@ KA.SHA is a full-stack luxury golf/sportswear fashion eCommerce web application 
 - `src/contexts/CartContext.tsx` — Global open/close state for cart drawer
 - `src/components/3d/ModelViewerCustomizer.tsx` — Bespoke Studio with 3D/2D upload support, text/shape tools, and curated **Patterns & Prints** library
 - `src/components/3d/patterns.ts` — Curated print library (id, label, file, swatch colors) + zone presets (front/back/sleeves/collar) for the customizer. Drop a new image into `public/patterns/` and append an entry here to publish a new print.
+- `src/components/3d/gt-styles.ts` — GT Design Style System (GT001–GT032). Pure programmatic engine that paints colour zones (rect/polygon/line) onto the existing 1024×1024 Fabric texture canvas — **no new UV mapping required**. Exposes `applyGtStyle / clearGtStyle / recolorGtStyle` and a typed `GT_STYLES` catalogue grouped into Classic / Sport-Side / Triple / Wave / Hourglass / Pinstripe / Raglan. All GT objects are tagged `data.kashaGt = true`, non-selectable, and sent to back so text/logos/uploads stay on top.
 
 ### Patterns workflow (customizer)
 1. Customer opens **Design** tab → **Patterns & Prints** grid.
@@ -50,6 +51,16 @@ KA.SHA is a full-stack luxury golf/sportswear fashion eCommerce web application 
    - **Apply to whole T-shirt** — sets the Fabric canvas background to a tiled pattern, which the model-viewer texture-maps across the entire UV print area.
    - **Place on a zone** (Front / Back / Left Sleeve / Right Sleeve / Collar) — drops the print as a draggable Fabric image at a preset coordinate; customer can reposition/scale via the Tweak controls.
 3. Multiple zone-prints can be stacked. The all-over print is overridden by the chosen part color when removed.
+
+### GT Design Style workflow (customizer)
+1. Customer opens **Design** tab → **Design Styles (GT001–GT032)** accordion above Print Library.
+2. Expands one of the 7 group accordions and clicks a swatch (auto-rendered preview). The handler:
+   - clears any active all-over print (GT covers the whole shirt)
+   - forces body PBR base colour to white so the painted zones render true to colour
+   - calls `applyGtStyle(canvas, style, defaultColors)` then `syncTexture()`
+3. Recolour via the Primary/Accent (and Tertiary on triple-tone styles) colour pickers or the Quick Palette swatches — re-runs `applyGtStyle` with the new colours.
+4. **Remove design style** clears all `kashaGt`-tagged objects and restores the canvas background.
+5. Adding text, logos, uploads, or zone-prints on top of a GT style works as normal — GT objects always sit at the bottom of the z-stack.
 
 ## Admin Panel
 - Route: `/admin` (single page with five tabs)
