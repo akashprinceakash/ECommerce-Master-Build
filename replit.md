@@ -69,7 +69,7 @@ KA.SHA is a full-stack luxury golf/sportswear fashion eCommerce web application 
 - **Products tab**: Full product CRUD, .glb model + thumbnail upload
 - **Orders tab**: List/filter all orders by status, expand to see line items + customer + shipping + payment IDs, update status (pending → confirmed → shipped → delivered → cancelled)
 - **Users tab**: List all Clerk users with order/spend stats, grant/revoke admin via Clerk metadata, delete users (with confirmation)
-- **Designs tab**: Browse all customer customizations with rich preview modal
+- **Designs tab**: Browse all customer customizations with rich preview modal; admins can also DELETE any user's design (admin override via `DELETE /api/admin/customizations/:id`) with a native confirmation prompt and per-card pending state
 - API routes:
   - Products: `GET/POST /api/admin/products`, `PUT/DELETE /api/admin/products/:id`
   - Uploads: `POST /api/admin/upload/model`, `POST /api/admin/upload/thumbnail`

@@ -148,6 +148,28 @@ router.delete("/admin/products/:id", requireAuth, async (req, res): Promise<void
   res.sendStatus(204);
 });
 
+// Delete any user's design (admin override). Regular users can only delete
+// their own designs via DELETE /api/customizations/:id; this endpoint lets
+// the admin remove any customer design from the Designs admin tab.
+router.delete("/admin/customizations/:id", requireAuth, async (req, res): Promise<void> => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const result = await db
+    .delete(customizationsTable)
+    .where(eq(customizationsTable.id, id))
+    .returning({ id: customizationsTable.id });
+
+  if (result.length === 0) {
+    res.status(404).json({ error: "Design not found" });
+    return;
+  }
+  res.sendStatus(204);
+});
+
 router.post("/admin/upload/model", requireAuth, (req, res, next) => {
   requireAdmin(req, res).then(adminId => {
     if (!adminId) return;

@@ -408,6 +408,16 @@ export default function AdminPage() {
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const deleteDesignMutation = useMutation({
+    mutationFn: (id: number) => apiFetch(`/api/admin/customizations/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-designs"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] });
+      toast({ title: "Design deleted" });
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const resetForm = () => { setForm({ ...EMPTY_FORM }); setEditingId(null); setShowForm(false); };
 
   const startEdit = (p: Product) => {
@@ -753,14 +763,35 @@ export default function AdminPage() {
                         <span className="truncate">{d.userEmail}</span>
                       </div>
                       <p className="text-[10px] text-muted-foreground/60">{new Date(d.updatedAt).toLocaleDateString()}</p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="mt-auto rounded-none text-[10px] tracking-widest w-full flex items-center gap-2"
-                        onClick={() => setViewingDesign(d)}
-                      >
-                        <Eye className="w-3 h-3" /> VIEW DESIGN
-                      </Button>
+                      <div className="mt-auto flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-none text-[10px] tracking-widest flex-1 flex items-center justify-center gap-2"
+                          onClick={() => setViewingDesign(d)}
+                        >
+                          <Eye className="w-3 h-3" /> VIEW
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-none text-[10px] tracking-widest flex items-center justify-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300"
+                          title="Delete this customer design"
+                          disabled={deleteDesignMutation.isPending && deleteDesignMutation.variables === d.id}
+                          onClick={() => {
+                            if (confirm(`Delete design "${d.name}" by ${d.userEmail ?? "this customer"}? This cannot be undone.`)) {
+                              deleteDesignMutation.mutate(d.id);
+                            }
+                          }}
+                        >
+                          {deleteDesignMutation.isPending && deleteDesignMutation.variables === d.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3 h-3" />
+                          )}
+                          {deleteDesignMutation.isPending && deleteDesignMutation.variables === d.id ? "DELETING" : "DELETE"}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
