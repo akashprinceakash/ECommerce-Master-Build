@@ -1022,12 +1022,10 @@ export default function CustomizePage() {
       originX: "center", originY: "center",
       fontFamily: txtFont, fontSize: txtSize, fill: txtColor,
       fontWeight: "bold",
-      // The 3D mesh's body UVs are mirrored on the rendering side, so any
-      // text placed on the canvas appears reversed on the shirt. Pre-flipping
-      // the text on the X axis cancels that mirror so it reads correctly on
-      // the 3D model. (Patterns/shapes are direction-agnostic, so they don't
-      // need this — only text and logos do.)
-      flipX: true,
+      // No flipX — the model-viewer applies the texture straight onto the UV
+      // (see ModelViewerCustomizer: createTexture → baseColorTexture, no flip
+      // transform), and the print library renders correctly without any flip,
+      // so text and logos render correctly without it too.
     });
     fc.add(t);
     fc.setActiveObject(t);
@@ -1053,9 +1051,9 @@ export default function CustomizePage() {
       const pos = PLACEMENTS[logoPlacement] || { left:512, top:512 };
       const maxW = parseInt(document.getElementById("logo-size-input")?.getAttribute("value")||"200");
       if (img.width && img.width > maxW) img.scaleToWidth(maxW);
-      // flipX: cancels the mirrored body-UV so the logo reads correctly on
-      // the 3D shirt (same fix as text). Symmetric logos won't notice.
-      img.set({ left:pos.left, top:pos.top, originX:"center", originY:"center", flipX:true });
+      // No flipX — the texture is rendered straight onto the UV (no mirror),
+      // so logos read correctly without any pre-flip.
+      img.set({ left:pos.left, top:pos.top, originX:"center", originY:"center" });
       const fc = fcRef.current; if (!fc) return;
       fc.add(img); fc.setActiveObject(img);
       logoObjRef.current = img;
