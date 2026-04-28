@@ -115,15 +115,34 @@ const FONTS = [
   { label:"Casual", value:"'Comic Sans MS'" },
 ];
 
-// Placement → canvas coordinate map (1024×1024 UV space)
+// Placement → canvas coordinate map (1024×1024 UV space).
+// Derived from ZONE_PRESETS so text / logos / shapes land on the same UV
+// islands the Patterns library uses (single source of truth = patterns.ts).
+// Each entry is the CENTER point of that placement (originX/Y:"center"
+// elsewhere expects centers). "Front Chest" sits in the upper-third of the
+// front island; "Front Center" sits at the geometric centre, etc.
+const _zCenter = (z: keyof typeof ZONE_PRESETS, dy = 0) => ({
+  left: ZONE_PRESETS[z].left + ZONE_PRESETS[z].w / 2,
+  top:  ZONE_PRESETS[z].top  + ZONE_PRESETS[z].h * dy,
+});
 const PLACEMENTS: Record<string, {left:number;top:number}> = {
-  "front-chest":  { left:320, top:280 },
-  "front-center": { left:512, top:512 },
-  "back-top":     { left:512, top:180 },
-  "back-center":  { left:512, top:420 },
-  "sleeve-left":  { left:170, top:480 },
-  "sleeve-right": { left:854, top:480 },
+  "front-chest":  _zCenter("front",        0.22),
+  "front-center": _zCenter("front",        0.50),
+  "back-top":     _zCenter("back",         0.18),
+  "back-center":  _zCenter("back",         0.50),
+  "sleeve-left":  _zCenter("leftSleeve",   0.50),
+  "sleeve-right": _zCenter("rightSleeve",  0.50),
 };
+
+// Five user-editable colour zones for the per-zone Garment Parts panel.
+// Each maps 1:1 to a ZONE_PRESETS rectangle on the 1024×1024 texture canvas.
+const COLOR_ZONES: { id: Exclude<PatternZone, "all">; label: string }[] = [
+  { id: "front",       label: "Front" },
+  { id: "back",        label: "Back" },
+  { id: "leftSleeve",  label: "Left Sleeve" },
+  { id: "rightSleeve", label: "Right Sleeve" },
+  { id: "collar",      label: "Collar" },
+];
 
 // ── Auth helper ──────────────────────────────────────────────────────────────
 async function getToken(): Promise<string | null> {
@@ -263,6 +282,15 @@ export default function CustomizePage() {
   // Shape controls
   const [shapeColor, setShapeColor] = useState("#FFFFFF");
   const [strokeW, setStrokeW]       = useState(12);
+  const [shapePlacement, setShapePlacement] = useState("front-center");
+
+  // Per-zone garment colours — each user-painted colour rect lives on the
+  // texture canvas at the matching ZONE_PRESETS rectangle. Empty string =
+  // no colour applied (the body / GT base shows through).
+  const [activeColorZone, setActiveColorZone] = useState<Exclude<PatternZone, "all">>("front");
+  const [zoneColors, setZoneColors] = useState<Record<Exclude<PatternZone, "all">, string>>({
+    front: "", back: "", leftSleeve: "", rightSleeve: "", collar: "",
+  });
 
   // Canvas element adjustments
   const [elScale, setElScale] = useState(1);
@@ -763,6 +791,9 @@ export default function CustomizePage() {
   const applyAllOverPrint = useCallback(async (p: PatternDef) => {
     const fc = fcRef.current;
     if (!fc) return;
+    // Invalidate any in-flight GT apply/recolor — otherwise a slow GT load
+    // could finish AFTER us and stomp our print background.
+    gtRequestIdRef.current++;
     try {
       const img = await loadHTMLImage(patternUrl(p.file));
       // Pre-scale the source onto an offscreen canvas so the pattern repeats
@@ -856,9 +887,53 @@ export default function CustomizePage() {
     toast({ title: "Design style removed" });
   }, [syncTexture, toast]);
 
+  // ── PER-ZONE COLOUR ──────────────────────────────────────────────────────
+  // Paints (or removes) a flat colour rectangle on the texture canvas at the
+  // exact ZONE_PRESETS rectangle for the chosen zone. Sits ABOVE GT base
+  // textures and BELOW prints / text / logos / shapes so the user can recolour
+  // a panel without losing their decorative work.
+  const applyZoneColor = useCallback((zone: Exclude<PatternZone, "all">, hex: string) => {
+    const fc = fcRef.current;
+    if (!fc) return;
+    // Invalidate any in-flight GT apply — its async completion could otherwise
+    // re-stack the texture above our zone colour rect.
+    gtRequestIdRef.current++;
+    // Remove any prior colour rect for this zone.
+    const existing = fc.getObjects().filter((o: any) => o?.data?.kashaZoneColor === zone);
+    if (existing.length) fc.remove(...existing);
+
+    if (!hex) {
+      setZoneColors(prev => ({ ...prev, [zone]: "" }));
+      fc.renderAll();
+      syncTexture();
+      return;
+    }
+
+    const preset = ZONE_PRESETS[zone];
+    const rect = new fabric.Rect({
+      left: preset.left, top: preset.top,
+      width: preset.w,   height: preset.h,
+      fill: hex,
+      selectable: false, evented: false,
+      originX: "left",   originY: "top",
+    });
+    (rect as any).data = { kashaZoneColor: zone };
+    fc.add(rect);
+    // Stack: GT base (very back) → zone colour rects → prints → text/logos/shapes.
+    // sendObjectToBack puts rect at index 0, then we restore the GT base behind it.
+    (fc as any).sendObjectToBack?.(rect);
+    const gtBase = fc.getObjects().find((o: any) => o?.data?.tag === "__kashaGtBg__");
+    if (gtBase) (fc as any).sendObjectToBack?.(gtBase);
+    fc.renderAll();
+    setZoneColors(prev => ({ ...prev, [zone]: hex }));
+    syncTexture();
+  }, [syncTexture]);
+
   const placePrintOnZone = useCallback(async (p: PatternDef, zone: Exclude<PatternZone, "all">) => {
     const fc = fcRef.current;
     if (!fc) return;
+    // Invalidate any in-flight GT apply for the same reason as applyZoneColor.
+    gtRequestIdRef.current++;
     try {
       const img = await fabric.FabricImage.fromURL(patternUrl(p.file), { crossOrigin: "anonymous" });
       const preset = ZONE_PRESETS[zone];
@@ -947,6 +1022,12 @@ export default function CustomizePage() {
       originX: "center", originY: "center",
       fontFamily: txtFont, fontSize: txtSize, fill: txtColor,
       fontWeight: "bold",
+      // The 3D mesh's body UVs are mirrored on the rendering side, so any
+      // text placed on the canvas appears reversed on the shirt. Pre-flipping
+      // the text on the X axis cancels that mirror so it reads correctly on
+      // the 3D model. (Patterns/shapes are direction-agnostic, so they don't
+      // need this — only text and logos do.)
+      flipX: true,
     });
     fc.add(t);
     fc.setActiveObject(t);
@@ -972,7 +1053,9 @@ export default function CustomizePage() {
       const pos = PLACEMENTS[logoPlacement] || { left:512, top:512 };
       const maxW = parseInt(document.getElementById("logo-size-input")?.getAttribute("value")||"200");
       if (img.width && img.width > maxW) img.scaleToWidth(maxW);
-      img.set({ left:pos.left, top:pos.top, originX:"center", originY:"center" });
+      // flipX: cancels the mirrored body-UV so the logo reads correctly on
+      // the 3D shirt (same fix as text). Symmetric logos won't notice.
+      img.set({ left:pos.left, top:pos.top, originX:"center", originY:"center", flipX:true });
       const fc = fcRef.current; if (!fc) return;
       fc.add(img); fc.setActiveObject(img);
       logoObjRef.current = img;
@@ -1003,30 +1086,39 @@ export default function CustomizePage() {
   };
 
   // ── Shapes ────────────────────────────────────────────────────────────────
+  // All shapes drop at the user's currently-selected Placement so they land
+  // on the same UV island the Patterns library uses (single source of truth).
+  // Stroke colours are direction-agnostic so no flipX is needed here.
+  const _shapePos = () => PLACEMENTS[shapePlacement] || { left: 512, top: 512 };
   const addLine = () => {
     const fc = fcRef.current; if (!fc) return;
-    fc.add(new fabric.Line([0,0,500,0],{stroke:shapeColor,strokeWidth:strokeW,left:512,top:512,originX:"center",originY:"center"}));
+    const p = _shapePos();
+    fc.add(new fabric.Line([0,0,500,0],{stroke:shapeColor,strokeWidth:strokeW,left:p.left,top:p.top,originX:"center",originY:"center"}));
     fc.renderAll(); syncTexture();
   };
   const addCurve = () => {
     const fc = fcRef.current; if (!fc) return;
-    fc.add(new fabric.Path("M 0 80 Q 250 -80 500 80",{fill:"",stroke:shapeColor,strokeWidth:strokeW,left:512,top:512,originX:"center",originY:"center"}));
+    const p = _shapePos();
+    fc.add(new fabric.Path("M 0 80 Q 250 -80 500 80",{fill:"",stroke:shapeColor,strokeWidth:strokeW,left:p.left,top:p.top,originX:"center",originY:"center"}));
     fc.renderAll(); syncTexture();
   };
   const addRect = () => {
     const fc = fcRef.current; if (!fc) return;
-    fc.add(new fabric.Rect({width:300,height:180,fill:"transparent",stroke:shapeColor,strokeWidth:strokeW,left:512,top:512,originX:"center",originY:"center"}));
+    const p = _shapePos();
+    fc.add(new fabric.Rect({width:300,height:180,fill:"transparent",stroke:shapeColor,strokeWidth:strokeW,left:p.left,top:p.top,originX:"center",originY:"center"}));
     fc.renderAll(); syncTexture();
   };
   const addCircle = () => {
     const fc = fcRef.current; if (!fc) return;
-    fc.add(new fabric.Circle({radius:140,fill:"transparent",stroke:shapeColor,strokeWidth:strokeW,left:512,top:512,originX:"center",originY:"center"}));
+    const p = _shapePos();
+    fc.add(new fabric.Circle({radius:140,fill:"transparent",stroke:shapeColor,strokeWidth:strokeW,left:p.left,top:p.top,originX:"center",originY:"center"}));
     fc.renderAll(); syncTexture();
   };
   const addStripes = () => {
     const fc = fcRef.current; if (!fc) return;
+    const p = _shapePos();
     const lines = Array.from({length:14},(_,i) => new fabric.Line([-600,i*80-520,600,i*80-520],{stroke:shapeColor,strokeWidth:strokeW}));
-    fc.add(new fabric.Group(lines,{left:512,top:512,originX:"center",originY:"center"}));
+    fc.add(new fabric.Group(lines,{left:p.left,top:p.top,originX:"center",originY:"center"}));
     fc.renderAll(); syncTexture();
   };
   const removeSel = () => {
@@ -1238,44 +1330,61 @@ export default function CustomizePage() {
         {/* ════ LEFT PANEL ════ */}
         <div style={{ width:"260px",minWidth:"260px",borderRight:`1px solid ${V.bd}`,overflowY:"auto",padding:"14px 12px",display:"flex",flexDirection:"column",gap:0,scrollbarWidth:"thin",background:V.bg }}>
 
-          {/* Garment Parts */}
+          {/* Garment Parts — fixed 5 zones (Front, Back, L-Sleeve, R-Sleeve, Collar) */}
           <div style={sb}>
             <div style={sl}>Garment Parts</div>
+            <p style={{ margin:"0 0 8px",fontSize:"10px",color:V.mu,lineHeight:1.5 }}>
+              Pick a part, then choose a colour from the palette below. Click ✕ to clear.
+            </p>
             <div style={{ display:"flex",flexDirection:"column",gap:"6px" }}>
-              {!modelLoaded ? (
-                <p style={{ fontSize:"11px",color:V.mu }}>Loading model parts…</p>
-              ) : mats.length > 0 ? mats.map((m,i) => (
-                <div key={i} onClick={()=>setActivePart(i)} style={{
-                  display:"flex",alignItems:"center",justifyContent:"space-between",
-                  background:activePart===i?`rgba(201,168,124,.12)`:"rgba(0,0,0,.25)",
-                  padding:"9px 11px",borderRadius:"9px",
-                  border:`1px solid ${activePart===i?V.ac:V.bd}`,
-                  cursor:"pointer",transition:"border-color .15s",
-                }}>
-                  <div>
-                    <div style={{ fontSize:"11px",fontWeight:500 }}>{m.name}</div>
-                    <div style={{ fontSize:"10px",color:V.ac,marginTop:"1px" }}>
-                      {i===0?"Main body":i===1?"Trim / collar":i===2?"Sleeve panel":i===3?"Buttons":`Part ${i+1}`}
+              {COLOR_ZONES.map(z => {
+                const active = activeColorZone === z.id;
+                const col    = zoneColors[z.id];
+                return (
+                  <div key={z.id} onClick={()=>setActiveColorZone(z.id)} style={{
+                    display:"flex",alignItems:"center",justifyContent:"space-between",
+                    background:active?`rgba(201,168,124,.12)`:"rgba(0,0,0,.25)",
+                    padding:"9px 11px",borderRadius:"9px",
+                    border:`1px solid ${active?V.ac:V.bd}`,
+                    cursor:"pointer",transition:"border-color .15s",
+                  }}>
+                    <div>
+                      <div style={{ fontSize:"11px",fontWeight:500 }}>{z.label}</div>
+                      <div style={{ fontSize:"10px",color:V.ac,marginTop:"1px" }}>
+                        {col ? col.toUpperCase() : "No colour"}
+                      </div>
+                    </div>
+                    <div style={{ display:"flex",alignItems:"center",gap:"6px" }}>
+                      <input type="color" value={col || "#ffffff"}
+                        onClick={e=>e.stopPropagation()}
+                        onChange={e=>{ setActiveColorZone(z.id); applyZoneColor(z.id,e.target.value); }}
+                        style={{ width:"30px",height:"24px",border:"none",cursor:"pointer",background:"none",borderRadius:"5px",padding:0 }}
+                      />
+                      {col && (
+                        <button
+                          onClick={e=>{ e.stopPropagation(); applyZoneColor(z.id, ""); }}
+                          title="Clear this zone"
+                          style={{ background:"none",border:`1px solid ${V.bd}`,color:V.mu,
+                                   cursor:"pointer",fontSize:"11px",borderRadius:"5px",
+                                   width:"22px",height:"24px",lineHeight:"1",padding:0 }}
+                        >×</button>
+                      )}
                     </div>
                   </div>
-                  <input type="color" value={m.color}
-                    onClick={e=>e.stopPropagation()}
-                    onChange={e=>{ setActivePart(i); applyPartColor(i,e.target.value); }}
-                    style={{ width:"30px",height:"24px",border:"none",cursor:"pointer",background:"none",borderRadius:"5px",padding:0 }}
-                  />
-                </div>
-              )) : (
-                <p style={{ fontSize:"11px",color:V.mu }}>No 3D model parts found.</p>
-              )}
+                );
+              })}
             </div>
           </div>
 
-          {/* Color Palette */}
+          {/* Color Palette — paints the active zone */}
           <div style={sb}>
             <div style={sl}>Color Palette</div>
+            <p style={{ margin:"0 0 8px",fontSize:"10px",color:V.mu,lineHeight:1.5 }}>
+              Painting <span style={{ color:V.ac,fontWeight:600 }}>{COLOR_ZONES.find(z=>z.id===activeColorZone)?.label}</span>
+            </p>
             <div style={{ display:"flex",flexWrap:"wrap",gap:"6px",alignItems:"center" }}>
               {PAL.map(hex => (
-                <div key={hex} title={hex} onClick={()=>applyPalette(hex)} style={{
+                <div key={hex} title={hex} onClick={()=>applyZoneColor(activeColorZone, hex)} style={{
                   width:"26px",height:"26px",borderRadius:"50%",cursor:"pointer",flexShrink:0,
                   background:hex,border:`2px solid ${hex==="#FFFFFF"?V.bd2:"transparent"}`,transition:"transform .12s",
                 }}
@@ -1286,10 +1395,10 @@ export default function CustomizePage() {
             </div>
             <div style={{ marginTop:"9px",display:"flex",gap:"7px",alignItems:"center" }}>
               <input id="cp-custom" type="color" defaultValue="#C5D3DE"
-                onChange={e=>{ applyPartColor(activePart,e.target.value); }}
+                onChange={e=>{ applyZoneColor(activeColorZone, e.target.value); }}
                 style={{ width:"34px",height:"28px",borderRadius:"7px",cursor:"pointer",background:"none",padding:0,border:"none" }}
               />
-              <span style={{ fontSize:"11px",color:V.mu }}>Apply to selected part</span>
+              <span style={{ fontSize:"11px",color:V.mu }}>Custom colour</span>
             </div>
           </div>
 
@@ -1888,6 +1997,10 @@ export default function CustomizePage() {
                     style={{ flex:1,height:"3px",background:V.bd2,borderRadius:"2px",outline:"none",WebkitAppearance:"none",appearance:"none" }} />
                   <span style={{ fontSize:"10px",color:V.mu,minWidth:"26px",textAlign:"right" }}>{strokeW}</span>
                 </div>
+              </div>
+              <div>
+                <div style={sl}>Placement</div>
+                {placeBtns(PLACEMENT_OPTS, shapePlacement, setShapePlacement)}
               </div>
               <div>
                 <div style={sl}>Add Shape</div>

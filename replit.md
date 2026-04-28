@@ -98,7 +98,7 @@ Full unified studio combining model-viewer 3D rendering with Fabric.js design ca
 
 ### Layout
 - **Header**: Back link, design name input, Save + Add to Cart buttons
-- **Left panel**: Garment Parts (dynamic from .glb materials, per-part color pickers), Color Palette (13 luxury swatches), Auto Rotate toggle, Size (XS–XXL), Quantity, Save/Export
+- **Left panel**: Garment Parts — fixed 5-zone list (Front, Back, Left Sleeve, Right Sleeve, Collar — no Full Body); each zone is painted onto the texture canvas as a `fabric.Rect` at the matching `ZONE_PRESETS` rectangle and tagged `data.kashaZoneColor === <zone>` so it can be replaced/cleared cleanly. Stack order: GT base → zone-colour rects → prints → text/logos/shapes. Color Palette (13 luxury swatches) paints the *active* zone (header reads "Painting <Zone>"). Auto Rotate toggle, Size (XS–XXL), Quantity, Save/Export. The single source of truth for placement / zone coords is `patterns.ts → ZONE_PRESETS`; `PLACEMENTS` (used by text / logo / shape "Front Chest / Front Center / Back Top / Back Center / Sleeve Left / Sleeve Right" buttons) is derived from those same rectangles. Text and logos receive `flipX:true` to cancel the body-UV mirror so they render correctly on the 3D shirt (patterns/shapes are direction-agnostic and don't need it).
 - **Center**: Google `model-viewer` web component for live 3D preview; WebGL fallback shows product thumbnail
 - **Right panel (6 tabs)**: COLORS | DESIGN | TEXT | LOGO | SHAPES | CANVAS
 
