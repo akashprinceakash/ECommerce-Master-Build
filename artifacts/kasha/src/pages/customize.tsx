@@ -604,7 +604,7 @@ export default function CustomizePage() {
     const left = new fabric.Rect({
       left:320, top:50, width:90, height:140, rx:10, ry:10,
       fill:color, opacity:0.7, selectable:false, evented:false,
-      data:{ garmentType:"collar" },
+      data:{ garmentType:"collar" }, 
     });
     const right = new fabric.Rect({
       left:614, top:50, width:90, height:140, rx:10, ry:10,
@@ -1022,10 +1022,12 @@ export default function CustomizePage() {
       originX: "center", originY: "center",
       fontFamily: txtFont, fontSize: txtSize, fill: txtColor,
       fontWeight: "bold",
-      // No flipX — the model-viewer applies the texture straight onto the UV
-      // (see ModelViewerCustomizer: createTexture → baseColorTexture, no flip
-      // transform), and the print library renders correctly without any flip,
-      // so text and logos render correctly without it too.
+      // The body UVs of the GLB are horizontally mirrored when wrapped onto
+      // the 3D mesh: typing "Akash" on the canvas would show "hsakA" on the
+      // shirt. Pre-flipping on X cancels that mirror so it reads correctly.
+      // Patterns/prints are repeating + roughly symmetric so the mirror is
+      // not visible on them — only directional content (text, logos) needs it.
+      flipX: true,
     });
     fc.add(t);
     fc.setActiveObject(t);
@@ -1051,9 +1053,9 @@ export default function CustomizePage() {
       const pos = PLACEMENTS[logoPlacement] || { left:512, top:512 };
       const maxW = parseInt(document.getElementById("logo-size-input")?.getAttribute("value")||"200");
       if (img.width && img.width > maxW) img.scaleToWidth(maxW);
-      // No flipX — the texture is rendered straight onto the UV (no mirror),
-      // so logos read correctly without any pre-flip.
-      img.set({ left:pos.left, top:pos.top, originX:"center", originY:"center" });
+      // flipX cancels the body-UV horizontal mirror so the logo reads correctly
+      // on the 3D shirt — same fix as text. Symmetric logos won't notice.
+      img.set({ left:pos.left, top:pos.top, originX:"center", originY:"center", flipX:true });
       const fc = fcRef.current; if (!fc) return;
       fc.add(img); fc.setActiveObject(img);
       logoObjRef.current = img;
@@ -1374,32 +1376,6 @@ export default function CustomizePage() {
             </div>
           </div>
 
-          {/* Color Palette — paints the active zone */}
-          <div style={sb}>
-            <div style={sl}>Color Palette</div>
-            <p style={{ margin:"0 0 8px",fontSize:"10px",color:V.mu,lineHeight:1.5 }}>
-              Painting <span style={{ color:V.ac,fontWeight:600 }}>{COLOR_ZONES.find(z=>z.id===activeColorZone)?.label}</span>
-            </p>
-            <div style={{ display:"flex",flexWrap:"wrap",gap:"6px",alignItems:"center" }}>
-              {PAL.map(hex => (
-                <div key={hex} title={hex} onClick={()=>applyZoneColor(activeColorZone, hex)} style={{
-                  width:"26px",height:"26px",borderRadius:"50%",cursor:"pointer",flexShrink:0,
-                  background:hex,border:`2px solid ${hex==="#FFFFFF"?V.bd2:"transparent"}`,transition:"transform .12s",
-                }}
-                  onMouseEnter={e=>(e.currentTarget.style.transform="scale(1.18)")}
-                  onMouseLeave={e=>(e.currentTarget.style.transform="scale(1)")}
-                />
-              ))}
-            </div>
-            <div style={{ marginTop:"9px",display:"flex",gap:"7px",alignItems:"center" }}>
-              <input id="cp-custom" type="color" defaultValue="#C5D3DE"
-                onChange={e=>{ applyZoneColor(activeColorZone, e.target.value); }}
-                style={{ width:"34px",height:"28px",borderRadius:"7px",cursor:"pointer",background:"none",padding:0,border:"none" }}
-              />
-              <span style={{ fontSize:"11px",color:V.mu }}>Custom colour</span>
-            </div>
-          </div>
-
           {/* Options */}
           <div style={sb}>
             <div style={sl}>Options</div>
@@ -1532,132 +1508,11 @@ export default function CustomizePage() {
             ))}
           </div>
 
-          {/* ── COLORS TAB ── */}
+          {/* ── COLORS TAB ── Design Styles (GT001–GT032) + Design Summary */}
           {rightTab==="colors" && (
             <div style={{ padding:"14px 12px",display:"flex",flexDirection:"column",gap:"16px" }}>
 
-              {/* Design Presets */}
-              <div>
-                <div style={sl}>Design Presets (GT001–GT012)</div>
-                <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"5px" }}>
-                  {PRESETS.map(p => (
-                    <button key={p.name} onClick={()=>applyPreset(p)} title={`${p.name}: ${p.primary} / ${p.secondary}`}
-                      style={{
-                        borderRadius:"7px",border:`2px solid ${presetName===p.name?V.ac:V.bd}`,
-                        padding:"4px",cursor:"pointer",background:"rgba(0,0,0,.3)",overflow:"hidden",transition:"border-color .15s",
-                      }}>
-                      <div style={{ display:"flex",flexDirection:"column",gap:"2px" }}>
-                        <div style={{ height:"16px",borderRadius:"3px 3px 0 0",background:p.primary }} />
-                        <div style={{ height:"8px",borderRadius:"0 0 3px 3px",background:p.secondary }} />
-                      </div>
-                      <div style={{ fontSize:"8px",color:presetName===p.name?V.ac:V.mu,marginTop:"3px",fontWeight:600 }}>{p.name}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Primary Color */}
-              <div>
-                <div style={sl}>Primary Color (Body / Canvas)</div>
-                <div style={{ display:"flex",flexWrap:"wrap",gap:"5px",marginBottom:"7px" }}>
-                  {PAL.map(hex => (
-                    <div key={hex} onClick={()=>applyPrimary(hex)} title={hex} style={{
-                      width:"24px",height:"24px",borderRadius:"50%",cursor:"pointer",flexShrink:0,
-                      background:hex,border:`2px solid ${primaryColor===hex?V.ac:hex==="#FFFFFF"?V.bd2:"transparent"}`,
-                      transition:"transform .12s",
-                    }}
-                      onMouseEnter={e=>(e.currentTarget.style.transform="scale(1.2)")}
-                      onMouseLeave={e=>(e.currentTarget.style.transform="scale(1)")}
-                    />
-                  ))}
-                </div>
-                <div style={{ display:"flex",gap:"8px",alignItems:"center" }}>
-                  <input type="color" value={primaryColor} onChange={e=>applyPrimary(e.target.value)}
-                    style={{ width:"40px",height:"32px",border:`1px solid ${V.bd}`,borderRadius:"7px",cursor:"pointer",padding:"2px",background:"none" }} />
-                  <div style={{ fontSize:"11px",color:V.mu }}>Custom primary</div>
-                  <div style={{ fontSize:"11px",color:V.ac,fontWeight:600,fontFamily:"monospace" }}>{primaryColor}</div>
-                </div>
-              </div>
-
-              {/* Secondary / Trim Color */}
-              <div>
-                <div style={sl}>Secondary / Trim Color</div>
-                <div style={{ display:"flex",flexWrap:"wrap",gap:"5px",marginBottom:"7px" }}>
-                  {PAL.map(hex => (
-                    <div key={hex} onClick={()=>applySecondary(hex)} title={hex} style={{
-                      width:"24px",height:"24px",borderRadius:"50%",cursor:"pointer",flexShrink:0,
-                      background:hex,border:`2px solid ${secondaryColor===hex?V.ac:hex==="#FFFFFF"?V.bd2:"transparent"}`,
-                      transition:"transform .12s",
-                    }}
-                      onMouseEnter={e=>(e.currentTarget.style.transform="scale(1.2)")}
-                      onMouseLeave={e=>(e.currentTarget.style.transform="scale(1)")}
-                    />
-                  ))}
-                </div>
-                <div style={{ display:"flex",gap:"8px",alignItems:"center" }}>
-                  <input type="color" value={secondaryColor} onChange={e=>applySecondary(e.target.value)}
-                    style={{ width:"40px",height:"32px",border:`1px solid ${V.bd}`,borderRadius:"7px",cursor:"pointer",padding:"2px",background:"none" }} />
-                  <div style={{ fontSize:"11px",color:V.mu }}>Custom trim</div>
-                  <div style={{ fontSize:"11px",color:V.ac,fontWeight:600,fontFamily:"monospace" }}>{secondaryColor}</div>
-                </div>
-              </div>
-
-              {/* Design Summary */}
-              <div style={{ background:V.sf,border:`1px solid ${V.bd}`,borderRadius:"9px",padding:"12px" }}>
-                <div style={sl}>Design Summary</div>
-                {summary.map(r => (
-                  <div key={r.label} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:`1px solid ${V.bd}` }}>
-                    <span style={{ fontSize:"11px",color:V.mu }}>{r.label}</span>
-                    <span style={{ fontSize:"11px",color:V.tx,fontWeight:500 }}>{r.val as any}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── DESIGN TAB ── */}
-          {rightTab==="design" && (
-            <div style={{ padding:"14px 12px",display:"flex",flexDirection:"column",gap:"16px" }}>
-
-              {/* Garment Options */}
-              <div>
-                <div style={sl}>Garment Options</div>
-
-                {([
-                  { key:"sleeves", label:"Sleeves", desc:"Short sleeve design",   val:gSleeves, set:(v:boolean)=>{ setGSleeves(v); toggleGarment("sleeve",v,secondaryColor); } },
-                  { key:"collar",  label:"Collar",  desc:"Polo collar style",      val:gCollar,  set:(v:boolean)=>{ setGCollar(v);  toggleGarment("collar",v,secondaryColor); } },
-                  { key:"placket", label:"Button Placket", desc:"Front 3-button placket", val:gPlacket, set:(v:boolean)=>{ setGPlacket(v); toggleGarment("placket",v,secondaryColor); } },
-                  { key:"panel",   label:"Side Panel", desc:"Contrast color panels", val:gPanel, set:(v:boolean)=>{ setGPanel(v); toggleGarment("panel",v,secondaryColor); } },
-                  { key:"stripe",  label:"Chest Stripe", desc:"Diagonal accent stripe", val:gStripe, set:(v:boolean)=>{ setGStripe(v); toggleGarment("stripe",v,secondaryColor); } },
-                ] as const).map(item => (
-                  <div key={item.key} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 0",borderBottom:`1px solid ${V.bd}` }}>
-                    <div>
-                      <div style={{ fontSize:"12px",fontWeight:500 }}>{item.label}</div>
-                      <div style={{ fontSize:"10px",color:V.mu }}>{item.desc}</div>
-                    </div>
-                    {togBtn(item.val, ()=>item.set(!item.val))}
-                  </div>
-                ))}
-              </div>
-
-              {/* Pattern Overlay */}
-              <div>
-                <div style={sl}>Pattern Overlay</div>
-                <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"5px" }}>
-                  {(["none","stripes","grid","dots"] as const).map(pat => (
-                    <button key={pat} onClick={()=>{ setPattern(pat); drawPattern(pat, secondaryColor); }} style={{
-                      padding:"8px 0",fontSize:"10px",fontWeight:600,fontFamily:"inherit",cursor:"pointer",
-                      borderRadius:"7px",border:`1.5px solid ${pattern===pat?V.ac:V.bd}`,
-                      background:pattern===pat?"rgba(201,168,124,.12)":V.sf,
-                      color:pattern===pat?V.ac:V.mu,transition:"all .15s",
-                    }}>
-                      {pat==="none"?"None":pat==="stripes"?"///":pat==="grid"?"#":"•••"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* GT Design Style System */}
+              {/* GT Design Style System (moved from Design tab) */}
               <div>
                 <div style={sl}>Design Styles (GT001–GT032)</div>
                 <p style={{ margin:"0 0 8px",fontSize:"10px",color:V.mu,lineHeight:1.5 }}>
@@ -1802,7 +1657,24 @@ export default function CustomizePage() {
                 )}
               </div>
 
-              {/* Print Library */}
+              {/* Design Summary (kept) */}
+              <div style={{ background:V.sf,border:`1px solid ${V.bd}`,borderRadius:"9px",padding:"12px" }}>
+                <div style={sl}>Design Summary</div>
+                {summary.map(r => (
+                  <div key={r.label} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:`1px solid ${V.bd}` }}>
+                    <span style={{ fontSize:"11px",color:V.mu }}>{r.label}</span>
+                    <span style={{ fontSize:"11px",color:V.tx,fontWeight:500 }}>{r.val as any}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── DESIGN TAB ── two sections: Print Library + Garment Options */}
+          {rightTab==="design" && (
+            <div style={{ padding:"14px 12px",display:"flex",flexDirection:"column",gap:"16px" }}>
+
+              {/* SECTION 1: Print Library */}
               <div>
                 <div style={sl}>Print Library</div>
                 <p style={{ margin:"0 0 8px",fontSize:"10px",color:V.mu,lineHeight:1.5 }}>
@@ -1887,11 +1759,24 @@ export default function CustomizePage() {
                 })()}
               </div>
 
-              {/* Quick tip */}
-              <div style={{ background:"rgba(201,168,124,.07)",border:`1px solid rgba(201,168,124,.18)`,borderRadius:"7px",padding:"9px" }}>
-                <p style={{ fontSize:"10px",color:V.ac,lineHeight:1.6 }}>
-                  💡 Garment features are drawn onto the design canvas as overlay shapes in the Trim color. They update live on the 3D model.
-                </p>
+              {/* SECTION 2: Garment Options */}
+              <div>
+                <div style={sl}>Garment Options</div>
+                {([
+                  { key:"sleeves", label:"Sleeves",        desc:"Short sleeve design",      val:gSleeves, set:(v:boolean)=>{ setGSleeves(v); toggleGarment("sleeve",v,secondaryColor); } },
+                  { key:"collar",  label:"Collar",         desc:"Polo collar style",        val:gCollar,  set:(v:boolean)=>{ setGCollar(v);  toggleGarment("collar",v,secondaryColor); } },
+                  { key:"placket", label:"Button Placket", desc:"Front 3-button placket",   val:gPlacket, set:(v:boolean)=>{ setGPlacket(v); toggleGarment("placket",v,secondaryColor); } },
+                  { key:"panel",   label:"Side Panel",     desc:"Contrast color panels",    val:gPanel,   set:(v:boolean)=>{ setGPanel(v);   toggleGarment("panel",v,secondaryColor); } },
+                  { key:"stripe",  label:"Chest Stripe",   desc:"Diagonal accent stripe",   val:gStripe,  set:(v:boolean)=>{ setGStripe(v);  toggleGarment("stripe",v,secondaryColor); } },
+                ] as const).map(item => (
+                  <div key={item.key} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 0",borderBottom:`1px solid ${V.bd}` }}>
+                    <div>
+                      <div style={{ fontSize:"12px",fontWeight:500 }}>{item.label}</div>
+                      <div style={{ fontSize:"10px",color:V.mu }}>{item.desc}</div>
+                    </div>
+                    {togBtn(item.val, ()=>item.set(!item.val))}
+                  </div>
+                ))}
               </div>
             </div>
           )}

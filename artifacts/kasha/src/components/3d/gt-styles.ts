@@ -198,7 +198,9 @@ export async function applyGtStyle(
     width: 1024, height: 1024,
     scaleX: 1, scaleY: 1,
     originX: "left", originY: "top",
-    selectable: false, evented: false,
+    // Editable on the CANVAS tab — the customer can drag / scale / rotate
+    // the GT style so they can reposition the print over a specific zone.
+    selectable: true, evented: true,
     data: { tag: GT_TAG, styleId: style.id },
   } as any);
 
