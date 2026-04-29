@@ -191,105 +191,13 @@ export function clearGtStyle(fc: fabric.Canvas): void {
     .forEach((o) => fc.remove(o));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CLASSIC GROUP — live zone rendering
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// "Classic" = solid body (front + back + both sleeves) painted in `primary`,
-// with `accent` trim on the collar band, both cuff bands, the front + back
-// hem bands, and a vertical front placket strip. All rectangles are derived
-// from the canonical ZONE_PRESETS in patterns.ts so they always line up with
-// the UV islands of the shirt mesh.
-
-interface RectSpec { box: ZoneBox; fill: string; layer: "body" | "trim" }
-
-function classicLayout(colors: GtColors): RectSpec[] {
-  const Z = ZONE_PRESETS;
-
-  // Body fills — back-most layer, painted in primary
-  const body: RectSpec[] = [
-    { box: box(Z.front),       fill: colors.primary, layer: "body" },
-    { box: box(Z.back),        fill: colors.primary, layer: "body" },
-    { box: box(Z.leftSleeve),  fill: colors.primary, layer: "body" },
-    { box: box(Z.rightSleeve), fill: colors.primary, layer: "body" },
-  ];
-
-  // Trim accents — sit on top of the body, painted in accent
-  const trim: RectSpec[] = [
-    // Collar band
-    { box: box(Z.collar), fill: colors.accent, layer: "trim" },
-    // Front hem (bottom strip of the front panel)
-    { box: { left: Z.front.left, top: Z.front.top + Z.front.h - HEM_H, width: Z.front.w, height: HEM_H }, fill: colors.accent, layer: "trim" },
-    // Back hem
-    { box: { left: Z.back.left,  top: Z.back.top  + Z.back.h  - HEM_H, width: Z.back.w,  height: HEM_H }, fill: colors.accent, layer: "trim" },
-    // Left cuff
-    { box: { left: Z.leftSleeve.left,  top: Z.leftSleeve.top  + Z.leftSleeve.h  - CUFF_H, width: Z.leftSleeve.w,  height: CUFF_H }, fill: colors.accent, layer: "trim" },
-    // Right cuff
-    { box: { left: Z.rightSleeve.left, top: Z.rightSleeve.top + Z.rightSleeve.h - CUFF_H, width: Z.rightSleeve.w, height: CUFF_H }, fill: colors.accent, layer: "trim" },
-    // Front placket — vertical strip at the centre-top of the front panel
-    { box: { left: Z.front.left + Z.front.w / 2 - PLACKET_W / 2, top: Z.front.top, width: PLACKET_W, height: PLACKET_H }, fill: colors.accent, layer: "trim" },
-  ];
-
-  return [...body, ...trim];
-}
-
-function applyClassicZones(fc: fabric.Canvas, style: GtStyleDef, colors: GtColors): void {
-  clearGtStyle(fc);
-
-  for (const spec of classicLayout(colors)) {
-    const r = new fabric.Rect({
-      ...spec.box,
-      fill: spec.fill,
-      originX: "left", originY: "top",
-      strokeWidth: 0,
-      // Editable on the CANVAS tab — customer can drag / scale individual
-      // bands (e.g. widen the placket, shift the hem) to fine-tune the trim.
-      selectable: true, evented: true,
-    } as any);
-    (r as any).data = { tag: GT_TAG, styleId: style.id, layer: spec.layer };
-    fc.add(r);
-  }
-
-  // Stack: body rects below trim rects, all of them below prints/text/logos.
-  // We push trim to back first, then body — so body ends up at the very back
-  // and trim sits just above it.
-  fc.getObjects()
-    .filter((o) => (o as any).data?.tag === GT_TAG && (o as any).data?.layer === "trim")
-    .forEach((o) => fc.sendObjectToBack(o));
-  fc.getObjects()
-    .filter((o) => (o as any).data?.tag === GT_TAG && (o as any).data?.layer === "body")
-    .forEach((o) => fc.sendObjectToBack(o));
-
-  fc.renderAll();
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Public API
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Apply a GT style.
- *
- *  - Classic group → live zone rendering (Fabric Rects derived from
- *    ZONE_PRESETS, so trim placement is editable from this file).
- *  - All other groups → pre-baked PNG path (legacy). These will be migrated
- *    to zone-based recipes once the client confirms the layout for each group
- *    (sport-side, triple, wave, hourglass, pinstripe, raglan).
- */
+/** Apply a GT style — loads pre-built texture, optionally recolors it */
 export async function applyGtStyle(
   fc:           fabric.Canvas,
   style:        GtStyleDef,
   customColors?: Partial<GtColors>,
 ): Promise<void> {
   const colors: GtColors = { ...style.defaultColors, ...customColors };
-
-  // NEW: zone-based rendering for the Classic group
-  if (style.group === "classic") {
-    applyClassicZones(fc, style, colors);
-    return;
-  }
-
-  // LEGACY: pre-baked PNG path for the remaining groups
   const baseUrl = GT_BASE_TEXTURES[style.id];
   if (!baseUrl) return;
 
@@ -310,6 +218,8 @@ export async function applyGtStyle(
     width: 1024, height: 1024,
     scaleX: 1, scaleY: 1,
     originX: "left", originY: "top",
+    // Editable on the CANVAS tab — the customer can drag / scale / rotate
+    // the GT style so they can reposition the print over a specific zone.
     selectable: true, evented: true,
     data: { tag: GT_TAG, styleId: style.id },
   } as any);
