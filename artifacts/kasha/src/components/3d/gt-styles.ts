@@ -17,17 +17,24 @@ import * as fabric from "fabric";
 import { ZONE_PRESETS } from "./patterns";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ZONE-BASED RENDERING (NEW for the Classic group; other groups still use
-// pre-baked PNGs in GT_BASE_TEXTURES below until each group's layout is
-// confirmed with the client).
+// ZONE-BASED RENDERING (used by the Classic and Sport-Side groups; the
+// remaining groups still use pre-baked PNGs in GT_BASE_TEXTURES below
+// until each group's layout is confirmed with the client).
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Trim band sizes in pixels on the 1024×1024 UV canvas. Tweak these to make
 // the trim wider / narrower / longer.
+//
+// CLASSIC group (GT001–GT005) — collar / hem / cuff / placket
 const HEM_H     = 60;   // horizontal band thickness at the bottom of front/back
 const CUFF_H    = 32;   // horizontal band thickness at the bottom of sleeves
 const PLACKET_W = 48;   // vertical strip width at the centre-top of front
 const PLACKET_H = 220;  // vertical strip height (collar → mid-chest)
+//
+// SPORT-SIDE group (GT006–GT009) — side panels + shoulder caps + sleeve under-arm
+const SP_SIDE_W       = 90;   // black vertical panel on outer edge of front/back
+const SP_SHOULDER_H   = 90;   // black horizontal cap across the top of front/back
+const SP_SLEEVE_H     = 70;   // black under-arm strip on the bottom of each sleeve UV
 
 interface ZoneBox { left: number; top: number; width: number; height: number }
 
@@ -233,10 +240,64 @@ function classicLayout(colors: GtColors): RectSpec[] {
   return [...body, ...trim];
 }
 
-function applyClassicZones(fc: fabric.Canvas, style: GtStyleDef, colors: GtColors): void {
+// ─────────────────────────────────────────────────────────────────────────────
+// SPORT-SIDE GROUP — live zone rendering
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// "Sport Side" = solid body painted in `primary` (e.g. army green), with
+// `accent` (e.g. black) on:
+//   - vertical side panels on the OUTER edges of the front and back panels
+//     (these visually wrap around to form the curved side panel from armpit
+//     to hem on the 3D model)
+//   - horizontal shoulder caps across the TOP of the front and back panels
+//     (these meet the side panels at the shoulder seam, forming the
+//     contiguous black "yoke" you see in the technical drawing)
+//   - a horizontal under-arm strip on the BOTTOM of each sleeve UV island
+//     (this wraps to the under-arm seam on the 3D model)
+//
+// Used by GT006 (Olive & Black), GT007 (Red & Black), GT008 (Navy & Black),
+// GT009 (Blush & Slate) — same layout, different colour pairs.
+function sportSideLayout(colors: GtColors): RectSpec[] {
+  const Z = ZONE_PRESETS;
+
+  const body: RectSpec[] = [
+    { box: box(Z.front),       fill: colors.primary, layer: "body" },
+    { box: box(Z.back),        fill: colors.primary, layer: "body" },
+    { box: box(Z.leftSleeve),  fill: colors.primary, layer: "body" },
+    { box: box(Z.rightSleeve), fill: colors.primary, layer: "body" },
+  ];
+
+  const trim: RectSpec[] = [
+    // Front — left side panel
+    { box: { left: Z.front.left, top: Z.front.top, width: SP_SIDE_W, height: Z.front.h }, fill: colors.accent, layer: "trim" },
+    // Front — right side panel
+    { box: { left: Z.front.left + Z.front.w - SP_SIDE_W, top: Z.front.top, width: SP_SIDE_W, height: Z.front.h }, fill: colors.accent, layer: "trim" },
+    // Front — shoulder cap (full-width strip across the top)
+    { box: { left: Z.front.left, top: Z.front.top, width: Z.front.w, height: SP_SHOULDER_H }, fill: colors.accent, layer: "trim" },
+    // Back — left side panel
+    { box: { left: Z.back.left, top: Z.back.top, width: SP_SIDE_W, height: Z.back.h }, fill: colors.accent, layer: "trim" },
+    // Back — right side panel
+    { box: { left: Z.back.left + Z.back.w - SP_SIDE_W, top: Z.back.top, width: SP_SIDE_W, height: Z.back.h }, fill: colors.accent, layer: "trim" },
+    // Back — shoulder cap
+    { box: { left: Z.back.left, top: Z.back.top, width: Z.back.w, height: SP_SHOULDER_H }, fill: colors.accent, layer: "trim" },
+    // Left sleeve — under-arm strip (bottom edge of UV island)
+    { box: { left: Z.leftSleeve.left, top: Z.leftSleeve.top + Z.leftSleeve.h - SP_SLEEVE_H, width: Z.leftSleeve.w, height: SP_SLEEVE_H }, fill: colors.accent, layer: "trim" },
+    // Right sleeve — under-arm strip
+    { box: { left: Z.rightSleeve.left, top: Z.rightSleeve.top + Z.rightSleeve.h - SP_SLEEVE_H, width: Z.rightSleeve.w, height: SP_SLEEVE_H }, fill: colors.accent, layer: "trim" },
+  ];
+
+  return [...body, ...trim];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Generic zone-layout applier — used by every group that has been migrated
+// from the legacy PNG path. Just feed it a list of `RectSpec`s and it builds
+// the Fabric canvas.
+// ─────────────────────────────────────────────────────────────────────────────
+function applyZoneLayout(fc: fabric.Canvas, style: GtStyleDef, layout: RectSpec[]): void {
   clearGtStyle(fc);
 
-  for (const spec of classicLayout(colors)) {
+  for (const spec of layout) {
     const r = new fabric.Rect({
       ...spec.box,
       fill: spec.fill,
@@ -272,9 +333,11 @@ function applyClassicZones(fc: fabric.Canvas, style: GtStyleDef, colors: GtColor
  *
  *  - Classic group → live zone rendering (Fabric Rects derived from
  *    ZONE_PRESETS, so trim placement is editable from this file).
+ *  - Sport-Side group → live zone rendering (side panels + shoulder caps +
+ *    sleeve under-arm strips, derived from ZONE_PRESETS).
  *  - All other groups → pre-baked PNG path (legacy). These will be migrated
  *    to zone-based recipes once the client confirms the layout for each group
- *    (sport-side, triple, wave, hourglass, pinstripe, raglan).
+ *    (triple, wave, hourglass, pinstripe, raglan).
  */
 export async function applyGtStyle(
   fc:           fabric.Canvas,
@@ -283,9 +346,13 @@ export async function applyGtStyle(
 ): Promise<void> {
   const colors: GtColors = { ...style.defaultColors, ...customColors };
 
-  // NEW: zone-based rendering for the Classic group
+  // NEW: zone-based rendering — one branch per migrated group
   if (style.group === "classic") {
-    applyClassicZones(fc, style, colors);
+    applyZoneLayout(fc, style, classicLayout(colors));
+    return;
+  }
+  if (style.group === "sport-side") {
+    applyZoneLayout(fc, style, sportSideLayout(colors));
     return;
   }
 
