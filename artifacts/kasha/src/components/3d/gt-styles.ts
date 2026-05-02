@@ -25,11 +25,13 @@ import { ZONE_PRESETS } from "./patterns";
 // Trim band sizes in pixels on the 1024×1024 UV canvas. Tweak these to make
 // the trim wider / narrower / longer.
 //
-// CLASSIC group (GT001–GT005) — collar / hem / cuff / placket
-const HEM_H     = 60;   // horizontal band thickness at the bottom of front/back
-const CUFF_H    = 32;   // horizontal band thickness at the bottom of sleeves
-const PLACKET_W = 48;   // vertical strip width at the centre-top of front
-const PLACKET_H = 220;  // vertical strip height (collar → mid-chest)
+// CLASSIC group (GT001–GT005) — yoke / collar-trim / placket / hem / cuff
+const HEM_H         = 60;   // horizontal band thickness at the bottom of front/back
+const CUFF_H        = 32;   // horizontal band thickness at the bottom of sleeves
+const YOKE_H        = 100;  // accent horizontal band across the TOP of the front panel
+const COLLAR_TRIM_H = 30;   // thin accent strip on the BOTTOM edge of the collar UV (under-collar band)
+const PLACKET_W     = 40;   // vertical placket strip width
+const PLACKET_H     = 180;  // vertical placket strip height (drops down from yoke)
 //
 // SPORT-SIDE group (GT006–GT009) — side panels + shoulder caps + sleeve under-arm
 const SP_SIDE_W       = 90;   // black vertical panel on outer edge of front/back
@@ -213,18 +215,25 @@ interface RectSpec { box: ZoneBox; fill: string; layer: "body" | "trim" }
 function classicLayout(colors: GtColors): RectSpec[] {
   const Z = ZONE_PRESETS;
 
-  // Body fills — back-most layer, painted in primary
+  // Body fills — back-most layer, painted in primary.
+  // The COLLAR is now part of the body (primary colour), with only a thin
+  // accent strip on its bottom edge (the under-collar band).
   const body: RectSpec[] = [
     { box: box(Z.front),       fill: colors.primary, layer: "body" },
     { box: box(Z.back),        fill: colors.primary, layer: "body" },
     { box: box(Z.leftSleeve),  fill: colors.primary, layer: "body" },
     { box: box(Z.rightSleeve), fill: colors.primary, layer: "body" },
+    { box: box(Z.collar),      fill: colors.primary, layer: "body" },
   ];
 
   // Trim accents — sit on top of the body, painted in accent
   const trim: RectSpec[] = [
-    // Collar band
-    { box: box(Z.collar), fill: colors.accent, layer: "trim" },
+    // Front yoke — horizontal band across the TOP of the front panel
+    { box: { left: Z.front.left, top: Z.front.top, width: Z.front.w, height: YOKE_H }, fill: colors.accent, layer: "trim" },
+    // Front placket — vertical strip dropping DOWN from the yoke, centred
+    { box: { left: Z.front.left + Z.front.w / 2 - PLACKET_W / 2, top: Z.front.top + YOKE_H, width: PLACKET_W, height: PLACKET_H }, fill: colors.accent, layer: "trim" },
+    // Under-collar band — thin strip on the BOTTOM edge of the collar UV
+    { box: { left: Z.collar.left, top: Z.collar.top + Z.collar.h - COLLAR_TRIM_H, width: Z.collar.w, height: COLLAR_TRIM_H }, fill: colors.accent, layer: "trim" },
     // Front hem (bottom strip of the front panel)
     { box: { left: Z.front.left, top: Z.front.top + Z.front.h - HEM_H, width: Z.front.w, height: HEM_H }, fill: colors.accent, layer: "trim" },
     // Back hem
@@ -233,8 +242,6 @@ function classicLayout(colors: GtColors): RectSpec[] {
     { box: { left: Z.leftSleeve.left,  top: Z.leftSleeve.top  + Z.leftSleeve.h  - CUFF_H, width: Z.leftSleeve.w,  height: CUFF_H }, fill: colors.accent, layer: "trim" },
     // Right cuff
     { box: { left: Z.rightSleeve.left, top: Z.rightSleeve.top + Z.rightSleeve.h - CUFF_H, width: Z.rightSleeve.w, height: CUFF_H }, fill: colors.accent, layer: "trim" },
-    // Front placket — vertical strip at the centre-top of the front panel
-    { box: { left: Z.front.left + Z.front.w / 2 - PLACKET_W / 2, top: Z.front.top, width: PLACKET_W, height: PLACKET_H }, fill: colors.accent, layer: "trim" },
   ];
 
   return [...body, ...trim];
