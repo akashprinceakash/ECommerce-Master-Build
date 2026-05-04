@@ -55,13 +55,21 @@ export interface ZonePreset {
 //   rightSleeve: { left: 804, top: 116, w: 403, h: 175 },
 //   collar:      { left: 262, top: 284, w: 509, h: 161 },
 // };
-// left/top = TOP-LEFT corner of the UV island (matches originX:"left", originY:"top")
+// left/top = TOP-LEFT corner of the UV island (matches originX:"left", originY:"top").
+// Coordinates measured from the model's actual UV layout screenshot — the red-
+// marked zones in attached_assets/Screenshot_2026-04-29_124953_1777873375931.png
+// indicate where Classic/Sport accents should land on the 1024×1024 texture.
 export const ZONE_PRESETS: Record<Exclude<PatternZone, "all">, ZonePreset> = {
-  front:       { left:  10, top: 341, w: 490, h: 678 },
-  back:        { left: 524, top: 188, w: 483, h: 833 },
-  collar:      { left:  12, top: 183, w: 507, h: 166 },
-  leftSleeve:  { left: 210, top:   4, w: 398, h: 170 },
-  rightSleeve: { left: 617, top:   2, w: 398, h: 171 },
+  // Front shirt island (shirt-silhouette UV, lower-left of the texture)
+  front:       { left:   8, top: 290, w: 510, h: 720 },
+  // Back shirt island (shirt-silhouette UV, lower-right of the texture)
+  back:        { left: 520, top: 240, w: 495, h: 770 },
+  // Collar UV island (large rectangle in the upper-left of the texture)
+  collar:      { left:  10, top: 215, w: 505, h: 150 },
+  // Left sleeve strip (horizontal band in the top-middle of the texture)
+  leftSleeve:  { left: 205, top:  10, w: 308, h:  85 },
+  // Right sleeve strip (horizontal band in the top-right of the texture)
+  rightSleeve: { left: 522, top:  10, w: 491, h:  85 },
 };
 // Tile size used for the "Apply to whole T-shirt" all-over print. The source
 // image is scaled to this size before being passed to fabric.Pattern, so it
