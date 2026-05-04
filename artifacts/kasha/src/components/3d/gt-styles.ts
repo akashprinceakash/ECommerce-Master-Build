@@ -14,35 +14,6 @@
 //   Works on any style in < 100ms for a 1024×1024 image.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as fabric from "fabric";
-import { ZONE_PRESETS } from "./patterns";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ZONE-BASED RENDERING (used by the Classic and Sport-Side groups; the
-// remaining groups still use pre-baked PNGs in GT_BASE_TEXTURES below
-// until each group's layout is confirmed with the client).
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// Trim band sizes in pixels on the 1024×1024 UV canvas. Tweak these to make
-// the trim wider / narrower / longer.
-//
-// CLASSIC group (GT001–GT005) — yoke / collar-trim / placket / hem / cuff
-const HEM_H         = 60;   // horizontal band thickness at the bottom of front/back
-const CUFF_H        = 32;   // horizontal band thickness at the bottom of sleeves
-const YOKE_H        = 100;  // accent horizontal band across the TOP of the front panel
-const COLLAR_TRIM_H = 30;   // thin accent strip on the BOTTOM edge of the collar UV (under-collar band)
-const PLACKET_W     = 40;   // vertical placket strip width
-const PLACKET_H     = 180;  // vertical placket strip height (drops down from yoke)
-//
-// SPORT-SIDE group (GT006–GT009) — side panels + shoulder caps + sleeve under-arm
-const SP_SIDE_W       = 90;   // black vertical panel on outer edge of front/back
-const SP_SHOULDER_H   = 90;   // black horizontal cap across the top of front/back
-const SP_SLEEVE_H     = 70;   // black under-arm strip on the bottom of each sleeve UV
-
-interface ZoneBox { left: number; top: number; width: number; height: number }
-
-function box(z: { left: number; top: number; w: number; h: number }): ZoneBox {
-  return { left: z.left, top: z.top, width: z.w, height: z.h };
-}
 
 export interface GtColors {
   primary:   string;
@@ -200,199 +171,13 @@ export function clearGtStyle(fc: fabric.Canvas): void {
     .forEach((o) => fc.remove(o));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CLASSIC GROUP — live zone rendering
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// "Classic" = solid body (front + back + both sleeves) painted in `primary`,
-// with `accent` trim on the collar band, both cuff bands, the front + back
-// hem bands, and a vertical front placket strip. All rectangles are derived
-// from the canonical ZONE_PRESETS in patterns.ts so they always line up with
-// the UV islands of the shirt mesh.
-
-interface RectSpec { box: ZoneBox; fill: string; layer: "body" | "trim" }
-
-/**
- * GT001 — Minimal Polo.
- * Clean solid body, contrasting collar + sleeve cuffs, straight bottom border
- * stripe (hem). No placket, no front yoke band. Same hem on front + back.
- */
-function gt001Layout(colors: GtColors): RectSpec[] {
-  const Z = ZONE_PRESETS;
-
-  const body: RectSpec[] = [
-    { box: box(Z.front),       fill: colors.primary, layer: "body" },
-    { box: box(Z.back),        fill: colors.primary, layer: "body" },
-    { box: box(Z.leftSleeve),  fill: colors.primary, layer: "body" },
-    { box: box(Z.rightSleeve), fill: colors.primary, layer: "body" },
-  ];
-
-  const trim: RectSpec[] = [
-    // Contrasting collar — fully accent
-    { box: box(Z.collar), fill: colors.accent, layer: "trim" },
-    // Contrasting cuffs
-    { box: { left: Z.leftSleeve.left,  top: Z.leftSleeve.top  + Z.leftSleeve.h  - CUFF_H, width: Z.leftSleeve.w,  height: CUFF_H }, fill: colors.accent, layer: "trim" },
-    { box: { left: Z.rightSleeve.left, top: Z.rightSleeve.top + Z.rightSleeve.h - CUFF_H, width: Z.rightSleeve.w, height: CUFF_H }, fill: colors.accent, layer: "trim" },
-    // Straight bottom border stripe — front + back hem
-    { box: { left: Z.front.left, top: Z.front.top + Z.front.h - HEM_H, width: Z.front.w, height: HEM_H }, fill: colors.accent, layer: "trim" },
-    { box: { left: Z.back.left,  top: Z.back.top  + Z.back.h  - HEM_H, width: Z.back.w,  height: HEM_H }, fill: colors.accent, layer: "trim" },
-  ];
-
-  return [...body, ...trim];
-}
-
-function classicLayout(colors: GtColors): RectSpec[] {
-  const Z = ZONE_PRESETS;
-
-  // Body fills — back-most layer, painted in primary.
-  // The COLLAR is NOT a body fill — it is fully painted in the accent below,
-  // representing the under-collar/stand which shows when the polo is worn.
-  const body: RectSpec[] = [
-    { box: box(Z.front),       fill: colors.primary, layer: "body" },
-    { box: box(Z.back),        fill: colors.primary, layer: "body" },
-    { box: box(Z.leftSleeve),  fill: colors.primary, layer: "body" },
-    { box: box(Z.rightSleeve), fill: colors.primary, layer: "body" },
-  ];
-
-  // Trim accents — sit on top of the body, painted in accent
-  const trim: RectSpec[] = [
-    // Collar — fully accent (the whole UV island)
-    { box: box(Z.collar), fill: colors.accent, layer: "trim" },
-    // Front placket — vertical strip dropping DOWN from the TOP of the front,
-    // visually flowing out of the bottom edge of the collar block
-    { box: { left: Z.front.left + Z.front.w / 2 - PLACKET_W / 2, top: Z.front.top, width: PLACKET_W, height: PLACKET_H }, fill: colors.accent, layer: "trim" },
-    // Front hem (bottom strip of the front panel)
-    { box: { left: Z.front.left, top: Z.front.top + Z.front.h - HEM_H, width: Z.front.w, height: HEM_H }, fill: colors.accent, layer: "trim" },
-    // Back hem
-    { box: { left: Z.back.left,  top: Z.back.top  + Z.back.h  - HEM_H, width: Z.back.w,  height: HEM_H }, fill: colors.accent, layer: "trim" },
-    // Left cuff
-    { box: { left: Z.leftSleeve.left,  top: Z.leftSleeve.top  + Z.leftSleeve.h  - CUFF_H, width: Z.leftSleeve.w,  height: CUFF_H }, fill: colors.accent, layer: "trim" },
-    // Right cuff
-    { box: { left: Z.rightSleeve.left, top: Z.rightSleeve.top + Z.rightSleeve.h - CUFF_H, width: Z.rightSleeve.w, height: CUFF_H }, fill: colors.accent, layer: "trim" },
-  ];
-
-  return [...body, ...trim];
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SPORT-SIDE GROUP — live zone rendering
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// "Sport Side" = solid body painted in `primary` (e.g. army green), with
-// `accent` (e.g. black) on:
-//   - vertical side panels on the OUTER edges of the front and back panels
-//     (these visually wrap around to form the curved side panel from armpit
-//     to hem on the 3D model)
-//   - horizontal shoulder caps across the TOP of the front and back panels
-//     (these meet the side panels at the shoulder seam, forming the
-//     contiguous black "yoke" you see in the technical drawing)
-//   - a horizontal under-arm strip on the BOTTOM of each sleeve UV island
-//     (this wraps to the under-arm seam on the 3D model)
-//
-// Used by GT006 (Olive & Black), GT007 (Red & Black), GT008 (Navy & Black),
-// GT009 (Blush & Slate) — same layout, different colour pairs.
-function sportSideLayout(colors: GtColors): RectSpec[] {
-  const Z = ZONE_PRESETS;
-
-  const body: RectSpec[] = [
-    { box: box(Z.front),       fill: colors.primary, layer: "body" },
-    { box: box(Z.back),        fill: colors.primary, layer: "body" },
-    { box: box(Z.leftSleeve),  fill: colors.primary, layer: "body" },
-    { box: box(Z.rightSleeve), fill: colors.primary, layer: "body" },
-  ];
-
-  const trim: RectSpec[] = [
-    // Front — left side panel
-    { box: { left: Z.front.left, top: Z.front.top, width: SP_SIDE_W, height: Z.front.h }, fill: colors.accent, layer: "trim" },
-    // Front — right side panel
-    { box: { left: Z.front.left + Z.front.w - SP_SIDE_W, top: Z.front.top, width: SP_SIDE_W, height: Z.front.h }, fill: colors.accent, layer: "trim" },
-    // Front — shoulder cap (full-width strip across the top)
-    { box: { left: Z.front.left, top: Z.front.top, width: Z.front.w, height: SP_SHOULDER_H }, fill: colors.accent, layer: "trim" },
-    // Back — left side panel
-    { box: { left: Z.back.left, top: Z.back.top, width: SP_SIDE_W, height: Z.back.h }, fill: colors.accent, layer: "trim" },
-    // Back — right side panel
-    { box: { left: Z.back.left + Z.back.w - SP_SIDE_W, top: Z.back.top, width: SP_SIDE_W, height: Z.back.h }, fill: colors.accent, layer: "trim" },
-    // Back — shoulder cap
-    { box: { left: Z.back.left, top: Z.back.top, width: Z.back.w, height: SP_SHOULDER_H }, fill: colors.accent, layer: "trim" },
-    // Left sleeve — under-arm strip (bottom edge of UV island)
-    { box: { left: Z.leftSleeve.left, top: Z.leftSleeve.top + Z.leftSleeve.h - SP_SLEEVE_H, width: Z.leftSleeve.w, height: SP_SLEEVE_H }, fill: colors.accent, layer: "trim" },
-    // Right sleeve — under-arm strip
-    { box: { left: Z.rightSleeve.left, top: Z.rightSleeve.top + Z.rightSleeve.h - SP_SLEEVE_H, width: Z.rightSleeve.w, height: SP_SLEEVE_H }, fill: colors.accent, layer: "trim" },
-  ];
-
-  return [...body, ...trim];
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Generic zone-layout applier — used by every group that has been migrated
-// from the legacy PNG path. Just feed it a list of `RectSpec`s and it builds
-// the Fabric canvas.
-// ─────────────────────────────────────────────────────────────────────────────
-function applyZoneLayout(fc: fabric.Canvas, style: GtStyleDef, layout: RectSpec[]): void {
-  clearGtStyle(fc);
-
-  for (const spec of layout) {
-    const r = new fabric.Rect({
-      ...spec.box,
-      fill: spec.fill,
-      originX: "left", originY: "top",
-      strokeWidth: 0,
-      // Editable on the CANVAS tab — customer can drag / scale individual
-      // bands (e.g. widen the placket, shift the hem) to fine-tune the trim.
-      selectable: true, evented: true,
-    } as any);
-    (r as any).data = { tag: GT_TAG, styleId: style.id, layer: spec.layer };
-    fc.add(r);
-  }
-
-  // Stack: body rects below trim rects, all of them below prints/text/logos.
-  // We push trim to back first, then body — so body ends up at the very back
-  // and trim sits just above it.
-  fc.getObjects()
-    .filter((o) => (o as any).data?.tag === GT_TAG && (o as any).data?.layer === "trim")
-    .forEach((o) => fc.sendObjectToBack(o));
-  fc.getObjects()
-    .filter((o) => (o as any).data?.tag === GT_TAG && (o as any).data?.layer === "body")
-    .forEach((o) => fc.sendObjectToBack(o));
-
-  fc.renderAll();
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Public API
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Apply a GT style.
- *
- *  - Classic group → live zone rendering (Fabric Rects derived from
- *    ZONE_PRESETS, so trim placement is editable from this file).
- *  - Sport-Side group → live zone rendering (side panels + shoulder caps +
- *    sleeve under-arm strips, derived from ZONE_PRESETS).
- *  - All other groups → pre-baked PNG path (legacy). These will be migrated
- *    to zone-based recipes once the client confirms the layout for each group
- *    (triple, wave, hourglass, pinstripe, raglan).
- */
+/** Apply a GT style — loads pre-built texture, optionally recolors it */
 export async function applyGtStyle(
   fc:           fabric.Canvas,
   style:        GtStyleDef,
   customColors?: Partial<GtColors>,
 ): Promise<void> {
   const colors: GtColors = { ...style.defaultColors, ...customColors };
-
-  // NEW: zone-based rendering — one branch per migrated group
-  if (style.group === "classic") {
-    // GT001 = minimal polo (no placket); GT002–GT005 = classic with placket
-    const layout = style.id === "GT001" ? gt001Layout(colors) : classicLayout(colors);
-    applyZoneLayout(fc, style, layout);
-    return;
-  }
-  if (style.group === "sport-side") {
-    applyZoneLayout(fc, style, sportSideLayout(colors));
-    return;
-  }
-
-  // LEGACY: pre-baked PNG path for the remaining groups
   const baseUrl = GT_BASE_TEXTURES[style.id];
   if (!baseUrl) return;
 
@@ -413,6 +198,8 @@ export async function applyGtStyle(
     width: 1024, height: 1024,
     scaleX: 1, scaleY: 1,
     originX: "left", originY: "top",
+    // Editable on the CANVAS tab — the customer can drag / scale / rotate
+    // the GT style so they can reposition the print over a specific zone.
     selectable: true, evented: true,
     data: { tag: GT_TAG, styleId: style.id },
   } as any);
