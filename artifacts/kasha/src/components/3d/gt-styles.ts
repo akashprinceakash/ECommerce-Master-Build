@@ -212,6 +212,35 @@ export function clearGtStyle(fc: fabric.Canvas): void {
 
 interface RectSpec { box: ZoneBox; fill: string; layer: "body" | "trim" }
 
+/**
+ * GT001 — Minimal Polo.
+ * Clean solid body, contrasting collar + sleeve cuffs, straight bottom border
+ * stripe (hem). No placket, no front yoke band. Same hem on front + back.
+ */
+function gt001Layout(colors: GtColors): RectSpec[] {
+  const Z = ZONE_PRESETS;
+
+  const body: RectSpec[] = [
+    { box: box(Z.front),       fill: colors.primary, layer: "body" },
+    { box: box(Z.back),        fill: colors.primary, layer: "body" },
+    { box: box(Z.leftSleeve),  fill: colors.primary, layer: "body" },
+    { box: box(Z.rightSleeve), fill: colors.primary, layer: "body" },
+  ];
+
+  const trim: RectSpec[] = [
+    // Contrasting collar — fully accent
+    { box: box(Z.collar), fill: colors.accent, layer: "trim" },
+    // Contrasting cuffs
+    { box: { left: Z.leftSleeve.left,  top: Z.leftSleeve.top  + Z.leftSleeve.h  - CUFF_H, width: Z.leftSleeve.w,  height: CUFF_H }, fill: colors.accent, layer: "trim" },
+    { box: { left: Z.rightSleeve.left, top: Z.rightSleeve.top + Z.rightSleeve.h - CUFF_H, width: Z.rightSleeve.w, height: CUFF_H }, fill: colors.accent, layer: "trim" },
+    // Straight bottom border stripe — front + back hem
+    { box: { left: Z.front.left, top: Z.front.top + Z.front.h - HEM_H, width: Z.front.w, height: HEM_H }, fill: colors.accent, layer: "trim" },
+    { box: { left: Z.back.left,  top: Z.back.top  + Z.back.h  - HEM_H, width: Z.back.w,  height: HEM_H }, fill: colors.accent, layer: "trim" },
+  ];
+
+  return [...body, ...trim];
+}
+
 function classicLayout(colors: GtColors): RectSpec[] {
   const Z = ZONE_PRESETS;
 
@@ -353,7 +382,9 @@ export async function applyGtStyle(
 
   // NEW: zone-based rendering — one branch per migrated group
   if (style.group === "classic") {
-    applyZoneLayout(fc, style, classicLayout(colors));
+    // GT001 = minimal polo (no placket); GT002–GT005 = classic with placket
+    const layout = style.id === "GT001" ? gt001Layout(colors) : classicLayout(colors);
+    applyZoneLayout(fc, style, layout);
     return;
   }
   if (style.group === "sport-side") {

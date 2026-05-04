@@ -18,8 +18,20 @@ uri = "file://artifacts/kasha/public/images/product-jacket.png"
 type = "image"
 title = "Luxury Jacket Product Shot"
 
+[[generated]]
+id = "19Eel9ySwXV87VHGaqB1x"
+uri = "file://attached_assets/generated_images/generated_image.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "WicUZAl5xj8pkA_wEYvjt"
 uri = "file://kasha-project.tar.gz"
 type = "unspecified"
 title = "KA.SHA — Full Project (tar.gz)"
+
+[[outputs]]
+id = "GRfyyhTijVaWmQVIryk4l"
+uri = "file://attached_assets/generated_images/generated_image.png"
+type = "image"
+title = "GT001 Reference — Minimal Polo Flat"
