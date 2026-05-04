@@ -216,24 +216,22 @@ function classicLayout(colors: GtColors): RectSpec[] {
   const Z = ZONE_PRESETS;
 
   // Body fills — back-most layer, painted in primary.
-  // The COLLAR is now part of the body (primary colour), with only a thin
-  // accent strip on its bottom edge (the under-collar band).
+  // The COLLAR is NOT a body fill — it is fully painted in the accent below,
+  // representing the under-collar/stand which shows when the polo is worn.
   const body: RectSpec[] = [
     { box: box(Z.front),       fill: colors.primary, layer: "body" },
     { box: box(Z.back),        fill: colors.primary, layer: "body" },
     { box: box(Z.leftSleeve),  fill: colors.primary, layer: "body" },
     { box: box(Z.rightSleeve), fill: colors.primary, layer: "body" },
-    { box: box(Z.collar),      fill: colors.primary, layer: "body" },
   ];
 
   // Trim accents — sit on top of the body, painted in accent
   const trim: RectSpec[] = [
-    // Front yoke — horizontal band across the TOP of the front panel
-    { box: { left: Z.front.left, top: Z.front.top, width: Z.front.w, height: YOKE_H }, fill: colors.accent, layer: "trim" },
-    // Front placket — vertical strip dropping DOWN from the yoke, centred
-    { box: { left: Z.front.left + Z.front.w / 2 - PLACKET_W / 2, top: Z.front.top + YOKE_H, width: PLACKET_W, height: PLACKET_H }, fill: colors.accent, layer: "trim" },
-    // Under-collar band — thin strip on the BOTTOM edge of the collar UV
-    { box: { left: Z.collar.left, top: Z.collar.top + Z.collar.h - COLLAR_TRIM_H, width: Z.collar.w, height: COLLAR_TRIM_H }, fill: colors.accent, layer: "trim" },
+    // Collar — fully accent (the whole UV island)
+    { box: box(Z.collar), fill: colors.accent, layer: "trim" },
+    // Front placket — vertical strip dropping DOWN from the TOP of the front,
+    // visually flowing out of the bottom edge of the collar block
+    { box: { left: Z.front.left + Z.front.w / 2 - PLACKET_W / 2, top: Z.front.top, width: PLACKET_W, height: PLACKET_H }, fill: colors.accent, layer: "trim" },
     // Front hem (bottom strip of the front panel)
     { box: { left: Z.front.left, top: Z.front.top + Z.front.h - HEM_H, width: Z.front.w, height: HEM_H }, fill: colors.accent, layer: "trim" },
     // Back hem
