@@ -20,6 +20,7 @@ export default function ProductDetailPage() {
   const { openCart } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [customSize, setCustomSize] = useState("");
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
 
@@ -53,7 +54,12 @@ export default function ProductDetailPage() {
       toast({ title: "Select a size", description: "Please choose a size before adding to cart.", variant: "destructive" });
       return;
     }
-    addToCartMutation.mutate({ data: { productId: id, quantity, size: selectedSize } });
+    if (selectedSize === "C" && !customSize.trim()) {
+      toast({ title: "Custom measurements required", description: "Please enter your custom size details.", variant: "destructive" });
+      return;
+    }
+    const sizeValue = selectedSize === "C" ? `C:${customSize.trim()}` : selectedSize;
+    addToCartMutation.mutate({ data: { productId: id, quantity, size: sizeValue } });
   }
 
   function handleBuyNow() {
@@ -65,13 +71,16 @@ export default function ProductDetailPage() {
       toast({ title: "Select a size", description: "Please choose a size before purchasing.", variant: "destructive" });
       return;
     }
+    if (selectedSize === "C" && !customSize.trim()) {
+      toast({ title: "Custom measurements required", description: "Please enter your custom size details.", variant: "destructive" });
+      return;
+    }
+    const sizeValue = selectedSize === "C" ? `C:${customSize.trim()}` : selectedSize;
     addToCartMutation.mutate(
-      { data: { productId: id, quantity, size: selectedSize } },
+      { data: { productId: id, quantity, size: sizeValue } },
       { onSuccess: () => navigate("/cart") }
     );
   }
-
-  const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
 
   if (isLoading) {
     return (
@@ -182,11 +191,11 @@ export default function ProductDetailPage() {
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
-                {sizes.map(size => (
+                {(product.sizes && product.sizes.length > 0 ? product.sizes : ["S","M","L","XL"]).map(size => (
                   <button
                     key={size}
                     onClick={() => setSelectedSize(size)}
-                    className={`w-12 h-12 text-[12px] font-bold border transition-all ${
+                    className={`min-w-12 h-12 px-3 text-[12px] font-bold border transition-all ${
                       selectedSize === size
                         ? "bg-black text-white border-black"
                         : "bg-white text-black border-gray-300 hover:border-black"
@@ -195,11 +204,52 @@ export default function ProductDetailPage() {
                     {size}
                   </button>
                 ))}
+                <button
+                  onClick={() => setSelectedSize("C")}
+                  className={`min-w-12 h-12 px-3 text-[11px] font-bold border transition-all ${
+                    selectedSize === "C"
+                      ? "bg-black text-white border-black"
+                      : "bg-white text-black border-gray-300 hover:border-black"
+                  }`}
+                  title="Custom measurements (saved as 'C')"
+                >
+                  CUSTOM
+                </button>
               </div>
+              {selectedSize === "C" && (
+                <input
+                  type="text"
+                  value={customSize}
+                  onChange={(e) => setCustomSize(e.target.value)}
+                  placeholder="e.g. Chest 42, Length 28, Sleeve 9"
+                  className="w-full mt-3 border border-gray-300 px-3 py-2 text-[12px] focus:outline-none focus:border-black"
+                />
+              )}
               {!selectedSize && (
                 <p className="text-[11px] text-gray-400 mt-2">Please select a size</p>
               )}
             </div>
+
+            {/* Fabric / Pattern info */}
+            {(product.fabric || product.fixedPattern) && (
+              <div className="grid grid-cols-2 gap-3 text-[11px]">
+                {product.fabric && (
+                  <div className="border border-gray-200 p-3">
+                    <div className="font-bold text-gray-400 tracking-[0.15em] mb-1">FABRIC</div>
+                    <div className="text-black">{product.fabric}</div>
+                  </div>
+                )}
+                {product.fixedPattern && (
+                  <div className="border border-gray-200 p-3">
+                    <div className="font-bold text-gray-400 tracking-[0.15em] mb-1">PATTERN</div>
+                    <div className="text-black">{product.fixedPattern}{product.patternCategory ? ` · ${product.patternCategory.replace(/-/g," ")}` : ""}</div>
+                  </div>
+                )}
+              </div>
+            )}
+            {product.sku && (
+              <p className="text-[10px] text-gray-400 tracking-[0.15em]">SKU · {product.sku}</p>
+            )}
 
             {/* Quantity */}
             <div>

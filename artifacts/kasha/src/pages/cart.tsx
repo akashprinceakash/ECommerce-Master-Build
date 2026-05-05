@@ -120,7 +120,7 @@ export default function CartPage() {
                           {formatPrice(item.product.priceInPaise * item.quantity)}
                         </p>
                       </div>
-                      <p className="text-[12px] text-gray-500">Size: {item.size}</p>
+                      <p className="text-[12px] text-gray-500">Size: {item.size.startsWith("C:") ? `Custom (${item.size.slice(2)})` : item.size === "C" ? "Custom" : item.size}</p>
                       {item.customization && (
                         <p className="text-[12px] text-gray-500">Custom: {item.customization.name}</p>
                       )}

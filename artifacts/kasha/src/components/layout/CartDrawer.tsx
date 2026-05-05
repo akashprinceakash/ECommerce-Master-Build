@@ -113,7 +113,7 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
                           {formatPrice(item.product.priceInPaise * item.quantity)}
                         </p>
                       </div>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Size: {item.size}</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Size: {item.size.startsWith("C:") ? `Custom (${item.size.slice(2)})` : item.size === "C" ? "Custom" : item.size}</p>
                       {item.customization && (
                         <p className="text-[11px] text-gray-500">Custom: {item.customization.name}</p>
                       )}

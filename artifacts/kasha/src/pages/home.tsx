@@ -312,15 +312,15 @@ export default function Home() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
             {[
-              { sku: "KS1000B", img: ff1, name: "Signature Floral Polo",     swatch: "#a9c4d4", kind: "Fabric" as const },
-              { sku: "KS1001B", img: ff2, name: "Trim Detail Polo",          swatch: "#cfdde6", kind: "Fabric" as const },
-              { sku: "KS1002B", img: ff3, name: "Sport Side Panel Polo",     swatch: "#5a6a3a", kind: "Pattern" as const },
-              { sku: "KS1003B", img: ff4, name: "Hourglass Panel Polo",      swatch: "#e8b9c4", kind: "Pattern" as const },
-              { sku: "KS1004B", img: ff5, name: "Classic Piping Polo",       swatch: "#1f3a2a", kind: "Pattern" as const },
-              { sku: "KS1005B", img: ff3, name: "Triple Tone Polo",          swatch: "#3a3a3a", kind: "Pattern" as const },
-              { sku: "KS1006B", img: ff5, name: "Wave Panel Polo",           swatch: "#2a3a4a", kind: "Pattern" as const },
+              { id: 10, sku: "KS1000B", img: ff1, name: "Signature Floral Polo",     swatch: "#a9c4d4", kind: "Fabric" as const },
+              { id: 11, sku: "KS1001B", img: ff2, name: "Trim Detail Polo",          swatch: "#cfdde6", kind: "Fabric" as const },
+              { id: 12, sku: "KS1002B", img: ff3, name: "Sport Side Panel Polo",     swatch: "#5a6a3a", kind: "Pattern" as const },
+              { id: 13, sku: "KS1003B", img: ff4, name: "Hourglass Panel Polo",      swatch: "#e8b9c4", kind: "Pattern" as const },
+              { id: 14, sku: "KS1004B", img: ff5, name: "Classic Piping Polo",       swatch: "#1f3a2a", kind: "Pattern" as const },
+              { id: 15, sku: "KS1005B", img: ff3, name: "Triple Tone Polo",          swatch: "#3a3a3a", kind: "Pattern" as const },
+              { id: 16, sku: "KS1006B", img: ff5, name: "Wave Panel Polo",           swatch: "#2a3a4a", kind: "Pattern" as const },
             ].map((item) => (
-              <Link key={item.sku} href={`/products/${item.sku.toLowerCase()}`} className="group block">
+              <Link key={item.sku} href={`/products/${item.id}`} className="group block">
                 <div className="relative overflow-hidden bg-[#f7f3ee] flex items-center justify-center" style={{ aspectRatio: "3/4" }}>
                   <img
                     src={item.img}
@@ -352,6 +352,60 @@ export default function Home() {
           <p className="text-[11px] text-[#a09890] text-center mt-10 tracking-[0.05em]">
             Poly 55% · Sorona 45% · 105 GSM · Sizes S / M / L / XL + Custom · Made to order
           </p>
+        </div>
+      </section>
+
+      {/* ───────────── PATTERN CATEGORIES ───────────── */}
+      <section className="bg-[#f7f3ee] pt-16 pb-16 border-b border-[#ece8e2]">
+        <div className={`${MAXW} mx-auto px-10`}>
+          <div className="text-center mb-10">
+            <p className="text-[9px] tracking-[0.3em] text-[#9b8b6e] mb-3 uppercase">Pattern Categories</p>
+            <h2 style={{ fontFamily: G }} className="text-[32px] md:text-[36px] text-[#1c1c1c] leading-[1.15]">
+              Seven panel languages.<br />One signature silhouette.
+            </h2>
+            <p className="text-[12px] text-[#6b6560] mt-3 max-w-[560px] mx-auto">
+              Every pattern style ships as its own product. Pick the cut, then recolour the zones — the panel layout stays as-designed.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            {[
+              { id: "classic",     label: "Classic",     productId: 14, swatch: "#1f3a2a" },
+              { id: "sport-side",  label: "Sport Side",  productId: 12, swatch: "#5a6a3a" },
+              { id: "triple-tone", label: "Triple Tone", productId: 15, swatch: "#3a3a3a" },
+              { id: "wave-panel",  label: "Wave Panel",  productId: 16, swatch: "#2a3a4a" },
+              { id: "hourglass",   label: "Hourglass",   productId: 13, swatch: "#e8b9c4" },
+              { id: "pinstripe",   label: "Pinstripe",   productId: null, swatch: "#cfdde6" },
+              { id: "raglan",      label: "Raglan",      productId: null, swatch: "#a9c4d4" },
+            ].map((cat) => {
+              const inner = (
+                <div className="group block">
+                  <div className="aspect-square bg-white border border-[#ece8e2] flex items-center justify-center transition-colors group-hover:border-[#1c1c1c]">
+                    <span
+                      className="block rounded-full"
+                      style={{ width: 56, height: 56, background: cat.swatch, border: "1px solid rgba(0,0,0,0.08)" }}
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <div className="mt-3 text-center">
+                    <div className="text-[12px] tracking-[0.12em] text-[#1c1c1c] uppercase font-semibold">{cat.label}</div>
+                    {cat.productId === null && (
+                      <div className="text-[9px] tracking-[0.18em] text-[#a09890] mt-1 uppercase">Coming Soon</div>
+                    )}
+                  </div>
+                </div>
+              );
+              return cat.productId !== null ? (
+                <Link key={cat.id} href={`/products/${cat.productId}`} aria-label={`${cat.label} pattern polo`}>
+                  {inner}
+                </Link>
+              ) : (
+                <div key={cat.id} aria-label={`${cat.label} pattern polo (coming soon)`}>
+                  {inner}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
