@@ -550,6 +550,22 @@ export default function CustomizePage() {
     return () => mv.removeEventListener("load", onLoad);
   }, [mvReady, product?.modelUrl]);
 
+  // ── Auto-lock GT pattern for Pattern T-Shirts ─────────────────────────────
+  // For pattern products the GT id is encoded in product.name as "[gt:GTxxx]".
+  // Auto-apply that style on first load so the customer lands on the locked
+  // pattern with no extra click. They cannot switch (picker is hidden).
+  useEffect(() => {
+    if (product?.category !== "pattern" || !modelLoaded || !fcRef.current) return;
+    const m = product?.name?.match(/\[gt:(GT\d+)\]/);
+    if (!m) return;
+    if (activeGtStyle?.id === m[1]) return;
+    const style = GT_STYLES.find((s) => s.id === m[1]);
+    if (style) handleSelectGtStyle(style);
+    // Only run once per product load — handleSelectGtStyle setter triggers
+    // activeGtStyle which short-circuits the next run.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.category, modelLoaded, product?.name]);
+
   // ── Restore saved design ──────────────────────────────────────────────────
   useEffect(() => {
     if (!existing || !modelLoaded || !fcRef.current) return;
@@ -1307,6 +1323,41 @@ export default function CustomizePage() {
     ? ["text","logo","canvas","colors"]
     : ["text","logo","canvas","design"]) as readonly ("text"|"logo"|"canvas"|"colors"|"design")[];
 
+  // ── SKU per client spec ────────────────────────────────────────────────────
+  // Format: "<BODY> <DESIGN> <SIZE>"
+  //   BODY    = product name (e.g. KS1000B). For pattern products the name is
+  //             "Group Pattern T-Shirt [gt:GTxxx]" — strip the [gt:...] suffix.
+  //   DESIGN  = print code (GP016) or pattern code (GT001) or color combo (GREYNAVY)
+  //   SIZE    = "S"|"M"|"L"|"XL" or "C" for Custom
+  const lockedGtId = (() => {
+    const m = product?.name?.match(/\[gt:(GT\d+)\]/);
+    return m ? m[1] : null;
+  })();
+  // BODY = the leading "KS####<letter>" silhouette token from the product name.
+  // Falls back to the full cleaned name if no KS#### token is present.
+  const bodyCode = (() => {
+    const cleaned = (product?.name || "").replace(/\s*\[gt:GT\d+\]\s*$/, "").trim();
+    const m = cleaned.match(/^(KS\d+[A-Z])/);
+    return m ? m[1] : cleaned;
+  })();
+  const sizeCode = size === "Custom" ? "C" : size;
+  const designCode = (() => {
+    if (isPattern && (activeGtStyle?.id || lockedGtId)) return activeGtStyle?.id || lockedGtId!;
+    if (activePrintId) {
+      // Map print id → standardized "GP###" code based on its index in PATTERNS.
+      // This produces the canonical KA.SHA print SKU code (e.g. GP001, GP016)
+      // rather than leaking the human-readable id like "PAISLEY".
+      const idx = PATTERNS.findIndex(x => x.id === activePrintId);
+      return idx >= 0 ? `GP${String(idx + 1).padStart(3, "0")}` : activePrintId.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    }
+    // Color-combo fallback: derive a short tag from the active GT colors or zoneColors
+    const cols = Object.values(zoneColors).filter(Boolean) as string[];
+    if (cols.length >= 2) return cols.slice(0, 2).map(c => c.replace("#","").toUpperCase()).join("");
+    if (activeGtStyle) return activeGtStyle.id;
+    return "";
+  })();
+  const skuFull = [bodyCode, designCode, sizeCode].filter(Boolean).join(" ");
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={{ display:"flex",flexDirection:"column",height:"100vh",background:V.bg,color:V.tx,fontFamily:"'DM Sans',sans-serif",overflow:"hidden" }}>
@@ -1539,10 +1590,10 @@ export default function CustomizePage() {
             <div style={{ fontSize:"10px",color:V.mu }}>{formatPrice(product.priceInPaise)}</div>
           </div>
 
-          {/* Style badge */}
-          <div style={{ position:"absolute",top:"14px",right:"14px",background:"rgba(8,6,4,.85)",border:`1px solid ${V.bd}`,borderRadius:"9px",padding:"6px 10px",backdropFilter:"blur(8px)" }}>
-            <div style={{ fontSize:"9px",color:V.mu,letterSpacing:".08em",textTransform:"uppercase" }}>Style</div>
-            <div style={{ fontSize:"12px",fontWeight:600,color:V.ac }}>{presetName}</div>
+          {/* SKU badge — live style number per client spec (BODY DESIGN SIZE) */}
+          <div style={{ position:"absolute",top:"14px",right:"14px",background:"rgba(8,6,4,.85)",border:`1px solid ${V.bd}`,borderRadius:"9px",padding:"6px 10px",backdropFilter:"blur(8px)",maxWidth:"320px" }}>
+            <div style={{ fontSize:"9px",color:V.mu,letterSpacing:".08em",textTransform:"uppercase" }}>Style Number</div>
+            <div style={{ fontSize:"12px",fontWeight:600,color:V.ac,fontFamily:"'Courier New',monospace" }}>{skuFull || presetName}</div>
           </div>
         </div>
 
