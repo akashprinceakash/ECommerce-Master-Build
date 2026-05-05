@@ -59,14 +59,14 @@ export function Navbar() {
     <>
       {/* ANNOUNCEMENT BAR */}
       <div className="bg-[#f7f3ee] border-b border-[#ece8e2]">
-        <div className="max-w-[940px] mx-auto px-9 py-2 text-center text-[10px] tracking-[0.25em] text-[#9b8b6e] uppercase">
+        <div className="max-w-[1280px] mx-auto px-10 py-2 text-center text-[10px] tracking-[0.25em] text-[#9b8b6e] uppercase">
           New Season Arrivals — Shop the Full Collection &nbsp;·&nbsp; Free Shipping on Orders Above ₹5,000
         </div>
       </div>
 
-      {/* MAIN NAV — 60px sticky */}
+      {/* MAIN NAV — 64px sticky */}
       <header className="sticky top-0 z-50 w-full bg-white border-b border-[#ece8e2]">
-        <div className="max-w-[940px] mx-auto px-9 h-[60px] flex items-center justify-between gap-4">
+        <div className="max-w-[1280px] mx-auto px-10 h-[64px] flex items-center justify-between gap-4 relative">
 
           {/* LOGO */}
           <Link href="/" className="flex items-center shrink-0">
@@ -74,7 +74,7 @@ export function Navbar() {
           </Link>
 
           {/* CENTER NAV */}
-          <nav className="hidden md:flex items-center gap-9 absolute left-1/2 -translate-x-1/2">
+          <nav className="hidden lg:flex items-center gap-8 flex-1 justify-center">
             {mainLinks.map(link => (
               <Link
                 key={link.label}
@@ -101,17 +101,13 @@ export function Navbar() {
             </div>
 
             {isAdmin && (
-              <Link href="/admin">
-                <button className="hidden md:flex items-center gap-1.5 bg-emerald-600 text-white text-[9px] tracking-[0.2em] px-3 py-2 hover:bg-emerald-700 transition-colors">
-                  <ShieldCheck className="w-3 h-3" /> ADMIN
-                </button>
+              <Link href="/admin" className="hidden md:flex items-center gap-1.5 bg-emerald-600 text-white text-[9px] tracking-[0.2em] px-3 py-2 hover:bg-emerald-700 transition-colors">
+                <ShieldCheck className="w-3 h-3" /> ADMIN
               </Link>
             )}
 
-            <Link href="/products/1/customize">
-              <button className="hidden md:flex items-center bg-[#1c1c1c] text-white text-[9px] tracking-[0.25em] px-5 py-2.5 hover:bg-black transition-colors uppercase">
-                Customise
-              </button>
+            <Link href="/products/1/customize" className="hidden md:flex items-center bg-[#1c1c1c] text-white text-[9px] tracking-[0.25em] px-5 py-2.5 hover:bg-black transition-colors uppercase">
+              Customise
             </Link>
 
             <Show when="signed-in">
@@ -154,10 +150,8 @@ export function Navbar() {
             </Show>
 
             <Show when="signed-out">
-              <Link href="/sign-in">
-                <button className="hidden sm:flex text-[10px] tracking-[0.2em] text-[#6b6560] hover:text-[#1c1c1c] transition-colors uppercase">
-                  Sign in
-                </button>
+              <Link href="/sign-in" className="hidden sm:flex text-[10px] tracking-[0.2em] text-[#6b6560] hover:text-[#1c1c1c] transition-colors uppercase">
+                Sign in
               </Link>
             </Show>
 

@@ -5,8 +5,8 @@ export function Footer() {
   return (
     <>
       {/* BRAND STRIP — cream */}
-      <section className="bg-[#f7f3ee] border-y border-[#ece8e2] py-12 relative overflow-hidden">
-        <div className="max-w-[940px] mx-auto px-9 text-center relative z-10">
+      <section className="bg-[#f7f3ee] border-y border-[#ece8e2] py-14 relative overflow-hidden">
+        <div className="max-w-[1280px] mx-auto px-10 text-center relative z-10">
           <p style={{ fontFamily: "Georgia, serif" }} className="text-[24px] text-[#1c1c1c] leading-tight">
             Premium meets edgy.
           </p>
@@ -21,7 +21,7 @@ export function Footer() {
 
       {/* FOOTER — charcoal */}
       <footer className="bg-[#1c1c1c] text-white">
-        <div className="max-w-[940px] mx-auto px-9 pt-12 pb-8">
+        <div className="max-w-[1280px] mx-auto px-10 pt-14 pb-8">
           <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-10 mb-10">
 
             {/* BRAND */}
