@@ -1,0 +1,276 @@
+
+
+
+
+## 🧩 1. UI REQUIREMENTS
+
+* The UI **must exactly match the provided screenshots**
+* Maintain:
+
+  * Layout consistency
+  * Spacing, fonts, colors
+  * Component positioning
+--
+
+## 🛒 2. ADMIN → ORDERS SECTION
+
+### Current Issue:
+
+Orders list only shows basic details
+
+### Required Changes:
+
+* Add a **"View Full Order" button** for each order
+
+### On Click:
+
+* Open a **popup/modal**
+* Display:
+
+  * Selected user details
+  * Selected order details
+  * Selected design
+
+### Important:
+
+* Reuse existing screen flow:
+
+  ```
+  Admin → Customer Designs → Selected Order → View
+  ```
+* No need to redesign — reuse current UI
+
+---
+
+### 🖼 Export Feature (VERY IMPORTANT)
+
+Inside the popup:
+
+* Add **"Export Design as PNG" button**
+* Must:
+
+  * Export **ALL SIDES of T-shirt** (front, back, sleeves, or full body t-shirt etc.) 
+  * Use same logic as customization page export
+  * Output should be high quality
+
+---
+
+## 👕 3. HOME → PRODUCT FLOW
+
+### A. Fabric T-Shirts Section
+
+* Display **Fabric/Material-based T-Shirts**
+* Each product should:
+
+  * Navigate to Product Detail Page on click
+
+---
+
+### Product Detail Page Must Include:
+
+* Product Image
+* Product Name
+* Description
+* Fabric / Material
+* Sizes (S/M/L/XL + Custom)
+* Price
+* Customization Button
+
+---
+
+## 🎨 4. CUSTOMIZATION PAGE (FABRIC T-SHIRTS)
+
+### Layout:
+
+#### LEFT SIDE:
+
+* Garment Sections (existing)
+* ➕ Add new option:
+
+  * ✅ **"Apply for Full Body Design"**
+
+---
+
+#### RIGHT SIDE:
+
+Must include:
+
+* Text
+* Logos
+* Canvas
+* Colors / Patterns
+* Shapes
+
+---
+
+## 🎨 5. PATTERN T-SHIRTS SECTION
+
+### Home Page:
+
+* Show **7 Pattern T-Shirts**
+* Patterns come from:
+
+  ```
+  GT001 – GT032 (Grouped into 6 categories)
+  ```
+
+---
+
+### On Click:
+
+* Navigate to Product Detail Page (same structure)
+
+---
+
+### Customization Page (Pattern Products):
+
+⚠️ IMPORTANT RESTRICTION:
+
+* REMOVE:
+
+  * ❌ Shapes
+  * ❌ Extra design tools
+* KEEP:
+
+  * Only relevant pattern customization
+
+---
+
+## 📏 6. SIZE CUSTOMIZATION (CRITICAL FIX)
+
+### Current Issue:
+
+XS too small / XXL too large
+
+### Required:
+
+* Add **Custom Size Input Option**
+
+### Behavior:
+
+* User can:
+
+  * Select standard sizes (S/M/L/XL)
+  * OR enter custom size manually
+
+---
+
+## 🧾 7. STYLE NUMBER LOGIC (VERY IMPORTANT)
+
+### Format:
+
+```
+[STYLE] + [PRINT / COLOR] + [SIZE]
+```
+
+---
+
+### A. STYLE CODE
+
+* Example:
+
+  ```
+  KS1000B
+  ```
+* Rules:
+
+  * T-shirt → ends with **B**
+  * Pants → F
+  * Shorts → S
+  * Skirt → K
+
+---
+
+### B. PRINT CODE
+
+* Format:
+
+  ```
+  GP001, GP002 ... GP032
+  ```
+* Example:
+
+  ```
+  KS1000B GP016
+  ```
+
+---
+
+### C. SIZE CODE
+
+#### If Standard:
+
+```
+S / M / L / XL
+```
+
+#### If Custom:
+
+```
+C
+```
+
+---
+
+### Final Example:
+
+```
+KS1000B GP016 L
+KS1000B GP016 C
+```
+
+---
+
+### D. COLOR-BASED CUSTOMIZATION
+
+If user selects colors instead of print:
+
+```
+KS1000B Grey Navy XL
+KS1000B Black Red C
+```
+
+---
+
+## 📦 8. PRODUCT DATA STRUCTURE
+
+Use this format:
+
+| Field        | Value                       |
+| ------------ | --------------------------- |
+| Product Name | KS1000B                     |
+| Description  | Sleek golf T-shirt...       |
+| Fabric       | Poly 55% Sorona 45% 105 GSM |
+| Sizes        | S/M/L/XL/Custom             |
+| Colors       | Customize button            | 
+| Price        | ₹2000                       |
+
+---
+
+## ⚠️ STRICT RULES (TO AVOID AI MISTAKES)
+
+* Do NOT:
+
+  * Skip any feature
+  * Change flows
+
+* Maintain:
+
+  * Separate flows for Fabric vs Pattern products
+* Reuse existing UI wherever instructed
+* Follow naming conventions strictly
+
+---
+
+## 🚀 OUTPUT EXPECTATION
+
+The system should support:
+
+* Clean UI matching design
+* Smooth navigation
+* Full order visualization
+* Accurate style code generation
+
+* Exportable multi-side designs
+
+

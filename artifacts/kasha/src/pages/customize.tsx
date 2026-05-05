@@ -104,7 +104,7 @@ const PRESETS = [
   { name:"GT012", primary:"#ACB1A1", secondary:"#576043" },
 ];
 
-const SIZES = ["XS","S","M","L","XL","XXL"];
+const SIZES = ["S","M","L","XL","Custom"];
 
 const FONTS = [
   { label:"DM Sans", value:"'DM Sans'" },
@@ -232,7 +232,7 @@ export default function CustomizePage() {
   const [activePart, setActivePart] = useState(0);
 
   // Right panel tabs: colors | design | text | logo | shapes | canvas
-  const [rightTab, setRightTab]     = useState<"colors"|"design"|"text"|"logo"|"shapes"|"canvas">("colors");
+  const [rightTab, setRightTab]     = useState<"colors"|"design"|"text"|"logo"|"shapes"|"canvas">("text");
 
   // Print Library state
   const [activePrintId, setActivePrintId]   = useState<string | null>(null);
@@ -249,6 +249,8 @@ export default function CustomizePage() {
 
   // Core design state
   const [size, setSize]             = useState("M");
+  const [customSize, setCustomSize] = useState("");
+  const [fullBody, setFullBody]     = useState(false);
   const [qty, setQty]               = useState(1);
   const [autoRotate, setAutoRotate] = useState(true);
   const [designName, setDesignName] = useState("");
@@ -1293,7 +1295,7 @@ export default function CustomizePage() {
   if (!product) return null;
 
   const PLACEMENT_OPTS = ["front-chest","front-center","back-top","back-center","sleeve-left","sleeve-right"];
-  const TABS = ["colors","design","text","logo","shapes","canvas"] as const;
+  const TABS = ["text","logo","canvas","colors","design","shapes"] as const;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -1357,12 +1359,26 @@ export default function CustomizePage() {
                     <div style={{ display:"flex",alignItems:"center",gap:"6px" }}>
                       <input type="color" value={col || "#ffffff"}
                         onClick={e=>e.stopPropagation()}
-                        onChange={e=>{ setActiveColorZone(z.id); applyZoneColor(z.id,e.target.value); }}
+                        onChange={e=>{
+                          setActiveColorZone(z.id);
+                          if (fullBody) {
+                            COLOR_ZONES.forEach(zz => applyZoneColor(zz.id, e.target.value));
+                          } else {
+                            applyZoneColor(z.id, e.target.value);
+                          }
+                        }}
                         style={{ width:"30px",height:"24px",border:"none",cursor:"pointer",background:"none",borderRadius:"5px",padding:0 }}
                       />
                       {col && (
                         <button
-                          onClick={e=>{ e.stopPropagation(); applyZoneColor(z.id, ""); }}
+                          onClick={e=>{
+                            e.stopPropagation();
+                            if (fullBody) {
+                              COLOR_ZONES.forEach(zz => applyZoneColor(zz.id, ""));
+                            } else {
+                              applyZoneColor(z.id, "");
+                            }
+                          }}
                           title="Clear this zone"
                           style={{ background:"none",border:`1px solid ${V.bd}`,color:V.mu,
                                    cursor:"pointer",fontSize:"11px",borderRadius:"5px",
@@ -1379,6 +1395,20 @@ export default function CustomizePage() {
           {/* Options */}
           <div style={sb}>
             <div style={sl}>Options</div>
+            <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${V.bd}` }}>
+              <div>
+                <div style={{ fontSize:"12px",fontWeight:500 }}>Apply for Full Body Design</div>
+                <div style={{ fontSize:"10px",color:V.mu }}>Paint all 5 zones at once</div>
+              </div>
+              {togBtn(fullBody, () => {
+                const next = !fullBody; setFullBody(next);
+                if (next) {
+                  // When turned on, the Color Palette / inline pickers paint
+                  // every zone simultaneously (Front, Back, Sleeves, Collar).
+                  setActiveColorZone("front" as any);
+                }
+              })}
+            </div>
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0" }}>
               <div>
                 <div style={{ fontSize:"12px",fontWeight:500 }}>Auto Rotate</div>
@@ -1392,7 +1422,7 @@ export default function CustomizePage() {
             </div>
           </div>
 
-          {/* Size */}
+          {/* Size — Standard S/M/L/XL or Custom (manual measurement) */}
           <div style={sb}>
             <div style={sl}>Size</div>
             <div style={{ display:"flex",flexWrap:"wrap",gap:"5px" }}>
@@ -1402,10 +1432,24 @@ export default function CustomizePage() {
                   background:size===s?V.ac:"rgba(0,0,0,.3)",
                   border:`1px solid ${size===s?V.ac:V.bd}`,
                   borderRadius:"8px",color:size===s?V.bg:V.mu,
-                  fontFamily:"inherit",fontSize:"12px",fontWeight:600,cursor:"pointer",
+                  fontFamily:"inherit",fontSize:"11px",fontWeight:600,cursor:"pointer",
                 }}>{s}</button>
               ))}
             </div>
+            {size === "Custom" && (
+              <input
+                type="text"
+                value={customSize}
+                onChange={e=>setCustomSize(e.target.value)}
+                placeholder="e.g. Chest 42, Length 28"
+                style={{
+                  marginTop:"8px",width:"100%",padding:"8px 10px",
+                  background:"rgba(0,0,0,.3)",border:`1px solid ${V.ac}`,
+                  borderRadius:"7px",color:V.tx,fontSize:"11px",fontFamily:"inherit",
+                  outline:"none",boxSizing:"border-box",
+                }}
+              />
+            )}
           </div>
 
           {/* Quantity */}
