@@ -231,7 +231,11 @@ export default function CustomizePage() {
   const [mats, setMats]             = useState<MatEntry[]>([]);
   const [activePart, setActivePart] = useState(0);
 
-  // Right panel tabs: colors | design | text | logo | shapes | canvas
+  // Right panel tabs (per client spec):
+  //   Fabric  : TEXT | LOGO | CANVAS | DESIGN  (prints, NO GT patterns)
+  //   Pattern : TEXT | LOGO | CANVAS | COLORS  (color combos for the locked GT pattern, NO prints)
+  // SHAPES is removed for ALL flows. The "shapes" union member is kept only so any
+  // legacy persisted state doesn't crash; the tab is never rendered or selectable.
   const [rightTab, setRightTab]     = useState<"colors"|"design"|"text"|"logo"|"shapes"|"canvas">("text");
 
   // Print Library state
@@ -1295,7 +1299,13 @@ export default function CustomizePage() {
   if (!product) return null;
 
   const PLACEMENT_OPTS = ["front-chest","front-center","back-top","back-center","sleeve-left","sleeve-right"];
-  const TABS = ["text","logo","canvas","colors","design","shapes"] as const;
+  // Pattern T-Shirts (category === "pattern") use a fixed GT pattern and only allow
+  // text / logo / canvas / colour-combinations. Fabric T-Shirts use prints — no GT
+  // switcher. Shapes are removed for ALL flows per client spec.
+  const isPattern = product?.category === "pattern";
+  const TABS = (isPattern
+    ? ["text","logo","canvas","colors"]
+    : ["text","logo","canvas","design"]) as readonly ("text"|"logo"|"canvas"|"colors"|"design")[];
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -1556,8 +1566,12 @@ export default function CustomizePage() {
           {rightTab==="colors" && (
             <div style={{ padding:"14px 12px",display:"flex",flexDirection:"column",gap:"16px" }}>
 
-              {/* GT Design Style System (moved from Design tab) */}
+              {/* GT Design Style System
+                  - FABRIC flow: full picker (groups + GT001-032 swatches)
+                  - PATTERN flow: HIDDEN — pattern is locked to the product. Customer
+                    only edits color combinations of the already-active pattern below. */}
               <div>
+                {!isPattern && (<>
                 <div style={sl}>Design Styles (GT001–GT032)</div>
                 <p style={{ margin:"0 0 8px",fontSize:"10px",color:V.mu,lineHeight:1.5 }}>
                   Pick a predefined style — it applies to the right shirt zones automatically. Then recolour to taste.
@@ -1614,6 +1628,24 @@ export default function CustomizePage() {
                     );
                   })}
                 </div>
+                </>)}
+
+                {isPattern && activeGtStyle && (
+                  <div style={{
+                    background:V.sf,border:`1px solid ${V.ac}`,borderRadius:"8px",
+                    padding:"10px",marginBottom:"10px",
+                  }}>
+                    <div style={{ fontSize:"10px",color:V.mu,letterSpacing:".06em",textTransform:"uppercase",marginBottom:"4px" }}>
+                      Locked Pattern
+                    </div>
+                    <div style={{ fontSize:"13px",fontWeight:600,color:V.ac }}>
+                      {activeGtStyle.id} — {activeGtStyle.label}
+                    </div>
+                    <div style={{ fontSize:"10px",color:V.mu,marginTop:"4px",lineHeight:1.5 }}>
+                      To use a different pattern, return to the home page and pick another.
+                    </div>
+                  </div>
+                )}
 
                 {activeGtStyle && (
                   <div style={{
