@@ -32,14 +32,6 @@ import ff5 from "@assets/Picture5_1777975346798.png"; // KS1004B dark green w/ w
 const G = "Georgia, 'Times New Roman', serif";
 const MAXW = "max-w-[1280px]";
 
-const TAILOR_OPTIONS = [
-  { color: "#3a6aaa", label: "Royal Blue",  img: ff2 },
-  { color: "#c0302a", label: "Crimson",     img: ff4 },
-  { color: "#2a5a2a", label: "Forest",      img: ff5 },
-  { color: "#c8a0b0", label: "Blush",       img: ff4 },
-  { color: "#FEC200", label: "Sun Yellow",  img: ff1 },
-];
-
 const HERO_SLIDES = [
   {
     eyebrow: "Premium Golf Wear 2025",
@@ -363,72 +355,55 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ───────────── TAILOR YOUR PLAY (CUSTOMISE PANEL) ───────────── */}
-      <section className="bg-white">
-        <div className="max-w-[940px] mx-auto my-10 md:my-14 px-9">
+      {/* ───────────── TAILOR YOUR PLAY ───────────── */}
+      <section className="bg-white pt-16 pb-16">
+        <div className={`${MAXW} mx-auto px-10`}>
           <div className="grid grid-cols-1 md:grid-cols-2 border border-[#ece8e2]">
-            {/* LEFT — cream */}
-            <div className="bg-[#f7f3ee] px-11 py-12">
-              <p className="text-[9px] tracking-[0.25em] text-[#9b8b6e] uppercase mb-3.5">Tailor Your Play</p>
-              <h2
-                style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400 }}
-                className="text-[24px] text-[#1c1c1c] leading-[1.3] mb-7"
-              >
-                Make it yours.<br />Every detail.
+            <div className="bg-[#f7f3ee] p-12 md:p-14">
+              <p className="text-[9px] tracking-[0.3em] text-[#9b8b6e] uppercase mb-5">Tailor Your Play</p>
+              <h2 style={{ fontFamily: G }} className="text-[32px] md:text-[36px] text-[#1c1c1c] leading-[1.1]">
+                Your game.<br />Your choices.
               </h2>
 
-              {[
-                { title: "Choose your base",  body: "Start with any polo, tee or trouser from the Ka.Sha core range" },
-                { title: "Pick your print",   body: "Select from our signature prints or go with a solid colour" },
-                { title: "Add your details",  body: "Collar, cuffs, logo placement and embroidery options" },
-                { title: "We craft it",       body: "Your piece is made to order and delivered within 14 days" },
-              ].map((step, i) => (
-                <div key={i} className="flex gap-4 items-start mb-[22px]">
-                  <span
-                    style={{ fontFamily: "'Cormorant Garamond', Georgia, serif" }}
-                    className="text-[18px] text-[#9b8b6e] shrink-0 min-w-[30px] leading-tight"
-                  >
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <div>
-                    <div className="text-[11px] text-[#1c1c1c] mb-[3px] tracking-[0.04em]">{step.title}</div>
-                    <div className="text-[10px] text-[#6b6560] leading-[1.65]">{step.body}</div>
-                  </div>
-                </div>
-              ))}
+              <ol className="mt-8 space-y-4">
+                {[
+                  "Select your style — polo, tee or collar",
+                  "Choose a print or solid from the palette",
+                  "Upload your logo and drag to position",
+                  "Review & get your Ka.Sha",
+                ].map((step, i) => (
+                  <li key={i} className="flex gap-5 items-baseline">
+                    <span className="text-[12px] tracking-[0.15em] text-[#9b8b6e] shrink-0">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span className="text-[13px] text-[#6b6560]">{step}</span>
+                  </li>
+                ))}
+              </ol>
+
+              <Link href="/products/1/customize" className="mt-9 inline-block bg-[#1c1c1c] text-white text-[10px] tracking-[0.3em] px-9 py-4 uppercase hover:bg-black transition-colors">
+                Start Customising
+              </Link>
             </div>
 
-            {/* RIGHT — white preview */}
-            <div className="bg-white px-11 py-12 flex flex-col items-center justify-center">
-              <img
-                src={TAILOR_OPTIONS[tailorColor].img}
-                alt={`Customise preview — ${TAILOR_OPTIONS[tailorColor].label}`}
-                className="w-[200px] h-[240px] object-contain mb-4 transition-opacity duration-300"
-              />
-              <div role="radiogroup" aria-label="Choose colour" className="flex gap-2 mb-[18px]">
-                {TAILOR_OPTIONS.map((opt, i) => (
+            <div className="bg-white p-8 flex flex-col items-center justify-center min-h-[420px]">
+              <img src={p11} alt="Customise preview" className="max-h-[340px] w-auto object-contain" />
+              <p className="text-[9px] tracking-[0.3em] text-[#9b8b6e] uppercase mt-6">Choose Colour</p>
+              <div className="flex gap-3 mt-3">
+                {["#c0302a", "#6b8a73", "#3a6aaa", "#c8a0b0", "#f7f3ee"].map((c, i) => (
                   <button
-                    key={opt.color}
-                    type="button"
-                    role="radio"
-                    aria-checked={tailorColor === i}
-                    aria-label={opt.label}
+                    key={c}
                     onClick={() => setTailorColor(i)}
-                    className="rounded-full cursor-pointer transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1c1c1c] focus-visible:ring-offset-2"
+                    aria-label={`Colour ${i + 1}`}
+                    className="rounded-full transition-all"
                     style={{
-                      width: 20, height: 20, background: opt.color,
-                      border: tailorColor === i ? "2px solid #1c1c1c" : "2px solid transparent",
-                      transform: tailorColor === i ? "scale(1.15)" : "scale(1)",
+                      width: 22, height: 22, background: c,
+                      border: tailorColor === i ? "2px solid #1c1c1c" : "1px solid #ece8e2",
+                      outlineOffset: 2,
                     }}
                   />
                 ))}
               </div>
-              <Link
-                href="/products/1/customize"
-                className="bg-[#1c1c1c] text-white text-[9px] tracking-[0.2em] uppercase px-[30px] py-3 hover:bg-[#333] transition-colors"
-              >
-                Start Customising
-              </Link>
             </div>
           </div>
         </div>
