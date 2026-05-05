@@ -77,11 +77,11 @@ export function Navbar() {
               </button>
 
               <Link href="/" className="flex items-center gap-2 shrink-0">
-                <img
-                  src="/images/kasha-logo.png"
-                  alt="KA.SHA"
-                  className="h-10 w-auto object-contain"
-                />
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16 2C8.268 2 2 8.268 2 16s6.268 14 14 14 14-6.268 14-14S23.732 2 16 2z" fill="#111"/>
+                  <path d="M22 10c-1.5 0-2.8.8-3.5 2-1-.6-2.2-1-3.5-1-3.3 0-6 2.7-6 6s2.7 6 6 6c1.5 0 2.9-.5 3.9-1.4.8.9 2 1.4 3.1 1.4 2.2 0 4-1.8 4-4 0-1.5-.8-2.8-2-3.5.6-.7 1-1.6 1-2.5 0-1.7-1.3-3-3-3z" fill="white"/>
+                </svg>
+                <span className="text-[22px] font-black tracking-[0.15em] text-black">KA.SHA</span>
               </Link>
             </div>
 
@@ -197,7 +197,7 @@ export function Navbar() {
       {mobileOpen && (
         <div className="fixed inset-0 z-50 bg-white flex flex-col">
           <div className="flex items-center justify-between px-6 h-16 border-b">
-            <img src="/images/kasha-logo.png" alt="KA.SHA" className="h-9 w-auto object-contain" />
+            <span className="text-[20px] font-black tracking-[0.15em] text-black">KA.SHA</span>
             <button onClick={() => setMobileOpen(false)}>
               <X className="h-6 w-6" />
             </button>

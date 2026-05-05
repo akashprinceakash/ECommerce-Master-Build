@@ -3,8 +3,7 @@ import { apiFetch } from "@/lib/adminApi";
 import { formatPrice } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { Loader2, ChevronDown, ChevronRight, MapPin, CreditCard, Package, Eye, Download, X } from "lucide-react";
-import * as fabric from "fabric";
+import { Loader2, ChevronDown, ChevronRight, MapPin, CreditCard, Package } from "lucide-react";
 
 interface AdminOrder {
   id: number;
@@ -28,79 +27,9 @@ interface AdminOrder {
     quantity: number;
     size: string;
     priceInPaise: number;
-    product: { name: string; thumbnailUrl: string | null; modelUrl?: string | null; category?: string | null } | null;
-    customization: {
-      id: number;
-      name: string;
-      color?: string | null;
-      size?: string | null;
-      partsEnabled?: any;
-      canvasData?: string | null;
-      previewImageUrl?: string | null;
-    } | null;
+    product: { name: string; thumbnailUrl: string | null } | null;
+    customization: { name: string } | null;
   }>;
-}
-
-// Trigger a browser download of a data URL as a file.
-function downloadDataUrl(dataUrl: string, filename: string) {
-  const a = document.createElement("a");
-  a.href = dataUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-
-// Render a fabric.js canvasJSON snapshot to a flat PNG dataURL using an offscreen canvas.
-async function renderCanvasJsonToPng(canvasJson: string, width = 2048, height = 2048): Promise<string | null> {
-  return new Promise((resolve) => {
-    try {
-      const el = document.createElement("canvas");
-      el.width = width; el.height = height;
-      const fc = new fabric.Canvas(el, { width, height, backgroundColor: "#ffffff" });
-      fc.loadFromJSON(canvasJson, () => {
-        fc.renderAll();
-        const url = fc.toDataURL({ format: "png", multiplier: 1 });
-        fc.dispose();
-        resolve(url);
-      });
-    } catch { resolve(null); }
-  });
-}
-
-// Export the full design as PNGs covering all sides.
-// Outputs:
-//   1. <prefix>-3d-preview.png   — the saved 3D mockup (if available)
-//   2. <prefix>-design-texture.png — the flat fabric canvas (this single texture wraps
-//      front, back, both sleeves and the collar of the model — i.e. ALL sides).
-async function exportDesignAllSides(
-  customization: NonNullable<AdminOrder["items"][number]["customization"]>,
-  prefix: string,
-): Promise<{ count: number; errors: string[] }> {
-  let count = 0;
-  const errors: string[] = [];
-  if (customization.previewImageUrl) {
-    try {
-      const res = await fetch(customization.previewImageUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      downloadDataUrl(url, `${prefix}-3d-preview.png`);
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      count++;
-    } catch (e: any) { errors.push(`preview: ${e.message || e}`); }
-  }
-  if (customization.canvasData) {
-    try {
-      const parsed = JSON.parse(customization.canvasData);
-      const canvasJSON = parsed.canvasJSON || parsed;
-      const json = typeof canvasJSON === "string" ? canvasJSON : JSON.stringify(canvasJSON);
-      const png = await renderCanvasJsonToPng(json);
-      if (png) { downloadDataUrl(png, `${prefix}-design-texture.png`); count++; }
-      else errors.push("canvas: render returned null");
-    } catch (e: any) { errors.push(`canvas: ${e.message || e}`); }
-  }
-  return { count, errors };
 }
 
 const STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"] as const;
@@ -117,8 +46,6 @@ export function AdminOrders() {
   const { toast } = useToast();
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [filter, setFilter] = useState<string>("all");
-  const [viewOrder, setViewOrder] = useState<AdminOrder | null>(null);
-  const [exporting, setExporting] = useState<number | null>(null);
 
   const { data: orders = [], isLoading } = useQuery<AdminOrder[]>({
     queryKey: ["admin-orders"],
@@ -188,13 +115,6 @@ export function AdminOrders() {
                 </div>
                 <div className="text-sm font-semibold">{formatPrice(o.totalInPaise)}</div>
                 <span className={`text-[10px] uppercase px-2 py-1 border ${STATUS_COLORS[o.status] ?? "border-border"}`}>{o.status}</span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setViewOrder(o); }}
-                  className="text-[10px] uppercase tracking-wider px-2 py-1 border border-border hover:border-primary hover:bg-primary hover:text-primary-foreground transition flex items-center gap-1"
-                  title="View full order details"
-                >
-                  <Eye className="w-3 h-3" /> View
-                </button>
               </div>
 
               {expanded.has(o.id) && (
@@ -261,202 +181,6 @@ export function AdminOrders() {
           ))}
         </div>
       )}
-
-      {/* View Full Order modal */}
-      {viewOrder && (
-        <FullOrderModal viewOrder={viewOrder} onClose={() => setViewOrder(null)}>
-            <div className="sticky top-0 bg-white border-b border-border p-5 flex items-center justify-between z-10">
-              <div>
-                <div className="text-xs uppercase tracking-wider text-muted-foreground">Full Order</div>
-                <div id="full-order-title" className="text-xl font-bold font-mono">#{viewOrder.id}</div>
-              </div>
-              <button
-                onClick={() => setViewOrder(null)}
-                className="p-2 hover:bg-muted rounded transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-6">
-              {/* Customer + status */}
-              <div className="grid md:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Customer</div>
-                  <div className="font-medium">{viewOrder.customerName}</div>
-                  <div className="text-xs text-muted-foreground">{viewOrder.customerEmail}</div>
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Placed</div>
-                  <div>{new Date(viewOrder.createdAt).toLocaleString()}</div>
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Status</div>
-                  <span className={`text-[10px] uppercase px-2 py-1 border ${STATUS_COLORS[viewOrder.status] ?? "border-border"}`}>
-                    {viewOrder.status}
-                  </span>
-                </div>
-              </div>
-
-              {/* Shipping + payment */}
-              <div className="grid md:grid-cols-2 gap-4 text-sm border-t border-border pt-5">
-                <div>
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-2"><MapPin className="w-3 h-3" /> Ship to</div>
-                  <div className="font-medium">{viewOrder.shippingName}</div>
-                  <div className="text-muted-foreground">{viewOrder.shippingAddress}</div>
-                  <div className="text-muted-foreground">{viewOrder.shippingCity}, {viewOrder.shippingState} - {viewOrder.shippingPostalCode}</div>
-                  <div className="text-muted-foreground">{viewOrder.shippingPhone}</div>
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-2"><CreditCard className="w-3 h-3" /> Payment</div>
-                  <div className="text-xs font-mono break-all">Payment: {viewOrder.paymentId ?? "—"}</div>
-                  {viewOrder.razorpayOrderId && (
-                    <div className="text-xs font-mono break-all text-muted-foreground">Razorpay Order: {viewOrder.razorpayOrderId}</div>
-                  )}
-                  <div className="text-base font-semibold mt-2">Total: {formatPrice(viewOrder.totalInPaise)}</div>
-                </div>
-              </div>
-
-              {/* Items with full design + export */}
-              <div className="border-t border-border pt-5">
-                <div className="text-xs uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
-                  <Package className="w-3 h-3" /> Items &amp; Designs
-                </div>
-                <div className="space-y-4">
-                  {viewOrder.items.map((it) => {
-                    const c = it.customization;
-                    return (
-                      <div key={it.id} className="border border-border p-4 bg-muted/10">
-                        <div className="flex items-start gap-4">
-                          {/* Preview */}
-                          <div className="w-32 h-32 flex-shrink-0 bg-white border border-border overflow-hidden flex items-center justify-center">
-                            {c?.previewImageUrl ? (
-                              <img src={c.previewImageUrl} alt="" className="w-full h-full object-cover" />
-                            ) : it.product?.thumbnailUrl ? (
-                              <img src={it.product.thumbnailUrl} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-xs text-muted-foreground">No preview</span>
-                            )}
-                          </div>
-
-                          {/* Details */}
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium">{it.product?.name ?? "Unknown product"}</div>
-                            {it.product?.category && (
-                              <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">
-                                {it.product.category === "pattern" ? "Pattern T-Shirt" : "Fabric T-Shirt"}
-                              </div>
-                            )}
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Size <span className="font-semibold text-foreground">{it.size}</span> · Qty <span className="font-semibold text-foreground">{it.quantity}</span> · {formatPrice(it.priceInPaise * it.quantity)}
-                            </div>
-                            {c && (
-                              <div className="mt-2 text-xs space-y-0.5">
-                                <div><span className="text-muted-foreground">Bespoke design:</span> <span className="font-medium">{c.name}</span></div>
-                                {c.color && (
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-muted-foreground">Body colour:</span>
-                                    <span className="inline-block w-3 h-3 border border-border" style={{ background: c.color }} />
-                                    <span className="font-mono">{c.color}</span>
-                                  </div>
-                                )}
-                                {c.partsEnabled?.presetName && (
-                                  <div><span className="text-muted-foreground">Pattern / preset:</span> <span className="font-mono">{c.partsEnabled.presetName}</span></div>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Export buttons */}
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {c ? (
-                                <button
-                                  disabled={exporting === it.id}
-                                  onClick={async () => {
-                                    setExporting(it.id);
-                                    const prefix = `kasha-order-${viewOrder.id}-item-${it.id}`;
-                                    const { count, errors } = await exportDesignAllSides(c, prefix);
-                                    setExporting(null);
-                                    if (count === 0) {
-                                      toast({
-                                        title: "Nothing to export",
-                                        description: errors.length ? `Export failed: ${errors.join("; ")}` : "This design has no preview or canvas data saved.",
-                                        variant: "destructive",
-                                      });
-                                    } else {
-                                      toast({
-                                        title: `Exported ${count} file${count === 1 ? "" : "s"}`,
-                                        description: errors.length
-                                          ? `Some assets failed: ${errors.join("; ")}`
-                                          : "PNG files downloaded covering all sides.",
-                                      });
-                                    }
-                                  }}
-                                  className="text-[10px] uppercase tracking-wider px-3 py-1.5 border border-primary bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition flex items-center gap-1.5"
-                                >
-                                  {exporting === it.id ? (
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                  ) : (
-                                    <Download className="w-3 h-3" />
-                                  )}
-                                  Export Design as PNG (all sides)
-                                </button>
-                              ) : (
-                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Stock item — no bespoke design</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-        </FullOrderModal>
-      )}
-    </div>
-  );
-}
-
-// Accessible dialog wrapper — handles Escape, focus trap basics, ARIA roles,
-// and click-outside-to-close. Body scroll is locked while the modal is open.
-import { useRef as _useRef, useEffect as _useEffect } from "react";
-function FullOrderModal({ viewOrder, onClose, children }: { viewOrder: AdminOrder; onClose: () => void; children: React.ReactNode }) {
-  const dialogRef = _useRef<HTMLDivElement>(null);
-  const lastFocused = _useRef<HTMLElement | null>(null);
-
-  _useEffect(() => {
-    lastFocused.current = document.activeElement as HTMLElement | null;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    // Focus the dialog so keyboard users land in it
-    dialogRef.current?.focus();
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
-      lastFocused.current?.focus();
-    };
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-      onClick={onClose}
-      aria-hidden={false}
-    >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="full-order-title"
-        tabIndex={-1}
-        className="bg-white max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-border outline-none"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
     </div>
   );
 }
