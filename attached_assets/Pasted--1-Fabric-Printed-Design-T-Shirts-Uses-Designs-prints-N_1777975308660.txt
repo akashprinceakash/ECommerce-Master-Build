@@ -1,0 +1,275 @@
+
+
+
+
+### 1. **Fabric / Printed Design T-Shirts**
+
+* Uses **Designs (prints)**
+* ❌ NO Patterns (GT001–GT032)
+
+### 2. **Pattern T-Shirts**
+
+* Uses **Predefined Pattern Structures (GT001–GT032)**
+* ❌ NO Designs section
+* ❌ NO switching to other patterns inside customization
+
+👉 These two must **NEVER mix**
+
+---
+
+# 🧭 NAVIGATION FLOW (STRICT)
+Below the 
+Top Sellers
+
+The Fairway Favourites 
+these ksb001b ksb002 ksb003 ksb003 ksb004 ksb005 ksb006 ksb007 product details  for that you refer the KASHA_Product_Details (1) pdf which i have attached
+---
+
+
+# 🧵 1. FABRIC T-SHIRTS FLOW
+
+## 🏠 Home Page
+
+* Show:
+
+
+
+---
+
+## 📄 Product Page
+
+Must display:
+
+* Image
+* Name
+* Description
+* Fabric
+* Sizes (S/M/L/XL + Custom)
+* Price
+* **Customize Button**
+
+---
+
+## 🎨 Fabric Customization Page
+
+### ✅ LEFT SIDE (Garment Sections)
+
+* Same as current (Front, Back, Sleeves, etc.)
+* Include:
+
+  * ✅ Apply Full Body Option
+
+---
+
+### ✅ RIGHT SIDE — ALLOWED FEATURES
+
+* Text
+* Logos
+* Canvas
+* Designs (Printed designs)
+
+---
+
+### ❌ REMOVE (VERY IMPORTANT)
+
+* ❌ Colors / Pattern Section (GT001–GT032 must NOT appear)
+* ❌ Pattern Categories (Sport Side, Raglan, etc.)
+
+---
+
+### ✅ Behavior
+
+* User can:
+
+  * Apply **different designs to different garment parts**
+  * Change colors (only for base garment if supported)
+  * Add text/logos
+
+---
+
+# 🧵 2. PATTERN T-SHIRTS FLOW
+
+## 🏠 Home Page
+
+* Show **Pattern Categories (6 types)**:
+
+  * Classic
+  * Sport Side
+  * Triple Tone
+  * Wave Panel
+  * Hourglass
+  * Pinstripe
+  * Raglan
+
+(each contains GT001–GT032 grouped)
+
+---
+
+## 📄 Product Page
+
+Same structure as Fabric:
+
+* Image
+* Name
+* Description
+* Fabric
+* Sizes
+* Price
+* Customize Button
+
+---
+
+## 🎨 Pattern Customization Page
+
+### ✅ LEFT SIDE
+
+* Garment sections (same as fabric)
+* Include full body option if applicable
+
+---
+
+### ✅ RIGHT SIDE — ALLOWED FEATURES
+
+* Text
+* Logos
+* Canvas
+* Color Combinations (for pattern areas only)
+
+---
+
+### ❌ STRICTLY REMOVE
+
+* ❌ Designs Section (NO printed designs)
+* ❌ Shapes
+* ❌ Switching to other patterns
+* ❌ Showing GT001–GT032 list again
+
+---
+
+## ⚠️ CRITICAL BEHAVIOR
+
+Example Flow:
+
+1. User selects:
+
+   ```
+   Home → Men → T-Shirts → Classic Pattern
+   ```
+2. Goes to Product Page
+3. Clicks Customize
+4. Lands on customization page
+
+👉 On this page:
+
+* ONLY that selected pattern is active
+* User can:
+
+  * Change colors
+  * Add text/logos
+* User CANNOT:
+
+  * Change pattern
+  * See other pattern categories
+  * See designs section
+
+---
+
+## 🔁 Pattern Switching Rule
+
+* If user wants another pattern:
+
+  * ❌ NOT inside customization
+  * ✅ Must go back to Home → select another pattern
+
+---
+
+# 🧩 3. KEY DIFFERENCE SUMMARY (NO CONFUSION)
+
+| Feature             | Fabric T-Shirt | Pattern T-Shirt           |
+| ------------------- | -------------- | ------------------------- |
+| Designs Section     | ✅ YES          | ❌ NO                      |
+| Patterns (GT001–32) | ❌ NO           | ✅ YES (fixed per product) |
+| Pattern Switching   | ❌ NO           | ❌ NO                      |
+| Color Customization | ✅ YES          | ✅ YES                     |
+| Apply per Part      | ✅ YES          | ✅ YES                     |
+| Shapes              | ❌ NO           | ❌ NO                      |
+
+---
+
+# 📏 4. SIZE SYSTEM
+
+* Standard:
+
+  * S / M / L / XL
+* Add:
+
+  * ✅ Custom Size Input
+
+### Behavior:
+
+* If custom size:
+
+  * Save as `C`
+* Else:
+
+  * Save selected size
+
+---
+
+# 🧾 5. STYLE NUMBER LOGIC
+
+### Format:
+
+```
+[STYLE] + [PRINT or COLOR] + [SIZE]
+```
+
+---
+
+### Examples:
+
+#### Fabric (Design-based):
+
+```
+KS1000B GP016 L
+KS1000B GP020 C
+```
+
+#### Pattern:
+
+```
+KS1000B GT001 XL
+```
+
+#### Color-based:
+
+```
+KS1000B Grey Navy L
+```
+
+---
+
+# 🧠 FINAL IMPLEMENTATION RULES (VERY STRICT)
+
+* ❌ Do NOT mix Fabric & Pattern logic
+* ❌ Do NOT show Designs in Pattern flow
+* ❌ Do NOT show Patterns in Fabric flow
+* ❌ Do NOT allow switching patterns inside customization
+* ✅ Always reuse existing UI where possible
+* ✅ Maintain navigation exactly as defined
+
+---
+
+# 🚀 EXPECTED RESULT
+
+* Clear separation between:
+
+  * Fabric customization
+  * Pattern customization
+* Clean user experience
+* No confusion in customization tools
+* Correct product logic & style codes
+
+
+
+

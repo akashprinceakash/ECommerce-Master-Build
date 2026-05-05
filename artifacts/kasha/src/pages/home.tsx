@@ -22,6 +22,13 @@ import p15 from "@assets/kasha-photo-15.jpeg"; // green QClub polo
 import p20 from "@assets/kasha-photo-20.jpeg"; // 3-panel butterfly/floral
 import p25 from "@assets/kasha-photo-25.jpeg"; // 6 green trousers grid
 
+// Fairway Favourites — catalog polo line drawings (KS1000B–KS1006B)
+import ff1 from "@assets/Picture1_1777975346800.png"; // KS1000B blue floral
+import ff2 from "@assets/Picture2_1777975346800.png"; // KS1001B light blue + brown trim
+import ff3 from "@assets/Picture3_1777975346799.png"; // KS1002B olive/black panel
+import ff4 from "@assets/Picture4_1777975346799.png"; // KS1003B pink/black panel
+import ff5 from "@assets/Picture5_1777975346798.png"; // KS1004B dark green w/ white piping
+
 const G = "Georgia, 'Times New Roman', serif";
 const MAXW = "max-w-[1280px]";
 
@@ -239,7 +246,7 @@ export default function Home() {
         <div className={`${MAXW} mx-auto px-10`}>
           <div className="text-center mb-10">
             <p className="text-[9px] tracking-[0.3em] text-[#9b8b6e] mb-3 uppercase">Top Sellers</p>
-            <h2 style={{ fontFamily: G }} className="text-[32px] md:text-[36px] text-[#1c1c1c]">The Fairway Favourites</h2>
+            <h2 style={{ fontFamily: G }} className="text-[32px] md:text-[36px] text-[#1c1c1c]">Bestsellers This Season</h2>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
@@ -284,6 +291,67 @@ export default function Home() {
               );
             })}
           </div>
+        </div>
+      </section>
+
+      {/* ───────────── FAIRWAY FAVOURITES (catalog: KS1000B–KS1006B) ───────────── */}
+      <section className="bg-white pt-16 pb-16 border-b border-[#ece8e2]">
+        <div className={`${MAXW} mx-auto px-10`}>
+          <div className="flex items-end justify-between mb-10">
+            <div>
+              <p className="text-[9px] tracking-[0.3em] text-[#9b8b6e] mb-3 uppercase">The Catalogue</p>
+              <h2 style={{ fontFamily: G }} className="text-[32px] md:text-[36px] text-[#1c1c1c]">Fairway Favourites</h2>
+              <p className="text-[13px] text-[#6b6560] mt-2 max-w-[520px]">
+                Signature polos in breathable Poly-Sorona dry-fit. Pick a style, then customise prints, panels and colourways.
+              </p>
+            </div>
+            <Link href="/products" className="hidden md:inline-block text-[10px] tracking-[0.3em] text-[#9b8b6e] hover:text-[#1c1c1c] transition-colors uppercase whitespace-nowrap">
+              View full catalogue »
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+            {[
+              { sku: "KS1000B", img: ff1, name: "Signature Floral Polo",     swatch: "#a9c4d4", kind: "Fabric" as const },
+              { sku: "KS1001B", img: ff2, name: "Trim Detail Polo",          swatch: "#cfdde6", kind: "Fabric" as const },
+              { sku: "KS1002B", img: ff3, name: "Sport Side Panel Polo",     swatch: "#5a6a3a", kind: "Pattern" as const },
+              { sku: "KS1003B", img: ff4, name: "Hourglass Panel Polo",      swatch: "#e8b9c4", kind: "Pattern" as const },
+              { sku: "KS1004B", img: ff5, name: "Classic Piping Polo",       swatch: "#1f3a2a", kind: "Pattern" as const },
+              { sku: "KS1005B", img: ff3, name: "Triple Tone Polo",          swatch: "#3a3a3a", kind: "Pattern" as const },
+              { sku: "KS1006B", img: ff5, name: "Wave Panel Polo",           swatch: "#2a3a4a", kind: "Pattern" as const },
+            ].map((item) => (
+              <Link key={item.sku} href={`/products/${item.sku.toLowerCase()}`} className="group block">
+                <div className="relative overflow-hidden bg-[#f7f3ee] flex items-center justify-center" style={{ aspectRatio: "3/4" }}>
+                  <img
+                    src={item.img}
+                    alt={`${item.name} — ${item.sku}`}
+                    className="w-full h-full object-contain p-6 transition-transform duration-700 group-hover:scale-[1.04]"
+                  />
+                  <span className="absolute top-3 left-3 bg-white border border-[#ece8e2] text-[8px] tracking-[0.25em] text-[#1c1c1c] uppercase px-2 py-1">
+                    {item.kind}
+                  </span>
+                </div>
+                <div className="flex items-start justify-between pt-3">
+                  <div>
+                    <h3 style={{ fontFamily: G }} className="text-[14px] text-[#1c1c1c] leading-tight">{item.name}</h3>
+                    <p className="text-[10px] tracking-[0.2em] text-[#9b8b6e] uppercase mt-1">{item.sku}</p>
+                  </div>
+                  <p className="text-[13px] text-[#1c1c1c] whitespace-nowrap">₹2,000</p>
+                </div>
+                <div className="flex items-center gap-2 mt-2.5">
+                  <span
+                    className="inline-block rounded-full border border-[#ece8e2]"
+                    style={{ width: 14, height: 14, background: item.swatch }}
+                  />
+                  <span className="text-[10px] text-[#a09890] tracking-[0.15em] uppercase">Customisable</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <p className="text-[11px] text-[#a09890] text-center mt-10 tracking-[0.05em]">
+            Poly 55% · Sorona 45% · 105 GSM · Sizes S / M / L / XL + Custom · Made to order
+          </p>
         </div>
       </section>
 
