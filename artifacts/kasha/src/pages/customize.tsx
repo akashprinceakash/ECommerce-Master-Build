@@ -104,7 +104,7 @@ const PRESETS = [
   { name:"GT012", primary:"#ACB1A1", secondary:"#576043" },
 ];
 
-const SIZES = ["XS","S","M","L","XL","XXL"];
+const SIZES = ["S","M","L","XL","Custom"];
 
 const FONTS = [
   { label:"DM Sans", value:"'DM Sans'" },
@@ -231,8 +231,12 @@ export default function CustomizePage() {
   const [mats, setMats]             = useState<MatEntry[]>([]);
   const [activePart, setActivePart] = useState(0);
 
-  // Right panel tabs: colors | design | text | logo | shapes | canvas
-  const [rightTab, setRightTab]     = useState<"colors"|"design"|"text"|"logo"|"shapes"|"canvas">("colors");
+  // Right panel tabs (per client spec):
+  //   Fabric  : TEXT | LOGO | CANVAS | DESIGN  (prints, NO GT patterns)
+  //   Pattern : TEXT | LOGO | CANVAS | COLORS  (color combos for the locked GT pattern, NO prints)
+  // SHAPES is removed for ALL flows. The "shapes" union member is kept only so any
+  // legacy persisted state doesn't crash; the tab is never rendered or selectable.
+  const [rightTab, setRightTab]     = useState<"colors"|"design"|"text"|"logo"|"shapes"|"canvas">("text");
 
   // Print Library state
   const [activePrintId, setActivePrintId]   = useState<string | null>(null);
@@ -249,6 +253,8 @@ export default function CustomizePage() {
 
   // Core design state
   const [size, setSize]             = useState("M");
+  const [customSize, setCustomSize] = useState("");
+  const [fullBody, setFullBody]     = useState(false);
   const [qty, setQty]               = useState(1);
   const [autoRotate, setAutoRotate] = useState(true);
   const [designName, setDesignName] = useState("");
@@ -543,6 +549,22 @@ export default function CustomizePage() {
     mv.addEventListener("load", onLoad);
     return () => mv.removeEventListener("load", onLoad);
   }, [mvReady, product?.modelUrl]);
+
+  // ── Auto-lock GT pattern for Pattern T-Shirts ─────────────────────────────
+  // For pattern products the GT id is encoded in product.name as "[gt:GTxxx]".
+  // Auto-apply that style on first load so the customer lands on the locked
+  // pattern with no extra click. They cannot switch (picker is hidden).
+  useEffect(() => {
+    if (product?.category !== "pattern" || !modelLoaded || !fcRef.current) return;
+    const m = product?.name?.match(/\[gt:(GT\d+)\]/);
+    if (!m) return;
+    if (activeGtStyle?.id === m[1]) return;
+    const style = GT_STYLES.find((s) => s.id === m[1]);
+    if (style) handleSelectGtStyle(style);
+    // Only run once per product load — handleSelectGtStyle setter triggers
+    // activeGtStyle which short-circuits the next run.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.category, modelLoaded, product?.name]);
 
   // ── Restore saved design ──────────────────────────────────────────────────
   useEffect(() => {
@@ -1293,7 +1315,48 @@ export default function CustomizePage() {
   if (!product) return null;
 
   const PLACEMENT_OPTS = ["front-chest","front-center","back-top","back-center","sleeve-left","sleeve-right"];
-  const TABS = ["colors","design","text","logo","shapes","canvas"] as const;
+  // Pattern T-Shirts (category === "pattern") use a fixed GT pattern and only allow
+  // text / logo / canvas / colour-combinations. Fabric T-Shirts use prints — no GT
+  // switcher. Shapes are removed for ALL flows per client spec.
+  const isPattern = product?.category === "pattern";
+  const TABS = (isPattern
+    ? ["text","logo","canvas","colors"]
+    : ["text","logo","canvas","design"]) as readonly ("text"|"logo"|"canvas"|"colors"|"design")[];
+
+  // ── SKU per client spec ────────────────────────────────────────────────────
+  // Format: "<BODY> <DESIGN> <SIZE>"
+  //   BODY    = product name (e.g. KS1000B). For pattern products the name is
+  //             "Group Pattern T-Shirt [gt:GTxxx]" — strip the [gt:...] suffix.
+  //   DESIGN  = print code (GP016) or pattern code (GT001) or color combo (GREYNAVY)
+  //   SIZE    = "S"|"M"|"L"|"XL" or "C" for Custom
+  const lockedGtId = (() => {
+    const m = product?.name?.match(/\[gt:(GT\d+)\]/);
+    return m ? m[1] : null;
+  })();
+  // BODY = the leading "KS####<letter>" silhouette token from the product name.
+  // Falls back to the full cleaned name if no KS#### token is present.
+  const bodyCode = (() => {
+    const cleaned = (product?.name || "").replace(/\s*\[gt:GT\d+\]\s*$/, "").trim();
+    const m = cleaned.match(/^(KS\d+[A-Z])/);
+    return m ? m[1] : cleaned;
+  })();
+  const sizeCode = size === "Custom" ? "C" : size;
+  const designCode = (() => {
+    if (isPattern && (activeGtStyle?.id || lockedGtId)) return activeGtStyle?.id || lockedGtId!;
+    if (activePrintId) {
+      // Map print id → standardized "GP###" code based on its index in PATTERNS.
+      // This produces the canonical KA.SHA print SKU code (e.g. GP001, GP016)
+      // rather than leaking the human-readable id like "PAISLEY".
+      const idx = PATTERNS.findIndex(x => x.id === activePrintId);
+      return idx >= 0 ? `GP${String(idx + 1).padStart(3, "0")}` : activePrintId.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    }
+    // Color-combo fallback: derive a short tag from the active GT colors or zoneColors
+    const cols = Object.values(zoneColors).filter(Boolean) as string[];
+    if (cols.length >= 2) return cols.slice(0, 2).map(c => c.replace("#","").toUpperCase()).join("");
+    if (activeGtStyle) return activeGtStyle.id;
+    return "";
+  })();
+  const skuFull = [bodyCode, designCode, sizeCode].filter(Boolean).join(" ");
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -1357,12 +1420,26 @@ export default function CustomizePage() {
                     <div style={{ display:"flex",alignItems:"center",gap:"6px" }}>
                       <input type="color" value={col || "#ffffff"}
                         onClick={e=>e.stopPropagation()}
-                        onChange={e=>{ setActiveColorZone(z.id); applyZoneColor(z.id,e.target.value); }}
+                        onChange={e=>{
+                          setActiveColorZone(z.id);
+                          if (fullBody) {
+                            COLOR_ZONES.forEach(zz => applyZoneColor(zz.id, e.target.value));
+                          } else {
+                            applyZoneColor(z.id, e.target.value);
+                          }
+                        }}
                         style={{ width:"30px",height:"24px",border:"none",cursor:"pointer",background:"none",borderRadius:"5px",padding:0 }}
                       />
                       {col && (
                         <button
-                          onClick={e=>{ e.stopPropagation(); applyZoneColor(z.id, ""); }}
+                          onClick={e=>{
+                            e.stopPropagation();
+                            if (fullBody) {
+                              COLOR_ZONES.forEach(zz => applyZoneColor(zz.id, ""));
+                            } else {
+                              applyZoneColor(z.id, "");
+                            }
+                          }}
                           title="Clear this zone"
                           style={{ background:"none",border:`1px solid ${V.bd}`,color:V.mu,
                                    cursor:"pointer",fontSize:"11px",borderRadius:"5px",
@@ -1379,6 +1456,20 @@ export default function CustomizePage() {
           {/* Options */}
           <div style={sb}>
             <div style={sl}>Options</div>
+            <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${V.bd}` }}>
+              <div>
+                <div style={{ fontSize:"12px",fontWeight:500 }}>Apply for Full Body Design</div>
+                <div style={{ fontSize:"10px",color:V.mu }}>Paint all 5 zones at once</div>
+              </div>
+              {togBtn(fullBody, () => {
+                const next = !fullBody; setFullBody(next);
+                if (next) {
+                  // When turned on, the Color Palette / inline pickers paint
+                  // every zone simultaneously (Front, Back, Sleeves, Collar).
+                  setActiveColorZone("front" as any);
+                }
+              })}
+            </div>
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0" }}>
               <div>
                 <div style={{ fontSize:"12px",fontWeight:500 }}>Auto Rotate</div>
@@ -1392,7 +1483,7 @@ export default function CustomizePage() {
             </div>
           </div>
 
-          {/* Size */}
+          {/* Size — Standard S/M/L/XL or Custom (manual measurement) */}
           <div style={sb}>
             <div style={sl}>Size</div>
             <div style={{ display:"flex",flexWrap:"wrap",gap:"5px" }}>
@@ -1402,10 +1493,24 @@ export default function CustomizePage() {
                   background:size===s?V.ac:"rgba(0,0,0,.3)",
                   border:`1px solid ${size===s?V.ac:V.bd}`,
                   borderRadius:"8px",color:size===s?V.bg:V.mu,
-                  fontFamily:"inherit",fontSize:"12px",fontWeight:600,cursor:"pointer",
+                  fontFamily:"inherit",fontSize:"11px",fontWeight:600,cursor:"pointer",
                 }}>{s}</button>
               ))}
             </div>
+            {size === "Custom" && (
+              <input
+                type="text"
+                value={customSize}
+                onChange={e=>setCustomSize(e.target.value)}
+                placeholder="e.g. Chest 42, Length 28"
+                style={{
+                  marginTop:"8px",width:"100%",padding:"8px 10px",
+                  background:"rgba(0,0,0,.3)",border:`1px solid ${V.ac}`,
+                  borderRadius:"7px",color:V.tx,fontSize:"11px",fontFamily:"inherit",
+                  outline:"none",boxSizing:"border-box",
+                }}
+              />
+            )}
           </div>
 
           {/* Quantity */}
@@ -1485,10 +1590,10 @@ export default function CustomizePage() {
             <div style={{ fontSize:"10px",color:V.mu }}>{formatPrice(product.priceInPaise)}</div>
           </div>
 
-          {/* Style badge */}
-          <div style={{ position:"absolute",top:"14px",right:"14px",background:"rgba(8,6,4,.85)",border:`1px solid ${V.bd}`,borderRadius:"9px",padding:"6px 10px",backdropFilter:"blur(8px)" }}>
-            <div style={{ fontSize:"9px",color:V.mu,letterSpacing:".08em",textTransform:"uppercase" }}>Style</div>
-            <div style={{ fontSize:"12px",fontWeight:600,color:V.ac }}>{presetName}</div>
+          {/* SKU badge — live style number per client spec (BODY DESIGN SIZE) */}
+          <div style={{ position:"absolute",top:"14px",right:"14px",background:"rgba(8,6,4,.85)",border:`1px solid ${V.bd}`,borderRadius:"9px",padding:"6px 10px",backdropFilter:"blur(8px)",maxWidth:"320px" }}>
+            <div style={{ fontSize:"9px",color:V.mu,letterSpacing:".08em",textTransform:"uppercase" }}>Style Number</div>
+            <div style={{ fontSize:"12px",fontWeight:600,color:V.ac,fontFamily:"'Courier New',monospace" }}>{skuFull || presetName}</div>
           </div>
         </div>
 
@@ -1512,8 +1617,12 @@ export default function CustomizePage() {
           {rightTab==="colors" && (
             <div style={{ padding:"14px 12px",display:"flex",flexDirection:"column",gap:"16px" }}>
 
-              {/* GT Design Style System (moved from Design tab) */}
+              {/* GT Design Style System
+                  - FABRIC flow: full picker (groups + GT001-032 swatches)
+                  - PATTERN flow: HIDDEN — pattern is locked to the product. Customer
+                    only edits color combinations of the already-active pattern below. */}
               <div>
+                {!isPattern && (<>
                 <div style={sl}>Design Styles (GT001–GT032)</div>
                 <p style={{ margin:"0 0 8px",fontSize:"10px",color:V.mu,lineHeight:1.5 }}>
                   Pick a predefined style — it applies to the right shirt zones automatically. Then recolour to taste.
@@ -1570,6 +1679,24 @@ export default function CustomizePage() {
                     );
                   })}
                 </div>
+                </>)}
+
+                {isPattern && activeGtStyle && (
+                  <div style={{
+                    background:V.sf,border:`1px solid ${V.ac}`,borderRadius:"8px",
+                    padding:"10px",marginBottom:"10px",
+                  }}>
+                    <div style={{ fontSize:"10px",color:V.mu,letterSpacing:".06em",textTransform:"uppercase",marginBottom:"4px" }}>
+                      Locked Pattern
+                    </div>
+                    <div style={{ fontSize:"13px",fontWeight:600,color:V.ac }}>
+                      {activeGtStyle.id} — {activeGtStyle.label}
+                    </div>
+                    <div style={{ fontSize:"10px",color:V.mu,marginTop:"4px",lineHeight:1.5 }}>
+                      To use a different pattern, return to the home page and pick another.
+                    </div>
+                  </div>
+                )}
 
                 {activeGtStyle && (
                   <div style={{
