@@ -1,80 +1,102 @@
 import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Link } from "wouter";
-import { ArrowRight, ChevronRight } from "lucide-react";
 import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
 import { formatPrice } from "@/lib/format";
 
-// ── Design tokens (from KaSha Homepage Mockup v4) ────────────────────────────
-const T = {
-  charcoal: "#1c1c1c",
-  cream: "#f7f3ee",
-  divider: "#ece8e2",
-  gold: "#9b8b6e",
-  bodyGrey: "#6b6560",
-  muted: "#a09890",
-  yellow: "#FEC200",
-  heroGold: "#f0d89a",
-  red: "#c0302a",
-  blue: "#3a6aaa",
-  blush: "#c8a0b0",
-};
+// Image asset paths — extracted from kasha_final HTML mockup
+const IMG = (n: number) => `/images/kasha/img${String(n).padStart(2, "0")}.jpeg`;
 
-// ── HERO SLIDES ──────────────────────────────────────────────────────────────
+// Hero slides per mockup
 const HERO_SLIDES = [
   {
-    img: "/images/product-jacket.png",
-    eyebrow: "NEW COLLECTION — 2026",
-    titlePre: "Redefining",
-    titleEm: "the Modern",
-    titlePost: "Game.",
-    body: "Elevated performance wear for those who treat golf as a lifestyle, not just a sport.",
-    cta1: { label: "SHOP NEW ARRIVALS", href: "/products" },
-    cta2: { label: "EXPLORE COLLECTIONS", href: "/products" },
+    img: IMG(2),
+    eyebrow: "PREMIUM GOLF WEAR 2025",
+    title: <>Authority<br/>in fit.<br/><em>Personality<br/>in detail.</em></>,
+    sub: "Tailored elegance for the modern player.",
+    cta1: { label: "Shop Women", href: "/products?gender=women" },
+    cta2: { label: "View Lookbook", href: "/heritage" },
   },
   {
-    img: "/images/product-tshirt.png",
-    eyebrow: "BUTTERFLY EDITION",
-    titlePre: "Bloom",
-    titleEm: "across the",
-    titlePost: "Fairway.",
-    body: "Hand-drawn prints meet performance fabrics. Made for the contemporary player.",
-    cta1: { label: "SHOP PRINTS", href: "/products?category=fabric-tshirt" },
-    cta2: { label: "VIEW LOOKBOOK", href: "/heritage" },
+    img: IMG(3),
+    eyebrow: "PRINT EDITION · 2025",
+    title: <>Bold inside<br/>a calm<br/><em>frame.</em></>,
+    sub: "Structured where it matters.\nExpressive where it shows.",
+    cta1: { label: "See Prints", href: "/products?category=fabric-tshirt" },
+    cta2: { label: "Explore All", href: "/products" },
   },
   {
-    img: "/images/product-trousers.png",
-    eyebrow: "WOMEN'S EDIT",
-    titlePre: "Crafted",
-    titleEm: "for her",
-    titlePost: "Game.",
-    body: "Tailored cuts, refined fabrics. The Ka.Sha women's collection.",
-    cta1: { label: "SHOP WOMEN", href: "/products?gender=women" },
-    cta2: { label: "OUR STORY", href: "/heritage" },
+    img: IMG(4),
+    eyebrow: "PREMIUM GOLF WEAR 2025",
+    title: <>You bring<br/>the precision.<br/><em>We bring<br/>the flair.</em></>,
+    sub: "Performance crafted for the fairway.\nPersonality made for every hole.",
+    cta1: { label: "Shop Golf", href: "/products" },
+    cta2: { label: "Tailor Your Play", href: "/products/1/customize" },
   },
   {
-    img: "/images/product-jacket.png",
-    eyebrow: "ON-COURSE EDITION",
-    titlePre: "Print.",
-    titleEm: "Performance.",
-    titlePost: "Polish.",
-    body: "Limited print drops, ready for the fairway.",
-    cta1: { label: "EXPLORE", href: "/products" },
-    cta2: { label: "CUSTOMISE", href: "/products/1/customize" },
+    img: IMG(5),
+    eyebrow: "THE KA.SHA PLAYER · 2025",
+    title: <>56. 42. 36.<br/><em>One brand.<br/>Every game.</em></>,
+    sub: "Wear your personality.\nFor players who play hard.",
+    cta1: { label: "Shop Men", href: "/products?gender=men" },
+    cta2: { label: "Shop Women", href: "/products?gender=women" },
   },
 ];
 
+// Customise panel preview swap
+const CUST_SWATCHES = [
+  { color: "#a52020", img: IMG(14) },
+  { color: "#2a5a2a", img: IMG(15) },
+  { color: "#2a4a8a", img: IMG(16) },
+  { color: "#d4a0bc", img: IMG(17) },
+  { color: "#e8e0d8", img: IMG(18), border: true },
+];
+
+// Top seller seed cards (used as fallback if no products from API yet)
+const TOP_SELLERS_FALLBACK = [
+  { img: IMG(9),  name: "KS1000B",          price: "₹2,000.00", swatches: ["#c0302a","#3a6aaa","#2a5a2a","#f0f0ee"] },
+  { img: IMG(10), name: "The QClub Polo",   price: "₹4,500.00", swatches: ["#c0302a","#3a6aaa","#2a5a2a"] },
+  { img: IMG(11), name: "The Marble Polo",  price: "₹4,200.00", swatches: ["#3a6aaa","#c0302a","#2a5a2a"] },
+  { img: IMG(12), name: "The Scroll Polo",  price: "₹4,500.00", swatches: ["#c8a0b0","#d4b890"] },
+];
+
+const PRINTS = [
+  { img: IMG(19), name: "The Garden polo", sub: "Print on print" },
+  { img: IMG(20), name: "Marble wave",      sub: "Fluid signature" },
+  { img: IMG(21), name: "Collar detail",    sub: "White contrast trim" },
+  { img: IMG(22), name: "Trouser pocket",   sub: "Tailored finish" },
+];
+
+const EVENT_TILES = [
+  { img: IMG(23), cat: "Corporate & teams", title: <>Tournament kits,<br/>team activations.</>, cta: "Enquire Now ›" },
+  { img: IMG(24) },
+  { img: IMG(25) },
+  { img: IMG(26), cat: "Women's golf",      title: <>Authority in fit.<br/>Personality in detail.</>, cta: "Shop Women »»" },
+];
+
+const EVENT_THUMBS = [
+  { img: IMG(27), label: "On the Fairway" },
+  { img: IMG(28), label: "Print Edition" },
+  { img: IMG(29), label: "Women's Golf" },
+  { img: IMG(30), label: "Tournament Day" },
+];
+
+const MARQUEE = [
+  "Golf T-Shirts", "Performance Trousers", "Caps & Accessories",
+  "Tailor Your Play", "Every Piece Customisable", "Men · Women · Kids",
+];
+
 export default function Home() {
-  const [tab, setTab] = useState<"MEN" | "WOMEN" | "KIDS">("MEN");
+  const [tab, setTab] = useState<"Men" | "Women" | "Kids">("Men");
   const [slide, setSlide] = useState(0);
-  const slideRef = useRef<number>(0);
+  const [custSw, setCustSw] = useState(0);
+  const slideRef = useRef(0);
 
   const { data: products } = useListProducts(
     {},
     { query: { queryKey: getListProductsQueryKey({}) } }
   );
 
-  // Auto-advance hero every 5.5s per spec
   useEffect(() => {
     const id = setInterval(() => {
       slideRef.current = (slideRef.current + 1) % HERO_SLIDES.length;
@@ -83,69 +105,69 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
 
-  const fabricTees = (products || []).filter(p => p.category === "fabric-tshirt");
+  const fabricTees  = (products || []).filter(p => p.category === "fabric-tshirt");
   const patternTees = (products || []).filter(p => p.category === "pattern");
-  const topSellers = (products || []).slice(0, 4);
+  const topSellers  = (products || []).slice(0, 4);
 
-  const categoryTiles = {
-    MEN: [
-      { title: "T-Shirts",  href: "/products?category=fabric-tshirt", chip: "NEW IN", img: "/images/product-tshirt.png" },
-      { title: "Trousers",  href: "/products?category=trousers",      chip: "ESSENTIAL", img: "/images/product-trousers.png" },
-      { title: "Caps",      href: "/products?category=caps",          chip: "SHOP", img: "/images/product-jacket.png" },
-    ],
-    WOMEN: [
-      { title: "Tops",      href: "/products?gender=women", chip: "WOMEN", img: "/images/product-tshirt.png" },
-      { title: "Bottoms",   href: "/products?gender=women", chip: "WOMEN", img: "/images/product-trousers.png" },
-      { title: "Caps",      href: "/products?gender=women", chip: "WOMEN", img: "/images/product-jacket.png" },
-    ],
-    KIDS: [
-      { title: "Tops",      href: "/products?gender=kids", chip: "KIDS", img: "/images/product-tshirt.png" },
-      { title: "Bottoms",   href: "/products?gender=kids", chip: "KIDS", img: "/images/product-trousers.png" },
-      { title: "Caps",      href: "/products?gender=kids", chip: "KIDS", img: "/images/product-jacket.png" },
-    ],
-  };
+  const goSlide = (i: number) => { slideRef.current = i; setSlide(i); };
+  const navSlide = (d: number) => goSlide((slide + d + HERO_SLIDES.length) % HERO_SLIDES.length);
+
+  const cleanName = (n?: string) => (n || "").replace(/\s*\[gt:GT\d+\]\s*$/, "");
 
   return (
     <Layout>
-      {/* ─── 02 HERO CAROUSEL — 540px full-bleed ───────────────────────── */}
-      <section className="relative w-full overflow-hidden" style={{ height: "540px", background: T.charcoal }}>
+      {/* Embedded fonts to match mockup */}
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Josefin+Sans:wght@300;400;600&display=swap" />
+
+      {/* ── ANNOUNCE BAR ────────────────────────────────────────── */}
+      <div
+        className="text-center"
+        style={{
+          background: "#f7f3ee",
+          borderBottom: "1px solid #e8e4df",
+          padding: "10px 24px",
+          fontSize: "10px",
+          letterSpacing: "2px",
+          textTransform: "uppercase",
+          color: "#9b8b6e",
+          fontFamily: "'Josefin Sans', sans-serif",
+        }}
+      >
+        New season arrivals — shop the full collection
+        <span className="mx-2.5 opacity-40 not-italic">·</span>
+        Free shipping on orders above ₹5,000
+      </div>
+
+      {/* ── HERO CAROUSEL ────────────────────────────────────────── */}
+      <section className="relative w-full overflow-hidden" style={{ background: "#1a2a3a", height: "calc(100vh - 132px)", minHeight: "580px" }}>
         {HERO_SLIDES.map((s, i) => (
           <div
             key={i}
-            className="absolute inset-0 transition-opacity duration-700 ease-in-out"
-            style={{ opacity: i === slide ? 1 : 0, pointerEvents: i === slide ? "auto" : "none" }}
+            className="absolute inset-0 transition-opacity"
+            style={{ opacity: i === slide ? 1 : 0, transitionDuration: "800ms", pointerEvents: i === slide ? "auto" : "none" }}
             aria-hidden={i !== slide}
           >
-            <img src={s.img} alt="" className="w-full h-full object-cover object-center" />
-            {/* Gradient L→R 58%→0% per spec */}
-            <div
-              className="absolute inset-0"
-              style={{ background: "linear-gradient(to right, rgba(0,0,0,0.58) 0%, rgba(0,0,0,0.20) 58%, rgba(0,0,0,0) 100%)" }}
-            />
-            <div className="relative h-full max-w-[940px] mx-auto px-9 flex flex-col justify-center text-white">
-              <span className="text-[10px] mb-4" style={{ letterSpacing: "0.3em", color: T.heroGold }}>
+            <img src={s.img} alt="" className="w-full h-full object-cover" style={{ objectPosition: "center 20%" }} />
+            <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(0,0,0,.52) 0%, rgba(0,0,0,.18) 48%, transparent 100%)" }} />
+            <div className="absolute" style={{ bottom: "90px", left: "72px", maxWidth: "460px" }}>
+              <p style={{ fontSize: "11px", letterSpacing: "3px", color: "rgba(255,255,255,.7)", marginBottom: "20px", fontFamily: "'Josefin Sans', sans-serif" }}>
                 {s.eyebrow}
-              </span>
-              <h1 style={{ fontFamily: "Georgia, serif", fontSize: "42px", lineHeight: 1.1, fontWeight: 400, marginBottom: "18px" }}>
-                {s.titlePre}<br />
-                <em style={{ color: T.heroGold, fontStyle: "italic" }}>{s.titleEm}</em><br />
-                {s.titlePost}
+              </p>
+              <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "52px", fontWeight: 400, lineHeight: 1.08, color: "#fff", marginBottom: "20px" }}>
+                {s.title}
               </h1>
-              <p className="max-w-md mb-7 text-sm leading-relaxed text-white/85">{s.body}</p>
-              <div className="flex flex-wrap gap-3">
+              <style>{` .hero-h1 em { color:#f0d89a; font-style:italic; } `}</style>
+              <p style={{ fontSize: "13px", color: "rgba(255,255,255,.78)", lineHeight: 1.8, marginBottom: "32px", whiteSpace: "pre-line", fontFamily: "'Josefin Sans', sans-serif" }}>
+                {s.sub}
+              </p>
+              <div className="flex gap-3">
                 <Link href={s.cta1.href}>
-                  <button
-                    className="bg-white hover:bg-gray-100 transition-colors px-7 py-3"
-                    style={{ color: T.charcoal, fontSize: "9px", letterSpacing: "0.25em", fontWeight: 600 }}
-                  >
+                  <button className="hero-btn-wh" style={{ background: "#fff", color: "#1c1c1c", border: "none", fontFamily: "'Josefin Sans', sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", padding: "14px 30px", cursor: "pointer", transition: "all .2s" }}>
                     {s.cta1.label}
                   </button>
                 </Link>
                 <Link href={s.cta2.href}>
-                  <button
-                    className="border border-white text-white hover:bg-white/10 transition-colors px-7 py-3"
-                    style={{ fontSize: "9px", letterSpacing: "0.25em", fontWeight: 600 }}
-                  >
+                  <button style={{ background: "transparent", color: "#fff", border: "1.5px solid rgba(255,255,255,.55)", fontFamily: "'Josefin Sans', sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", padding: "14px 30px", cursor: "pointer", transition: "all .2s" }}>
                     {s.cta2.label}
                   </button>
                 </Link>
@@ -153,45 +175,78 @@ export default function Home() {
             </div>
           </div>
         ))}
+        <style>{`
+          h1 em { color:#f0d89a !important; font-style:italic; }
+        `}</style>
 
-        {/* Slide counter top-right per spec */}
-        <div className="absolute top-6 right-9 text-white text-[10px] tracking-[0.2em] z-10">
-          {String(slide + 1).padStart(2, "0")} / {String(HERO_SLIDES.length).padStart(2, "0")}
+        <div className="absolute" style={{ top: "22px", right: "28px", fontSize: "11px", color: "rgba(255,255,255,.6)", letterSpacing: "1px", fontFamily: "'Josefin Sans', sans-serif" }}>
+          {slide + 1} / {HERO_SLIDES.length}
         </div>
 
-        {/* Slide dots */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+        <button onClick={() => navSlide(-1)} aria-label="Previous slide"
+          className="absolute top-1/2 left-3 -translate-y-1/2 text-white text-2xl opacity-65 hover:opacity-100 transition-opacity p-2 bg-transparent border-0 cursor-pointer">
+          ←
+        </button>
+        <button onClick={() => navSlide(1)} aria-label="Next slide"
+          className="absolute top-1/2 right-3 -translate-y-1/2 text-white text-2xl opacity-65 hover:opacity-100 transition-opacity p-2 bg-transparent border-0 cursor-pointer">
+          →
+        </button>
+
+        <div className="absolute left-1/2 -translate-x-1/2 flex gap-[7px] items-center" style={{ bottom: "28px" }}>
           {HERO_SLIDES.map((_, i) => (
             <button
               key={i}
-              onClick={() => { slideRef.current = i; setSlide(i); }}
-              className="h-1.5 rounded-full transition-all duration-300"
-              style={{
-                width: i === slide ? "28px" : "10px",
-                background: i === slide ? "#fff" : "rgba(255,255,255,0.5)",
-              }}
+              onClick={() => goSlide(i)}
               aria-label={`Go to slide ${i + 1}`}
+              style={{
+                height: "3px",
+                width: i === slide ? "42px" : "22px",
+                background: i === slide ? "#fff" : "rgba(255,255,255,.32)",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                transition: "width .4s, background .4s",
+              }}
             />
           ))}
         </div>
       </section>
 
-      {/* ─── 03 CATEGORY GRID — 3 tiles, 320px ─────────────────────────── */}
-      <section className="bg-white" style={{ padding: "50px 0" }}>
-        <div className="max-w-[940px] mx-auto px-9">
-          {/* Tabs */}
-          <div className="flex justify-center gap-0 mb-6">
-            {(["MEN", "WOMEN", "KIDS"] as const).map(t => (
+      {/* ── MARQUEE STRIP ─────────────────────────────────────── */}
+      <div style={{ background: "#1c1c1c", overflow: "hidden", whiteSpace: "nowrap", padding: "13px 0" }}>
+        <div className="kasha-mq-inner" style={{ display: "inline-block" }}>
+          {[...MARQUEE, ...MARQUEE, ...MARQUEE, ...MARQUEE].map((s, i) => (
+            <span key={i}>
+              <span style={{ fontSize: "10px", letterSpacing: "2.5px", textTransform: "uppercase", color: "#fff", margin: "0 32px", fontFamily: "'Josefin Sans', sans-serif" }}>{s}</span>
+              <span style={{ color: "#9b8b6e", margin: "0 10px", fontFamily: "'Josefin Sans', sans-serif" }}>·</span>
+            </span>
+          ))}
+        </div>
+        <style>{`
+          @keyframes kasha-mq { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+          .kasha-mq-inner { animation: kasha-mq 24s linear infinite; }
+        `}</style>
+      </div>
+
+      {/* ── CATEGORY GRID ─────────────────────────────────────── */}
+      <section style={{ padding: "72px 80px", background: "#fff", fontFamily: "'Josefin Sans', sans-serif" }}>
+        <div style={{ maxWidth: "1380px", margin: "0 auto" }}>
+          <p style={{ fontSize: "10px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e", textAlign: "center", marginBottom: "12px" }}>Shop by category</p>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "40px", fontWeight: 400, textAlign: "center", color: "#1c1c1c", marginBottom: "10px" }}>The Ka.Sha Collections</h2>
+          <p style={{ fontSize: "12px", color: "#a09890", textAlign: "center", letterSpacing: ".5px", marginBottom: "36px" }}>Fit. Fabric. Print. Every piece fully Customisable.</p>
+
+          <div className="flex justify-center mb-11" style={{ borderBottom: "1px solid #e8e4df", maxWidth: "600px", marginLeft: "auto", marginRight: "auto" }}>
+            {(["Men","Women","Kids"] as const).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className="px-5 py-2 transition-colors"
                 style={{
-                  fontSize: "10px",
-                  letterSpacing: "0.2em",
-                  borderBottom: `2px solid ${tab === t ? T.charcoal : "transparent"}`,
-                  color: tab === t ? T.charcoal : T.bodyGrey,
-                  fontWeight: tab === t ? 600 : 400,
+                  fontSize: "12px", letterSpacing: "2px", textTransform: "uppercase",
+                  color: tab === t ? "#1c1c1c" : "#6b6560",
+                  background: "none", border: "none",
+                  borderBottom: `2px solid ${tab === t ? "#1c1c1c" : "transparent"}`,
+                  cursor: "pointer", padding: "14px 52px",
+                  fontFamily: "'Josefin Sans', sans-serif", marginBottom: "-1px",
                 }}
               >
                 {t}
@@ -199,34 +254,25 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-[14px]">
-            {categoryTiles[tab].map(c => (
-              <Link key={c.title} href={c.href} className="group block">
-                <div className="relative overflow-hidden bg-gray-100" style={{ height: "320px" }}>
-                  <img
-                    src={c.img}
-                    alt={c.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-                  />
-                  {/* Chip pill top-left */}
-                  <span
-                    className="absolute top-3 left-3 bg-white px-2.5 py-1"
-                    style={{ fontSize: "8px", letterSpacing: "0.18em", color: T.charcoal, fontWeight: 600 }}
-                  >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[
+              { img: IMG(6), chip: "T-Shirts",            name: "Golf T-shirts",      desc: "Polos & performance tees · prints & solids", href: "/products?category=fabric-tshirt" },
+              { img: IMG(7), chip: "Trousers",            name: "Golf trousers",      desc: "Tailored · technical · stretch",              href: "/products?category=trousers" },
+              { img: IMG(8), chip: "Caps & Accessories",  name: "Caps & accessories", desc: "Structured · embroidered · logo",             href: "/products?category=caps" },
+            ].map(c => (
+              <Link key={c.chip} href={c.href} className="group block cursor-pointer">
+                <div className="relative overflow-hidden" style={{ height: "440px", background: "#f5f4f2" }}>
+                  <img src={c.img} alt={c.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
+                  <span className="absolute" style={{ top: "16px", left: "16px", background: "#fff", fontSize: "9px", letterSpacing: "1.5px", textTransform: "uppercase", padding: "5px 12px", color: "#1c1c1c" }}>
                     {c.chip}
                   </span>
                 </div>
-                <div className="flex items-center justify-between mt-3">
-                  <h3 style={{ fontFamily: "Georgia, serif", fontSize: "15px", color: T.charcoal }}>
-                    {c.title}
-                  </h3>
-                  <span
-                    className="flex items-center gap-1 transition-colors"
-                    style={{ fontSize: "9px", letterSpacing: "0.2em", color: T.gold }}
-                  >
-                    EXPLORE
-                    <span style={{ width: "20px", height: "1px", background: T.gold, display: "inline-block" }} />
-                    <ArrowRight className="w-3 h-3" style={{ color: T.gold }} />
+                <div style={{ padding: "18px 0 0" }}>
+                  <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "18px", color: "#1c1c1c", marginBottom: "4px" }}>{c.name}</div>
+                  <div style={{ fontSize: "11px", color: "#a09890", marginBottom: "12px" }}>{c.desc}</div>
+                  <span style={{ fontSize: "10px", letterSpacing: "1.5px", textTransform: "uppercase", color: "#1c1c1c", display: "inline-flex", alignItems: "center", gap: "10px" }}>
+                    Explore
+                    <span style={{ display: "block", width: "28px", height: "1px", background: "#1c1c1c" }} />
                   </span>
                 </div>
               </Link>
@@ -235,112 +281,85 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── 04 TOP SELLERS ─ 4 product cards (220px image) ───────────── */}
-      <section className="bg-white" style={{ padding: "50px 0" }}>
-        <div className="max-w-[940px] mx-auto px-9">
-          <div className="text-center mb-10">
-            <p className="mb-2" style={{ fontSize: "9px", letterSpacing: "0.3em", color: T.gold }}>TOP SELLERS</p>
-            <h2 style={{ fontFamily: "Georgia, serif", fontSize: "26px", color: T.charcoal }}>The Fairway Favourites</h2>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-[12px]">
-            {(topSellers.length > 0 ? topSellers : [1,2,3,4]).map((p: any, i) => (
-              typeof p === "number" ? (
-                <div key={i} className="bg-gray-100 animate-pulse" style={{ height: "300px" }} />
-              ) : (
-                <Link key={p.id} href={`/products/${p.id}`} className="group block">
-                  <div className="relative overflow-hidden bg-gray-100" style={{ height: "220px" }}>
-                    {p.thumbnailUrl ? (
-                      <img src={p.thumbnailUrl} alt={p.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs font-black tracking-[0.2em]">KA.SHA</div>
-                    )}
-                    {/* White bordered badge per spec */}
-                    <span
-                      className="absolute top-2 left-2 bg-white px-2 py-0.5 border"
-                      style={{ fontSize: "8px", letterSpacing: "0.18em", borderColor: T.divider, color: T.charcoal }}
-                    >
-                      BEST SELLER
-                    </span>
-                  </div>
-                  <h3 className="mt-3" style={{ fontFamily: "Georgia, serif", fontSize: "13px", color: T.charcoal }}>
-                    {p.name?.replace(/\s*\[gt:GT\d+\]\s*$/, "") || "Product"}
-                  </h3>
-                  <div className="flex items-center justify-between mt-1">
-                    <p style={{ fontSize: "11px", color: T.muted }}>{formatPrice(p.priceInPaise)}</p>
-                    {/* Colour swatches — 14px circles, 5px gap */}
-                    <div className="flex gap-[5px]">
-                      {[T.red, T.blue, T.blush].map((c, idx) => (
-                        <span key={idx} className="rounded-full border" style={{ width: "10px", height: "10px", background: c, borderColor: T.divider }} />
-                      ))}
-                    </div>
-                  </div>
-                </Link>
-              )
-            ))}
-          </div>
+      {/* ── TOP SELLERS ─────────────────────────────────────── */}
+      <section style={{ padding: "60px 0 0", fontFamily: "'Josefin Sans', sans-serif" }}>
+        <div style={{ maxWidth: "1380px", margin: "0 auto", padding: "0 80px", textAlign: "center", marginBottom: "36px" }}>
+          <p style={{ fontSize: "10px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e", marginBottom: "8px" }}>Top sellers</p>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "40px", fontWeight: 400, color: "#1c1c1c" }}>The fairway favourites</h2>
+        </div>
+        <div
+          className="grid grid-cols-2 md:grid-cols-4"
+          style={{ gap: 0, padding: "0 80px", maxWidth: "1380px", margin: "0 auto", borderTop: "1px solid #e8e4df" }}
+        >
+          {(topSellers.length >= 4 ? topSellers.slice(0,4).map((p, i) => ({
+            href: `/products/${p.id}`,
+            img: p.thumbnailUrl || TOP_SELLERS_FALLBACK[i].img,
+            name: cleanName(p.name) || TOP_SELLERS_FALLBACK[i].name,
+            price: formatPrice(p.priceInPaise),
+            swatches: TOP_SELLERS_FALLBACK[i].swatches,
+          })) : TOP_SELLERS_FALLBACK.map(t => ({ ...t, href: "/products" }))).map((c, i) => (
+            <Link key={i} href={c.href} className="group block cursor-pointer" style={{ borderRight: i < 3 ? "1px solid #e8e4df" : "none" }}>
+              <div style={{ height: "480px", overflow: "hidden", background: "#f8f7f5" }}>
+                <img src={c.img} alt={c.name} className="transition-transform duration-500 group-hover:scale-[1.04]" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }} />
+              </div>
+              <div style={{ padding: "18px 20px 24px" }}>
+                <div className="flex gap-1.5 mb-2.5">
+                  {c.swatches.map((sw, j) => (
+                    <span key={j} className={j === 0 ? "kasha-sw on" : "kasha-sw"} style={{ width: "16px", height: "16px", borderRadius: "50%", background: sw, border: j === 0 ? "2px solid #1c1c1c" : "2px solid transparent", display: "inline-block" }} />
+                  ))}
+                </div>
+                <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "16px", color: "#1c1c1c", marginBottom: "5px" }}>{c.name}</div>
+                <div style={{ fontSize: "13px", color: "#a09890" }}>{c.price}</div>
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 
-      {/* ─── MEN ▸ T-SHIRTS — Fabric + Pattern (KA.SHA v2 spec) ────────── */}
-      <section style={{ background: T.cream, padding: "50px 0" }}>
-        <div className="max-w-[940px] mx-auto px-9">
-          <div className="text-center mb-8">
-            <p className="mb-2" style={{ fontSize: "9px", letterSpacing: "0.3em", color: T.gold }}>MEN ▸ T-SHIRTS</p>
-            <h2 style={{ fontFamily: "Georgia, serif", fontSize: "26px", color: T.charcoal }}>Fabric &amp; Pattern T-Shirts</h2>
-            <p className="mt-2" style={{ fontSize: "11px", color: T.bodyGrey }}>
-              Choose a blank canvas to print on, or a pre-patterned silhouette to colour.
-            </p>
+      {/* ── MEN ▸ T-SHIRTS Fabric + Pattern (KA.SHA v2 spec preserved) ─ */}
+      <section style={{ background: "#f7f3ee", padding: "60px 80px", marginTop: "60px", fontFamily: "'Josefin Sans', sans-serif" }}>
+        <div style={{ maxWidth: "1380px", margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: "32px" }}>
+            <p style={{ fontSize: "10px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e", marginBottom: "8px" }}>Men ▸ T-Shirts</p>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "32px", fontWeight: 400, color: "#1c1c1c" }}>Fabric &amp; Pattern</h2>
+            <p style={{ fontSize: "12px", color: "#a09890", marginTop: "8px" }}>Choose a blank canvas to print on, or a pre-patterned silhouette to colour.</p>
           </div>
 
-          {/* Fabric row */}
-          <div className="mb-8">
-            <h3 className="mb-3" style={{ fontSize: "9px", letterSpacing: "0.3em", color: T.gold }}>FABRIC &amp; MATERIAL</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-[10px]">
+          <div style={{ marginBottom: "28px" }}>
+            <h3 style={{ fontSize: "9px", letterSpacing: "3px", color: "#9b8b6e", marginBottom: "12px" }}>FABRIC &amp; MATERIAL</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
               {(fabricTees.length > 0 ? fabricTees : Array(7).fill(null)).map((p, i) => (
                 p ? (
-                  <Link key={p.id} href={`/products/${p.id}`} className="group block">
-                    <div className="bg-white overflow-hidden border" style={{ height: "200px", borderColor: T.divider }}>
-                      {p.thumbnailUrl ? (
-                        <img src={p.thumbnailUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300 text-[10px] font-black tracking-[0.2em]">{p.name}</div>
-                      )}
+                  <Link key={p.id} href={`/products/${p.id}`} className="group block cursor-pointer">
+                    <div className="bg-white overflow-hidden" style={{ height: "200px", border: "1px solid #ece8e2" }}>
+                      {p.thumbnailUrl
+                        ? <img src={p.thumbnailUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
+                        : <div className="w-full h-full flex items-center justify-center text-gray-300 text-[10px] tracking-[0.2em]">{p.name}</div>}
                     </div>
-                    <h4 className="mt-2 truncate" style={{ fontFamily: "Georgia, serif", fontSize: "12px", color: T.charcoal }}>{p.name}</h4>
-                    <p style={{ fontSize: "11px", color: T.muted }}>{formatPrice(p.priceInPaise)}</p>
+                    <h4 className="mt-2 truncate" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "13px", color: "#1c1c1c" }}>{p.name}</h4>
+                    <p style={{ fontSize: "11px", color: "#a09890" }}>{formatPrice(p.priceInPaise)}</p>
                   </Link>
-                ) : (
-                  <div key={i} className="bg-white animate-pulse" style={{ height: "200px" }} />
-                )
+                ) : <div key={i} className="bg-white animate-pulse" style={{ height: "200px" }} />
               ))}
             </div>
           </div>
 
-          {/* Pattern row */}
           <div>
-            <h3 className="mb-3" style={{ fontSize: "9px", letterSpacing: "0.3em", color: T.gold }}>PATTERNS</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-[10px]">
+            <h3 style={{ fontSize: "9px", letterSpacing: "3px", color: "#9b8b6e", marginBottom: "12px" }}>PATTERNS</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
               {(patternTees.length > 0 ? patternTees : Array(7).fill(null)).map((p, i) => {
                 if (!p) return <div key={i} className="bg-white animate-pulse" style={{ height: "200px" }} />;
-                const cleanName = p.name.replace(/\s*\[gt:GT\d+\]\s*$/, "");
+                const cn = cleanName(p.name);
                 return (
-                  <Link key={p.id} href={`/products/${p.id}`} className="group block">
-                    <div className="relative bg-white overflow-hidden border flex items-center justify-center" style={{ height: "200px", borderColor: T.divider }}>
-                      {p.thumbnailUrl ? (
-                        <img src={p.thumbnailUrl} alt={cleanName} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
-                      ) : (
-                        <span style={{ fontSize: "10px", letterSpacing: "0.2em", color: T.gold, fontWeight: 600 }}>{cleanName.split(" ")[1] || "PATTERN"}</span>
-                      )}
-                      <span
-                        className="absolute top-1.5 right-1.5 bg-white px-1.5 py-0.5 border"
-                        style={{ fontSize: "7px", letterSpacing: "0.15em", borderColor: T.divider, color: T.charcoal }}
-                      >
-                        PATTERN
-                      </span>
+                  <Link key={p.id} href={`/products/${p.id}`} className="group block cursor-pointer">
+                    <div className="relative bg-white overflow-hidden" style={{ height: "200px", border: "1px solid #ece8e2" }}>
+                      {p.thumbnailUrl
+                        ? <img src={p.thumbnailUrl} alt={cn} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
+                        : <div className="w-full h-full flex items-center justify-center" style={{ fontSize: "10px", letterSpacing: "0.2em", color: "#9b8b6e" }}>{cn.split(" ")[1] || "PATTERN"}</div>}
+                      <span className="absolute" style={{ top: "6px", right: "6px", background: "#fff", fontSize: "7px", letterSpacing: "1.5px", padding: "3px 6px", border: "1px solid #ece8e2", color: "#1c1c1c" }}>PATTERN</span>
                     </div>
-                    <h4 className="mt-2 truncate" style={{ fontFamily: "Georgia, serif", fontSize: "12px", color: T.charcoal }}>{cleanName}</h4>
-                    <p style={{ fontSize: "11px", color: T.muted }}>{formatPrice(p.priceInPaise)}</p>
+                    <h4 className="mt-2 truncate" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "13px", color: "#1c1c1c" }}>{cn}</h4>
+                    <p style={{ fontSize: "11px", color: "#a09890" }}>{formatPrice(p.priceInPaise)}</p>
                   </Link>
                 );
               })}
@@ -349,132 +368,131 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── 05 TAILOR YOUR PLAY + PRINTS SHOWCASE ─────────────────────── */}
-      <section className="bg-white" style={{ padding: "50px 0" }}>
-        <div className="max-w-[940px] mx-auto px-9">
-          {/* Prints tiles row */}
-          <div className="text-center mb-8">
-            <p className="mb-2" style={{ fontSize: "9px", letterSpacing: "0.3em", color: T.gold }}>PRINTS SHOWCASE</p>
-            <h2 style={{ fontFamily: "Georgia, serif", fontSize: "26px", color: T.charcoal }}>Detail Gallery</h2>
+      {/* ── CUSTOMISE PANEL ─────────────────────────────────────── */}
+      <section className="grid grid-cols-1 md:grid-cols-2" style={{ minHeight: "640px", marginTop: "80px", fontFamily: "'Josefin Sans', sans-serif" }}>
+        <div style={{ background: "#f0ece6", padding: "88px 100px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <p style={{ fontSize: "10px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e", marginBottom: "20px" }}>Tailor your play</p>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "52px", fontWeight: 400, color: "#1c1c1c", marginBottom: "44px", lineHeight: 1.1 }}>
+            Your game.<br/>Your choices.
+          </h2>
+          {[
+            "Select your style — polo, tee or collar",
+            "Choose a print or solid from the palette",
+            "Upload your logo and drag to position",
+            "Review & get your Ka.Sha",
+          ].map((step, i) => (
+            <div key={i} className="flex items-baseline mb-7" style={{ gap: "40px" }}>
+              <span style={{ fontSize: "13px", color: "#9b8b6e", letterSpacing: "1px", flexShrink: 0, width: "24px" }}>0{i+1}</span>
+              <span style={{ fontSize: "14px", color: "#1c1c1c", lineHeight: 1.6 }}>{step}</span>
+            </div>
+          ))}
+          <Link href="/products/1/customize">
+            <button className="self-start mt-10" style={{ background: "#1c1c1c", color: "#fff", fontFamily: "'Josefin Sans', sans-serif", fontSize: "11px", letterSpacing: "2.5px", textTransform: "uppercase", padding: "16px 40px", border: "none", cursor: "pointer", transition: "background .2s" }}>
+              Start Customising
+            </button>
+          </Link>
+        </div>
+        <div style={{ background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 80px" }}>
+          <img src={CUST_SWATCHES[custSw].img} alt="Polo preview" style={{ width: "240px", height: "300px", objectFit: "contain", transition: "opacity .3s" }} />
+          <div className="flex mt-5 mb-2" style={{ gap: "14px" }}>
+            {CUST_SWATCHES.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => setCustSw(i)}
+                aria-label={`Swatch ${i + 1}`}
+                style={{
+                  width: "28px", height: "28px", borderRadius: "50%",
+                  background: s.color, cursor: "pointer",
+                  border: i === custSw ? "3px solid #1c1c1c" : (s.border ? "1.5px solid #ccc" : "3px solid transparent"),
+                  transform: i === custSw ? "scale(1.12)" : "none",
+                  transition: "border-color .2s, transform .2s",
+                  padding: 0,
+                }}
+              />
+            ))}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-[10px] mb-12">
-            {[
-              { label: "Verdant Polo",  sub: "Hand-drawn floral",   img: "/images/product-tshirt.png" },
-              { label: "Marble Crimson", sub: "Fluid print close-up", img: "/images/product-jacket.png" },
-              { label: "Collar Detail",  sub: "Contrast trim",       img: "/images/product-tshirt.png" },
-              { label: "Trouser Crop",   sub: "Pocket detail",        img: "/images/product-trousers.png" },
-            ].map((t, i) => (
-              <Link key={i} href="/products?category=prints" className="group block relative overflow-hidden">
-                <div className="overflow-hidden bg-gray-100" style={{ height: "200px" }}>
-                  <img src={t.img} alt={t.label} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
-                </div>
-                <div
-                  className="absolute bottom-0 left-0 right-0 px-3 py-2"
-                  style={{ background: "rgba(255,255,255,0.92)" }}
-                >
-                  <div style={{ fontFamily: "Georgia, serif", fontSize: "12px", color: T.charcoal }}>{t.label}</div>
-                  <div style={{ fontSize: "9px", letterSpacing: "0.15em", color: T.gold }}>{t.sub.toUpperCase()}</div>
+          <p style={{ fontSize: "9px", letterSpacing: "2.5px", textTransform: "uppercase", color: "#9b8b6e" }}>Choose Colour</p>
+        </div>
+      </section>
+
+      {/* ── PRINTS SHOWCASE ─────────────────────────────────────── */}
+      <section style={{ padding: "80px 80px 0", fontFamily: "'Josefin Sans', sans-serif" }}>
+        <div style={{ maxWidth: "1380px", margin: "0 auto" }}>
+          <p style={{ fontSize: "10px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e", textAlign: "center", marginBottom: "14px" }}>Prints showcase</p>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "40px", fontWeight: 400, color: "#1c1c1c", textAlign: "center", lineHeight: 1.3, marginBottom: "12px" }}>
+            Structured where it matters.<br/>Expressive where it shows.
+          </h2>
+          <p style={{ fontSize: "12px", color: "#a09890", textAlign: "center", letterSpacing: ".5px", marginBottom: "52px" }}>Collar · Stitch · Fabric · Logo detail</p>
+          <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: 0 }}>
+            {PRINTS.map((p, i) => (
+              <Link key={i} href="/products" className="group block cursor-pointer overflow-hidden">
+                <img src={p.img} alt={p.name} className="transition-transform duration-500 group-hover:scale-[1.04]" style={{ width: "100%", height: "460px", objectFit: "cover", objectPosition: "center top", display: "block" }} />
+                <div style={{ padding: "16px 0 0" }}>
+                  <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "17px", color: "#1c1c1c", marginBottom: "4px" }}>{p.name}</div>
+                  <div style={{ fontSize: "10px", color: "#9b8b6e", letterSpacing: ".5px" }}>{p.sub}</div>
                 </div>
               </Link>
             ))}
           </div>
-
-          {/* Tailor Your Play — 2-col customiser panel */}
-          <div className="grid grid-cols-1 md:grid-cols-2 border" style={{ borderColor: T.divider }}>
-            <div style={{ background: T.cream, padding: "40px 36px" }}>
-              <p className="mb-3" style={{ fontSize: "9px", letterSpacing: "0.3em", color: T.gold }}>TAILOR YOUR PLAY</p>
-              <h3 className="mb-6" style={{ fontFamily: "Georgia, serif", fontSize: "26px", color: T.charcoal, lineHeight: 1.2 }}>
-                Make every piece <em style={{ color: T.gold }}>uniquely yours.</em>
-              </h3>
-              {[
-                { n: "01", label: "Choose a silhouette" },
-                { n: "02", label: "Pick a fabric or pattern" },
-                { n: "03", label: "Add prints, text & logos" },
-                { n: "04", label: "Order — we craft it" },
-              ].map((s) => (
-                <div key={s.n} className="flex items-baseline gap-3 mb-3">
-                  <span style={{ fontFamily: "Georgia, serif", fontSize: "14px", color: T.gold, fontWeight: 600 }}>{s.n}</span>
-                  <span style={{ fontSize: "11px", color: T.bodyGrey, letterSpacing: "0.05em" }}>{s.label}</span>
-                </div>
-              ))}
-              <Link href="/products/1/customize">
-                <button
-                  className="mt-6 hover:opacity-90 transition-opacity"
-                  style={{ background: T.charcoal, color: "#fff", padding: "14px 28px", fontSize: "9px", letterSpacing: "0.25em", fontWeight: 600 }}
-                >
-                  START CUSTOMISING
-                </button>
-              </Link>
-            </div>
-            <div className="bg-white flex items-center justify-center" style={{ padding: "40px" }}>
-              <img src="/images/product-tshirt.png" alt="Customiser preview" className="max-h-[280px] object-contain" />
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* ─── 06 EVENTS GALLERY ─────────────────────────────────────────── */}
-      <section className="bg-white" style={{ padding: "50px 0" }}>
-        <div className="max-w-[940px] mx-auto px-9">
-          <div className="flex items-end justify-between mb-6">
+      {/* ── EVENTS GALLERY ─────────────────────────────────────── */}
+      <section style={{ padding: "80px 80px 0", fontFamily: "'Josefin Sans', sans-serif" }}>
+        <div style={{ maxWidth: "1380px", margin: "0 auto" }}>
+          <div className="flex items-end justify-between" style={{ marginBottom: "24px" }}>
             <div>
-              <p className="mb-2" style={{ fontSize: "9px", letterSpacing: "0.3em", color: T.gold }}>EVENTS</p>
-              <h2 style={{ fontFamily: "Georgia, serif", fontSize: "26px", color: T.charcoal }}>On the Course With Ka.Sha</h2>
+              <p style={{ fontSize: "12px", color: "#9b8b6e", marginBottom: "8px" }}>On the course</p>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "36px", fontWeight: 400, color: "#1c1c1c" }}>Your event. Our customised expertise.</h2>
             </div>
-            <Link href="/heritage">
-              <span className="flex items-center gap-2" style={{ fontSize: "10px", letterSpacing: "0.2em", color: T.gold }}>
-                ALL EVENTS
-                <span style={{ width: "24px", height: "1px", background: T.gold, display: "inline-block" }} />
-                <ArrowRight className="w-3 h-3" />
-              </span>
+            <Link href="/heritage" style={{ fontSize: "13px", letterSpacing: "1px", color: "#1c1c1c", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px" }}>
+              View All Events »»
             </Link>
           </div>
-
-          {/* Main 2fr+1fr row — 300px */}
-          <div className="grid gap-[10px] mb-3" style={{ gridTemplateColumns: "2fr 1fr" }}>
-            {[
-              { label: "QClub Invitational",     sub: "Pune · 2026", img: "/images/product-jacket.png" },
-              { label: "Women's Open Edit",      sub: "Mumbai · 2026", img: "/images/product-trousers.png" },
-            ].map((e, i) => (
-              <div key={i} className="relative overflow-hidden bg-gray-100" style={{ height: "300px" }}>
-                <img src={e.img} alt={e.label} className="w-full h-full object-cover" />
-                <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 50%)" }} />
-                <div className="absolute bottom-4 left-4 text-white">
-                  <div style={{ fontFamily: "Georgia, serif", fontSize: "18px" }}>{e.label}</div>
-                  <div style={{ fontSize: "9px", letterSpacing: "0.2em", color: T.heroGold }}>{e.sub.toUpperCase()}</div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: 0, height: "500px", margin: "0 -0px" }}>
+          {EVENT_TILES.map((e, i) => (
+            <div key={i} className="relative overflow-hidden cursor-pointer group">
+              <img src={e.img} alt="" className="transition-transform duration-500 group-hover:scale-[1.03]" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,.72) 0%, rgba(0,0,0,.1) 45%, transparent 100%)" }} />
+              {e.cat && (
+                <div className="absolute bottom-0 left-0 right-0 text-white" style={{ padding: "24px 22px" }}>
+                  <p style={{ fontSize: "10px", letterSpacing: "2px", textTransform: "uppercase", opacity: 0.82, marginBottom: "8px" }}>{e.cat}</p>
+                  <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "22px", lineHeight: 1.2, marginBottom: "14px" }}>{e.title}</p>
+                  <button style={{ fontSize: "10px", letterSpacing: "1.5px", textTransform: "uppercase", color: "#fff", background: "none", border: "none", borderBottom: "1px solid rgba(255,255,255,.5)", padding: "0 0 2px", cursor: "pointer", fontFamily: "'Josefin Sans', sans-serif" }}>{e.cta}</button>
                 </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: 0, height: "190px" }}>
+          {EVENT_THUMBS.map((t, i) => (
+            <div key={i} className="relative overflow-hidden cursor-pointer group">
+              <img src={t.img} alt={t.label} className="transition-transform duration-500 group-hover:scale-[1.05]" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,.7) 0%, transparent 55%)" }} />
+              <div className="absolute bottom-0 left-0 right-0" style={{ padding: "10px 14px", fontSize: "9px", letterSpacing: "2px", textTransform: "uppercase", color: "#fff" }}>
+                {t.label}
               </div>
-            ))}
-          </div>
-
-          {/* Thumb row — 4 tiles, 140px */}
-          <div className="grid grid-cols-4 gap-[10px]">
-            {["Print Drop · Goa", "Pop-up · Delhi", "Press Day", "Course Edit"].map((label, i) => (
-              <div key={i} className="relative overflow-hidden bg-gray-100" style={{ height: "140px" }}>
-                <img src="/images/product-tshirt.png" alt={label} className="w-full h-full object-cover" />
-                <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5" style={{ background: "rgba(0,0,0,0.6)" }}>
-                  <div style={{ fontSize: "8px", letterSpacing: "0.2em", color: "#fff", fontWeight: 600 }}>
-                    {label.toUpperCase()}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* ─── 07 BRAND STRIP ────────────────────────────────────────────── */}
-      <section style={{ background: T.cream, padding: "32px 0", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        <span
-          aria-hidden
-          className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          style={{ fontFamily: "Georgia, serif", fontSize: "180px", color: T.charcoal, opacity: 0.04, letterSpacing: "0.1em" }}
-        >
-          KA.SHA
-        </span>
-        <p className="relative" style={{ fontFamily: "Georgia, serif", fontSize: "24px", color: T.charcoal }}>
-          <em style={{ color: T.gold }}>Premium Golf Wear,</em> crafted in India.
-        </p>
+      {/* ── BRAND STRIP ─────────────────────────────────────── */}
+      <section className="relative overflow-hidden text-center" style={{ background: "#f7f3ee", padding: "96px 40px", marginTop: "80px", fontFamily: "'Josefin Sans', sans-serif" }}>
+        <div className="absolute pointer-events-none select-none" style={{
+          top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+          fontFamily: "'Cormorant Garamond', Georgia, serif",
+          fontSize: "200px", fontWeight: 500,
+          color: "rgba(155,139,110,.04)", whiteSpace: "nowrap"
+        }}>KA.SHA</div>
+        <div className="relative" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "44px", fontWeight: 400, color: "#1c1c1c", marginBottom: "4px" }}>
+          Premium meets edgy.
+        </div>
+        <div className="relative" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "44px", fontWeight: 400, fontStyle: "italic", color: "#9b8b6e", marginBottom: "18px" }}>
+          Performance matches flair.
+        </div>
+        <p className="relative" style={{ fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e" }}>Ka.Sha — For Players</p>
       </section>
     </Layout>
   );
