@@ -505,23 +505,12 @@ components:
       properties:
         id:
           type: integer
-        sku:
-          type: ["string", "null"]
         name:
           type: string
         description:
           type: string
         category:
           type: string
-        productType:
-          type: string
-          enum: [fabric, pattern]
-        fabric:
-          type: ["string", "null"]
-        fixedPattern:
-          type: ["string", "null"]
-        patternCategory:
-          type: ["string", "null"]
         priceInPaise:
           type: integer
         modelUrl:
@@ -544,7 +533,6 @@ components:
         - name
         - description
         - category
-        - productType
         - priceInPaise
         - modelUrl
         - available

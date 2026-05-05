@@ -4,14 +4,9 @@ import { z } from "zod/v4";
 
 export const productsTable = pgTable("products", {
   id: serial("id").primaryKey(),
-  sku: text("sku").unique(),
   name: text("name").notNull(),
   description: text("description").notNull(),
   category: text("category").notNull(),
-  productType: text("product_type").notNull().default("fabric"),
-  fabric: text("fabric"),
-  fixedPattern: text("fixed_pattern"),
-  patternCategory: text("pattern_category"),
   priceInPaise: integer("price_in_paise").notNull(),
   modelUrl: text("model_url").notNull(),
   thumbnailUrl: text("thumbnail_url"),

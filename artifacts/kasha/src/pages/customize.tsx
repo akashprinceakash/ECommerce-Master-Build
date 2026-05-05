@@ -78,11 +78,6 @@ function GtSwatch({ style, isActive, accent }: { style: GtStyleDef; isActive: bo
 interface Product {
   id: number; name: string; description: string; category: string;
   priceInPaise: number; modelUrl: string; thumbnailUrl?: string | null; defaultColor?: string;
-  sku?: string | null;
-  productType?: "fabric" | "pattern";
-  fabric?: string | null;
-  fixedPattern?: string | null;
-  patternCategory?: string | null;
 }
 interface MatEntry { idx: number; name: string; mat: any; color: string; }
 
@@ -237,8 +232,7 @@ export default function CustomizePage() {
   const [activePart, setActivePart] = useState(0);
 
   // Right panel tabs: colors | design | text | logo | shapes | canvas
-  // Initial tab is set per productType in an effect below once product loads.
-  const [rightTab, setRightTab]     = useState<"colors"|"design"|"text"|"logo"|"shapes"|"canvas">("design");
+  const [rightTab, setRightTab]     = useState<"colors"|"design"|"text"|"logo"|"shapes"|"canvas">("colors");
 
   // Print Library state
   const [activePrintId, setActivePrintId]   = useState<string | null>(null);
@@ -524,8 +518,6 @@ export default function CustomizePage() {
   useEffect(() => { syncTextureRef.current = syncTexture; }, [syncTexture]);
 
   useEffect(() => { if (mats.length) syncTexture(); }, [mats, syncTexture]);
-
-  // Flow-init effect declared further down (after handleSelectGtStyle is defined).
 
   // ── model-viewer load event ───────────────────────────────────────────────
   useEffect(() => {
@@ -883,29 +875,6 @@ export default function CustomizePage() {
     if (myReq !== gtRequestIdRef.current) return;
     syncTexture();
   }, [activeGtStyle, gtColors, syncTexture]);
-
-  // ── KA.SHA flow init: per productType set initial right-tab and (for
-  // pattern products) lock activeGtStyle to product.fixedPattern. Runs once
-  // when mats become available so the canvas is ready for applyGtStyle. ──
-  const flowInitDoneRef = useRef(false);
-  useEffect(() => {
-    if (flowInitDoneRef.current) return;
-    if (!product || !mats.length || !fcRef.current) return;
-    flowInitDoneRef.current = true;
-    if (product.productType === "pattern") {
-      setRightTab("colors");
-      const fixed = product.fixedPattern;
-      if (fixed) {
-        const style = GT_STYLES.find(s => s.id === fixed);
-        if (style) {
-          setPresetName(style.id);
-          handleSelectGtStyle(style);
-        }
-      }
-    } else {
-      setRightTab("design");
-    }
-  }, [product, mats.length, handleSelectGtStyle]);
 
   const handleClearGtStyle = useCallback(() => {
     const fc = fcRef.current;
@@ -1324,13 +1293,7 @@ export default function CustomizePage() {
   if (!product) return null;
 
   const PLACEMENT_OPTS = ["front-chest","front-center","back-top","back-center","sleeve-left","sleeve-right"];
-  // ── Customizer flow split (KA.SHA spec) ──
-  // Fabric flow: print/design library + text/logo/canvas. NO GT styles, NO shapes.
-  // Pattern flow: GT colors (locked to product.fixedPattern) + text/logo/canvas. NO designs/prints, NO shapes.
-  const isPatternFlow = product.productType === "pattern";
-  const TABS = (isPatternFlow
-    ? (["colors","text","logo","canvas"] as const)
-    : (["design","text","logo","canvas"] as const)) as readonly ("colors"|"design"|"text"|"logo"|"shapes"|"canvas")[];
+  const TABS = ["colors","design","text","logo","shapes","canvas"] as const;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -1551,16 +1514,11 @@ export default function CustomizePage() {
 
               {/* GT Design Style System (moved from Design tab) */}
               <div>
-                <div style={sl}>
-                  {isPatternFlow ? `Locked Style — ${product.fixedPattern ?? ""}` : "Design Styles (GT001–GT032)"}
-                </div>
+                <div style={sl}>Design Styles (GT001–GT032)</div>
                 <p style={{ margin:"0 0 8px",fontSize:"10px",color:V.mu,lineHeight:1.5 }}>
-                  {isPatternFlow
-                    ? "This product comes with a fixed pattern. Recolour the zones below — the cut and panel layout stay the same."
-                    : "Pick a predefined style — it applies to the right shirt zones automatically. Then recolour to taste."}
+                  Pick a predefined style — it applies to the right shirt zones automatically. Then recolour to taste.
                 </p>
 
-                {!isPatternFlow && (
                 <div style={{ display:"flex",flexDirection:"column",gap:"6px" }}>
                   {GT_GROUPS.map((group) => {
                     const groupStyles = GT_STYLES.filter((s) => s.group === group.id);
@@ -1612,7 +1570,6 @@ export default function CustomizePage() {
                     );
                   })}
                 </div>
-                )}
 
                 {activeGtStyle && (
                   <div style={{
@@ -1686,18 +1643,16 @@ export default function CustomizePage() {
                       </div>
                     </div>
 
-                    {!isPatternFlow && (
-                      <button
-                        onClick={handleClearGtStyle}
-                        style={{
-                          padding:"7px",background:"transparent",
-                          color:"#c4727a",border:"1px solid rgba(196,114,122,.45)",borderRadius:"6px",
-                          fontFamily:"inherit",fontWeight:600,fontSize:"11px",cursor:"pointer",
-                        }}
-                      >
-                        ✕ Remove design style
-                      </button>
-                    )}
+                    <button
+                      onClick={handleClearGtStyle}
+                      style={{
+                        padding:"7px",background:"transparent",
+                        color:"#c4727a",border:"1px solid rgba(196,114,122,.45)",borderRadius:"6px",
+                        fontFamily:"inherit",fontWeight:600,fontSize:"11px",cursor:"pointer",
+                      }}
+                    >
+                      ✕ Remove design style
+                    </button>
                   </div>
                 )}
               </div>

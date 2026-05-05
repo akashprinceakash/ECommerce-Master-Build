@@ -13,28 +13,11 @@ export interface ErrorResponse {
   error: string;
 }
 
-export type ProductProductType =
-  (typeof ProductProductType)[keyof typeof ProductProductType];
-
-export const ProductProductType = {
-  fabric: "fabric",
-  pattern: "pattern",
-} as const;
-
 export interface Product {
   id: number;
-  /** @nullable */
-  sku?: string | null;
   name: string;
   description: string;
   category: string;
-  productType: ProductProductType;
-  /** @nullable */
-  fabric?: string | null;
-  /** @nullable */
-  fixedPattern?: string | null;
-  /** @nullable */
-  patternCategory?: string | null;
   priceInPaise: number;
   modelUrl: string;
   /** @nullable */
