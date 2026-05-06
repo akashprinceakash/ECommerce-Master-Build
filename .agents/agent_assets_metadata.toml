@@ -23,3 +23,9 @@ id = "WicUZAl5xj8pkA_wEYvjt"
 uri = "file://kasha-project.tar.gz"
 type = "unspecified"
 title = "KA.SHA — Full Project (tar.gz)"
+
+[[outputs]]
+id = "WHJAhb5a2Nm52ZTVl0tfc"
+uri = "file://exports/kasha-customisation.zip"
+type = "unspecified"
+title = "KA.SHA Customisation Bundle (backend + frontend)"
