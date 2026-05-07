@@ -1,496 +1,546 @@
-import { useState, useEffect, useRef } from "react";
-import { Layout } from "@/components/layout/Layout";
-import { Link } from "wouter";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "wouter";
 import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
+import { Layout } from "@/components/layout/Layout";
 import { formatPrice } from "@/lib/format";
 
-// Image asset paths — extracted from kasha_final HTML mockup
-const IMG = (n: number) => `/images/kasha/img${String(n).padStart(2, "0")}.jpeg`;
-
-// Hero slides per mockup
-const HERO_SLIDES = [
-  {
-    img: IMG(2),
-    eyebrow: "PREMIUM GOLF WEAR 2025",
-    title: <>Authority<br/>in fit.<br/><em>Personality<br/>in detail.</em></>,
-    sub: "Tailored elegance for the modern player.",
-    cta1: { label: "Shop Women", href: "/products?gender=women" },
-    cta2: { label: "View Lookbook", href: "/heritage" },
-  },
-  {
-    img: IMG(3),
-    eyebrow: "PRINT EDITION · 2025",
-    title: <>Bold inside<br/>a calm<br/><em>frame.</em></>,
-    sub: "Structured where it matters.\nExpressive where it shows.",
-    cta1: { label: "See Prints", href: "/products?category=fabric-tshirt" },
-    cta2: { label: "Explore All", href: "/products" },
-  },
-  {
-    img: IMG(4),
-    eyebrow: "PREMIUM GOLF WEAR 2025",
-    title: <>You bring<br/>the precision.<br/><em>We bring<br/>the flair.</em></>,
-    sub: "Performance crafted for the fairway.\nPersonality made for every hole.",
-    cta1: { label: "Shop Golf", href: "/products" },
-    cta2: { label: "Tailor Your Play", href: "/products/1/customize" },
-  },
-  {
-    img: IMG(5),
-    eyebrow: "THE KA.SHA PLAYER · 2025",
-    title: <>56. 42. 36.<br/><em>One brand.<br/>Every game.</em></>,
-    sub: "Wear your personality.\nFor players who play hard.",
-    cta1: { label: "Shop Men", href: "/products?gender=men" },
-    cta2: { label: "Shop Women", href: "/products?gender=women" },
-  },
+const POLO_IMAGES = [
+  "/images/golf/polo-pink-black.jpeg",
+  "/images/golf/polo-green-black.jpeg",
+  "/images/golf/polo-pink-curve.jpeg",
+  "/images/golf/polo-beige-brown.png",
 ];
 
-// Customise panel preview swap
-const CUST_SWATCHES = [
-  { color: "#a52020", img: IMG(14) },
-  { color: "#2a5a2a", img: IMG(15) },
-  { color: "#2a4a8a", img: IMG(16) },
-  { color: "#d4a0bc", img: IMG(17) },
-  { color: "#e8e0d8", img: IMG(18), border: true },
+const FALLBACK_BADGES = ["Bestseller", "", "", "New", "", "", "Women's", "Kids'"];
+
+const FALLBACK_SWATCHES: string[][] = [
+  ["sw-navy", "sw-white", "sw-forest", "sw-charcoal", "sw-coral", "sw-burg", "sw-olive", "sw-sky"],
+  ["sw-navy", "sw-forest", "sw-burg"],
+  ["sw-navy", "sw-forest", "sw-burg", "sw-sky"],
+  ["sw-navy", "sw-forest", "sw-charcoal"],
+  ["sw-navy", "sw-charcoal", "sw-ivory"],
+  ["sw-navy", "sw-charcoal", "sw-olive"],
+  ["sw-white", "sw-navy", "sw-coral", "sw-sky", "sw-olive"],
+  ["sw-forest", "sw-navy", "sw-coral"],
 ];
 
-// Top seller seed cards (used as fallback if no products from API yet)
-const TOP_SELLERS_FALLBACK = [
-  { img: IMG(9),  name: "KS1000B",          price: "₹2,000.00", swatches: ["#c0302a","#3a6aaa","#2a5a2a","#f0f0ee"] },
-  { img: IMG(10), name: "The QClub Polo",   price: "₹4,500.00", swatches: ["#c0302a","#3a6aaa","#2a5a2a"] },
-  { img: IMG(11), name: "The Marble Polo",  price: "₹4,200.00", swatches: ["#3a6aaa","#c0302a","#2a5a2a"] },
-  { img: IMG(12), name: "The Scroll Polo",  price: "₹4,500.00", swatches: ["#c8a0b0","#d4b890"] },
-];
+const SWATCH_HEX: Record<string, string> = {
+  "sw-navy": "#1a2540",
+  "sw-white": "#f0ece4",
+  "sw-forest": "#2e4a34",
+  "sw-charcoal": "#484848",
+  "sw-coral": "#b86040",
+  "sw-burg": "#6e2030",
+  "sw-olive": "#5a6030",
+  "sw-sky": "#5888aa",
+  "sw-ivory": "#e0d8c8",
+};
 
-const PRINTS = [
-  { img: IMG(19), name: "The Garden polo", sub: "Print on print" },
-  { img: IMG(20), name: "Marble wave",      sub: "Fluid signature" },
-  { img: IMG(21), name: "Collar detail",    sub: "White contrast trim" },
-  { img: IMG(22), name: "Trouser pocket",   sub: "Tailored finish" },
-];
-
-const EVENT_TILES = [
-  { img: IMG(23), cat: "Corporate & teams", title: <>Tournament kits,<br/>team activations.</>, cta: "Enquire Now ›" },
-  { img: IMG(24) },
-  { img: IMG(25) },
-  { img: IMG(26), cat: "Women's golf",      title: <>Authority in fit.<br/>Personality in detail.</>, cta: "Shop Women »»" },
-];
-
-const EVENT_THUMBS = [
-  { img: IMG(27), label: "On the Fairway" },
-  { img: IMG(28), label: "Print Edition" },
-  { img: IMG(29), label: "Women's Golf" },
-  { img: IMG(30), label: "Tournament Day" },
-];
-
-const MARQUEE = [
-  "Golf T-Shirts", "Performance Trousers", "Caps & Accessories",
-  "Tailor Your Play", "Every Piece Customisable", "Men · Women · Kids",
-];
+function Swatches({ keys }: { keys: string[] }) {
+  return (
+    <div style={{ display: "flex", gap: 5, marginBottom: 7 }}>
+      {keys.map((k, i) => (
+        <div
+          key={i}
+          style={{
+            width: 11,
+            height: 11,
+            borderRadius: "50%",
+            border: "0.5px solid rgba(0,0,0,0.12)",
+            background: SWATCH_HEX[k] || "#999",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function Home() {
-  const [tab, setTab] = useState<"Men" | "Women" | "Kids">("Men");
-  const [slide, setSlide] = useState(0);
-  const [custSw, setCustSw] = useState(0);
-  const slideRef = useRef(0);
+  const [, navigate] = useLocation();
+  const [cur, setCur] = useState(0);
+  const [barKey, setBarKey] = useState(0);
 
-  const { data: products } = useListProducts(
-    {},
-    { query: { queryKey: getListProductsQueryKey({}) } }
+  // Fetch fabric and pattern t-shirts (the "Ready to Wear Golf T-Shirts")
+  const { data: fabricProducts } = useListProducts(
+    { category: "fabric-tshirt" },
+    { query: { queryKey: getListProductsQueryKey({ category: "fabric-tshirt" }) } }
+  );
+  const { data: patternProducts } = useListProducts(
+    { category: "pattern" },
+    { query: { queryKey: getListProductsQueryKey({ category: "pattern" }) } }
   );
 
+  const golfShirts = [...(fabricProducts || []), ...(patternProducts || [])].slice(0, 8);
+
+  // Auto-advance hero
   useEffect(() => {
     const id = setInterval(() => {
-      slideRef.current = (slideRef.current + 1) % HERO_SLIDES.length;
-      setSlide(slideRef.current);
-    }, 5500);
+      setCur((c) => (c + 1) % 4);
+      setBarKey((k) => k + 1);
+    }, 5400);
     return () => clearInterval(id);
   }, []);
 
-  const fabricTees  = (products || []).filter(p => p.category === "fabric-tshirt");
-  const patternTees = (products || []).filter(p => p.category === "pattern");
-  const topSellers  = (products || []).slice(0, 4);
+  const goTo = (n: number) => {
+    setCur(((n % 4) + 4) % 4);
+    setBarKey((k) => k + 1);
+  };
 
-  const goSlide = (i: number) => { slideRef.current = i; setSlide(i); };
-  const navSlide = (d: number) => goSlide((slide + d + HERO_SLIDES.length) % HERO_SLIDES.length);
+  const slides = [
+    {
+      cls: "s1",
+      eye: "New Season · Golf Collection",
+      head: (
+        <>
+          Dressed for the<br />clubhouse. Built<br />for every birdie.
+        </>
+      ),
+      sub: "Technical golfwear · Men · Women · Kids",
+      btn: "Shop the Collection",
+      btnHref: "#shop",
+    },
+    {
+      cls: "s2",
+      eye: "Ready to Wear · 8 Patterns",
+      head: (
+        <>
+          Solids. Stripes.<br />Argyle. Checks.<br />Your course, your style.
+        </>
+      ),
+      sub: "Off-the-shelf · Ships in 5 days",
+      btn: "Shop T-Shirts",
+      btnHref: "#shop",
+    },
+    {
+      cls: "s3",
+      eye: "Bespoke Studio",
+      head: (
+        <>
+          Your colour.<br />Your logo.<br />Your shirt.
+        </>
+      ),
+      badge: "Colour · Print · Fit · Logo · Text · Trim",
+      btn: "Open the Custom Studio",
+      btnHref: "#custom",
+    },
+    {
+      cls: "s4",
+      eye: "Tournaments · Academies · Clubs",
+      head: (
+        <>
+          One shirt.<br />Five hundred.<br />Delivered on brief.
+        </>
+      ),
+      sub: "Bulk from 12 pieces · Pantone-matched",
+      btn: "Get a Quote",
+      btnHref: "#custom",
+    },
+  ];
 
-  const cleanName = (n?: string) => (n || "").replace(/\s*\[gt:GT\d+\]\s*$/, "");
+  const handleAnchor = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href.startsWith("#")) {
+      e.preventDefault();
+      const el = document.getElementById(href.slice(1));
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   return (
     <Layout>
-      {/* Embedded fonts to match mockup */}
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Josefin+Sans:wght@300;400;600&display=swap" />
+      <style>{`
+        .kasha-html { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background:#f5f3ef; color:#1a1a1a; }
+        .kasha-html *, .kasha-html *::before, .kasha-html *::after { box-sizing: border-box; }
 
-      {/* ── ANNOUNCE BAR ────────────────────────────────────────── */}
-      <div
-        className="text-center"
-        style={{
-          background: "#f7f3ee",
-          borderBottom: "1px solid #e8e4df",
-          padding: "10px 24px",
-          fontSize: "10px",
-          letterSpacing: "2px",
-          textTransform: "uppercase",
-          color: "#9b8b6e",
-          fontFamily: "'Josefin Sans', sans-serif",
-        }}
-      >
-        New season arrivals — shop the full collection
-        <span className="mx-2.5 opacity-40 not-italic">·</span>
-        Free shipping on orders above ₹5,000
-      </div>
+        /* Hero */
+        .kh-hero { position: relative; height: calc(100vh - 84px); min-height: 580px; overflow: hidden; }
+        .kh-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s ease; display:flex; align-items:flex-end; }
+        .kh-slide.active { opacity: 1; }
+        .kh-slide::after { content:''; position:absolute; inset:0; background: linear-gradient(to bottom, transparent 28%, rgba(8,10,18,0.72) 100%); }
+        .kh-s1 { background: linear-gradient(155deg,#1a2535 0%,#2d3f52 45%,#8aaab8 100%); }
+        .kh-s2 { background: linear-gradient(148deg,#1c2d20 0%,#304838 48%,#6a9878 100%); }
+        .kh-s3 { background: linear-gradient(152deg,#2c1f12 0%,#4a3522 48%,#b09060 100%); }
+        .kh-s4 { background: linear-gradient(150deg,#1e1a2c 0%,#2e2848 48%,#8070b0 100%); }
+        .kh-slide-content { position:relative; z-index:2; padding: 0 64px 72px; }
+        .kh-eye { font-size:9px; letter-spacing:0.36em; color:#B8925A; text-transform:uppercase; margin-bottom:14px; opacity:0; transform:translateY(12px); transition:opacity .7s ease .3s, transform .7s ease .3s; }
+        .kh-slide.active .kh-eye { opacity:1; transform:translateY(0); }
+        .kh-head { font-size: clamp(38px,5.5vw,66px); font-weight:200; letter-spacing:.04em; color:#fff; line-height:1.12; margin-bottom:16px; opacity:0; transform:translateY(18px); transition: opacity .85s ease .5s, transform .85s ease .5s; }
+        .kh-slide.active .kh-head { opacity:1; transform:translateY(0); }
+        .kh-sub { font-size:11px; letter-spacing:.18em; color:rgba(255,255,255,.48); text-transform:uppercase; margin-bottom:34px; opacity:0; transform:translateY(10px); transition:opacity .7s ease .7s, transform .7s ease .7s; }
+        .kh-slide.active .kh-sub { opacity:1; transform:translateY(0); }
+        .kh-btn { display:inline-block; font-size:9px; letter-spacing:.26em; color:#0f1622; background:#B8925A; padding:13px 28px; text-transform:uppercase; text-decoration:none; opacity:0; transform:translateY(8px); transition:opacity .65s ease .9s, transform .65s ease .9s, background .2s; cursor:pointer; }
+        .kh-slide.active .kh-btn { opacity:1; transform:translateY(0); }
+        .kh-btn:hover { background:#ca9f64; }
+        .kh-cbadge { display:inline-flex; align-items:center; gap:8px; margin-bottom:20px; font-size:9px; letter-spacing:.26em; color:rgba(255,255,255,.6); text-transform:uppercase; opacity:0; transform:translateY(10px); transition:opacity .7s ease .7s, transform .7s ease .7s; }
+        .kh-slide.active .kh-cbadge { opacity:1; transform:translateY(0); }
+        .kh-cbadge::before { content:''; width:20px; height:1px; background:#B8925A; }
+        .kh-dots { position:absolute; bottom:28px; right:64px; z-index:10; display:flex; gap:8px; align-items:center; }
+        .kh-dot { width:5px; height:5px; background:rgba(255,255,255,.3); cursor:pointer; transition:all .3s; }
+        .kh-dot.active { width:22px; background:#B8925A; }
+        .kh-bar { position:absolute; bottom:0; left:0; height:1.5px; background:#B8925A; width:0%; z-index:10; animation: kh-bar 5.2s linear forwards; }
+        @keyframes kh-bar { from { width:0%; } to { width:100%; } }
 
-      {/* ── HERO CAROUSEL ────────────────────────────────────────── */}
-      <section className="relative w-full overflow-hidden" style={{ background: "#1a2a3a", height: "calc(100vh - 132px)", minHeight: "580px" }}>
-        {HERO_SLIDES.map((s, i) => (
-          <div
-            key={i}
-            className="absolute inset-0 transition-opacity"
-            style={{ opacity: i === slide ? 1 : 0, transitionDuration: "800ms", pointerEvents: i === slide ? "auto" : "none" }}
-            aria-hidden={i !== slide}
-          >
-            <img src={s.img} alt="" className="w-full h-full object-cover" style={{ objectPosition: "center 20%" }} />
-            <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(0,0,0,.52) 0%, rgba(0,0,0,.18) 48%, transparent 100%)" }} />
-            <div className="absolute" style={{ bottom: "90px", left: "72px", maxWidth: "460px" }}>
-              <p style={{ fontSize: "11px", letterSpacing: "3px", color: "rgba(255,255,255,.7)", marginBottom: "20px", fontFamily: "'Josefin Sans', sans-serif" }}>
-                {s.eyebrow}
-              </p>
-              <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "52px", fontWeight: 400, lineHeight: 1.08, color: "#fff", marginBottom: "20px" }}>
-                {s.title}
-              </h1>
-              <style>{` .hero-h1 em { color:#f0d89a; font-style:italic; } `}</style>
-              <p style={{ fontSize: "13px", color: "rgba(255,255,255,.78)", lineHeight: 1.8, marginBottom: "32px", whiteSpace: "pre-line", fontFamily: "'Josefin Sans', sans-serif" }}>
-                {s.sub}
-              </p>
-              <div className="flex gap-3">
-                <Link href={s.cta1.href}>
-                  <button className="hero-btn-wh" style={{ background: "#fff", color: "#1c1c1c", border: "none", fontFamily: "'Josefin Sans', sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", padding: "14px 30px", cursor: "pointer", transition: "all .2s" }}>
-                    {s.cta1.label}
-                  </button>
-                </Link>
-                <Link href={s.cta2.href}>
-                  <button style={{ background: "transparent", color: "#fff", border: "1.5px solid rgba(255,255,255,.55)", fontFamily: "'Josefin Sans', sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", padding: "14px 30px", cursor: "pointer", transition: "all .2s" }}>
-                    {s.cta2.label}
-                  </button>
-                </Link>
+        /* Section Divider */
+        .kh-sechead { padding: 52px 48px 28px; display:flex; align-items:baseline; justify-content:space-between; border-bottom: .5px solid #c8c4bc; background:#f5f3ef; }
+        .kh-sechead .eye { font-size:9px; letter-spacing:.32em; color:#B8925A; text-transform:uppercase; margin-bottom:8px; }
+        .kh-sechead h2 { font-size:20px; font-weight:200; letter-spacing:.14em; color:#0f1622; text-transform:uppercase; }
+        .kh-sechead a { font-size:9.5px; letter-spacing:.18em; color:#888; text-transform:uppercase; text-decoration:none; border-bottom:.5px solid #c8c4bc; padding-bottom:2px; white-space:nowrap; transition:color .2s, border-color .2s; }
+        .kh-sechead a:hover { color:#B8925A; border-color:#B8925A; }
+
+        /* Shirt grid */
+        .kh-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:1px; background:#c8c4bc; }
+        .kh-card { background:#f5f3ef; cursor:pointer; position:relative; }
+        .kh-card:hover .kh-cimg { transform: scale(1.04); }
+        .kh-card:hover .kh-hover { opacity: 1; }
+        .kh-cwrap { aspect-ratio: 3/4; overflow:hidden; position:relative; background:#eceae4; }
+        .kh-cimg { width:100%; height:100%; display:flex; align-items:center; justify-content:center; transition: transform .55s ease; position:relative; }
+        .kh-cimg img { width:100%; height:100%; object-fit:cover; object-position:center; }
+        .kh-badge { position:absolute; top:12px; left:12px; font-size:7.5px; letter-spacing:.2em; color:#fff; background:#B8925A; padding:3px 9px; text-transform:uppercase; z-index:2; }
+        .kh-hover { position:absolute; bottom:0; left:0; right:0; background:#0f1622; color:#fff; text-align:center; font-size:8.5px; letter-spacing:.22em; text-transform:uppercase; padding:11px; opacity:0; transition: opacity .22s; z-index:2; }
+        .kh-cinfo { padding:14px 16px 18px; background:#fff; }
+        .kh-cname { font-size:10.5px; font-weight:400; letter-spacing:.14em; color:#0f1622; text-transform:uppercase; margin-bottom:6px; }
+        .kh-cprice { font-size:10px; letter-spacing:.1em; color:#555; font-weight:300; }
+
+        /* Bottoms */
+        .kh-brow { display:grid; grid-template-columns: 1fr 1fr; gap:1px; background:#c8c4bc; margin-top:1px; }
+        .kh-brow .kh-bcard { background:#fff; display:grid; grid-template-columns: 200px 1fr; cursor:pointer; }
+        .kh-brow .kh-bcard:hover .kh-cimg { transform: scale(1.03); }
+        .kh-brow .kh-bcard .kh-cwrap { aspect-ratio: auto; min-height: 220px; }
+        .kh-binfo { padding:24px; display:flex; flex-direction:column; justify-content:center; }
+        .kh-bname { font-size:11px; font-weight:400; letter-spacing:.14em; color:#0f1622; text-transform:uppercase; margin-bottom:4px; }
+        .kh-bsub { font-size:10px; letter-spacing:.06em; color:#888; margin-bottom:10px; }
+        .kh-feats { list-style:none; margin-bottom:12px; padding:0; }
+        .kh-feats li { font-size:9.5px; letter-spacing:.1em; color:#888; text-transform:uppercase; padding:4px 0; border-bottom:.5px solid #eee; display:flex; align-items:center; gap:9px; }
+        .kh-feats li::before { content:''; width:12px; height:1px; background:#B8925A; flex-shrink:0; }
+        .kh-bprice { font-size:10px; letter-spacing:.1em; color:#555; }
+        .kh-trouser { background: linear-gradient(160deg,#1a2540,#263050); width:100%; height:100%; }
+        .kh-skort { background: linear-gradient(155deg,#2a1e2e,#4a3258); width:100%; height:100%; }
+
+        /* Custom banner */
+        .kh-cb { background:#0f1622; border-left:3px solid #B8925A; padding:48px 64px; display:flex; align-items:center; justify-content:space-between; gap:48px; }
+        .kh-cbeye { font-size:9px; letter-spacing:.32em; color:#B8925A; text-transform:uppercase; margin-bottom:12px; }
+        .kh-cbh { font-size:24px; font-weight:200; letter-spacing:.1em; color:#fff; line-height:1.38; }
+        .kh-cbacts { display:flex; flex-direction:column; align-items:flex-start; gap:10px; flex-shrink:0; }
+        .kh-cbcta { font-size:9px; letter-spacing:.26em; color:#0f1622; background:#B8925A; padding:13px 28px; text-transform:uppercase; border:none; cursor:pointer; white-space:nowrap; transition:background .2s; }
+        .kh-cbcta:hover { background:#ca9f64; }
+        .kh-cblink { font-size:9px; letter-spacing:.18em; color:rgba(255,255,255,.38); text-transform:uppercase; cursor:pointer; background:none; border:none; border-bottom:.5px solid rgba(255,255,255,.2); padding:0 0 2px; transition:color .2s; }
+        .kh-cblink:hover { color:rgba(255,255,255,.7); }
+        .kh-cgrid { display:grid; grid-template-columns: repeat(6, 1fr); gap:1px; background:#c8c4bc; }
+        .kh-cc { background:#fff; padding:24px 20px 22px; }
+        .kh-ccn { font-size:8px; letter-spacing:.28em; color:#B8925A; text-transform:uppercase; margin-bottom:8px; }
+        .kh-cct { font-size:10.5px; font-weight:500; letter-spacing:.14em; color:#0f1622; text-transform:uppercase; margin-bottom:8px; }
+        .kh-cctags { display:flex; flex-wrap:wrap; gap:3px; }
+        .kh-cctag { font-size:7.5px; letter-spacing:.1em; color:#666; background:#f0ede7; padding:2px 7px; text-transform:uppercase; }
+
+        /* Use cases */
+        .kh-uc-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:1px; background:#c8c4bc; }
+        .kh-uc { background:#fff; padding:28px 26px; }
+        .kh-ucn { font-size:8px; letter-spacing:.3em; color:#B8925A; text-transform:uppercase; margin-bottom:10px; }
+        .kh-uct { font-size:12px; font-weight:500; letter-spacing:.12em; color:#0f1622; text-transform:uppercase; margin-bottom:8px; }
+        .kh-ucb { font-size:12.5px; line-height:1.72; color:#666; margin-bottom:12px; }
+        .kh-uc-tags { display:flex; flex-wrap:wrap; gap:4px; }
+        .kh-uc-tag { font-size:8px; letter-spacing:.1em; color:#0f1622; background:#f0ede7; padding:2px 9px; text-transform:uppercase; }
+        .kh-uc.wide { grid-column: 1 / -1; display:grid; grid-template-columns: 1fr 2fr; gap:28px; align-items:center; }
+        .kh-uc.wide .kh-ucl { border-right: .5px solid #e8e4de; padding-right:28px; }
+
+        /* CTA strip */
+        .kh-cta { background:#0f1622; padding:26px 48px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+        .kh-cta span { font-size:12px; font-weight:200; letter-spacing:.16em; color:#fff; text-transform:uppercase; }
+        .kh-cta button { font-size:9px; letter-spacing:.24em; color:#0f1622; background:#B8925A; padding:11px 24px; text-transform:uppercase; border:none; cursor:pointer; white-space:nowrap; transition:background .2s; }
+        .kh-cta button:hover { background:#ca9f64; }
+
+        /* Quick category strip just under hero */
+        .kh-catstrip { display:grid; grid-template-columns: repeat(3, 1fr); gap:1px; background:#c8c4bc; border-bottom:.5px solid #c8c4bc; }
+        .kh-catstrip a { background:#0f1622; color:#fff; text-align:center; padding:22px 16px; text-decoration:none; font-size:11px; letter-spacing:.32em; text-transform:uppercase; transition:background .2s, color .2s; }
+        .kh-catstrip a:hover { background:#B8925A; color:#0f1622; }
+
+        @media (max-width: 1000px) {
+          .kh-grid { grid-template-columns: repeat(2, 1fr); }
+          .kh-cgrid { grid-template-columns: repeat(3, 1fr); }
+          .kh-brow { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 700px) {
+          .kh-sechead, .kh-cta { padding-left:20px; padding-right:20px; }
+          .kh-slide-content { padding: 0 24px 52px; }
+          .kh-head { font-size:32px; }
+          .kh-uc-grid { grid-template-columns: 1fr; }
+          .kh-uc.wide { grid-template-columns: 1fr; }
+          .kh-uc.wide .kh-ucl { border-right:none; border-bottom:.5px solid #e8e4de; padding-right:0; padding-bottom:18px; }
+          .kh-cb { flex-direction:column; padding:32px 24px; gap:24px; }
+          .kh-cgrid { grid-template-columns: repeat(2, 1fr); }
+          .kh-catstrip { grid-template-columns: 1fr; }
+        }
+      `}</style>
+
+      <div className="kasha-html">
+        {/* HERO CAROUSEL */}
+        <section id="hero" className="kh-hero">
+          {slides.map((s, i) => (
+            <div key={i} className={`kh-slide kh-${s.cls} ${i === cur ? "active" : ""}`}>
+              <div className="kh-slide-content">
+                <div className="kh-eye">{s.eye}</div>
+                <div className="kh-head">{s.head}</div>
+                {s.sub && <div className="kh-sub">{s.sub}</div>}
+                {s.badge && <div className="kh-cbadge">{s.badge}</div>}
+                <a
+                  href={s.btnHref}
+                  className="kh-btn"
+                  onClick={(e) => handleAnchor(e, s.btnHref)}
+                >
+                  {s.btn}
+                </a>
               </div>
             </div>
-          </div>
-        ))}
-        <style>{`
-          h1 em { color:#f0d89a !important; font-style:italic; }
-        `}</style>
-
-        <div className="absolute" style={{ top: "22px", right: "28px", fontSize: "11px", color: "rgba(255,255,255,.6)", letterSpacing: "1px", fontFamily: "'Josefin Sans', sans-serif" }}>
-          {slide + 1} / {HERO_SLIDES.length}
-        </div>
-
-        <button onClick={() => navSlide(-1)} aria-label="Previous slide"
-          className="absolute top-1/2 left-3 -translate-y-1/2 text-white text-2xl opacity-65 hover:opacity-100 transition-opacity p-2 bg-transparent border-0 cursor-pointer">
-          ←
-        </button>
-        <button onClick={() => navSlide(1)} aria-label="Next slide"
-          className="absolute top-1/2 right-3 -translate-y-1/2 text-white text-2xl opacity-65 hover:opacity-100 transition-opacity p-2 bg-transparent border-0 cursor-pointer">
-          →
-        </button>
-
-        <div className="absolute left-1/2 -translate-x-1/2 flex gap-[7px] items-center" style={{ bottom: "28px" }}>
-          {HERO_SLIDES.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => goSlide(i)}
-              aria-label={`Go to slide ${i + 1}`}
-              style={{
-                height: "3px",
-                width: i === slide ? "42px" : "22px",
-                background: i === slide ? "#fff" : "rgba(255,255,255,.32)",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                transition: "width .4s, background .4s",
-              }}
-            />
           ))}
-        </div>
-      </section>
-
-      {/* ── MARQUEE STRIP ─────────────────────────────────────── */}
-      <div style={{ background: "#1c1c1c", overflow: "hidden", whiteSpace: "nowrap", padding: "13px 0" }}>
-        <div className="kasha-mq-inner" style={{ display: "inline-block" }}>
-          {[...MARQUEE, ...MARQUEE, ...MARQUEE, ...MARQUEE].map((s, i) => (
-            <span key={i}>
-              <span style={{ fontSize: "10px", letterSpacing: "2.5px", textTransform: "uppercase", color: "#fff", margin: "0 32px", fontFamily: "'Josefin Sans', sans-serif" }}>{s}</span>
-              <span style={{ color: "#9b8b6e", margin: "0 10px", fontFamily: "'Josefin Sans', sans-serif" }}>·</span>
-            </span>
-          ))}
-        </div>
-        <style>{`
-          @keyframes kasha-mq { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
-          .kasha-mq-inner { animation: kasha-mq 24s linear infinite; }
-        `}</style>
-      </div>
-
-      {/* ── CATEGORY GRID ─────────────────────────────────────── */}
-      <section style={{ padding: "72px 80px", background: "#fff", fontFamily: "'Josefin Sans', sans-serif" }}>
-        <div style={{ maxWidth: "1380px", margin: "0 auto" }}>
-          <p style={{ fontSize: "10px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e", textAlign: "center", marginBottom: "12px" }}>Shop by category</p>
-          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "40px", fontWeight: 400, textAlign: "center", color: "#1c1c1c", marginBottom: "10px" }}>The Ka.Sha Collections</h2>
-          <p style={{ fontSize: "12px", color: "#a09890", textAlign: "center", letterSpacing: ".5px", marginBottom: "36px" }}>Fit. Fabric. Print. Every piece fully Customisable.</p>
-
-          <div className="flex justify-center mb-11" style={{ borderBottom: "1px solid #e8e4df", maxWidth: "600px", marginLeft: "auto", marginRight: "auto" }}>
-            {(["Men","Women","Kids"] as const).map(t => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                style={{
-                  fontSize: "12px", letterSpacing: "2px", textTransform: "uppercase",
-                  color: tab === t ? "#1c1c1c" : "#6b6560",
-                  background: "none", border: "none",
-                  borderBottom: `2px solid ${tab === t ? "#1c1c1c" : "transparent"}`,
-                  cursor: "pointer", padding: "14px 52px",
-                  fontFamily: "'Josefin Sans', sans-serif", marginBottom: "-1px",
-                }}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {[
-              { img: IMG(6), chip: "T-Shirts",            name: "Golf T-shirts",      desc: "Polos & performance tees · prints & solids", href: "/products?category=fabric-tshirt" },
-              { img: IMG(7), chip: "Trousers",            name: "Golf trousers",      desc: "Tailored · technical · stretch",              href: "/products?category=trousers" },
-              { img: IMG(8), chip: "Caps & Accessories",  name: "Caps & accessories", desc: "Structured · embroidered · logo",             href: "/products?category=caps" },
-            ].map(c => (
-              <Link key={c.chip} href={c.href} className="group block cursor-pointer">
-                <div className="relative overflow-hidden" style={{ height: "440px", background: "#f5f4f2" }}>
-                  <img src={c.img} alt={c.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
-                  <span className="absolute" style={{ top: "16px", left: "16px", background: "#fff", fontSize: "9px", letterSpacing: "1.5px", textTransform: "uppercase", padding: "5px 12px", color: "#1c1c1c" }}>
-                    {c.chip}
-                  </span>
-                </div>
-                <div style={{ padding: "18px 0 0" }}>
-                  <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "18px", color: "#1c1c1c", marginBottom: "4px" }}>{c.name}</div>
-                  <div style={{ fontSize: "11px", color: "#a09890", marginBottom: "12px" }}>{c.desc}</div>
-                  <span style={{ fontSize: "10px", letterSpacing: "1.5px", textTransform: "uppercase", color: "#1c1c1c", display: "inline-flex", alignItems: "center", gap: "10px" }}>
-                    Explore
-                    <span style={{ display: "block", width: "28px", height: "1px", background: "#1c1c1c" }} />
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── TOP SELLERS ─────────────────────────────────────── */}
-      <section style={{ padding: "60px 0 0", fontFamily: "'Josefin Sans', sans-serif" }}>
-        <div style={{ maxWidth: "1380px", margin: "0 auto", padding: "0 80px", textAlign: "center", marginBottom: "36px" }}>
-          <p style={{ fontSize: "10px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e", marginBottom: "8px" }}>Top sellers</p>
-          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "40px", fontWeight: 400, color: "#1c1c1c" }}>The fairway favourites</h2>
-        </div>
-        <div
-          className="grid grid-cols-2 md:grid-cols-4"
-          style={{ gap: 0, padding: "0 80px", maxWidth: "1380px", margin: "0 auto", borderTop: "1px solid #e8e4df" }}
-        >
-          {(topSellers.length >= 4 ? topSellers.slice(0,4).map((p, i) => ({
-            href: `/products/${p.id}`,
-            img: p.thumbnailUrl || TOP_SELLERS_FALLBACK[i].img,
-            name: cleanName(p.name) || TOP_SELLERS_FALLBACK[i].name,
-            price: formatPrice(p.priceInPaise),
-            swatches: TOP_SELLERS_FALLBACK[i].swatches,
-          })) : TOP_SELLERS_FALLBACK.map(t => ({ ...t, href: "/products" }))).map((c, i) => (
-            <Link key={i} href={c.href} className="group block cursor-pointer" style={{ borderRight: i < 3 ? "1px solid #e8e4df" : "none" }}>
-              <div style={{ height: "480px", overflow: "hidden", background: "#f8f7f5" }}>
-                <img src={c.img} alt={c.name} className="transition-transform duration-500 group-hover:scale-[1.04]" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }} />
-              </div>
-              <div style={{ padding: "18px 20px 24px" }}>
-                <div className="flex gap-1.5 mb-2.5">
-                  {c.swatches.map((sw, j) => (
-                    <span key={j} className={j === 0 ? "kasha-sw on" : "kasha-sw"} style={{ width: "16px", height: "16px", borderRadius: "50%", background: sw, border: j === 0 ? "2px solid #1c1c1c" : "2px solid transparent", display: "inline-block" }} />
-                  ))}
-                </div>
-                <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "16px", color: "#1c1c1c", marginBottom: "5px" }}>{c.name}</div>
-                <div style={{ fontSize: "13px", color: "#a09890" }}>{c.price}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* ── MEN ▸ T-SHIRTS — Fabric & Pattern (single horizontal row, like Top Sellers) ─ */}
-      <section style={{ padding: "100px 0 0", fontFamily: "'Josefin Sans', sans-serif" }}>
-        <div style={{ maxWidth: "1380px", margin: "0 auto", padding: "0 80px", textAlign: "center", marginBottom: "36px" }}>
-          <p style={{ fontSize: "10px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e", marginBottom: "8px" }}>Men ▸ T-Shirts</p>
-          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "40px", fontWeight: 400, color: "#1c1c1c", marginBottom: "10px" }}>Fabric &amp; Pattern</h2>
-          <p style={{ fontSize: "12px", color: "#a09890", letterSpacing: ".5px" }}>
-            Choose a blank canvas to print on, or a pre-patterned silhouette to colour.
-          </p>
-        </div>
-        <div
-          className="grid grid-cols-2 md:grid-cols-4"
-          style={{ gap: 0, padding: "0 80px", maxWidth: "1380px", margin: "0 auto", borderTop: "1px solid #e8e4df" }}
-        >
-          {(() => {
-            const fpFallback = [
-              { img: "/images/kasha/polos/p1.png", name: "KS1007B Classic Pattern", price: "₹2,000.00", chip: "PATTERN" },
-              { img: "/images/kasha/polos/p2.png", name: "The Linen Trouser",       price: "₹8,999.00", chip: "FABRIC"  },
-              { img: "/images/kasha/polos/p3.png", name: "The Khadi Jacket",        price: "₹18,999.00", chip: "FABRIC" },
-              { img: "/images/kasha/polos/p4.png", name: "The Silk Kurta",          price: "₹12,999.00", chip: "PATTERN" },
-            ];
-            const merged = [
-              ...patternTees.slice(0, 2).map(p => ({ ...p, _chip: "PATTERN" as const })),
-              ...fabricTees.slice(0, 2).map(p => ({ ...p, _chip: "FABRIC" as const })),
-            ];
-            const useReal = merged.length === 4;
-            return (useReal ? merged.map((p, i) => ({
-              href: `/products/${p.id}`,
-              img: p.thumbnailUrl || fpFallback[i].img,
-              name: cleanName(p.name) || fpFallback[i].name,
-              price: formatPrice(p.priceInPaise),
-              chip: p._chip,
-            })) : fpFallback.map(f => ({ ...f, href: "/products" }))).map((c, i) => (
-              <Link key={i} href={c.href} className="group block cursor-pointer" style={{ borderRight: i < 3 ? "1px solid #e8e4df" : "none" }}>
-                <div className="relative" style={{ height: "480px", overflow: "hidden", background: "#f8f7f5" }}>
-                  <img src={c.img} alt={c.name} className="transition-transform duration-500 group-hover:scale-[1.04]" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "20px", display: "block" }} />
-                  <span className="absolute" style={{ top: "16px", left: "16px", background: "#fff", fontSize: "9px", letterSpacing: "1.5px", textTransform: "uppercase", padding: "5px 12px", color: "#1c1c1c", border: "1px solid #ece8e2" }}>
-                    {c.chip}
-                  </span>
-                </div>
-                <div style={{ padding: "18px 20px 24px" }}>
-                  <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "16px", color: "#1c1c1c", marginBottom: "5px" }}>{c.name}</div>
-                  <div style={{ fontSize: "13px", color: "#a09890" }}>{c.price}</div>
-                </div>
-              </Link>
-            ));
-          })()}
-        </div>
-      </section>
-
-      {/* ── CUSTOMISE PANEL ─────────────────────────────────────── */}
-      <section className="grid grid-cols-1 md:grid-cols-2" style={{ minHeight: "720px", marginTop: "120px", fontFamily: "'Josefin Sans', sans-serif", maxWidth: "1380px", marginLeft: "auto", marginRight: "auto" }}>
-        <div style={{ background: "#f0ece6", padding: "88px 100px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          <p style={{ fontSize: "10px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e", marginBottom: "20px" }}>Tailor your play</p>
-          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "52px", fontWeight: 400, color: "#1c1c1c", marginBottom: "44px", lineHeight: 1.1 }}>
-            Your game.<br/>Your choices.
-          </h2>
-          {[
-            "Select your style — polo, tee or collar",
-            "Choose a print or solid from the palette",
-            "Upload your logo and drag to position",
-            "Review & get your Ka.Sha",
-          ].map((step, i) => (
-            <div key={i} className="flex items-baseline mb-7" style={{ gap: "40px" }}>
-              <span style={{ fontSize: "13px", color: "#9b8b6e", letterSpacing: "1px", flexShrink: 0, width: "24px" }}>0{i+1}</span>
-              <span style={{ fontSize: "14px", color: "#1c1c1c", lineHeight: 1.6 }}>{step}</span>
-            </div>
-          ))}
-          <Link href="/products/1/customize">
-            <button className="self-start mt-10" style={{ background: "#1c1c1c", color: "#fff", fontFamily: "'Josefin Sans', sans-serif", fontSize: "11px", letterSpacing: "2.5px", textTransform: "uppercase", padding: "16px 40px", border: "none", cursor: "pointer", transition: "background .2s" }}>
-              Start Customising
-            </button>
-          </Link>
-        </div>
-        <div style={{ background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 80px" }}>
-          <img src={CUST_SWATCHES[custSw].img} alt="Polo preview" style={{ width: "360px", height: "460px", objectFit: "contain", transition: "opacity .3s" }} />
-          <div className="flex mt-5 mb-2" style={{ gap: "14px" }}>
-            {CUST_SWATCHES.map((s, i) => (
-              <button
+          <div className="kh-dots">
+            {[0, 1, 2, 3].map((i) => (
+              <div
                 key={i}
-                onClick={() => setCustSw(i)}
-                aria-label={`Swatch ${i + 1}`}
-                style={{
-                  width: "28px", height: "28px", borderRadius: "50%",
-                  background: s.color, cursor: "pointer",
-                  border: i === custSw ? "3px solid #1c1c1c" : (s.border ? "1.5px solid #ccc" : "3px solid transparent"),
-                  transform: i === custSw ? "scale(1.12)" : "none",
-                  transition: "border-color .2s, transform .2s",
-                  padding: 0,
-                }}
+                className={`kh-dot ${i === cur ? "active" : ""}`}
+                onClick={() => goTo(i)}
               />
             ))}
           </div>
-          <p style={{ fontSize: "9px", letterSpacing: "2.5px", textTransform: "uppercase", color: "#9b8b6e" }}>Choose Colour</p>
-        </div>
-      </section>
+          <div key={`bar-${barKey}-${cur}`} className="kh-bar" />
+        </section>
 
-      {/* ── PRINTS SHOWCASE ─────────────────────────────────────── */}
-      <section style={{ padding: "140px 80px 0", fontFamily: "'Josefin Sans', sans-serif" }}>
-        <div style={{ maxWidth: "1380px", margin: "0 auto" }}>
-          <p style={{ fontSize: "10px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e", textAlign: "center", marginBottom: "14px" }}>Prints showcase</p>
-          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "40px", fontWeight: 400, color: "#1c1c1c", textAlign: "center", lineHeight: 1.3, marginBottom: "12px" }}>
-            Structured where it matters.<br/>Expressive where it shows.
-          </h2>
-          <p style={{ fontSize: "12px", color: "#a09890", textAlign: "center", letterSpacing: ".5px", marginBottom: "52px" }}>Collar · Stitch · Fabric · Logo detail</p>
-          <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: 0 }}>
-            {PRINTS.map((p, i) => (
-              <Link key={i} href="/products" className="group block cursor-pointer overflow-hidden">
-                <img src={p.img} alt={p.name} className="transition-transform duration-500 group-hover:scale-[1.04]" style={{ width: "100%", height: "460px", objectFit: "cover", objectPosition: "center top", display: "block" }} />
-                <div style={{ padding: "16px 0 0" }}>
-                  <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "17px", color: "#1c1c1c", marginBottom: "4px" }}>{p.name}</div>
-                  <div style={{ fontSize: "10px", color: "#9b8b6e", letterSpacing: ".5px" }}>{p.sub}</div>
+        {/* Quick category strip — Men / Women / Kids */}
+        <div className="kh-catstrip">
+          <Link href="/products?gender=men">Shop Men</Link>
+          <Link href="/products?gender=women">Shop Women</Link>
+          <Link href="/products?gender=kids">Shop Kids</Link>
+        </div>
+
+        {/* T-SHIRT GRID */}
+        <div id="shop">
+          <div className="kh-sechead">
+            <div>
+              <div className="eye">Ready to Wear</div>
+              <h2>Golf T-Shirts</h2>
+            </div>
+            <Link href="/products" className="">View all →</Link>
+          </div>
+
+          <div className="kh-grid">
+            {(golfShirts.length > 0 ? golfShirts : Array.from({ length: 8 })).map((p: any, idx) => {
+              const img = POLO_IMAGES[idx % POLO_IMAGES.length];
+              const badge = FALLBACK_BADGES[idx % FALLBACK_BADGES.length];
+              const swatches = FALLBACK_SWATCHES[idx % FALLBACK_SWATCHES.length];
+              const productId = p?.id;
+              const name = p?.name || "Golf Polo";
+              const price = p ? formatPrice(p.priceInPaise) : "From ₹ 3,200";
+
+              const cardInner = (
+                <>
+                  <div className="kh-cwrap">
+                    <div className="kh-cimg">
+                      <img src={img} alt={name} />
+                    </div>
+                    {badge && <div className="kh-badge">{badge}</div>}
+                    <div className="kh-hover">Quick View</div>
+                  </div>
+                  <div className="kh-cinfo">
+                    <div className="kh-cname">{name}</div>
+                    <Swatches keys={swatches} />
+                    <div className="kh-cprice">{price}</div>
+                  </div>
+                </>
+              );
+
+              return productId ? (
+                <Link key={p.id} href={`/products/${productId}`} className="kh-card">
+                  {cardInner}
+                </Link>
+              ) : (
+                <div
+                  key={`fb-${idx}`}
+                  className="kh-card"
+                  onClick={() => navigate("/products")}
+                >
+                  {cardInner}
                 </div>
-              </Link>
+              );
+            })}
+          </div>
+
+          {/* Bottoms */}
+          <div className="kh-sechead" style={{ paddingTop: 40 }}>
+            <div>
+              <div className="eye">Bottoms</div>
+              <h2>Trousers &amp; Skorts</h2>
+            </div>
+            <Link href="/products" className="">View all →</Link>
+          </div>
+
+          <div className="kh-brow">
+            <div className="kh-bcard" onClick={() => navigate("/products")}>
+              <div className="kh-cwrap">
+                <div className="kh-trouser" />
+                <div className="kh-badge">Men's</div>
+              </div>
+              <div className="kh-binfo">
+                <div className="kh-bname">Pro Tour Trouser</div>
+                <div className="kh-bsub">Slim tapered · 4-way stretch</div>
+                <ul className="kh-feats">
+                  <li>Velcro glove dock</li>
+                  <li>3-slot tee holder</li>
+                  <li>Zippered security pocket</li>
+                </ul>
+                <Swatches keys={["sw-navy", "sw-charcoal", "sw-ivory", "sw-olive"]} />
+                <div className="kh-bprice">From ₹ 5,800</div>
+              </div>
+            </div>
+
+            <div className="kh-bcard" onClick={() => navigate("/products")}>
+              <div className="kh-cwrap">
+                <div className="kh-skort" />
+                <div className="kh-badge">Women's</div>
+              </div>
+              <div className="kh-binfo">
+                <div className="kh-bname">Pro Tour Skort</div>
+                <div className="kh-bsub">Tailored fit · Technical stretch</div>
+                <ul className="kh-feats">
+                  <li>Inner shorts panel</li>
+                  <li>Full swing freedom</li>
+                  <li>Clubhouse-ready finish</li>
+                </ul>
+                <Swatches keys={["sw-navy", "sw-charcoal", "sw-ivory"]} />
+                <div className="kh-bprice">From ₹ 4,200</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* CUSTOM SECTION */}
+        <div id="custom">
+          <div className="kh-cb">
+            <div>
+              <div className="kh-cbeye">Bespoke &amp; Custom</div>
+              <div className="kh-cbh">
+                Every detail — yours to design.
+                <br />
+                One shirt or five hundred.
+              </div>
+            </div>
+            <div className="kh-cbacts">
+              <button
+                className="kh-cbcta"
+                onClick={() => navigate("/products/1/customize")}
+              >
+                Open the Custom Studio
+              </button>
+              <button className="kh-cblink" onClick={() => navigate("/products")}>
+                Bulk &amp; corporate pricing →
+              </button>
+            </div>
+          </div>
+
+          <div className="kh-cgrid">
+            {[
+              { n: "01", t: "Colour", tags: ["Pantone match", "Club colours"] },
+              { n: "02", t: "Print", tags: ["40+ prints", "Custom artwork"] },
+              { n: "03", t: "Fit & Size", tags: ["Athletic", "Classic", "Custom size"] },
+              { n: "04", t: "Logo", tags: ["5 placements", "Embroider / print"] },
+              { n: "05", t: "Text", tags: ["Name", "Initials", "Club text"] },
+              { n: "06", t: "Collar & Trim", tags: ["Contrast collar", "Tipping"] },
+            ].map((c) => (
+              <div className="kh-cc" key={c.n}>
+                <div className="kh-ccn">{c.n}</div>
+                <div className="kh-cct">{c.t}</div>
+                <div className="kh-cctags">
+                  {c.tags.map((t) => (
+                    <span className="kh-cctag" key={t}>
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
-      </section>
 
-      {/* ── EVENTS GALLERY ─────────────────────────────────────── */}
-      <section style={{ padding: "140px 80px 0", fontFamily: "'Josefin Sans', sans-serif" }}>
-        <div style={{ maxWidth: "1380px", margin: "0 auto" }}>
-          <div className="flex items-end justify-between" style={{ marginBottom: "24px" }}>
-            <div>
-              <p style={{ fontSize: "12px", color: "#9b8b6e", marginBottom: "8px" }}>On the course</p>
-              <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "36px", fontWeight: 400, color: "#1c1c1c" }}>Your event. Our customised expertise.</h2>
-            </div>
-            <Link href="/heritage" style={{ fontSize: "13px", letterSpacing: "1px", color: "#1c1c1c", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px" }}>
-              View All Events »»
-            </Link>
+        {/* USE CASES */}
+        <div className="kh-sechead">
+          <div>
+            <div className="eye">How Ka.Sha is Worn</div>
+            <h2>Made for Every Context on the Course</h2>
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: 0, height: "500px", margin: "0 -0px" }}>
-          {EVENT_TILES.map((e, i) => (
-            <div key={i} className="relative overflow-hidden cursor-pointer group">
-              <img src={e.img} alt="" className="transition-transform duration-500 group-hover:scale-[1.03]" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
-              <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,.72) 0%, rgba(0,0,0,.1) 45%, transparent 100%)" }} />
-              {e.cat && (
-                <div className="absolute bottom-0 left-0 right-0 text-white" style={{ padding: "24px 22px" }}>
-                  <p style={{ fontSize: "10px", letterSpacing: "2px", textTransform: "uppercase", opacity: 0.82, marginBottom: "8px" }}>{e.cat}</p>
-                  <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "22px", lineHeight: 1.2, marginBottom: "14px" }}>{e.title}</p>
-                  <button style={{ fontSize: "10px", letterSpacing: "1.5px", textTransform: "uppercase", color: "#fff", background: "none", border: "none", borderBottom: "1px solid rgba(255,255,255,.5)", padding: "0 0 2px", cursor: "pointer", fontFamily: "'Josefin Sans', sans-serif" }}>{e.cta}</button>
-                </div>
-              )}
+
+        <div className="kh-uc-grid">
+          <div className="kh-uc">
+            <div className="kh-ucn">01</div>
+            <div className="kh-uct">Tournaments</div>
+            <div className="kh-ucb">
+              Consistent kit across the field — tournament name, sponsor logo, player detail. From 12 pieces, Pantone-matched to brief.
             </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: 0, height: "190px" }}>
-          {EVENT_THUMBS.map((t, i) => (
-            <div key={i} className="relative overflow-hidden cursor-pointer group">
-              <img src={t.img} alt={t.label} className="transition-transform duration-500 group-hover:scale-[1.05]" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
-              <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,.7) 0%, transparent 55%)" }} />
-              <div className="absolute bottom-0 left-0 right-0" style={{ padding: "10px 14px", fontSize: "9px", letterSpacing: "2px", textTransform: "uppercase", color: "#fff" }}>
-                {t.label}
+            <div className="kh-uc-tags">
+              <span className="kh-uc-tag">From 12 pieces</span>
+              <span className="kh-uc-tag">Player names</span>
+              <span className="kh-uc-tag">Sponsor logo</span>
+            </div>
+          </div>
+          <div className="kh-uc">
+            <div className="kh-ucn">02</div>
+            <div className="kh-uct">Golf Academies</div>
+            <div className="kh-ucb">
+              Academy crest, student name, cohort year. A uniform students are proud to wear — on the range and at the club. All sizes XS–5XL.
+            </div>
+            <div className="kh-uc-tags">
+              <span className="kh-uc-tag">Academy crest</span>
+              <span className="kh-uc-tag">Student names</span>
+              <span className="kh-uc-tag">All sizes</span>
+            </div>
+          </div>
+          <div className="kh-uc">
+            <div className="kh-ucn">03</div>
+            <div className="kh-uct">Sponsored Shirts</div>
+            <div className="kh-ucb">
+              Logo at five placements, colour-matched to brand guidelines. Corporate sponsors, club partners, brand ambassadors.
+            </div>
+            <div className="kh-uc-tags">
+              <span className="kh-uc-tag">Brand logo</span>
+              <span className="kh-uc-tag">Colour match</span>
+              <span className="kh-uc-tag">5 placements</span>
+            </div>
+          </div>
+          <div className="kh-uc">
+            <div className="kh-ucn">04</div>
+            <div className="kh-uct">Personal Wardrobe</div>
+            <div className="kh-ucb">
+              Your print, your fit, your initials. Single-piece orders handled — every detail from collar trim to interior label.
+            </div>
+            <div className="kh-uc-tags">
+              <span className="kh-uc-tag">1-piece orders</span>
+              <span className="kh-uc-tag">Any print</span>
+              <span className="kh-uc-tag">Your fit</span>
+            </div>
+          </div>
+          <div className="kh-uc wide">
+            <div className="kh-ucl">
+              <div className="kh-ucn">05</div>
+              <div className="kh-uct">Social Golf Clubs</div>
+            </div>
+            <div>
+              <div className="kh-ucb">
+                Shared print, club name on chest, everyone in the same shirt — without anyone settling. From 12 pieces, mixed fits and sizes across the group.
+              </div>
+              <div className="kh-uc-tags">
+                <span className="kh-uc-tag">From 12 pieces</span>
+                <span className="kh-uc-tag">Club name</span>
+                <span className="kh-uc-tag">Mixed sizes</span>
+                <span className="kh-uc-tag">Group identity</span>
               </div>
             </div>
-          ))}
+          </div>
         </div>
-      </section>
 
-      {/* ── BRAND STRIP ─────────────────────────────────────── */}
-      <section className="relative overflow-hidden text-center" style={{ background: "#f7f3ee", padding: "96px 40px", marginTop: "80px", fontFamily: "'Josefin Sans', sans-serif" }}>
-        <div className="absolute pointer-events-none select-none" style={{
-          top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-          fontFamily: "'Cormorant Garamond', Georgia, serif",
-          fontSize: "200px", fontWeight: 500,
-          color: "rgba(155,139,110,.04)", whiteSpace: "nowrap"
-        }}>KA.SHA</div>
-        <div className="relative" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "44px", fontWeight: 400, color: "#1c1c1c", marginBottom: "4px" }}>
-          Premium meets edgy.
+        <div className="kh-cta">
+          <span>Start your order — one shirt or five hundred</span>
+          <button onClick={() => navigate("/products/1/customize")}>
+            Open the Custom Studio
+          </button>
         </div>
-        <div className="relative" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "44px", fontWeight: 400, fontStyle: "italic", color: "#9b8b6e", marginBottom: "18px" }}>
-          Performance matches flair.
-        </div>
-        <p className="relative" style={{ fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e" }}>Ka.Sha — For Players</p>
-      </section>
+      </div>
     </Layout>
   );
 }

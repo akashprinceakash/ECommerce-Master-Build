@@ -10,16 +10,40 @@ export default function ProductsPage() {
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
   const category = searchParams.get("category") || undefined;
+  const gender = searchParams.get("gender") || undefined;
 
-  const { data: products, isLoading, error } = useListProducts(
+  const { data: rawProducts, isLoading, error } = useListProducts(
     { category },
     { query: { queryKey: getListProductsQueryKey({ category }) } }
   );
 
+  // Client-side gender filter (matches keywords in product name/description)
+  const products = (() => {
+    if (!gender || !rawProducts) return rawProducts;
+    const g = gender.toLowerCase();
+    const tokens =
+      g === "men"
+        ? ["men", "men's", "mens", "male"]
+        : g === "women"
+        ? ["women", "women's", "womens", "female", "skort", "ladies"]
+        : g === "kids"
+        ? ["kid", "kids", "kid's", "junior", "youth", "child"]
+        : [];
+    if (tokens.length === 0) return rawProducts;
+    const matches = rawProducts.filter((p) => {
+      const hay = `${p.name} ${p.description || ""}`.toLowerCase();
+      return tokens.some((t) => hay.includes(t));
+    });
+    // Fallback: if nothing matches, show everything (so the page is never empty for now)
+    return matches.length > 0 ? matches : rawProducts;
+  })();
+
   const filterLinks = [
     { label: "All", href: "/products", key: null },
+    { label: "Men", href: "/products?gender=men", key: "men", isGender: true },
+    { label: "Women", href: "/products?gender=women", key: "women", isGender: true },
+    { label: "Kids", href: "/products?gender=kids", key: "kids", isGender: true },
     { label: "Clothing", href: "/products?category=clothing", key: "clothing" },
-    { label: "Accessories", href: "/products?category=accessories", key: "accessories" },
     { label: "Bespoke", href: "/products?category=bespoke", key: "bespoke" },
   ];
 
@@ -44,19 +68,27 @@ export default function ProductsPage() {
       <div className="max-w-[1400px] mx-auto px-6 py-10">
         {/* Filter Bar */}
         <div className="flex items-center gap-0 mb-8 border-b border-gray-200">
-          {filterLinks.map(f => (
-            <Link
-              key={f.label}
-              href={f.href}
-              className={`text-[12px] font-bold tracking-[0.1em] px-5 py-3 border-b-2 -mb-px transition-colors ${
-                (f.key === null ? !category : category === f.key)
-                  ? "border-black text-black"
-                  : "border-transparent text-gray-400 hover:text-gray-700"
-              }`}
-            >
-              {f.label}
-            </Link>
-          ))}
+          {filterLinks.map(f => {
+            const active =
+              f.key === null
+                ? !category && !gender
+                : (f as any).isGender
+                ? gender === f.key
+                : category === f.key;
+            return (
+              <Link
+                key={f.label}
+                href={f.href}
+                className={`text-[12px] font-bold tracking-[0.1em] px-5 py-3 border-b-2 -mb-px transition-colors ${
+                  active
+                    ? "border-black text-black"
+                    : "border-transparent text-gray-400 hover:text-gray-700"
+                }`}
+              >
+                {f.label}
+              </Link>
+            );
+          })}
         </div>
 
         {isLoading ? (
