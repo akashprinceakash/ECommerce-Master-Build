@@ -66,7 +66,7 @@ export function Navbar() {
       <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
         <div className="mx-auto px-6 max-w-[1400px]">
           {/* Main nav row */}
-          <div className="h-[68px] flex items-center justify-between gap-4">
+          <div className="h-[84px] flex items-center justify-between gap-4">
             {/* Left: Mobile menu + Logo */}
             <div className="flex items-center gap-4">
               <button
@@ -80,7 +80,7 @@ export function Navbar() {
                 <img
                   src="/images/kasha-logo.png"
                   alt="KA.SHA"
-                  className="h-10 w-auto object-contain"
+                  className="h-14 w-auto object-contain"
                 />
               </Link>
             </div>
@@ -91,7 +91,7 @@ export function Navbar() {
                 <Link
                   key={link.label}
                   href={link.href}
-                  className="text-[11px] font-bold tracking-[0.12em] text-gray-700 hover:text-black transition-colors whitespace-nowrap"
+                  className="text-[13px] font-bold tracking-[0.14em] text-gray-700 hover:text-black transition-colors whitespace-nowrap"
                 >
                   {link.label}
                 </Link>
@@ -105,7 +105,7 @@ export function Navbar() {
                   <Link
                     key={link.label}
                     href={link.href}
-                    className={`text-[11px] font-bold tracking-[0.1em] px-3 py-1 transition-colors ${
+                    className={`text-[13px] font-bold tracking-[0.12em] px-3.5 py-1.5 transition-colors ${
                       activeCategory === link.label
                         ? "text-black border-b-2 border-black"
                         : "text-gray-600 hover:text-black"
@@ -119,13 +119,13 @@ export function Navbar() {
 
               {isAdmin && (
                 <Link href="/admin">
-                  <button className="hidden md:flex items-center gap-1.5 bg-emerald-600 text-white text-[10px] font-bold tracking-[0.12em] px-4 py-2 hover:bg-emerald-700 transition-colors whitespace-nowrap">
+                  <button className="hidden md:flex items-center gap-1.5 bg-emerald-600 text-white text-[12px] font-bold tracking-[0.14em] px-5 py-3 hover:bg-emerald-700 transition-colors whitespace-nowrap">
                     <ShieldCheck className="w-3 h-3" /> ADMIN
                   </button>
                 </Link>
               )}
               <Link href="/products/1/customize">
-                <button className="hidden md:flex items-center bg-black text-white text-[10px] font-bold tracking-[0.12em] px-4 py-2 hover:bg-gray-900 transition-colors whitespace-nowrap">
+                <button className="hidden md:flex items-center bg-black text-white text-[12px] font-bold tracking-[0.14em] px-6 py-3 hover:bg-gray-900 transition-colors whitespace-nowrap">
                   CUSTOMISE
                 </button>
               </Link>
@@ -171,7 +171,7 @@ export function Navbar() {
 
               <Show when="signed-out">
                 <Link href="/sign-in">
-                  <button className="hidden sm:flex text-[11px] font-bold tracking-[0.1em] text-gray-700 hover:text-black transition-colors">
+                  <button className="hidden sm:flex text-[13px] font-bold tracking-[0.12em] text-gray-700 hover:text-black transition-colors">
                     SIGN IN
                   </button>
                 </Link>
