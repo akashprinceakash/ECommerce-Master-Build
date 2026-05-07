@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ka.Sha — Golf Wear</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background: #f5f3ef;
+  color: #1a1a1a;
+  overflow-x: hidden;
+}
+
+/* ══════════════ NAV ══════════════ */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: 56px;
+  background: rgba(245,243,239,0.97);
+  border-bottom: 0.5px solid #c8c4bc;
+  display: flex;
+  align-items: center;
+  padding: 0 48px;
+}
+.nav-left {
+  display: flex; gap: 28px; align-items: center;
+}
+.nav-left a {
+  font-size: 10px; letter-spacing: 0.2em; color: #0f1622;
+  text-decoration: none; text-transform: uppercase; opacity: 0.55; transition: opacity 0.2s;
+}
+.nav-left a:hover { opacity: 1; }
+
+.nav-brand {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  font-size: 19px; font-weight: 200; letter-spacing: 0.42em;
+  color: #0f1622; text-decoration: none; text-transform: uppercase; white-space: nowrap;
+}
+.nav-brand em { color: #B8925A; font-style: normal; }
+
+.nav-right {
+  margin-left: auto; display: flex; gap: 24px; align-items: center;
+}
+.nav-right a {
+  font-size: 10px; letter-spacing: 0.18em; color: #0f1622;
+  text-decoration: none; text-transform: uppercase; opacity: 0.55; transition: opacity 0.2s;
+}
+.nav-right a:hover { opacity: 1; }
+
+/* Custom Studio pill in nav */
+.nav-custom {
+  font-size: 9px !important;
+  letter-spacing: 0.22em !important;
+  color: #fff !important;
+  background: #0f1622 !important;
+  padding: 7px 16px;
+  opacity: 1 !important;
+  border-left: 2px solid #B8925A;
+}
+.nav-custom:hover { background: #B8925A !important; }
+
+.nav-shop {
+  font-size: 9px !important;
+  letter-spacing: 0.22em !important;
+  color: #0f1622 !important;
+  background: #B8925A !important;
+  padding: 7px 16px;
+  opacity: 1 !important;
+}
+
+/* ══════════════ HERO CAROUSEL ══════════════ */
+#hero {
+  margin-top: 56px;
+  position: relative;
+  height: 100vh; min-height: 580px;
+  overflow: hidden;
+}
+.slide {
+  position: absolute; inset: 0;
+  opacity: 0; transition: opacity 1.2s ease;
+  display: flex; align-items: flex-end;
+}
+.slide.active { opacity: 1; }
+.slide::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to bottom, transparent 28%, rgba(8,10,18,0.72) 100%);
+}
+
+/* — slide backgrounds: designed to receive full-bleed photography — */
+.s1 { background: linear-gradient(155deg, #1a2535 0%, #2d3f52 45%, #8aaab8 100%); }
+.s2 { background: linear-gradient(148deg, #1c2d20 0%, #304838 48%, #6a9878 100%); }
+.s3 { background: linear-gradient(152deg, #2c1f12 0%, #4a3522 48%, #b09060 100%); }
+.s4 { background: linear-gradient(150deg, #1e1a2c 0%, #2e2848 48%, #8070b0 100%); }
+
+.slide-content {
+  position: relative; z-index: 2;
+  padding: 0 64px 72px;
+}
+.s-eye {
+  font-size: 9px; letter-spacing: 0.36em; color: #B8925A;
+  text-transform: uppercase; margin-bottom: 14px;
+  opacity: 0; transform: translateY(12px);
+  transition: opacity 0.7s ease 0.3s, transform 0.7s ease 0.3s;
+}
+.slide.active .s-eye { opacity: 1; transform: translateY(0); }
+
+.s-head {
+  font-size: clamp(38px, 5.5vw, 66px); font-weight: 200;
+  letter-spacing: 0.04em; color: #fff; line-height: 1.12;
+  margin-bottom: 16px;
+  opacity: 0; transform: translateY(18px);
+  transition: opacity 0.85s ease 0.5s, transform 0.85s ease 0.5s;
+}
+.slide.active .s-head { opacity: 1; transform: translateY(0); }
+
+.s-sub {
+  font-size: 11px; letter-spacing: 0.18em; color: rgba(255,255,255,0.48);
+  text-transform: uppercase; margin-bottom: 34px;
+  opacity: 0; transform: translateY(10px);
+  transition: opacity 0.7s ease 0.7s, transform 0.7s ease 0.7s;
+}
+.slide.active .s-sub { opacity: 1; transform: translateY(0); }
+
+.s-btn {
+  display: inline-block; font-size: 9px; letter-spacing: 0.26em;
+  color: #0f1622; background: #B8925A; padding: 13px 28px;
+  text-transform: uppercase; text-decoration: none;
+  opacity: 0; transform: translateY(8px);
+  transition: opacity 0.65s ease 0.9s, transform 0.65s ease 0.9s, background 0.2s;
+}
+.slide.active .s-btn { opacity: 1; transform: translateY(0); }
+.s-btn:hover { background: #ca9f64; }
+
+/* Custom badge on hero slide 3 */
+.s-custom-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-bottom: 20px;
+  font-size: 9px; letter-spacing: 0.26em; color: rgba(255,255,255,0.6);
+  text-transform: uppercase;
+  opacity: 0; transform: translateY(10px);
+  transition: opacity 0.7s ease 0.7s, transform 0.7s ease 0.7s;
+}
+.slide.active .s-custom-badge { opacity: 1; transform: translateY(0); }
+.s-custom-badge::before {
+  content: ''; width: 20px; height: 1px; background: #B8925A;
+}
+
+/* Dots + progress */
+.hero-dots {
+  position: absolute; bottom: 28px; right: 64px; z-index: 10;
+  display: flex; gap: 8px; align-items: center;
+}
+.dot {
+  width: 5px; height: 5px; background: rgba(255,255,255,0.3);
+  cursor: pointer; transition: all 0.3s;
+}
+.dot.active { width: 22px; background: #B8925A; }
+.hero-bar {
+  position: absolute; bottom: 0; left: 0;
+  height: 1.5px; background: #B8925A; width: 0%;
+  z-index: 10; transition: width 5.2s linear;
+}
+
+/* ══════════════ SECTION DIVIDER ══════════════ */
+.sec-head {
+  padding: 52px 48px 28px;
+  display: flex; align-items: baseline; justify-content: space-between;
+  border-bottom: 0.5px solid #c8c4bc;
+}
+.sec-head-left .eye {
+  font-size: 9px; letter-spacing: 0.32em; color: #B8925A;
+  text-transform: uppercase; margin-bottom: 8px;
+}
+.sec-head-left h2 {
+  font-size: 20px; font-weight: 200;
+  letter-spacing: 0.14em; color: #0f1622; text-transform: uppercase;
+}
+.sec-head-right {
+  font-size: 9.5px; letter-spacing: 0.18em; color: #888;
+  text-transform: uppercase; text-decoration: none;
+  border-bottom: 0.5px solid #c8c4bc; padding-bottom: 2px;
+  white-space: nowrap; transition: color 0.2s, border-color 0.2s;
+}
+.sec-head-right:hover { color: #B8925A; border-color: #B8925A; }
+
+/* ══════════════ T-SHIRT GRID ══════════════ */
+.shirt-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: #c8c4bc;
+}
+.sc {
+  background: #f5f3ef; cursor: pointer;
+  position: relative;
+}
+.sc:hover .sc-img { transform: scale(1.04); }
+.sc:hover .sc-hover { opacity: 1; }
+
+.sc-wrap { aspect-ratio: 3/4; overflow: hidden; position: relative; }
+.sc-img {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.55s ease; position: relative;
+}
+
+/* Pattern fills */
+.p-navy     { background: #1a2540; }
+.p-argyle   { background:
+  repeating-linear-gradient(45deg,
+    #1a2540 0,#1a2540 14px,
+    #253050 14px,#253050 18px,
+    #B8925A 18px,#B8925A 20px,
+    #253050 20px,#253050 34px,
+    #1a2540 34px,#1a2540 38px); }
+.p-stripe   { background:
+  repeating-linear-gradient(0deg,
+    #eceae4 0,#eceae4 20px,
+    #0f1622 20px,#0f1622 24px,
+    #B8925A 24px,#B8925A 27px,
+    #0f1622 27px,#0f1622 31px,
+    #eceae4 31px,#eceae4 52px); }
+.p-check    { background:
+  repeating-conic-gradient(#1e3050 0% 25%,#2a4068 0% 50%) 0 0/28px 28px; }
+.p-hound    { background:
+  repeating-conic-gradient(#1a2540 0% 25%,#304060 0% 50%) 0 0/22px 22px; }
+.p-forest   { background: #2e4a34; }
+.p-coral    { background: #b86040; }
+.p-geo      { background:
+  repeating-linear-gradient(60deg,
+    #1a2540 0,#1a2540 10px,
+    #243050 10px,#243050 20px,
+    rgba(184,146,90,.22) 20px,rgba(184,146,90,.22) 22px,
+    #243050 22px,#243050 32px); }
+
+/* Shirt SVG outline */
+.shirt-svg { position: absolute; opacity: 0.18; width: 52%; }
+.shirt-svg-dk { opacity: 0.12; }
+
+/* Badge */
+.sc-badge {
+  position: absolute; top: 12px; left: 12px;
+  font-size: 7.5px; letter-spacing: 0.2em; color: #fff;
+  background: #B8925A; padding: 3px 9px; text-transform: uppercase;
+}
+/* Hover CTA */
+.sc-hover {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: #0f1622; color: #fff; text-align: center;
+  font-size: 8.5px; letter-spacing: 0.22em; text-transform: uppercase;
+  padding: 11px; opacity: 0; transition: opacity 0.22s;
+}
+/* Info */
+.sc-info { padding: 14px 16px 18px; background: #fff; }
+.sc-name {
+  font-size: 10.5px; font-weight: 400; letter-spacing: 0.14em;
+  color: #0f1622; text-transform: uppercase; margin-bottom: 6px;
+}
+.sc-swatches { display: flex; gap: 5px; margin-bottom: 7px; }
+.sw {
+  width: 11px; height: 11px; border-radius: 50%;
+  border: 0.5px solid rgba(0,0,0,0.12);
+}
+.sw-navy     { background: #1a2540; }
+.sw-white    { background: #f0ece4; }
+.sw-forest   { background: #2e4a34; }
+.sw-charcoal { background: #484848; }
+.sw-coral    { background: #b86040; }
+.sw-burg     { background: #6e2030; }
+.sw-olive    { background: #5a6030; }
+.sw-sky      { background: #5888aa; }
+.sw-ivory    { background: #e0d8c8; }
+.sc-price {
+  font-size: 10px; letter-spacing: 0.1em; color: #555; font-weight: 300;
+}
+
+/* ══════════════ BOTTOMS ROW ══════════════ */
+.bottoms-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1px; background: #c8c4bc; margin-top: 1px;
+}
+.bc {
+  background: #fff; display: grid;
+  grid-template-columns: 200px 1fr; cursor: pointer;
+}
+.bc:hover .sc-img { transform: scale(1.03); }
+.bc .sc-wrap { aspect-ratio: auto; min-height: 180px; }
+.bc-info {
+  padding: 24px 24px; display: flex; flex-direction: column; justify-content: center;
+}
+.bc-name {
+  font-size: 11px; font-weight: 400; letter-spacing: 0.14em;
+  color: #0f1622; text-transform: uppercase; margin-bottom: 4px;
+}
+.bc-sub {
+  font-size: 10px; letter-spacing: 0.06em; color: #888; margin-bottom: 10px;
+}
+.bc-feats { list-style: none; margin-bottom: 12px; }
+.bc-feats li {
+  font-size: 9.5px; letter-spacing: 0.1em; color: #888; text-transform: uppercase;
+  padding: 4px 0; border-bottom: 0.5px solid #eee;
+  display: flex; align-items: center; gap: 9px;
+}
+.bc-feats li::before {
+  content: ''; width: 12px; height: 1px; background: #B8925A; flex-shrink: 0;
+}
+.bc-price { font-size: 10px; letter-spacing: 0.1em; color: #555; }
+
+.p-trouser { background: linear-gradient(160deg,#1a2540,#263050); }
+.p-skort   { background: linear-gradient(155deg,#2a1e2e,#4a3258); }
+
+/* ══════════════ CUSTOM BANNER ══════════════ */
+.custom-banner {
+  background: #0f1622;
+  border-left: 3px solid #B8925A;
+  padding: 48px 64px;
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 48px;
+}
+.cb-text .cb-eye {
+  font-size: 9px; letter-spacing: 0.32em; color: #B8925A;
+  text-transform: uppercase; margin-bottom: 12px;
+}
+.cb-text h2 {
+  font-size: 24px; font-weight: 200; letter-spacing: 0.1em;
+  color: #fff; line-height: 1.38;
+}
+.cb-actions {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px; flex-shrink: 0;
+}
+.cb-cta {
+  font-size: 9px; letter-spacing: 0.26em; color: #0f1622;
+  background: #B8925A; padding: 13px 28px; text-transform: uppercase;
+  border: none; cursor: pointer; white-space: nowrap; transition: background 0.2s;
+}
+.cb-cta:hover { background: #ca9f64; }
+.cb-link {
+  font-size: 9px; letter-spacing: 0.18em; color: rgba(255,255,255,0.38);
+  text-transform: uppercase; cursor: pointer; background: none;
+  border: none; border-bottom: 0.5px solid rgba(255,255,255,0.2);
+  padding-bottom: 2px; transition: color 0.2s;
+}
+.cb-link:hover { color: rgba(255,255,255,0.7); }
+
+/* Custom 6-pillar grid */
+.custom-grid {
+  display: grid; grid-template-columns: repeat(6, 1fr);
+  gap: 1px; background: #c8c4bc;
+}
+.cc {
+  background: #fff; padding: 24px 20px 22px;
+}
+.cc-n {
+  font-size: 8px; letter-spacing: 0.28em; color: #B8925A;
+  text-transform: uppercase; margin-bottom: 8px;
+}
+.cc-t {
+  font-size: 10.5px; font-weight: 500; letter-spacing: 0.14em;
+  color: #0f1622; text-transform: uppercase; margin-bottom: 8px;
+}
+.cc-tags { display: flex; flex-wrap: wrap; gap: 3px; }
+.cc-tag {
+  font-size: 7.5px; letter-spacing: 0.1em; color: #666;
+  background: #f0ede7; padding: 2px 7px; text-transform: uppercase;
+}
+
+/* ══════════════ USE CASES ══════════════ */
+.uc-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 1px; background: #c8c4bc;
+}
+.uc {
+  background: #fff; padding: 28px 26px;
+}
+.uc-n {
+  font-size: 8px; letter-spacing: 0.3em; color: #B8925A;
+  text-transform: uppercase; margin-bottom: 10px;
+}
+.uc-t {
+  font-size: 12px; font-weight: 500; letter-spacing: 0.12em;
+  color: #0f1622; text-transform: uppercase; margin-bottom: 8px;
+}
+.uc-b {
+  font-size: 12.5px; line-height: 1.72; color: #666; margin-bottom: 12px;
+}
+.uc-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.uc-tag {
+  font-size: 8px; letter-spacing: 0.1em; color: #0f1622;
+  background: #f0ede7; padding: 2px 9px; text-transform: uppercase;
+}
+.uc.wide {
+  grid-column: 1 / -1;
+  display: grid; grid-template-columns: 1fr 2fr;
+  gap: 28px; align-items: center;
+}
+.uc.wide .uc-left {
+  border-right: 0.5px solid #e8e4de; padding-right: 28px;
+}
+
+/* ══════════════ CTA STRIP ══════════════ */
+.cta-strip {
+  background: #0f1622; padding: 26px 48px;
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 20px;
+}
+.cta-strip span {
+  font-size: 12px; font-weight: 200; letter-spacing: 0.16em;
+  color: #fff; text-transform: uppercase;
+}
+.cta-strip button {
+  font-size: 9px; letter-spacing: 0.24em; color: #0f1622;
+  background: #B8925A; padding: 11px 24px; text-transform: uppercase;
+  border: none; cursor: pointer; white-space: nowrap; transition: background 0.2s;
+}
+.cta-strip button:hover { background: #ca9f64; }
+
+/* ══════════════ FOOTER ══════════════ */
+footer {
+  background: #0f1622; padding: 48px 48px 32px;
+}
+.f-cols {
+  display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 40px; padding-bottom: 36px;
+  border-bottom: 0.5px solid rgba(255,255,255,0.07); margin-bottom: 28px;
+}
+.f-brand {
+  font-size: 20px; font-weight: 200; letter-spacing: 0.42em;
+  color: #fff; margin-bottom: 10px;
+}
+.f-brand em { color: #B8925A; font-style: normal; }
+.f-tagline {
+  font-size: 9.5px; letter-spacing: 0.14em;
+  color: rgba(255,255,255,0.28); text-transform: uppercase; line-height: 1.9;
+}
+.f-col h4 {
+  font-size: 8px; letter-spacing: 0.3em; color: rgba(255,255,255,0.3);
+  text-transform: uppercase; margin-bottom: 16px;
+  padding-bottom: 8px; border-bottom: 0.5px solid rgba(255,255,255,0.06);
+}
+.f-col a {
+  display: block; font-size: 10px; letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.45); text-decoration: none;
+  text-transform: uppercase; margin-bottom: 10px; transition: color 0.2s;
+}
+.f-col a:hover { color: #B8925A; }
+.f-bot {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.f-copy { font-size: 9px; letter-spacing: 0.1em; color: rgba(255,255,255,0.18); text-transform: uppercase; }
+.f-made { font-size: 9px; letter-spacing: 0.18em; color: rgba(184,146,90,0.35); text-transform: uppercase; }
+
+/* ══════════════ RESPONSIVE ══════════════ */
+@media (max-width: 1000px) {
+  .shirt-grid { grid-template-columns: repeat(2, 1fr); }
+  .custom-grid { grid-template-columns: repeat(3, 1fr); }
+  .bottoms-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  nav { padding: 0 20px; }
+  .sec-head, .cta-strip { padding-left: 20px; padding-right: 20px; }
+  .slide-content { padding: 0 24px 52px; }
+  .s-head { font-size: 32px; }
+  .uc-grid { grid-template-columns: 1fr; }
+  .uc.wide { grid-template-columns: 1fr; }
+  .uc.wide .uc-left { border-right: none; border-bottom: 0.5px solid #e8e4de; padding-right: 0; padding-bottom: 18px; }
+  .custom-banner { flex-direction: column; padding: 32px 24px; gap: 24px; }
+  .f-cols { grid-template-columns: 1fr 1fr; gap: 28px; }
+  .custom-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════ NAV ════════════════ -->
+<nav>
+  <div class="nav-left">
+    <a href="#">Men</a>
+    <a href="#">Women</a>
+    <a href="#">Kids</a>
+  </div>
+
+  <a href="#" class="nav-brand">Ka<em>.</em>Sha</a>
+
+  <div class="nav-right">
+    <a href="#custom">Bespoke &amp; Custom</a>
+    <a href="#shop" class="nav-shop">Shop Now</a>
+  </div>
+</nav>
+
+
+<!-- ════════════════ HERO CAROUSEL ════════════════ -->
+<section id="hero">
+
+  <div class="slide s1 active">
+    <div class="slide-content">
+      <div class="s-eye">New Season · Golf Collection</div>
+      <div class="s-head">Dressed for the<br>clubhouse. Built<br>for every birdie.</div>
+      <div class="s-sub">Technical golfwear · Men · Women · Kids</div>
+      <a href="#shop" class="s-btn">Shop the Collection</a>
+    </div>
+  </div>
+
+  <div class="slide s2">
+    <div class="slide-content">
+      <div class="s-eye">Ready to Wear · 8 Patterns</div>
+      <div class="s-head">Solids. Stripes.<br>Argyle. Checks.<br>Your course, your style.</div>
+      <div class="s-sub">Off-the-shelf · Ships in 5 days</div>
+      <a href="#shop" class="s-btn">Shop T-Shirts</a>
+    </div>
+  </div>
+
+  <div class="slide s3">
+    <div class="slide-content">
+      <div class="s-eye">Bespoke Studio</div>
+      <div class="s-head">Your colour.<br>Your logo.<br>Your shirt.</div>
+      <div class="s-custom-badge">Colour · Print · Fit · Logo · Text · Trim</div>
+      <a href="#custom" class="s-btn">Open the Custom Studio</a>
+    </div>
+  </div>
+
+  <div class="slide s4">
+    <div class="slide-content">
+      <div class="s-eye">Tournaments · Academies · Clubs</div>
+      <div class="s-head">One shirt.<br>Five hundred.<br>Delivered on brief.</div>
+      <div class="s-sub">Bulk from 12 pieces · Pantone-matched</div>
+      <a href="#custom" class="s-btn">Get a Quote</a>
+    </div>
+  </div>
+
+  <div class="hero-dots">
+    <div class="dot active" onclick="goTo(0)"></div>
+    <div class="dot" onclick="goTo(1)"></div>
+    <div class="dot" onclick="goTo(2)"></div>
+    <div class="dot" onclick="goTo(3)"></div>
+  </div>
+  <div class="hero-bar" id="hbar"></div>
+</section>
+
+
+<!-- ════════════════ T-SHIRT GRID ════════════════ -->
+<div id="shop">
+  <div class="sec-head">
+    <div class="sec-head-left">
+      <div class="eye">Ready to Wear</div>
+      <h2>Golf T-Shirts</h2>
+    </div>
+    <a href="#" class="sec-head-right">View all →</a>
+  </div>
+
+  <div class="shirt-grid">
+
+    <!-- Solid Navy -->
+    <div class="sc">
+      <div class="sc-wrap">
+        <div class="sc-img p-navy">
+          <svg class="shirt-svg" viewBox="0 0 180 240" fill="none">
+            <path d="M60 32 L16 84 L4 118 L36 130 L36 224 L144 224 L144 130 L176 118 L164 84 L120 32 L100 50 L90 40 L80 50 Z" stroke="white" stroke-width="2" fill="none"/>
+            <circle cx="89" cy="75" r="4.5" fill="white"/><circle cx="89" cy="96" r="4.5" fill="white"/><circle cx="89" cy="117" r="4.5" fill="white"/>
+          </svg>
+        </div>
+        <div class="sc-badge">Bestseller</div>
+        <div class="sc-hover">Quick View</div>
+      </div>
+      <div class="sc-info">
+        <div class="sc-name">Solid Polo — Men's</div>
+        <div class="sc-swatches">
+          <div class="sw sw-navy"></div><div class="sw sw-white"></div><div class="sw sw-forest"></div>
+          <div class="sw sw-charcoal"></div><div class="sw sw-coral"></div><div class="sw sw-burg"></div>
+          <div class="sw sw-olive"></div><div class="sw sw-sky"></div>
+        </div>
+        <div class="sc-price">From ₹ 3,200</div>
+      </div>
+    </div>
+
+    <!-- Argyle -->
+    <div class="sc">
+      <div class="sc-wrap">
+        <div class="sc-img p-argyle">
+          <svg class="shirt-svg" viewBox="0 0 180 240" fill="none">
+            <path d="M60 32 L16 84 L4 118 L36 130 L36 224 L144 224 L144 130 L176 118 L164 84 L120 32 L100 50 L90 40 L80 50 Z" stroke="white" stroke-width="2" fill="none"/>
+          </svg>
+        </div>
+        <div class="sc-hover">Quick View</div>
+      </div>
+      <div class="sc-info">
+        <div class="sc-name">Classic Argyle — Men's</div>
+        <div class="sc-swatches">
+          <div class="sw sw-navy"></div><div class="sw sw-forest"></div><div class="sw sw-burg"></div>
+        </div>
+        <div class="sc-price">From ₹ 3,600</div>
+      </div>
+    </div>
+
+    <!-- Heritage Stripe -->
+    <div class="sc">
+      <div class="sc-wrap">
+        <div class="sc-img p-stripe">
+          <svg class="shirt-svg shirt-svg-dk" viewBox="0 0 180 240" fill="none">
+            <path d="M60 32 L16 84 L4 118 L36 130 L36 224 L144 224 L144 130 L176 118 L164 84 L120 32 L100 50 L90 40 L80 50 Z" stroke="#0f1622" stroke-width="2" fill="none"/>
+          </svg>
+        </div>
+        <div class="sc-hover">Quick View</div>
+      </div>
+      <div class="sc-info">
+        <div class="sc-name">Heritage Stripe — Men's</div>
+        <div class="sc-swatches">
+          <div class="sw sw-navy"></div><div class="sw sw-forest"></div>
+          <div class="sw sw-burg"></div><div class="sw sw-sky"></div>
+        </div>
+        <div class="sc-price">From ₹ 3,400</div>
+      </div>
+    </div>
+
+    <!-- Glen Check -->
+    <div class="sc">
+      <div class="sc-wrap">
+        <div class="sc-img p-check">
+          <svg class="shirt-svg" viewBox="0 0 180 240" fill="none">
+            <path d="M60 32 L16 84 L4 118 L36 130 L36 224 L144 224 L144 130 L176 118 L164 84 L120 32 L100 50 L90 40 L80 50 Z" stroke="white" stroke-width="2" fill="none"/>
+          </svg>
+        </div>
+        <div class="sc-badge">New</div>
+        <div class="sc-hover">Quick View</div>
+      </div>
+      <div class="sc-info">
+        <div class="sc-name">Glen Check — Men's</div>
+        <div class="sc-swatches">
+          <div class="sw sw-navy"></div><div class="sw sw-forest"></div><div class="sw sw-charcoal"></div>
+        </div>
+        <div class="sc-price">From ₹ 3,600</div>
+      </div>
+    </div>
+
+    <!-- Houndstooth -->
+    <div class="sc">
+      <div class="sc-wrap">
+        <div class="sc-img p-hound">
+          <svg class="shirt-svg" viewBox="0 0 180 240" fill="none">
+            <path d="M60 32 L16 84 L4 118 L36 130 L36 224 L144 224 L144 130 L176 118 L164 84 L120 32 L100 50 L90 40 L80 50 Z" stroke="white" stroke-width="2" fill="none"/>
+          </svg>
+        </div>
+        <div class="sc-hover">Quick View</div>
+      </div>
+      <div class="sc-info">
+        <div class="sc-name">Houndstooth — Men's</div>
+        <div class="sc-swatches">
+          <div class="sw sw-navy"></div><div class="sw sw-charcoal"></div><div class="sw sw-ivory"></div>
+        </div>
+        <div class="sc-price">From ₹ 3,600</div>
+      </div>
+    </div>
+
+    <!-- Geometric -->
+    <div class="sc">
+      <div class="sc-wrap">
+        <div class="sc-img p-geo">
+          <svg class="shirt-svg" viewBox="0 0 180 240" fill="none">
+            <path d="M60 32 L16 84 L4 118 L36 130 L36 224 L144 224 L144 130 L176 118 L164 84 L120 32 L100 50 L90 40 L80 50 Z" stroke="white" stroke-width="2" fill="none"/>
+          </svg>
+        </div>
+        <div class="sc-hover">Quick View</div>
+      </div>
+      <div class="sc-info">
+        <div class="sc-name">Geometric — Men's</div>
+        <div class="sc-swatches">
+          <div class="sw sw-navy"></div><div class="sw sw-charcoal"></div><div class="sw sw-olive"></div>
+        </div>
+        <div class="sc-price">From ₹ 3,600</div>
+      </div>
+    </div>
+
+    <!-- Women's Solid -->
+    <div class="sc">
+      <div class="sc-wrap">
+        <div class="sc-img" style="background:#c8b8a8;">
+          <svg class="shirt-svg shirt-svg-dk" viewBox="0 0 180 240" fill="none">
+            <path d="M60 32 L16 84 L4 118 L36 130 L36 224 L144 224 L144 130 L176 118 L164 84 L120 32 L100 50 L90 40 L80 50 Z" stroke="#0f1622" stroke-width="2" fill="none"/>
+            <circle cx="89" cy="75" r="4.5" fill="#B8925A"/><circle cx="89" cy="96" r="4.5" fill="#B8925A"/>
+          </svg>
+        </div>
+        <div class="sc-badge">Women's</div>
+        <div class="sc-hover">Quick View</div>
+      </div>
+      <div class="sc-info">
+        <div class="sc-name">Solid Polo — Women's</div>
+        <div class="sc-swatches">
+          <div class="sw sw-white"></div><div class="sw sw-navy"></div>
+          <div class="sw sw-coral"></div><div class="sw sw-sky"></div><div class="sw sw-olive"></div>
+        </div>
+        <div class="sc-price">From ₹ 3,200</div>
+      </div>
+    </div>
+
+    <!-- Kids' -->
+    <div class="sc">
+      <div class="sc-wrap">
+        <div class="sc-img p-forest">
+          <svg class="shirt-svg" viewBox="0 0 180 240" fill="none">
+            <path d="M60 32 L16 84 L4 118 L36 130 L36 224 L144 224 L144 130 L176 118 L164 84 L120 32 L100 50 L90 40 L80 50 Z" stroke="white" stroke-width="2" fill="none"/>
+            <circle cx="89" cy="155" r="14" stroke="white" stroke-width="1" fill="none" opacity="0.5"/>
+            <text x="83" y="160" font-size="9" fill="white" opacity="0.55" font-family="serif">KS</text>
+          </svg>
+        </div>
+        <div class="sc-badge">Kids'</div>
+        <div class="sc-hover">Quick View</div>
+      </div>
+      <div class="sc-info">
+        <div class="sc-name">Junior Polo — Kids'</div>
+        <div class="sc-swatches">
+          <div class="sw sw-forest"></div><div class="sw sw-navy"></div><div class="sw sw-coral"></div>
+        </div>
+        <div class="sc-price">From ₹ 1,800</div>
+      </div>
+    </div>
+
+  </div><!-- /shirt-grid -->
+
+
+  <!-- Bottoms -->
+  <div class="sec-head" style="padding-top:40px;">
+    <div class="sec-head-left">
+      <div class="eye">Bottoms</div>
+      <h2>Trousers &amp; Skorts</h2>
+    </div>
+    <a href="#" class="sec-head-right">View all →</a>
+  </div>
+
+  <div class="bottoms-grid">
+
+    <div class="bc">
+      <div class="sc-wrap">
+        <div class="sc-img p-trouser">
+          <svg class="shirt-svg" viewBox="0 0 160 240" fill="none">
+            <path d="M34 20 L126 20 L134 110 L108 230 L80 230 L52 230 L26 110 Z" stroke="white" stroke-width="2" fill="none"/>
+            <line x1="80" y1="110" x2="80" y2="230" stroke="white" stroke-width="1.5" opacity="0.4"/>
+            <rect x="32" y="20" width="96" height="10" rx="5" stroke="white" stroke-width="1" fill="none" opacity="0.35"/>
+          </svg>
+        </div>
+        <div class="sc-badge">Men's</div>
+      </div>
+      <div class="bc-info">
+        <div class="bc-name">Pro Tour Trouser</div>
+        <div class="bc-sub">Slim tapered · 4-way stretch</div>
+        <ul class="bc-feats">
+          <li>Velcro glove dock</li>
+          <li>3-slot tee holder</li>
+          <li>Zippered security pocket</li>
+        </ul>
+        <div class="sc-swatches" style="margin-bottom:8px;">
+          <div class="sw sw-navy"></div><div class="sw sw-charcoal"></div>
+          <div class="sw sw-ivory"></div><div class="sw sw-olive"></div>
+        </div>
+        <div class="bc-price">From ₹ 5,800</div>
+      </div>
+    </div>
+
+    <div class="bc">
+      <div class="sc-wrap">
+        <div class="sc-img p-skort">
+          <svg class="shirt-svg" viewBox="0 0 160 240" fill="none">
+            <rect x="30" y="18" width="100" height="10" rx="5" stroke="white" stroke-width="1.5" fill="none" opacity="0.4"/>
+            <path d="M30 28 L18 120 L0 230 L80 200 L80 230 L80 200 L160 230 L142 120 L130 28 Z" stroke="white" stroke-width="2" fill="none"/>
+            <line x1="80" y1="60" x2="80" y2="200" stroke="white" stroke-width="1" opacity="0.3"/>
+          </svg>
+        </div>
+        <div class="sc-badge">Women's</div>
+      </div>
+      <div class="bc-info">
+        <div class="bc-name">Pro Tour Skort</div>
+        <div class="bc-sub">Tailored fit · Technical stretch</div>
+        <ul class="bc-feats">
+          <li>Inner shorts panel</li>
+          <li>Full swing freedom</li>
+          <li>Clubhouse-ready finish</li>
+        </ul>
+        <div class="sc-swatches" style="margin-bottom:8px;">
+          <div class="sw sw-navy"></div><div class="sw sw-charcoal"></div><div class="sw sw-ivory"></div>
+        </div>
+        <div class="bc-price">From ₹ 4,200</div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /shop -->
+
+
+<!-- ════════════════ CUSTOM SECTION ════════════════ -->
+<div id="custom">
+  <div class="custom-banner">
+    <div class="cb-text">
+      <div class="cb-eye">Bespoke &amp; Custom</div>
+      <h2>Every detail — yours to design.<br>One shirt or five hundred.</h2>
+    </div>
+    <div class="cb-actions">
+      <button class="cb-cta">Open the Custom Studio</button>
+      <button class="cb-link">Bulk &amp; corporate pricing →</button>
+    </div>
+  </div>
+
+  <div class="custom-grid">
+    <div class="cc">
+      <div class="cc-n">01</div>
+      <div class="cc-t">Colour</div>
+      <div class="cc-tags"><span class="cc-tag">Pantone match</span><span class="cc-tag">Club colours</span></div>
+    </div>
+    <div class="cc">
+      <div class="cc-n">02</div>
+      <div class="cc-t">Print</div>
+      <div class="cc-tags"><span class="cc-tag">40+ prints</span><span class="cc-tag">Custom artwork</span></div>
+    </div>
+    <div class="cc">
+      <div class="cc-n">03</div>
+      <div class="cc-t">Fit &amp; Size</div>
+      <div class="cc-tags"><span class="cc-tag">Athletic</span><span class="cc-tag">Classic</span><span class="cc-tag">Custom size</span></div>
+    </div>
+    <div class="cc">
+      <div class="cc-n">04</div>
+      <div class="cc-t">Logo</div>
+      <div class="cc-tags"><span class="cc-tag">5 placements</span><span class="cc-tag">Embroider / print</span></div>
+    </div>
+    <div class="cc">
+      <div class="cc-n">05</div>
+      <div class="cc-t">Text</div>
+      <div class="cc-tags"><span class="cc-tag">Name</span><span class="cc-tag">Initials</span><span class="cc-tag">Club text</span></div>
+    </div>
+    <div class="cc">
+      <div class="cc-n">06</div>
+      <div class="cc-t">Collar &amp; Trim</div>
+      <div class="cc-tags"><span class="cc-tag">Contrast collar</span><span class="cc-tag">Tipping</span></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════ USE CASES ════════════════ -->
+<div class="sec-head">
+  <div class="sec-head-left">
+    <div class="eye">How Ka.Sha is Worn</div>
+    <h2>Made for Every Context on the Course</h2>
+  </div>
+</div>
+
+<div class="uc-grid">
+
+  <div class="uc">
+    <div class="uc-n">01</div>
+    <div class="uc-t">Tournaments</div>
+    <div class="uc-b">Consistent kit across the field — tournament name, sponsor logo, player detail. From 12 pieces, Pantone-matched to brief.</div>
+    <div class="uc-tags">
+      <span class="uc-tag">From 12 pieces</span><span class="uc-tag">Player names</span><span class="uc-tag">Sponsor logo</span>
+    </div>
+  </div>
+
+  <div class="uc">
+    <div class="uc-n">02</div>
+    <div class="uc-t">Golf Academies</div>
+    <div class="uc-b">Academy crest, student name, cohort year. A uniform students are proud to wear — on the range and at the club. All sizes XS–5XL.</div>
+    <div class="uc-tags">
+      <span class="uc-tag">Academy crest</span><span class="uc-tag">Student names</span><span class="uc-tag">All sizes</span>
+    </div>
+  </div>
+
+  <div class="uc">
+    <div class="uc-n">03</div>
+    <div class="uc-t">Sponsored Shirts</div>
+    <div class="uc-b">Logo at five placements, colour-matched to brand guidelines. Corporate sponsors, club partners, brand ambassadors.</div>
+    <div class="uc-tags">
+      <span class="uc-tag">Brand logo</span><span class="uc-tag">Colour match</span><span class="uc-tag">5 placements</span>
+    </div>
+  </div>
+
+  <div class="uc">
+    <div class="uc-n">04</div>
+    <div class="uc-t">Personal Wardrobe</div>
+    <div class="uc-b">Your print, your fit, your initials. Single-piece orders handled — every detail from collar trim to interior label.</div>
+    <div class="uc-tags">
+      <span class="uc-tag">1-piece orders</span><span class="uc-tag">Any print</span><span class="uc-tag">Your fit</span>
+    </div>
+  </div>
+
+  <div class="uc wide">
+    <div class="uc-left">
+      <div class="uc-n">05</div>
+      <div class="uc-t">Social Golf Clubs</div>
+    </div>
+    <div>
+      <div class="uc-b">Shared print, club name on chest, everyone in the same shirt — without anyone settling. From 12 pieces, mixed fits and sizes across the group.</div>
+      <div class="uc-tags">
+        <span class="uc-tag">From 12 pieces</span><span class="uc-tag">Club name</span>
+        <span class="uc-tag">Mixed sizes</span><span class="uc-tag">Group identity</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="cta-strip">
+  <span>Start your order — one shirt or five hundred</span>
+  <button>Open the Custom Studio</button>
+</div>
+
+
+<!-- ════════════════ FOOTER ════════════════ -->
+<footer>
+  <div class="f-cols">
+    <div>
+      <div class="f-brand">Ka<em>.</em>Sha</div>
+      <div class="f-tagline">Elite craft,<br>worn on the course.<br>Made in India.</div>
+    </div>
+    <div class="f-col">
+      <h4>Shop</h4>
+      <a href="#">Men's Range</a>
+      <a href="#">Women's Range</a>
+      <a href="#">Kids' Range</a>
+      <a href="#">Trousers</a>
+      <a href="#">Women's Skort</a>
+    </div>
+    <div class="f-col">
+      <h4>Bespoke</h4>
+      <a href="#">Custom Studio</a>
+      <a href="#">Tournaments</a>
+      <a href="#">Academies</a>
+      <a href="#">Bulk Orders</a>
+    </div>
+    <div class="f-col">
+      <h4>Ka.Sha</h4>
+      <a href="#">Our Story</a>
+      <a href="#">Size Guide</a>
+      <a href="#">Shipping &amp; Returns</a>
+      <a href="#">Contact</a>
+    </div>
+  </div>
+  <div class="f-bot">
+    <div class="f-copy">© 2025 Ka.Sha Golfwear</div>
+    <div class="f-made">Crafted with precision · India</div>
+  </div>
+</footer>
+
+
+<script>
+let cur = 0;
+const slides = document.querySelectorAll('.slide');
+const dots   = document.querySelectorAll('.dot');
+const bar    = document.getElementById('hbar');
+
+function goTo(n) {
+  slides[cur].classList.remove('active');
+  dots[cur].classList.remove('active');
+  cur = (n + slides.length) % slides.length;
+  slides[cur].classList.add('active');
+  dots[cur].classList.add('active');
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  setTimeout(() => { bar.style.transition = 'width 5.2s linear'; bar.style.width = '100%'; }, 40);
+}
+bar.style.transition = 'width 5.2s linear';
+bar.style.width = '100%';
+setInterval(() => goTo(cur + 1), 5400);
+</script>
+
+</body>
+</html>

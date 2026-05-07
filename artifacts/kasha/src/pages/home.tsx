@@ -141,10 +141,12 @@ function HomeInner() {
         .kp-slide { position:absolute; inset:0; opacity:0; transition: opacity 1.2s ease; display:flex; align-items:flex-end; }
         .kp-slide.active { opacity:1; }
         .kp-slide::after { content:''; position:absolute; inset:0; background: linear-gradient(to bottom, transparent 28%, rgba(8,10,18,0.72) 100%); }
-        .kp-s1 { background: linear-gradient(155deg,#1a2535 0%,#2d3f52 45%,#8aaab8 100%); }
-        .kp-s2 { background: linear-gradient(148deg,#1c2d20 0%,#304838 48%,#6a9878 100%); }
-        .kp-s3 { background: linear-gradient(152deg,#2c1f12 0%,#4a3522 48%,#b09060 100%); }
-        .kp-s4 { background: linear-gradient(150deg,#1e1a2c 0%,#2e2848 48%,#8070b0 100%); }
+        .kp-s1 { background: linear-gradient(155deg,#1a2535 0%,#2d3f52 45%,#8aaab8 100%) center/cover no-repeat, #1a2535; }
+        .kp-s2 { background: linear-gradient(148deg,#1c2d20 0%,#304838 48%,#6a9878 100%) center/cover no-repeat, #1c2d20; }
+        .kp-s3 { background: linear-gradient(152deg,#2c1f12 0%,#4a3522 48%,#b09060 100%) center/cover no-repeat, #2c1f12; }
+        .kp-s4 { background: linear-gradient(150deg,#1e1a2c 0%,#2e2848 48%,#8070b0 100%) center/cover no-repeat, #1e1a2c; }
+        .kp-photo { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center; z-index:0; }
+        .kp-slide::before { content:''; position:absolute; inset:0; background: linear-gradient(135deg, rgba(8,10,18,0.55) 0%, rgba(8,10,18,0.25) 50%, rgba(8,10,18,0.15) 100%); z-index:1; }
         .kp-slide-content { position:relative; z-index:2; padding: 0 64px 72px; }
         .kp-eye { font-size:9px; letter-spacing:.36em; color:#B8925A; text-transform:uppercase; margin-bottom:14px; opacity:0; transform:translateY(12px); transition: opacity .7s ease .3s, transform .7s ease .3s; }
         .kp-slide.active .kp-eye { opacity:1; transform:translateY(0); }
@@ -290,6 +292,7 @@ function HomeInner() {
       {/* HERO CAROUSEL */}
       <section id="hero" className="kp-hero">
         <div className={`kp-slide kp-s1 ${cur === 0 ? "active" : ""}`}>
+          <img className="kp-photo" src="/images/hero/slide-1.jpg" alt="" />
           <div className="kp-slide-content">
             <div className="kp-eye">New Season · Golf Collection</div>
             <div className="kp-head">
@@ -302,6 +305,7 @@ function HomeInner() {
           </div>
         </div>
         <div className={`kp-slide kp-s2 ${cur === 1 ? "active" : ""}`}>
+          <img className="kp-photo" src="/images/hero/slide-2.jpg" alt="" />
           <div className="kp-slide-content">
             <div className="kp-eye">Ready to Wear · 8 Patterns</div>
             <div className="kp-head">
@@ -314,6 +318,7 @@ function HomeInner() {
           </div>
         </div>
         <div className={`kp-slide kp-s3 ${cur === 2 ? "active" : ""}`}>
+          <img className="kp-photo" src="/images/hero/slide-3.jpg" alt="" />
           <div className="kp-slide-content">
             <div className="kp-eye">Bespoke Studio</div>
             <div className="kp-head">
@@ -326,6 +331,7 @@ function HomeInner() {
           </div>
         </div>
         <div className={`kp-slide kp-s4 ${cur === 3 ? "active" : ""}`}>
+          <img className="kp-photo" src="/images/hero/slide-4.jpg" alt="" />
           <div className="kp-slide-content">
             <div className="kp-eye">Tournaments · Academies · Clubs</div>
             <div className="kp-head">

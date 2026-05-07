@@ -29,3 +29,15 @@ id = "WHJAhb5a2Nm52ZTVl0tfc"
 uri = "file://exports/kasha-customisation.zip"
 type = "unspecified"
 title = "KA.SHA Customisation Bundle (backend + frontend)"
+
+[[outputs]]
+id = "hSdbv1u3aCdzZ-kUa9H82"
+uri = "file://attached_assets/stock_images/tailor_workshop.jpg"
+type = "image"
+title = "tailor sewing fabric workshop"
+
+[[outputs]]
+id = "9Cj728vAh9ws2aozIqgbE"
+uri = "file://attached_assets/stock_images/golf_team.jpg"
+type = "image"
+title = "golfers team on golf course"
