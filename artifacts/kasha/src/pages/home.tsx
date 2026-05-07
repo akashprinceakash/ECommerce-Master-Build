@@ -316,57 +316,60 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── MEN ▸ T-SHIRTS — Fabric & Pattern (single horizontal row, like Top Sellers) ─ */}
-      <section style={{ padding: "100px 0 0", fontFamily: "'Josefin Sans', sans-serif" }}>
-        <div style={{ maxWidth: "1380px", margin: "0 auto", padding: "0 80px", textAlign: "center", marginBottom: "36px" }}>
-          <p style={{ fontSize: "10px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e", marginBottom: "8px" }}>Men ▸ T-Shirts</p>
-          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "40px", fontWeight: 400, color: "#1c1c1c", marginBottom: "10px" }}>Fabric &amp; Pattern</h2>
-          <p style={{ fontSize: "12px", color: "#a09890", letterSpacing: ".5px" }}>
-            Choose a blank canvas to print on, or a pre-patterned silhouette to colour.
-          </p>
-        </div>
-        <div
-          className="grid grid-cols-2 md:grid-cols-4"
-          style={{ gap: 0, padding: "0 80px", maxWidth: "1380px", margin: "0 auto", borderTop: "1px solid #e8e4df" }}
-        >
-          {(() => {
-            const fpFallback = [
-              { img: "/images/kasha/polos/p1.png", name: "KS1007B Classic Pattern", price: "₹2,000.00", chip: "PATTERN" },
-              { img: "/images/kasha/polos/p2.png", name: "The Linen Trouser",       price: "₹8,999.00", chip: "FABRIC"  },
-              { img: "/images/kasha/polos/p3.png", name: "The Khadi Jacket",        price: "₹18,999.00", chip: "FABRIC" },
-              { img: "/images/kasha/polos/p4.png", name: "The Silk Kurta",          price: "₹12,999.00", chip: "PATTERN" },
-            ];
-            const merged = [
-              ...patternTees.slice(0, 2).map(p => ({ ...p, _chip: "PATTERN" as const })),
-              ...fabricTees.slice(0, 2).map(p => ({ ...p, _chip: "FABRIC" as const })),
-            ];
-            const useReal = merged.length === 4;
-            return (useReal ? merged.map((p, i) => ({
-              href: `/products/${p.id}`,
-              img: p.thumbnailUrl || fpFallback[i].img,
-              name: cleanName(p.name) || fpFallback[i].name,
-              price: formatPrice(p.priceInPaise),
-              chip: p._chip,
-            })) : fpFallback.map(f => ({ ...f, href: "/products" }))).map((c, i) => (
-              <Link key={i} href={c.href} className="group block cursor-pointer" style={{ borderRight: i < 3 ? "1px solid #e8e4df" : "none" }}>
-                <div className="relative" style={{ height: "480px", overflow: "hidden", background: "#f8f7f5" }}>
-                  <img src={c.img} alt={c.name} className="transition-transform duration-500 group-hover:scale-[1.04]" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "20px", display: "block" }} />
-                  <span className="absolute" style={{ top: "16px", left: "16px", background: "#fff", fontSize: "9px", letterSpacing: "1.5px", textTransform: "uppercase", padding: "5px 12px", color: "#1c1c1c", border: "1px solid #ece8e2" }}>
-                    {c.chip}
-                  </span>
-                </div>
-                <div style={{ padding: "18px 20px 24px" }}>
-                  <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "16px", color: "#1c1c1c", marginBottom: "5px" }}>{c.name}</div>
-                  <div style={{ fontSize: "13px", color: "#a09890" }}>{c.price}</div>
-                </div>
-              </Link>
-            ));
-          })()}
+      {/* ── MEN ▸ T-SHIRTS Fabric + Pattern (KA.SHA v2 spec preserved) ─ */}
+      <section style={{ background: "#f7f3ee", padding: "60px 80px", marginTop: "60px", fontFamily: "'Josefin Sans', sans-serif" }}>
+        <div style={{ maxWidth: "1380px", margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: "32px" }}>
+            <p style={{ fontSize: "10px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e", marginBottom: "8px" }}>Men ▸ T-Shirts</p>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "32px", fontWeight: 400, color: "#1c1c1c" }}>Fabric &amp; Pattern</h2>
+            <p style={{ fontSize: "12px", color: "#a09890", marginTop: "8px" }}>Choose a blank canvas to print on, or a pre-patterned silhouette to colour.</p>
+          </div>
+
+          <div style={{ marginBottom: "28px" }}>
+            <h3 style={{ fontSize: "9px", letterSpacing: "3px", color: "#9b8b6e", marginBottom: "12px" }}>FABRIC &amp; MATERIAL</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
+              {(fabricTees.length > 0 ? fabricTees : Array(7).fill(null)).map((p, i) => (
+                p ? (
+                  <Link key={p.id} href={`/products/${p.id}`} className="group block cursor-pointer">
+                    <div className="bg-white overflow-hidden" style={{ height: "200px", border: "1px solid #ece8e2" }}>
+                      {p.thumbnailUrl
+                        ? <img src={p.thumbnailUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
+                        : <div className="w-full h-full flex items-center justify-center text-gray-300 text-[10px] tracking-[0.2em]">{p.name}</div>}
+                    </div>
+                    <h4 className="mt-2 truncate" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "13px", color: "#1c1c1c" }}>{p.name}</h4>
+                    <p style={{ fontSize: "11px", color: "#a09890" }}>{formatPrice(p.priceInPaise)}</p>
+                  </Link>
+                ) : <div key={i} className="bg-white animate-pulse" style={{ height: "200px" }} />
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 style={{ fontSize: "9px", letterSpacing: "3px", color: "#9b8b6e", marginBottom: "12px" }}>PATTERNS</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
+              {(patternTees.length > 0 ? patternTees : Array(7).fill(null)).map((p, i) => {
+                if (!p) return <div key={i} className="bg-white animate-pulse" style={{ height: "200px" }} />;
+                const cn = cleanName(p.name);
+                return (
+                  <Link key={p.id} href={`/products/${p.id}`} className="group block cursor-pointer">
+                    <div className="relative bg-white overflow-hidden" style={{ height: "200px", border: "1px solid #ece8e2" }}>
+                      {p.thumbnailUrl
+                        ? <img src={p.thumbnailUrl} alt={cn} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
+                        : <div className="w-full h-full flex items-center justify-center" style={{ fontSize: "10px", letterSpacing: "0.2em", color: "#9b8b6e" }}>{cn.split(" ")[1] || "PATTERN"}</div>}
+                      <span className="absolute" style={{ top: "6px", right: "6px", background: "#fff", fontSize: "7px", letterSpacing: "1.5px", padding: "3px 6px", border: "1px solid #ece8e2", color: "#1c1c1c" }}>PATTERN</span>
+                    </div>
+                    <h4 className="mt-2 truncate" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "13px", color: "#1c1c1c" }}>{cn}</h4>
+                    <p style={{ fontSize: "11px", color: "#a09890" }}>{formatPrice(p.priceInPaise)}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ── CUSTOMISE PANEL ─────────────────────────────────────── */}
-      <section className="grid grid-cols-1 md:grid-cols-2" style={{ minHeight: "720px", marginTop: "120px", fontFamily: "'Josefin Sans', sans-serif", maxWidth: "1380px", marginLeft: "auto", marginRight: "auto" }}>
+      <section className="grid grid-cols-1 md:grid-cols-2" style={{ minHeight: "640px", marginTop: "80px", fontFamily: "'Josefin Sans', sans-serif" }}>
         <div style={{ background: "#f0ece6", padding: "88px 100px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
           <p style={{ fontSize: "10px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e", marginBottom: "20px" }}>Tailor your play</p>
           <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "52px", fontWeight: 400, color: "#1c1c1c", marginBottom: "44px", lineHeight: 1.1 }}>
@@ -390,7 +393,7 @@ export default function Home() {
           </Link>
         </div>
         <div style={{ background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 80px" }}>
-          <img src={CUST_SWATCHES[custSw].img} alt="Polo preview" style={{ width: "360px", height: "460px", objectFit: "contain", transition: "opacity .3s" }} />
+          <img src={CUST_SWATCHES[custSw].img} alt="Polo preview" style={{ width: "240px", height: "300px", objectFit: "contain", transition: "opacity .3s" }} />
           <div className="flex mt-5 mb-2" style={{ gap: "14px" }}>
             {CUST_SWATCHES.map((s, i) => (
               <button
@@ -413,7 +416,7 @@ export default function Home() {
       </section>
 
       {/* ── PRINTS SHOWCASE ─────────────────────────────────────── */}
-      <section style={{ padding: "140px 80px 0", fontFamily: "'Josefin Sans', sans-serif" }}>
+      <section style={{ padding: "80px 80px 0", fontFamily: "'Josefin Sans', sans-serif" }}>
         <div style={{ maxWidth: "1380px", margin: "0 auto" }}>
           <p style={{ fontSize: "10px", letterSpacing: "3px", textTransform: "uppercase", color: "#9b8b6e", textAlign: "center", marginBottom: "14px" }}>Prints showcase</p>
           <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "40px", fontWeight: 400, color: "#1c1c1c", textAlign: "center", lineHeight: 1.3, marginBottom: "12px" }}>
@@ -435,7 +438,7 @@ export default function Home() {
       </section>
 
       {/* ── EVENTS GALLERY ─────────────────────────────────────── */}
-      <section style={{ padding: "140px 80px 0", fontFamily: "'Josefin Sans', sans-serif" }}>
+      <section style={{ padding: "80px 80px 0", fontFamily: "'Josefin Sans', sans-serif" }}>
         <div style={{ maxWidth: "1380px", margin: "0 auto" }}>
           <div className="flex items-end justify-between" style={{ marginBottom: "24px" }}>
             <div>
