@@ -13,6 +13,33 @@ type ItemType = "tshirts" | "trousers";
 const TSHIRT_CATEGORIES = ["t-shirt", "polo", "fabric-tshirt", "pattern", "shirts"];
 const TROUSER_CATEGORIES = ["pants"];
 
+// Explicit gender mapping for the existing catalog. Products without a
+// "men/women" keyword in their name need a deterministic assignment so that
+// "Men → T-shirts" and "Women → T-shirts" don't show the same items.
+// Anything not listed here is treated as unisex (visible under both Men and
+// Women). Kids has no dedicated SKUs yet, so it shows the unisex set with
+// the kids fallback imagery.
+const PRODUCT_GENDER: Record<number, "men" | "women" | "unisex"> = {
+  1: "men",      // The Silk Kurta
+  2: "unisex",   // The Linen Trouser
+  3: "men",      // The Khadi Jacket
+  4: "men",      // T-shirt1
+  5: "women",    // Signature T-shirt
+  6: "women",    // T-shirt5
+  7: "men",      // Signature Polo
+  8: "women",    // Pattern01 T-shirt
+  9: "men",      // Polo001
+  10: "women",   // Pologt
+  11: "men",     // KS1000B (fabric tee)
+  18: "men",     // KS1007B Classic
+  19: "women",   // KS1008B Sport Side
+  20: "men",     // KS1009B Triple Tone
+  21: "women",   // KS1010B Wave Panel
+  22: "men",     // KS1011B Hourglass
+  23: "women",   // KS1012B Pinstripe
+  24: "men",     // KS1013B Raglan
+};
+
 const GENDER_TOKENS: Record<Gender, string[]> = {
   men: ["men", "men's", "mens", "male"],
   women: ["women", "women's", "womens", "female", "skort", "ladies"],
@@ -55,13 +82,24 @@ export default function ProductsPage() {
       list = list.filter((p) => TROUSER_CATEGORIES.includes((p.category || "").toLowerCase()));
     }
 
-    if (gender) {
-      const tokens = GENDER_TOKENS[gender];
+    if (gender === "men" || gender === "women") {
+      list = list.filter((p) => {
+        // Honour explicit per-product gender mapping first
+        const mapped = PRODUCT_GENDER[p.id];
+        if (mapped) return mapped === gender || mapped === "unisex";
+        // Fall back to keyword matching for any future products
+        const tokens = GENDER_TOKENS[gender];
+        const hay = `${p.name} ${p.description || ""}`.toLowerCase();
+        return tokens.some((t) => hay.includes(t));
+      });
+    } else if (gender === "kids") {
+      // No dedicated kids SKUs yet — keyword match, otherwise show the unisex
+      // set so the section isn't empty. Fallback imagery handles the visual.
+      const tokens = GENDER_TOKENS.kids;
       const matched = list.filter((p) => {
         const hay = `${p.name} ${p.description || ""}`.toLowerCase();
         return tokens.some((t) => hay.includes(t));
       });
-      // If no name keywords match, fall back to the type-filtered list so the page is never empty.
       if (matched.length > 0) list = matched;
     }
 

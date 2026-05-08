@@ -108,14 +108,6 @@ function HomeInner() {
     setBarKey((k) => k + 1);
   };
 
-  const handleAnchor = (e: React.MouseEvent, href: string) => {
-    if (href.startsWith("#")) {
-      e.preventDefault();
-      const el = document.getElementById(href.slice(1));
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
-
   return (
     <div className="kasha-page">
       <style>{`
@@ -281,12 +273,8 @@ function HomeInner() {
           Ka<em>.</em>Sha
         </Link>
         <div className="kp-nav-right">
-          <a href="#custom" onClick={(e) => handleAnchor(e, "#custom")}>
-            Bespoke &amp; Custom
-          </a>
-          <a href="#shop" className="kp-nav-shop" onClick={(e) => handleAnchor(e, "#shop")}>
-            Shop Now
-          </a>
+          <Link href="/products/1/customize">Bespoke &amp; Custom</Link>
+          <Link href="/products" className="kp-nav-shop">Shop Now</Link>
         </div>
       </nav>
 
@@ -336,9 +324,9 @@ function HomeInner() {
               Your colour.<br />Your logo.<br />Your shirt.
             </div>
             <div className="kp-cbadge">Colour · Print · Fit · Logo · Text · Trim</div>
-            <a href="#custom" className="kp-btn" onClick={(e) => handleAnchor(e, "#custom")}>
+            <Link href="/products/1/customize" className="kp-btn">
               Open the Custom Studio
-            </a>
+            </Link>
           </div>
         </div>
         <div className={`kp-slide kp-s4 ${cur === 3 ? "active" : ""}`}>
@@ -349,9 +337,9 @@ function HomeInner() {
               One shirt.<br />Five hundred.<br />Delivered on brief.
             </div>
             <div className="kp-sub">Bulk from 12 pieces · Pantone-matched</div>
-            <a href="#custom" className="kp-btn" onClick={(e) => handleAnchor(e, "#custom")}>
+            <Link href="/products/1/customize" className="kp-btn">
               Get a Quote
-            </a>
+            </Link>
           </div>
         </div>
         <div className="kp-dots">
@@ -598,9 +586,9 @@ function HomeInner() {
           <div className="kp-fcol">
             <h4>Bespoke</h4>
             <Link href="/products/1/customize">Custom Studio</Link>
-            <a href="#custom" onClick={(e) => handleAnchor(e, "#custom")}>Tournaments</a>
-            <a href="#custom" onClick={(e) => handleAnchor(e, "#custom")}>Academies</a>
-            <a href="#custom" onClick={(e) => handleAnchor(e, "#custom")}>Bulk Orders</a>
+            <Link href="/products/1/customize">Tournaments</Link>
+            <Link href="/products/1/customize">Academies</Link>
+            <Link href="/products/1/customize">Bulk Orders</Link>
           </div>
           <div className="kp-fcol">
             <h4>Ka.Sha</h4>
