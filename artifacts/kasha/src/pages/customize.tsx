@@ -3,6 +3,7 @@ import { useParams, Link, useLocation } from "wouter";
 import { useUser, Show } from "@clerk/react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/Layout";
+import TShirtViewer3D from "@/components/3d/TShirtViewer3D";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
@@ -397,17 +398,12 @@ export default function CustomizePage() {
 
             <PreviewPanel
               partColors={partColors}
-              styleType={styleType}
               styleSummary={styleSummary}
               sleeveLen={sleeveLen}
               logoUrl={logoUrl}
               logoPos={logoPos}
               logoSize={logoSize}
               size={customEnabled ? "Custom" : size}
-              printId={printId}
-              patternId={patternId}
-              patternA={patternA}
-              patternB={patternB}
             />
           </div>
         </div>
@@ -1224,48 +1220,13 @@ function Divider() {
 // ── Preview Panel (right side) ─────────────────────────────────────────────
 function PreviewPanel(p: {
   partColors: Record<Part, string>;
-  styleType: StyleType;
   styleSummary: string;
   sleeveLen: "half" | "full";
   logoUrl: string | null;
   logoPos: Pos;
   logoSize: number;
   size: string;
-  printId: string;
-  patternId: string;
-  patternA: string;
-  patternB: string;
 }) {
-  const isPattern = p.styleType === "pattern";
-  const isPrint = p.styleType === "print";
-
-  // Logo positions on shirt body (within front rect 58,58 to 142,192)
-  const POS_COORDS: Record<Pos, { x: number; y: number }> = {
-    "top-left":   { x: 70,  y: 75  },
-    "top-center": { x: 100, y: 75  },
-    "top-right":  { x: 130, y: 75  },
-    "mid-left":   { x: 70,  y: 125 },
-    "center":     { x: 100, y: 125 },
-    "mid-right":  { x: 130, y: 125 },
-    "bot-left":   { x: 70,  y: 175 },
-    "bot-center": { x: 100, y: 175 },
-    "bot-right":  { x: 130, y: 175 },
-  };
-  const logoCoord = POS_COORDS[p.logoPos];
-  const logoBoxW = 40 * (p.logoSize / 50);
-  const logoBoxH = 28 * (p.logoSize / 50);
-
-  const patternFill = isPattern
-    ? (p.patternId === "stripes"
-        ? `repeating-linear-gradient(0deg,${p.patternA} 0,${p.patternA} 4px,${p.patternB} 4px,${p.patternB} 12px)`
-        : p.patternId === "diagonal"
-        ? `repeating-linear-gradient(45deg,${p.patternA} 0,${p.patternA} 2px,${p.patternB} 2px,${p.patternB} 10px)`
-        : p.patternId === "grid"
-        ? `${p.patternB}` : `${p.patternA}`)
-    : null;
-
-  const printDef = PRINTS.find(pr => pr.id === p.printId);
-
   return (
     <div
       style={{
@@ -1291,73 +1252,27 @@ function PreviewPanel(p: {
         Live Preview
       </div>
 
-      {/* Shirt SVG — 200×230 */}
-      <div style={{ position: "relative", width: "100%", maxWidth: 220, margin: "0 auto" }}>
-        <svg viewBox="0 0 200 230" style={{ width: "100%", height: "auto", display: "block" }}>
-          <defs>
-            {isPrint && printDef && (
-              <pattern id="bodyFill" patternUnits="userSpaceOnUse" width="20" height="20">
-                <rect width="20" height="20" fill="#1a1a1a" />
-              </pattern>
-            )}
-          </defs>
-          {/* Right sleeve */}
-          <path
-            d={p.sleeveLen === "half"
-              ? "M55 40 L25 60 L35 80 L62 68 Z"
-              : "M55 40 L20 65 L30 100 L62 86 Z"}
-            fill={p.partColors.sleeves}
-            stroke="rgba(255,255,255,0.15)"
-            strokeWidth="0.6"
-          />
-          {/* Left sleeve */}
-          <path
-            d={p.sleeveLen === "half"
-              ? "M145 40 L175 60 L165 80 L138 68 Z"
-              : "M145 40 L180 65 L170 100 L138 86 Z"}
-            fill={p.partColors.sleeves}
-            stroke="rgba(255,255,255,0.15)"
-            strokeWidth="0.6"
-          />
-          {/* Back */}
-          <rect x="55" y="55" width="90" height="140" rx="3" fill={p.partColors.back} stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
-          {/* Front */}
-          <rect x="58" y="58" width="84" height="134" rx="3" fill={p.partColors.front} stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
-          {/* Collar */}
-          <path
-            d="M88 38 Q100 50 112 38 L115 55 Q100 70 85 55 Z"
-            fill={p.partColors.collar}
-            stroke="rgba(255,255,255,0.15)"
-            strokeWidth="0.6"
-          />
-          {/* Logo placement box */}
-          {p.logoUrl && (
-            <image
-              href={p.logoUrl}
-              x={logoCoord.x - logoBoxW / 2}
-              y={logoCoord.y - logoBoxH / 2}
-              width={logoBoxW}
-              height={logoBoxH}
-              preserveAspectRatio="xMidYMid meet"
-            />
-          )}
-        </svg>
-        {/* Print/pattern overlay on front body */}
-        {(isPrint || isPattern) && (
-          <div
-            style={{
-              position: "absolute",
-              left: `${(58 / 200) * 100}%`,
-              top: `${(58 / 230) * 100}%`,
-              width: `${(84 / 200) * 100}%`,
-              height: `${(134 / 230) * 100}%`,
-              borderRadius: 3,
-              background: isPrint ? printDef?.bg : patternFill || undefined,
-              opacity: 0.92,
-              pointerEvents: "none",
-            }}
-          />
-        )}
+      {/* Real-time 3D viewer */}
+      <TShirtViewer3D
+        partColors={p.partColors}
+        sleeveType={p.sleeveLen}
+        logoData={p.logoUrl}
+        logoPosition={p.logoPos}
+        logoSize={p.logoSize}
+        height={360}
+      />
+      <div
+        style={{
+          fontFamily: FONT_UI,
+          fontSize: 9,
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+          color: MUTED_2,
+          textAlign: "center",
+          marginTop: 8,
+        }}
+      >
+        Drag to rotate · Scroll to zoom
       </div>
 
       <Divider />
