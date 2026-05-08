@@ -183,63 +183,11 @@ function hexToRgba(hex: string): [number, number, number, number] {
   return [isNaN(r) ? 1 : r, isNaN(g) ? 1 : g, isNaN(b) ? 1 : b, 1];
 }
 
-// Light theme — matches the YourDesignStore reference: white surface,
-// soft grey separators, near-black text, gold accent for highlights.
 const V = {
-  bg:"#ffffff", sf:"#f7f7f7", sf2:"#eeeeee",
-  bd:"#e6e6e6", bd2:"#cfcfcf",
-  tx:"#0f1622", mu:"#6b7280", ac:"#B8925A",
+  bg:"#0e0c0a", sf:"rgba(255,255,255,0.04)", sf2:"rgba(255,255,255,0.08)",
+  bd:"rgba(255,255,255,0.09)", bd2:"rgba(255,255,255,0.15)",
+  tx:"#f0ece4", mu:"#7a7470", ac:"#c9a87c",
 };
-
-// ── Top toolbar icon button (Undo / Redo / Save / Share / Contact) ───────────
-function ToolbarIcon({
-  label, onClick, disabled, children,
-}: {
-  label: string; onClick?: () => void; disabled?: boolean; children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={label}
-      style={{
-        display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
-        gap:"2px",padding:"6px 14px",borderRadius:"10px",border:"none",
-        background:"transparent",color:"#4b5563",cursor:disabled?"default":"pointer",
-        opacity:disabled?0.45:1,transition:"background-color .15s,color .15s",fontFamily:"inherit",
-      }}
-      onMouseEnter={(e)=>{ if(!disabled) (e.currentTarget as HTMLButtonElement).style.backgroundColor="#f3f4f6"; }}
-      onMouseLeave={(e)=>{ (e.currentTarget as HTMLButtonElement).style.backgroundColor="transparent"; }}
-    >
-      {children}
-      <span style={{ fontSize:"10px",letterSpacing:".04em" }}>{label}</span>
-    </button>
-  );
-}
-
-// ── Left vertical icon rail (Products / Text / Image / Art / Name / Order) ──
-type LeftRailItem = { id: string; label: string; icon: React.ReactNode };
-const LEFT_RAIL_ITEMS: LeftRailItem[] = [
-  { id:"products", label:"Products", icon:(
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2l3 4-3 2v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V10L3 8l3-4h2"/><path d="M9 4a3 3 0 1 0 6 0"/></svg>
-  )},
-  { id:"text", label:"Text", icon:(
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 7V5h14v2"/><line x1="12" y1="5" x2="12" y2="19"/><line x1="9" y1="19" x2="15" y2="19"/></svg>
-  )},
-  { id:"image", label:"Image", icon:(
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
-  )},
-  { id:"art", label:"Art", icon:(
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2a10 10 0 0 0 0 20c2 0 3-1 3-3 0-1.5 1-2 2-2h1a4 4 0 0 0 4-4c0-6-4-11-10-11z"/></svg>
-  )},
-  { id:"name", label:"Name", icon:(
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
-  )},
-  { id:"order", label:"Order", icon:(
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5A2.5 2.5 0 0 1 5 4.5C5 3 6 2 7.5 2 11 2 12 7 12 7zM12 7h4.5A2.5 2.5 0 0 0 19 4.5C19 3 18 2 16.5 2 13 2 12 7 12 7z"/></svg>
-  )},
-];
 
 // ── Component ────────────────────────────────────────────────────────────────
 export default function CustomizePage() {
@@ -1331,7 +1279,7 @@ export default function CustomizePage() {
     if (v==="danger")    return { ...base, background:"rgba(196,92,92,.15)", color:"#c45c5c", border:"1px solid rgba(196,92,92,.2)" };
     return { ...base, background:V.sf2, color:V.tx, border:`1px solid ${V.bd}` };
   };
-  const inp: React.CSSProperties = { width:"100%",padding:"8px 10px",background:"#ffffff",border:`1px solid ${V.bd}`,borderRadius:"8px",color:V.tx,fontFamily:"inherit",fontSize:"12px",outline:"none" };
+  const inp: React.CSSProperties = { width:"100%",padding:"8px 10px",background:"rgba(0,0,0,.4)",border:`1px solid ${V.bd}`,borderRadius:"8px",color:V.tx,fontFamily:"inherit",fontSize:"12px",outline:"none" };
   const slr: React.CSSProperties = { display:"flex",alignItems:"center",gap:"8px",marginTop:"4px" };
   const lbl: React.CSSProperties = { fontSize:"10px",color:V.mu,width:"44px",flexShrink:0 };
   const sl: React.CSSProperties  = { fontSize:"10px",letterSpacing:".1em",textTransform:"uppercase",color:V.mu,fontWeight:600,marginBottom:"7px" };
@@ -1414,86 +1362,33 @@ export default function CustomizePage() {
   return (
     <div style={{ display:"flex",flexDirection:"column",height:"100vh",background:V.bg,color:V.tx,fontFamily:"'DM Sans',sans-serif",overflow:"hidden" }}>
 
-      {/* ── HEADER ── (YourDesignStore reference layout) */}
-      <header style={{ display:"grid",gridTemplateColumns:"auto 1fr auto",alignItems:"center",padding:"0 24px",height:"68px",borderBottom:`1px solid ${V.bd}`,background:"#ffffff",flexShrink:0,zIndex:50 }}>
-        {/* Left — KA.SHA logo */}
-        <Link href="/" style={{ display:"flex",alignItems:"center",gap:"10px",textDecoration:"none" }}>
-          <img src="/images/kasha-logo.png" alt="KA.SHA" style={{ height:"40px",width:"auto",objectFit:"contain" }} />
-        </Link>
-
-        {/* Center — Action icon group: Save / Share / Contact
-            (Undo/Redo intentionally omitted until a Fabric history stack is wired up.) */}
-        <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:"4px" }}>
-          <Show when="signed-in">
-            <ToolbarIcon label="Save" onClick={()=>saveMut.mutate()} disabled={saveMut.isPending}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            </ToolbarIcon>
-          </Show>
-          <ToolbarIcon label="Share" onClick={()=>{ try { navigator.clipboard.writeText(window.location.href); toast({ title:"Link copied" }); } catch {} }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-          </ToolbarIcon>
-          <ToolbarIcon label="Contact" onClick={()=>{ window.location.href = "mailto:hello@ka-sha.example?subject=Custom%20Studio%20enquiry"; }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          </ToolbarIcon>
+      {/* ── HEADER ── */}
+      <header style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 20px",height:"48px",borderBottom:`1px solid ${V.bd}`,background:"rgba(8,6,4,0.9)",backdropFilter:"blur(12px)",flexShrink:0,zIndex:50 }}>
+        <div style={{ display:"flex",alignItems:"center",gap:"12px" }}>
+          <Link href={`/products/${id}`} style={{ color:V.mu,fontSize:"13px",textDecoration:"none" }}>← Back</Link>
+          <div style={{ width:"1px",height:"16px",background:V.bd }} />
+          <span style={{ fontFamily:"'Playfair Display',serif",fontSize:"15px",color:V.ac,letterSpacing:".04em" }}>Golf Studio ✦ 3D Customizer</span>
         </div>
-
-        {/* Right — Tutorials (black) + Order (gold) */}
-        <div style={{ display:"flex",alignItems:"center",gap:"10px" }}>
-          <input id="design-name-input" value={designName} onChange={e=>setDesignName(e.target.value)} placeholder="Name your design…"
-            style={{ width:"160px",height:"38px",padding:"0 12px",borderRadius:"24px",border:`1px solid ${V.bd}`,background:"#ffffff",color:V.tx,fontSize:"12px",outline:"none" }} />
-          <a href="https://www.youtube.com/results?search_query=ka+sha+custom+studio+tutorial" target="_blank" rel="noreferrer"
-            style={{ display:"flex",alignItems:"center",gap:"6px",height:"40px",padding:"0 22px",borderRadius:"24px",background:"#0f1622",color:"#fff",fontSize:"13px",fontWeight:600,textDecoration:"none",letterSpacing:".02em" }}>
-            Tutorials
-          </a>
+        <div style={{ display:"flex",alignItems:"center",gap:"8px" }}>
+          <input value={designName} onChange={e=>setDesignName(e.target.value)} placeholder="Name your design…" style={{ ...inp,width:"160px",fontSize:"12px" }} />
+          <Show when="signed-in">
+            <button onClick={()=>saveMut.mutate()} disabled={saveMut.isPending}
+              style={{ padding:"6px 14px",borderRadius:"8px",border:"none",background:V.ac,color:V.bg,fontSize:"12px",fontWeight:600,cursor:"pointer",opacity:saveMut.isPending?0.6:1 }}>
+              {saveMut.isPending?"Saving…":"💾 Save"}
+            </button>
+          </Show>
           <Show when="signed-out">
-            <Link href="/sign-in" style={{ display:"flex",alignItems:"center",height:"40px",padding:"0 22px",borderRadius:"24px",border:`1px solid ${V.bd}`,color:V.tx,fontSize:"13px",textDecoration:"none" }}>Sign in</Link>
+            <Link href="/sign-in" style={{ padding:"6px 14px",borderRadius:"8px",border:`1px solid ${V.bd}`,color:V.mu,fontSize:"12px",textDecoration:"none" }}>Sign in to save</Link>
           </Show>
           <button onClick={()=>cartMut.mutate()} disabled={cartMut.isPending||saveMut.isPending}
-            style={{ height:"40px",padding:"0 26px",borderRadius:"24px",border:"none",background:V.ac,color:"#fff",fontSize:"13px",fontWeight:600,cursor:"pointer",opacity:(cartMut.isPending||saveMut.isPending)?0.6:1,letterSpacing:".02em" }}>
-            {cartMut.isPending?"Adding…":"Order"}
+            style={{ padding:"6px 14px",borderRadius:"8px",border:"none",background:"#2d6a4f",color:"white",fontSize:"12px",fontWeight:600,cursor:"pointer",opacity:cartMut.isPending?0.6:1 }}>
+            {cartMut.isPending?"Adding…":"🛒 Add to Cart"}
           </button>
         </div>
       </header>
 
       {/* ── WORKSPACE ── */}
-      <div style={{ display:"flex",flex:1,overflow:"hidden",background:"#fafafa" }}>
-
-        {/* ════ LEFT ICON RAIL — Products / Text / Image / Art / Name / Order ════ */}
-        <div style={{ width:"96px",minWidth:"96px",borderRight:`1px solid ${V.bd}`,background:"#ffffff",padding:"18px 10px",display:"flex",flexDirection:"column",gap:"10px",alignItems:"center",overflowY:"auto" }}>
-          {LEFT_RAIL_ITEMS.map((it) => {
-            const map: Record<string, ()=>void> = {
-              products: () => setLocation(`/products/${id}`),
-              text:     () => setRightTab("text"),
-              image:    () => setRightTab("logo"),
-              art:      () => setRightTab(isPattern ? "colors" : "design"),
-              name:     () => { setRightTab("text"); setTimeout(()=>{ const el = document.getElementById("design-name-input") as HTMLInputElement|null; el?.focus(); el?.select(); }, 50); },
-              order:    () => cartMut.mutate(),
-            };
-            const isActive =
-              (it.id === "text"  && rightTab === "text") ||
-              (it.id === "image" && rightTab === "logo") ||
-              (it.id === "art"   && (rightTab === "design" || rightTab === "colors"));
-            return (
-              <button
-                key={it.id}
-                type="button"
-                onClick={map[it.id]}
-                title={it.label}
-                style={{
-                  width:"76px",padding:"12px 6px",borderRadius:"12px",
-                  border:`1px solid ${isActive ? V.ac : V.bd}`,
-                  background:isActive ? "rgba(184,146,90,.08)" : "#ffffff",
-                  color:isActive ? V.ac : "#374151",
-                  display:"flex",flexDirection:"column",alignItems:"center",gap:"6px",
-                  cursor:"pointer",fontFamily:"inherit",transition:"all .15s",
-                }}
-              >
-                <div style={{ display:"flex",alignItems:"center",justifyContent:"center" }}>{it.icon}</div>
-                <div style={{ fontSize:"10.5px",letterSpacing:".04em",fontWeight:500 }}>{it.label}</div>
-              </button>
-            );
-          })}
-        </div>
+      <div style={{ display:"flex",flex:1,overflow:"hidden" }}>
 
         {/* ════ LEFT PANEL ════ */}
         <div style={{ width:"260px",minWidth:"260px",borderRight:`1px solid ${V.bd}`,overflowY:"auto",padding:"14px 12px",display:"flex",flexDirection:"column",gap:0,scrollbarWidth:"thin",background:V.bg }}>
@@ -1511,7 +1406,7 @@ export default function CustomizePage() {
                 return (
                   <div key={z.id} onClick={()=>setActiveColorZone(z.id)} style={{
                     display:"flex",alignItems:"center",justifyContent:"space-between",
-                    background:active?`rgba(184,146,90,.10)`:"#ffffff",
+                    background:active?`rgba(201,168,124,.12)`:"rgba(0,0,0,.25)",
                     padding:"9px 11px",borderRadius:"9px",
                     border:`1px solid ${active?V.ac:V.bd}`,
                     cursor:"pointer",transition:"border-color .15s",
@@ -1595,9 +1490,9 @@ export default function CustomizePage() {
               {SIZES.map(s => (
                 <button key={s} onClick={()=>setSize(s)} style={{
                   flex:1,minWidth:"34px",padding:"7px 0",
-                  background:size===s?V.ac:"#ffffff",
+                  background:size===s?V.ac:"rgba(0,0,0,.3)",
                   border:`1px solid ${size===s?V.ac:V.bd}`,
-                  borderRadius:"8px",color:size===s?"#ffffff":V.tx,
+                  borderRadius:"8px",color:size===s?V.bg:V.mu,
                   fontFamily:"inherit",fontSize:"11px",fontWeight:600,cursor:"pointer",
                 }}>{s}</button>
               ))}
@@ -1610,7 +1505,7 @@ export default function CustomizePage() {
                 placeholder="e.g. Chest 42, Length 28"
                 style={{
                   marginTop:"8px",width:"100%",padding:"8px 10px",
-                  background:"#ffffff",border:`1px solid ${V.ac}`,
+                  background:"rgba(0,0,0,.3)",border:`1px solid ${V.ac}`,
                   borderRadius:"7px",color:V.tx,fontSize:"11px",fontFamily:"inherit",
                   outline:"none",boxSizing:"border-box",
                 }}
@@ -1628,18 +1523,23 @@ export default function CustomizePage() {
             </div>
           </div>
 
-          {/* Export — Save lives in the top toolbar; export stays here as the
-              canvas-export action is panel-specific. */}
+          {/* Save / Export */}
           <div style={{ padding:"12px 0" }}>
+            <Show when="signed-in">
+              <button onClick={()=>saveMut.mutate()} disabled={saveMut.isPending}
+                style={{ ...btnStyle("primary"),marginBottom:"7px" }}>
+                {saveMut.isPending?"Saving…":"💾 Save This Design"}
+              </button>
+            </Show>
             <button onClick={exportCanvas} style={btnStyle("secondary")}>📷 Export Design Canvas</button>
           </div>
         </div>
 
         {/* ════ CENTER: 3D VIEWER ════ */}
-        <div style={{ flex:1,position:"relative",background:"radial-gradient(ellipse at center,#ffffff 0%,#f3f4f6 100%)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden" }}>
+        <div style={{ flex:1,position:"relative",background:"radial-gradient(ellipse at center,#1a1612 0%,#080604 100%)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden" }}>
 
           {/* Loading overlay */}
-          <div id="mv-overlay" style={{ position:"absolute",inset:0,background:"#ffffff",display:webglAvailable?"flex":"none",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"12px",zIndex:10,transition:"opacity .5s" }}>
+          <div id="mv-overlay" style={{ position:"absolute",inset:0,background:V.bg,display:webglAvailable?"flex":"none",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"12px",zIndex:10,transition:"opacity .5s" }}>
             <div style={{ width:"36px",height:"36px",border:`2px solid ${V.bd2}`,borderTopColor:V.ac,borderRadius:"50%",animation:"spin .9s linear infinite" }} />
             <p style={{ fontSize:"12px",color:V.mu }}>Loading 3D T-Shirt…</p>
           </div>
@@ -1659,55 +1559,9 @@ export default function CustomizePage() {
               min-camera-orbit="auto auto 1.5m"
               max-camera-orbit="auto auto 5m"
               interaction-prompt="none"
-              style={{ width:"100%",height:"100%",background:"transparent","--poster-color":"transparent" } as any}
+              style={{ width:"100%",height:"100%","--poster-color":"transparent" } as any}
             />
           )}
-
-          {/* ── RIGHT-EDGE VIEW THUMBNAILS (Front-L / Front-R / Back / Right / Left) ── */}
-          <div style={{ position:"absolute",top:"50%",right:"18px",transform:"translateY(-50%)",display:"flex",flexDirection:"column",gap:"10px",zIndex:5 }}>
-            {[
-              { label:"FRONT - L", orbit:"-25deg 80deg 2.5m" },
-              { label:"FRONT - R", orbit:"25deg 80deg 2.5m"  },
-              { label:"BACK",      orbit:"180deg 80deg 2.5m" },
-              { label:"RIGHT",     orbit:"90deg 85deg 2.5m"  },
-              { label:"LEFT",      orbit:"-90deg 85deg 2.5m" },
-            ].map((v) => (
-              <button
-                key={v.label}
-                type="button"
-                onClick={()=>{
-                  const mv = mvRef.current as any;
-                  if (mv) {
-                    try {
-                      mv.autoRotate = false;
-                      setAutoRotate(false);
-                      mv.cameraOrbit = v.orbit;
-                      mv.jumpCameraToGoal?.();
-                    } catch {}
-                  }
-                }}
-                title={`View: ${v.label}`}
-                style={{
-                  display:"flex",flexDirection:"column",alignItems:"center",gap:"4px",
-                  background:"transparent",border:"none",cursor:"pointer",fontFamily:"inherit",padding:0,
-                }}
-              >
-                <div style={{
-                  width:"58px",height:"58px",borderRadius:"50%",
-                  border:`1px solid ${V.bd2}`,background:"#ffffff",
-                  display:"flex",alignItems:"center",justifyContent:"center",
-                  boxShadow:"0 1px 2px rgba(0,0,0,.04)",overflow:"hidden",
-                }}>
-                  {product.thumbnailUrl ? (
-                    <img src={product.thumbnailUrl} alt="" style={{ width:"82%",height:"82%",objectFit:"contain" }} />
-                  ) : (
-                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke={V.mu} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
-                  )}
-                </div>
-                <div style={{ fontSize:"9px",letterSpacing:".14em",color:V.mu,fontWeight:500 }}>{v.label}</div>
-              </button>
-            ))}
-          </div>
 
           {/* Fallback when no WebGL or no model */}
           {(!product.modelUrl || !webglAvailable) && (
