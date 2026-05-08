@@ -18,6 +18,12 @@ uri = "file://artifacts/kasha/public/images/product-jacket.png"
 type = "image"
 title = "Luxury Jacket Product Shot"
 
+[[generated]]
+id = "5vh3hYLxwSYl1WuNB80iD"
+uri = "file://artifacts/kasha/public/images/hero/slide-kids.png"
+type = "image"
+title = "kids golf polo"
+
 [[outputs]]
 id = "WicUZAl5xj8pkA_wEYvjt"
 uri = "file://kasha-project.tar.gz"

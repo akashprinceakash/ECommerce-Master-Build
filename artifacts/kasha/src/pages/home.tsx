@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
 import { CartProvider } from "@/contexts/CartContext";
 import { formatPrice } from "@/lib/format";
+import { getLastGender } from "@/lib/genderPreference";
 
 const POLO_IMAGES = [
   "/images/golf/polo-pink-black.jpeg",
@@ -299,9 +300,9 @@ function HomeInner() {
               Dressed for the<br />clubhouse. Built<br />for every birdie.
             </div>
             <div className="kp-sub">Technical golfwear · Men · Women · Kids</div>
-            <a href="#shop" className="kp-btn" onClick={(e) => handleAnchor(e, "#shop")}>
+            <Link href="/products" className="kp-btn">
               Shop the Collection
-            </a>
+            </Link>
           </div>
         </div>
         <div className={`kp-slide kp-s2 ${cur === 1 ? "active" : ""}`}>
@@ -312,9 +313,19 @@ function HomeInner() {
               Solids. Stripes.<br />Argyle. Checks.<br />Your course, your style.
             </div>
             <div className="kp-sub">Off-the-shelf · Ships in 5 days</div>
-            <a href="#shop" className="kp-btn" onClick={(e) => handleAnchor(e, "#shop")}>
+            <button
+              type="button"
+              className="kp-btn"
+              onClick={() => {
+                const g = getLastGender();
+                const sp = new URLSearchParams();
+                if (g) sp.set("gender", g);
+                sp.set("type", "tshirts");
+                navigate(`/products?${sp.toString()}`);
+              }}
+            >
               Shop T-Shirts
-            </a>
+            </button>
           </div>
         </div>
         <div className={`kp-slide kp-s3 ${cur === 2 ? "active" : ""}`}>
