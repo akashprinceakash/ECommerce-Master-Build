@@ -1,150 +1,27 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useParams, Link, useLocation } from "wouter";
 import { useUser, Show } from "@clerk/react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Layout } from "@/components/layout/Layout";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
-import * as fabric from "fabric";
-import { PATTERNS, ZONE_PRESETS, ZONE_LABEL, ALL_OVER_TILE_PX, patternUrl, type PatternZone, type PatternDef } from "@/components/3d/patterns";
-import { GT_STYLES, applyGtStyle, clearGtStyle, type GtStyleDef, type GtColors } from "@/components/3d/gt-styles";
 
-const GT_GROUPS = [
-  { id: "classic",    label: "Classic"     },
-  { id: "sport-side", label: "Sport Side"  },
-  { id: "triple",     label: "Triple Tone" },
-  { id: "wave",       label: "Wave Panel"  },
-  { id: "hourglass",  label: "Hourglass"   },
-  { id: "pinstripe",  label: "Pinstripe"   },
-  { id: "raglan",     label: "Raglan"      },
-] as const;
+const GOLD = "#B8925A";
+const GOLD_LIGHT = "#D4A96A";
+const BG = "#080A12";
+const CARD = "#0F1622";
+const CARD_2 = "#0D1220";
+const BD = "rgba(255,255,255,0.08)";
+const BD_GOLD = "rgba(184,146,90,0.3)";
+const TX = "#ffffff";
+const MUTED = "rgba(255,255,255,0.5)";
+const MUTED_2 = "rgba(255,255,255,0.35)";
 
-const GT_PALETTE = ["#C5D3DE","#F8F4E9","#ACB1A1","#F0CED2","#E9DAC3","#FFFFFF","#585858","#576043","#DA1F26","#273878","#243C2F","#362223","#000000"];
+const FONT_DISPLAY = "'Cormorant Garamond', serif";
+const FONT_UI = "'Josefin Sans', sans-serif";
 
-function GtSwatch({ style, isActive, accent }: { style: GtStyleDef; isActive: boolean; accent: string }) {
-  const cRef = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const el = cRef.current; if (!el) return;
-    const ctx = el.getContext("2d"); if (!ctx) return;
-    const W = 60, H = 60;
-    ctx.clearRect(0, 0, W, H);
-    const { primary, accent: ac, tertiary } = style.defaultColors;
-    switch (style.group) {
-      case "classic":
-        ctx.fillStyle = primary; ctx.fillRect(0,0,W,H);
-        ctx.fillStyle = ac;
-        ctx.fillRect(0,0,W,12); ctx.fillRect(0,H-8,W,8); ctx.fillRect(0,H-22,W,6);
-        break;
-      case "sport-side": case "wave": case "triple":
-        ctx.fillStyle = primary; ctx.fillRect(0,0,W,H);
-        ctx.fillStyle = ac;
-        ctx.fillRect(0,0,14,H); ctx.fillRect(W-14,0,14,H);
-        if (tertiary) { ctx.fillStyle = tertiary; ctx.fillRect(0,0,W,10); }
-        break;
-      case "hourglass":
-        ctx.fillStyle = primary; ctx.fillRect(0,0,W,H);
-        ctx.fillStyle = ac;
-        ctx.beginPath();
-        ctx.moveTo(W*0.22,0); ctx.lineTo(W*0.78,0);
-        ctx.lineTo(W*0.62,H*0.55); ctx.lineTo(W*0.78,H);
-        ctx.lineTo(W*0.22,H); ctx.lineTo(W*0.38,H*0.55);
-        ctx.closePath(); ctx.fill();
-        break;
-      case "pinstripe":
-        ctx.fillStyle = primary; ctx.fillRect(0,0,W,H);
-        ctx.strokeStyle = ac; ctx.lineWidth = 1.5;
-        for (let x = 8; x < W; x += 10) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-        break;
-      case "raglan":
-        ctx.fillStyle = primary; ctx.fillRect(0,0,W,H);
-        ctx.fillStyle = ac;
-        ctx.beginPath();
-        ctx.moveTo(0,0); ctx.lineTo(W*0.45,0); ctx.lineTo(W*0.18,H*0.35); ctx.lineTo(0,H*0.2);
-        ctx.closePath(); ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(W,0); ctx.lineTo(W*0.55,0); ctx.lineTo(W*0.82,H*0.35); ctx.lineTo(W,H*0.2);
-        ctx.closePath(); ctx.fill();
-        ctx.fillRect(0,0,W,8); ctx.fillRect(0,H-10,W,10);
-        break;
-      default:
-        ctx.fillStyle = primary; ctx.fillRect(0,0,W,H);
-    }
-    if (isActive) { ctx.strokeStyle = accent; ctx.lineWidth = 3; ctx.strokeRect(1.5,1.5,W-3,H-3); }
-  }, [style, isActive, accent]);
-  return <canvas ref={cRef} width={60} height={60} style={{ display: "block", width: "100%", height: "auto" }} />;
-}
-
-// ── Types ────────────────────────────────────────────────────────────────────
-interface Product {
-  id: number; name: string; description: string; category: string;
-  priceInPaise: number; modelUrl: string; thumbnailUrl?: string | null; defaultColor?: string;
-}
-interface MatEntry { idx: number; name: string; mat: any; color: string; }
-
-// ── Color palette (from PDF specs) ──────────────────────────────────────────
-const PAL = [
-  "#C5D3DE","#F8F4E9","#ACB1A1","#F0CED2","#E9DAC3",
-  "#FFFFFF","#585858","#576043","#DA1F26","#273878",
-  "#243C2F","#362223","#000000",
-];
-
-// ── Design presets (GT001–GT012 from reference) ──────────────────────────────
-const PRESETS = [
-  { name:"GT001", primary:"#C5D3DE", secondary:"#362223" },
-  { name:"GT002", primary:"#F0CED2", secondary:"#362223" },
-  { name:"GT003", primary:"#ACB1A1", secondary:"#362223" },
-  { name:"GT004", primary:"#E9DAC3", secondary:"#362223" },
-  { name:"GT005", primary:"#FFFFFF", secondary:"#273878" },
-  { name:"GT006", primary:"#576043", secondary:"#000000" },
-  { name:"GT007", primary:"#DA1F26", secondary:"#000000" },
-  { name:"GT008", primary:"#273878", secondary:"#000000" },
-  { name:"GT009", primary:"#F0CED2", secondary:"#585858" },
-  { name:"GT010", primary:"#F0CED2", secondary:"#000000" },
-  { name:"GT011", primary:"#000000", secondary:"#585858" },
-  { name:"GT012", primary:"#ACB1A1", secondary:"#576043" },
-];
-
-const SIZES = ["S","M","L","XL","Custom"];
-
-const FONTS = [
-  { label:"DM Sans", value:"'DM Sans'" },
-  { label:"Arial (Clean)", value:"Arial" },
-  { label:"Serif Classic", value:"'Times New Roman'" },
-  { label:"Monospace", value:"'Courier New'" },
-  { label:"Impact Bold", value:"Impact" },
-  { label:"Casual", value:"'Comic Sans MS'" },
-];
-
-// Placement → canvas coordinate map (1024×1024 UV space).
-// Derived from ZONE_PRESETS so text / logos / shapes land on the same UV
-// islands the Patterns library uses (single source of truth = patterns.ts).
-// Each entry is the CENTER point of that placement (originX/Y:"center"
-// elsewhere expects centers). "Front Chest" sits in the upper-third of the
-// front island; "Front Center" sits at the geometric centre, etc.
-const _zCenter = (z: keyof typeof ZONE_PRESETS, dy = 0) => ({
-  left: ZONE_PRESETS[z].left + ZONE_PRESETS[z].w / 2,
-  top:  ZONE_PRESETS[z].top  + ZONE_PRESETS[z].h * dy,
-});
-const PLACEMENTS: Record<string, {left:number;top:number}> = {
-  "front-chest":  _zCenter("front",        0.22),
-  "front-center": _zCenter("front",        0.50),
-  "back-top":     _zCenter("back",         0.18),
-  "back-center":  _zCenter("back",         0.50),
-  "sleeve-left":  _zCenter("leftSleeve",   0.50),
-  "sleeve-right": _zCenter("rightSleeve",  0.50),
-};
-
-// Five user-editable colour zones for the per-zone Garment Parts panel.
-// Each maps 1:1 to a ZONE_PRESETS rectangle on the 1024×1024 texture canvas.
-const COLOR_ZONES: { id: Exclude<PatternZone, "all">; label: string }[] = [
-  { id: "front",       label: "Front" },
-  { id: "back",        label: "Back" },
-  { id: "leftSleeve",  label: "Left Sleeve" },
-  { id: "rightSleeve", label: "Right Sleeve" },
-  { id: "collar",      label: "Collar" },
-];
-
-// ── Auth helper ──────────────────────────────────────────────────────────────
+// ── Auth + API helpers ──────────────────────────────────────────────────────
 async function getToken(): Promise<string | null> {
   try {
     const clerk = (window as any).Clerk;
@@ -153,7 +30,7 @@ async function getToken(): Promise<string | null> {
 }
 async function apiFetch(path: string, opts?: RequestInit): Promise<any> {
   const token = await getToken();
-  const headers: Record<string,string> = {};
+  const headers: Record<string, string> = {};
   if (!(opts?.body instanceof FormData)) headers["Content-Type"] = "application/json";
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${getApiUrl()}${path}`, { ...opts, headers });
@@ -161,1987 +38,1356 @@ async function apiFetch(path: string, opts?: RequestInit): Promise<any> {
   return res.status === 204 ? null : res.json();
 }
 
-// ── Dark studio theme ────────────────────────────────────────────────────────
-// Fabric v7 stores backgroundColor as a property — there's no setBackgroundColor()
-// helper. Use this to set + render in one call.
-function setFabricBg(fc: any, hex: string) {
-  if (!fc) {
-    console.warn("[customize] setFabricBg: no canvas yet, skipping bg=", hex);
-    return;
-  }
-  fc.backgroundColor = hex;
-  fc.renderAll();
-  console.debug("[customize] setFabricBg ->", hex, "objects:", fc.getObjects().length);
+// ── Catalog ─────────────────────────────────────────────────────────────────
+type ColorOpt = { hex: string; name: string };
+const COLORS: ColorOpt[] = [
+  { hex: "#1a1a1a", name: "Black" },
+  { hex: "#FFFFFF", name: "White" },
+  { hex: "#e8e0d8", name: "Cream" },
+  { hex: "#d4c5a9", name: "Sand" },
+  { hex: "#c9b89e", name: "Camel" },
+  { hex: "#b5cfe8", name: "Sky" },
+  { hex: "#378ADD", name: "Blue" },
+  { hex: "#185FA5", name: "Navy" },
+  { hex: "#4a7c59", name: "Forest" },
+  { hex: "#97C459", name: "Lime" },
+  { hex: "#E24B4A", name: "Red" },
+  { hex: "#D85A30", name: "Rust" },
+  { hex: "#D4537E", name: "Pink" },
+  { hex: "#7F77DD", name: "Purple" },
+  { hex: "#BA7517", name: "Amber" },
+  { hex: "#888780", name: "Slate" },
+];
+
+type PrintDef = { id: string; label: string; bg: string };
+const PRINTS: PrintDef[] = [
+  { id: "floral",   label: "Floral",   bg: "repeating-linear-gradient(45deg,#f5e6d3,#f5e6d3 4px,#e8c9a0 4px,#e8c9a0 8px)" },
+  { id: "abstract", label: "Abstract", bg: "repeating-radial-gradient(circle,#d4e8f5,#d4e8f5 3px,#a8d0ee 3px,#a8d0ee 6px)" },
+  { id: "geo",      label: "Geo",      bg: "repeating-linear-gradient(90deg,#c8d8e8,#c8d8e8 8px,#8aaec8 8px,#8aaec8 9px)" },
+  { id: "tropical", label: "Tropical", bg: "linear-gradient(135deg,#1a3a2e 0%,#2d5a3d 50%,#1a3a2e 100%)" },
+  { id: "camo",     label: "Camo",     bg: "repeating-conic-gradient(#7a8c5a 0% 25%,#5c6e40 0% 50%)" },
+  { id: "digital",  label: "Digital",  bg: "repeating-linear-gradient(0deg,#1a1a2e,#1a1a2e 5px,#16213e 5px,#16213e 10px)" },
+  { id: "tiedye",   label: "Tie-dye",  bg: "linear-gradient(135deg,#D4537E 0%,#7F77DD 50%,#378ADD 100%)" },
+];
+
+type PatternDef = { id: string; label: string; bg: string };
+const PATTERNS: PatternDef[] = [
+  { id: "stripes",     label: "Stripes",     bg: "repeating-linear-gradient(0deg,#1a1a1a,#1a1a1a 4px,#fff 4px,#fff 12px)" },
+  { id: "diagonal",    label: "Diagonal",    bg: "repeating-linear-gradient(45deg,#1a1a1a,#1a1a1a 2px,#fff 2px,#fff 10px)" },
+  { id: "grid",        label: "Grid",        bg: "repeating-linear-gradient(0deg,transparent,transparent 8px,#999 8px,#999 9px),repeating-linear-gradient(90deg,transparent,transparent 8px,#999 8px,#999 9px)" },
+  { id: "houndstooth", label: "Houndstooth", bg: "repeating-linear-gradient(45deg,transparent,transparent 5px,#999 5px,#999 6px),repeating-linear-gradient(-45deg,transparent,transparent 5px,#999 5px,#999 6px)" },
+];
+
+type Part = "collar" | "front" | "back" | "sleeves";
+const PARTS: { id: Part; label: string }[] = [
+  { id: "collar",  label: "Collar" },
+  { id: "front",   label: "Front" },
+  { id: "back",    label: "Back" },
+  { id: "sleeves", label: "Sleeves" },
+];
+
+type Pos = "top-left"|"top-center"|"top-right"|"mid-left"|"center"|"mid-right"|"bot-left"|"bot-center"|"bot-right";
+const POSITIONS: { id: Pos; label: string }[] = [
+  { id: "top-left",   label: "↖" },
+  { id: "top-center", label: "↑" },
+  { id: "top-right",  label: "↗" },
+  { id: "mid-left",   label: "←" },
+  { id: "center",     label: "◉" },
+  { id: "mid-right",  label: "→" },
+  { id: "bot-left",   label: "↙" },
+  { id: "bot-center", label: "↓" },
+  { id: "bot-right",  label: "↘" },
+];
+
+const SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
+type Size = typeof SIZES[number];
+type StyleType = "solid" | "print" | "pattern";
+
+const SIZE_CHART: { size: string; chest: string; shoulder: string; sleeve: string }[] = [
+  { size: "XS", chest: "34–36″", shoulder: "16″",   sleeve: "8″"   },
+  { size: "S",  chest: "36–38″", shoulder: "16.5″", sleeve: "8.5″" },
+  { size: "M",  chest: "38–40″", shoulder: "17.5″", sleeve: "9″"   },
+  { size: "L",  chest: "40–42″", shoulder: "18.5″", sleeve: "9.5″" },
+  { size: "XL", chest: "42–44″", shoulder: "19.5″", sleeve: "10″"  },
+  { size: "XXL",chest: "44–46″", shoulder: "20.5″", sleeve: "10.5″"},
+];
+
+// ── Product type ────────────────────────────────────────────────────────────
+interface Product {
+  id: number; name: string; description: string; category: string;
+  priceInPaise: number; modelUrl: string; thumbnailUrl?: string | null;
 }
 
-// model-viewer's setBaseColorFactor expects an RGBA float array (0..1), not a hex string.
-function hexToRgba(hex: string): [number, number, number, number] {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.substring(0, 2), 16) / 255;
-  const g = parseInt(h.substring(2, 4), 16) / 255;
-  const b = parseInt(h.substring(4, 6), 16) / 255;
-  return [isNaN(r) ? 1 : r, isNaN(g) ? 1 : g, isNaN(b) ? 1 : b, 1];
+// ── Helpers ────────────────────────────────────────────────────────────────
+function colorName(hex: string): string {
+  return COLORS.find(c => c.hex.toUpperCase() === hex.toUpperCase())?.name || hex.toUpperCase();
 }
 
-const V = {
-  bg:"#080A12", sf:"rgba(255,255,255,0.04)", sf2:"rgba(255,255,255,0.06)",
-  bd:"rgba(255,255,255,0.08)", bd2:"rgba(184,146,90,0.3)",
-  tx:"#ffffff", mu:"rgba(255,255,255,0.45)", ac:"#B8925A",
-};
-
-// ── Component ────────────────────────────────────────────────────────────────
+// ── Component ──────────────────────────────────────────────────────────────
 export default function CustomizePage() {
-  const params    = useParams();
-  const id        = parseInt(params.id || "0");
+  const params = useParams();
+  const id = parseInt(params.id || "0");
   const [, setLocation] = useLocation();
-  const { user }  = useUser();
+  const { user } = useUser();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  // WebGL detection
-  const [webglAvailable] = useState<boolean>(() => {
-    try {
-      const c = document.createElement("canvas");
-      return !!(window.WebGLRenderingContext && (c.getContext("webgl") || c.getContext("experimental-webgl")));
-    } catch { return false; }
-  });
-
-  // 3D model-viewer
-  const mvRef        = useRef<any>(null);
-  const [mvReady, setMvReady]       = useState(false);
-  const [modelLoaded, setModelLoaded] = useState(false);
-
-  // Fabric canvas
-  const fcRef        = useRef<fabric.Canvas | null>(null);
-  // Stable holder for the resize listener so we can clean it up on detach.
-  const resizeListenerRef = useRef<(() => void) | null>(null);
-  // Always points to the latest syncTexture closure — Fabric event handlers
-  // are registered once at canvas-init, so without this ref they'd capture
-  // a stale syncTexture (with empty mats) forever.
-  const syncTextureRef = useRef<(() => void) | null>(null);
-  // Indices of materials that actually accept textures (probed on model load).
-  // GLBs vary wildly — some only the body, some all parts, some none.
-  const texturableMatsRef = useRef<number[]>([]);
-  // Latest baked texture data URL (used for save/restore so admin can rebuild
-  // the customer's exact look on a fresh model-viewer).
-  const lastTextureUrlRef = useRef<string>("");
-  const logoObjRef   = useRef<any>(null);
-
-  // Materials from model
-  const [mats, setMats]             = useState<MatEntry[]>([]);
-  const [activePart, setActivePart] = useState(0);
-
-  // Right panel tabs (per client spec):
-  //   Fabric  : TEXT | LOGO | CANVAS | DESIGN  (prints, NO GT patterns)
-  //   Pattern : TEXT | LOGO | CANVAS | COLORS  (color combos for the locked GT pattern, NO prints)
-  // SHAPES is removed for ALL flows. The "shapes" union member is kept only so any
-  // legacy persisted state doesn't crash; the tab is never rendered or selectable.
-  const [rightTab, setRightTab]     = useState<"colors"|"design"|"text"|"logo"|"shapes"|"canvas">("text");
-
-  // Print Library state
-  const [activePrintId, setActivePrintId]   = useState<string | null>(null);
-  const [allOverPrintId, setAllOverPrintId] = useState<string | null>(null);
-  const baseBgRef = useRef<string>("#C5D3DE");
-
-  // GT Design Style System state
-  const [activeGtStyle, setActiveGtStyle] = useState<GtStyleDef | null>(null);
-  const [gtColors, setGtColors] = useState<GtColors>({ primary: "#FFFFFF", accent: "#000000" });
-  // Monotonic token to guard against race conditions when the user clicks GT
-  // styles or color swatches faster than the texture can load+recolor.
-  const gtRequestIdRef = useRef(0);
-  const [gtGroupOpen, setGtGroupOpen] = useState<string | null>("classic");
-
-  // Core design state
-  const [size, setSize]             = useState("M");
-  const [customSize, setCustomSize] = useState("");
-  const [fullBody, setFullBody]     = useState(false);
-  const [qty, setQty]               = useState(1);
-  const [autoRotate, setAutoRotate] = useState(true);
-  const [designName, setDesignName] = useState("");
-  const [presetName, setPresetName] = useState("GT001");
-
-  // Colors
-  const [primaryColor, setPrimaryColor]     = useState("#C5D3DE");
-  const [secondaryColor, setSecondaryColor] = useState("#362223");
-  const [canvasBg, setCanvasBg]             = useState("#C5D3DE");
-
-  // Garment design toggles (from File 2)
-  const [gSleeves, setGSleeves]   = useState(true);
-  const [gCollar, setGCollar]     = useState(true);
-  const [gPlacket, setGPlacket]   = useState(true);
-  const [gPanel, setGPanel]       = useState(true);
-  const [gStripe, setGStripe]     = useState(false);
-  const [pattern, setPattern]     = useState<"none"|"stripes"|"grid"|"dots">("none");
-
-  // Text controls
-  const [txtVal, setTxtVal]         = useState("");
-  const [txtColor, setTxtColor]     = useState("#FFFFFF");
-  const [txtFont, setTxtFont]       = useState("'DM Sans'");
-  const [txtSize, setTxtSize]       = useState(80);
-  const [txtPlacement, setTxtPlacement] = useState("front-chest");
-
-  // Logo controls
-  const [logoScale, setLogoScale]   = useState(1);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [logoPlacement, setLogoPlacement] = useState("front-chest");
-
-  // Shape controls
-  const [shapeColor, setShapeColor] = useState("#FFFFFF");
-  const [strokeW, setStrokeW]       = useState(12);
-  const [shapePlacement, setShapePlacement] = useState("front-center");
-
-  // Per-zone garment colours — each user-painted colour rect lives on the
-  // texture canvas at the matching ZONE_PRESETS rectangle. Empty string =
-  // no colour applied (the body / GT base shows through).
-  const [activeColorZone, setActiveColorZone] = useState<Exclude<PatternZone, "all">>("front");
-  const [zoneColors, setZoneColors] = useState<Record<Exclude<PatternZone, "all">, string>>({
-    front: "", back: "", leftSleeve: "", rightSleeve: "", collar: "",
-  });
-
-  // Canvas element adjustments
-  const [elScale, setElScale] = useState(1);
-  const [elX, setElX]         = useState(512);
-  const [elY, setElY]         = useState(512);
-
-  // ── Product data ──────────────────────────────────────────────────────────
+  // Data
   const { data: product, isLoading } = useQuery<Product>({
     queryKey: ["product", id],
-    queryFn:  () => apiFetch(`/api/products/${id}`),
-    enabled:  !!id,
+    queryFn: () => apiFetch(`/api/products/${id}`),
+    enabled: id > 0,
   });
 
-  const { data: existing } = useQuery<any>({
-    queryKey: ["customization", id],
-    queryFn:  () => apiFetch(`/api/customizations/product/${id}/latest`),
-    enabled:  !!id && !!user,
+  // Wizard state
+  const [step, setStep] = useState(1);
+
+  // Step 1: Style
+  const [styleType, setStyleType] = useState<StyleType>("solid");
+  const [mainColor, setMainColor] = useState<string>("#1a1a1a");
+  const [printId, setPrintId] = useState<string>("floral");
+  const [patternId, setPatternId] = useState<string>("stripes");
+  const [patternA, setPatternA] = useState<string>("#1a1a1a");
+  const [patternB, setPatternB] = useState<string>("#FFFFFF");
+  const [sleeveLen, setSleeveLen] = useState<"half" | "full">("half");
+
+  // Step 2: Parts
+  const [activePart, setActivePart] = useState<Part>("collar");
+  const [partColors, setPartColors] = useState<Record<Part, string>>({
+    collar: "#1a1a1a", front: "#1a1a1a", back: "#1a1a1a", sleeves: "#1a1a1a",
   });
 
-  // ── Load model-viewer script (only when WebGL available) ─────────────────
-  useEffect(() => {
-    if (!webglAvailable) { setMvReady(false); return; }
-    if (document.querySelector('script[data-mv-loader]')) { setMvReady(true); return; }
-    const s = document.createElement("script");
-    s.type = "module"; s.setAttribute("data-mv-loader","1");
-    s.src = "https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js";
-    s.onload = () => setMvReady(true);
-    document.head.appendChild(s);
-  }, [webglAvailable]);
+  // Step 3: Logo
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoPos, setLogoPos] = useState<Pos>("top-center");
+  const [logoSize, setLogoSize] = useState<number>(50);
 
-  // ── Init Fabric canvas (ref callback so it fires whenever the canvas DOM
-  //    element is attached — the component returns a spinner first while the
-  //    product is loading, so a useEffect([]) runs *before* the canvas exists
-  //    and never re-runs.) ────────────────────────────────────────────────────
-  const canvasElRef = useCallback((el: HTMLCanvasElement | null) => {
-    // Detach: dispose any existing Fabric canvas
-    if (!el) {
-      if (resizeListenerRef.current) {
-        window.removeEventListener("resize", resizeListenerRef.current);
-        resizeListenerRef.current = null;
-      }
-      if (fcRef.current) {
-        try {
-          // dispose() may be sync OR Promise-returning depending on Fabric build
-          const r: any = fcRef.current.dispose();
-          if (r && typeof r.catch === "function") r.catch(() => {});
-        } catch (e) {
-          console.warn("[customize] dispose threw:", e);
-        }
-        fcRef.current = null;
-      }
+  // Step 4: Size
+  const [size, setSize] = useState<Size>("S");
+  const [showChart, setShowChart] = useState(false);
+  const [customEnabled, setCustomEnabled] = useState(false);
+  const [customSize, setCustomSize] = useState({ chest: "", shoulder: "", hip: "", sleeve: "" });
+
+  // Quantity
+  const [qty, setQty] = useState(1);
+
+  // ─── Apply main color (Step 1 solid) auto-paints all parts on first set ──
+  const setSolidMain = (hex: string) => {
+    setMainColor(hex);
+    setPartColors({ collar: hex, front: hex, back: hex, sleeves: hex });
+  };
+
+  // ─── Apply current part color to all parts ─────────────────────────────
+  const applyPartToAll = () => {
+    const c = partColors[activePart];
+    setPartColors({ collar: c, front: c, back: c, sleeves: c });
+    toast({ title: "Applied", description: `${colorName(c)} applied to all parts` });
+  };
+
+  const setPartColor = (hex: string) => {
+    setPartColors(p => ({ ...p, [activePart]: hex }));
+  };
+
+  // ─── Logo upload ───────────────────────────────────────────────────────
+  const onLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Too large", description: "Logo must be under 5MB", variant: "destructive" });
       return;
     }
-    // Already initialised on this element → nothing to do
-    if (fcRef.current) return;
-
-    // Chrome textBaseline patch (Fabric occasionally feeds the deprecated value)
-    try {
-      const d = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, "textBaseline");
-      if (d?.set) {
-        Object.defineProperty(CanvasRenderingContext2D.prototype, "textBaseline", {
-          configurable: true,
-          set(v) { d.set!.call(this, v === "alphabetical" ? "alphabetic" : v); },
-          get() { return d.get!.call(this); },
-        });
-      }
-    } catch {}
-
-    const fc = new fabric.Canvas(el, {
-      width: 1024, height: 1024,
-      preserveObjectStacking: true,
-      backgroundColor: "#C5D3DE",
-    });
-    fcRef.current = fc;
-    console.debug("[customize] Fabric canvas initialised");
-
-    const scaleCanvas = () => {
-      // CSS-only scale: keep the underlying Fabric canvas at 1024×1024 (so the
-      // texture sent to the 3D model is always full-resolution) and scale the
-      // host element via transform for the visible preview.
-      const host = document.getElementById("fc-scale-host");
-      const wrapper = document.getElementById("fc-wrapper");
-      if (!host || !wrapper) return;
-      const w = wrapper.clientWidth || 1024;
-      host.style.transform = `scale(${w / 1024})`;
-    };
-    resizeListenerRef.current = scaleCanvas;
-    window.addEventListener("resize", scaleCanvas);
-    setTimeout(scaleCanvas, 100);
-
-    fc.on("object:modified",  () => syncTextureRef.current?.());
-    fc.on("object:added",     () => syncTextureRef.current?.());
-    fc.on("object:removed",   () => syncTextureRef.current?.());
-    fc.on("selection:created", (e: any) => {
-      const o = e.selected?.[0]; if (!o) return;
-      setElScale(o.scaleX ?? 1);
-      setElX(Math.round(o.left ?? 512));
-      setElY(Math.round(o.top  ?? 512));
-    });
-    fc.on("selection:updated", (e: any) => {
-      const o = e.selected?.[0]; if (!o) return;
-      setElScale(o.scaleX ?? 1);
-      setElX(Math.round(o.left ?? 512));
-      setElY(Math.round(o.top  ?? 512));
-    });
-  }, []);
-
-  // ── Re-scale canvas when CANVAS tab becomes visible ──────────────────────
-  useEffect(() => {
-    if (rightTab !== "canvas") return;
-    // Give the DOM a frame to render the wrapper at full width, then scale.
-    // We re-read fcRef *inside* rAF so HMR / dispose races can't hand us a
-    // stale reference whose methods have been stripped.
-    requestAnimationFrame(() => {
-      const host = document.getElementById("fc-scale-host");
-      const wrapper = document.getElementById("fc-wrapper");
-      if (!host || !wrapper) return;
-      const w = wrapper.clientWidth || 1024;
-      host.style.transform = `scale(${w / 1024})`;
-      fcRef.current?.renderAll();
-    });
-  }, [rightTab]);
-
-  // ── Texture sync: Fabric canvas → PNG → model-viewer material ─────────────
-  // Strategy borrowed from a tested reference impl that works on arbitrary GLBs:
-  //   1. Force TWO render passes + animation frames so fonts/images commit.
-  //   2. Read the raw HTMLCanvasElement (Fabric's wrapper sometimes lies).
-  //   3. Iterate ALL materials and try setTexture; break on FIRST success
-  //      (one shared UV-mapped material covers most t-shirts).
-  //   4. Fall back to the undocumented `info.texture = tex` path for stubborn
-  //      materials that throw on setTexture.
-  // We probe materials at load time (probeTexturability) and store the indices
-  // that are confirmed texturable.
-  const raf = () => new Promise<void>(r => requestAnimationFrame(() => r()));
-
-  const syncTexture = useCallback(async () => {
-    const mv: any = mvRef.current;
-    const fc: any = fcRef.current;
-    if (!mv || !fc || !mats.length) return;
-    try {
-      // Two render passes + RAFs — required for fonts and images to render
-      fc.renderAll(); await raf();
-      fc.renderAll(); await raf();
-
-      // Use the underlying HTMLCanvasElement (more reliable than fc.toDataURL)
-      const rawEl: HTMLCanvasElement | undefined =
-        typeof fc.getElement === "function" ? fc.getElement() : undefined;
-      const dataUrl = rawEl
-        ? rawEl.toDataURL("image/png", 1.0)
-        : fc.toDataURL({ format: "png", quality: 1.0, multiplier: 1 });
-      if (!dataUrl || dataUrl.length < 100) {
-        console.warn("[customize] syncTexture: empty canvas data");
-        return;
-      }
-      lastTextureUrlRef.current = dataUrl;
-
-      const tex = await mv.createTexture(dataUrl);
-      let applied = 0;
-      for (const entry of mats) {
-        const mat: any = entry?.mat;
-        const pbr = mat?.pbrMetallicRoughness;
-        if (!pbr) continue;
-        const slot = pbr.baseColorTexture;
-        // Path 1: documented setTexture
-        try {
-          slot?.setTexture?.(tex);
-          try { pbr.setBaseColorFactor([1, 1, 1, 1]); } catch {}
-          applied++;
-          break;
-        } catch {
-          // Path 2: undocumented direct assignment
-          try {
-            if (slot && typeof slot.texture !== "undefined") {
-              slot.texture = tex;
-              try { pbr.setBaseColorFactor([1, 1, 1, 1]); } catch {}
-              applied++;
-              break;
-            }
-          } catch {}
-        }
-      }
-      if (!applied) {
-        console.warn(
-          "[customize] syncTexture: this GLB has no UV-mapped texture slot. The design appears in the canvas preview but cannot bake onto the 3D mesh. (Re-export the GLB with a baseColorTexture map.)"
-        );
-      } else {
-        console.debug(`[customize] syncTexture: applied texture (${dataUrl.length}b)`);
-      }
-    } catch (e) {
-      console.error("[customize] syncTexture failed:", e);
-    }
-  }, [mats]);
-
-  // Probe materials with a 1×1 test texture to learn which ones accept textures.
-  // We don't use the result to gate writes (we always try all), but it gives us
-  // diagnostic info and a future hook for partial failures.
-  const probeTexturability = useCallback(async (model: any) => {
-    texturableMatsRef.current = [];
-    const mv: any = mvRef.current;
-    if (!mv || !model?.materials?.length) return;
-    try {
-      const c = document.createElement("canvas");
-      c.width = c.height = 1;
-      c.getContext("2d")!.fillStyle = "#ffffff";
-      c.getContext("2d")!.fillRect(0, 0, 1, 1);
-      const testTex = await mv.createTexture(c.toDataURL("image/png"));
-      model.materials.forEach((m: any, i: number) => {
-        try {
-          m.pbrMetallicRoughness.baseColorTexture.setTexture(testTex);
-          m.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]);
-          texturableMatsRef.current.push(i);
-        } catch {}
-      });
-      console.debug(
-        `[customize] probe: ${texturableMatsRef.current.length}/${model.materials.length} material(s) accept textures →`,
-        texturableMatsRef.current.map(i => model.materials[i].name || `Part ${i + 1}`)
-      );
-    } catch (e) {
-      console.warn("[customize] probe failed:", e);
-    }
-  }, []);
-
-  // Keep the ref pointing at the latest syncTexture so canvas event handlers
-  // (registered once at init) always call the current closure.
-  useEffect(() => { syncTextureRef.current = syncTexture; }, [syncTexture]);
-
-  useEffect(() => { if (mats.length) syncTexture(); }, [mats, syncTexture]);
-
-  // ── model-viewer load event ───────────────────────────────────────────────
-  useEffect(() => {
-    if (!mvReady || !product?.modelUrl) return;
-    const mv = mvRef.current; if (!mv) return;
-    const onLoad = async () => {
-      const ov = document.getElementById("mv-overlay");
-      if (ov) { ov.style.opacity = "0"; setTimeout(()=>{ if(ov) ov.style.display="none"; }, 500); }
-      const model = mv.model;
-      console.debug("[customize] model loaded. materials:", model?.materials?.length ?? 0);
-      if (!model?.materials?.length) { setModelLoaded(true); return; }
-      const entries: MatEntry[] = model.materials.map((m:any, i:number) => ({
-        idx:i, name:m.name||`Part ${i+1}`, mat:m, color:"#ffffff",
-      }));
-      setMats(entries);
-      setModelLoaded(true);
-      // Discover which materials accept textures, then push the current canvas
-      await probeTexturability(model);
-      // syncTexture closes over `mats` state which hasn't flushed yet — call
-      // it through the ref so we get the next-tick (post-setState) closure.
-      requestAnimationFrame(() => syncTextureRef.current?.());
-    };
-    mv.addEventListener("load", onLoad);
-    return () => mv.removeEventListener("load", onLoad);
-  }, [mvReady, product?.modelUrl]);
-
-  // ── Auto-lock GT pattern for Pattern T-Shirts ─────────────────────────────
-  // For pattern products the GT id is encoded in product.name as "[gt:GTxxx]".
-  // Auto-apply that style on first load so the customer lands on the locked
-  // pattern with no extra click. They cannot switch (picker is hidden).
-  useEffect(() => {
-    if (product?.category !== "pattern" || !modelLoaded || !fcRef.current) return;
-    const m = product?.name?.match(/\[gt:(GT\d+)\]/);
-    if (!m) return;
-    if (activeGtStyle?.id === m[1]) return;
-    const style = GT_STYLES.find((s) => s.id === m[1]);
-    if (style) handleSelectGtStyle(style);
-    // Only run once per product load — handleSelectGtStyle setter triggers
-    // activeGtStyle which short-circuits the next run.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product?.category, modelLoaded, product?.name]);
-
-  // ── Restore saved design ──────────────────────────────────────────────────
-  useEffect(() => {
-    if (!existing || !modelLoaded || !fcRef.current) return;
-    setSize(existing.size || "M");
-    setDesignName(existing.name || "");
-    if (!existing.canvasData) return;
-    try {
-      const parsed = JSON.parse(existing.canvasData);
-      const canvasJSON = parsed.canvasJSON || parsed;
-      const bg = parsed.canvasBg || "#C5D3DE";
-      setCanvasBg(bg);
-      setPrimaryColor(parsed.primaryColor || bg);
-      setSecondaryColor(parsed.secondaryColor || "#362223");
-      // Initialise the print-library "restore-to" colour to the loaded body colour
-      // so Clear All-Over reverts to it instead of the hard-coded default.
-      baseBgRef.current = parsed.primaryColor || bg;
-      if (parsed.garmentState) {
-        const g = parsed.garmentState;
-        setGSleeves(g.sleeves ?? true); setGCollar(g.collar ?? true);
-        setGPlacket(g.placket ?? true); setGPanel(g.panel ?? true);
-        setGStripe(g.stripe ?? false); setPattern(g.pattern ?? "none");
-      }
-      const fc = fcRef.current;
-      setFabricBg(fc, bg);
-      fc.loadFromJSON(typeof canvasJSON === "string" ? JSON.parse(canvasJSON) : canvasJSON).then(() => {
-        fc.renderAll(); syncTexture();
-      }).catch((e: any) => console.error("[customize] loadFromJSON failed:", e));
-      if (parsed.matColors?.length && mats.length) {
-        const updated = [...mats];
-        parsed.matColors.forEach((hex:string, i:number) => {
-          if (!updated[i]) return;
-          updated[i] = { ...updated[i], color:hex };
-          if (i === 0) {
-            setFabricBg(fc, hex);
-          } else {
-            try { updated[i].mat.pbrMetallicRoughness.setBaseColorFactor(hexToRgba(hex)); }
-            catch (e) { console.error("[customize] setBaseColorFactor failed:", e); }
-          }
-        });
-        setMats(updated);
-      }
-    } catch {}
-  }, [existing, modelLoaded]);
-
-  // ── Garment overlay helpers ───────────────────────────────────────────────
-  // Removes all garment overlay objects of a given type from canvas
-  const removeGarmentOverlay = useCallback((type: string) => {
-    const fc = fcRef.current; if (!fc) return;
-    const toRemove = fc.getObjects().filter((o:any) => o.data?.garmentType === type);
-    toRemove.forEach((o:any) => fc.remove(o));
-  }, []);
-
-  // Draw collar overlay on canvas
-  const drawCollar = useCallback((color: string) => {
-    const fc = fcRef.current; if (!fc) return;
-    removeGarmentOverlay("collar");
-    // Two collar flap rectangles
-    const left = new fabric.Rect({
-      left:320, top:50, width:90, height:140, rx:10, ry:10,
-      fill:color, opacity:0.7, selectable:false, evented:false,
-      data:{ garmentType:"collar" }, 
-    });
-    const right = new fabric.Rect({
-      left:614, top:50, width:90, height:140, rx:10, ry:10,
-      fill:color, opacity:0.7, selectable:false, evented:false,
-      data:{ garmentType:"collar" },
-    });
-    const center = new fabric.Rect({
-      left:412, top:30, width:200, height:80, rx:8, ry:8,
-      fill:color, opacity:0.6, selectable:false, evented:false,
-      data:{ garmentType:"collar" },
-    });
-    fc.add(left, right, center);
-  }, [removeGarmentOverlay]);
-
-  // Draw sleeve cuff overlays
-  const drawSleeves = useCallback((color: string) => {
-    const fc = fcRef.current; if (!fc) return;
-    removeGarmentOverlay("sleeve");
-    const leftCuff = new fabric.Rect({
-      left:30, top:380, width:130, height:60, rx:6, ry:6,
-      fill:color, opacity:0.7, selectable:false, evented:false,
-      data:{ garmentType:"sleeve" },
-    });
-    const rightCuff = new fabric.Rect({
-      left:864, top:380, width:130, height:60, rx:6, ry:6,
-      fill:color, opacity:0.7, selectable:false, evented:false,
-      data:{ garmentType:"sleeve" },
-    });
-    fc.add(leftCuff, rightCuff);
-  }, [removeGarmentOverlay]);
-
-  // Draw button placket
-  const drawPlacket = useCallback((color: string) => {
-    const fc = fcRef.current; if (!fc) return;
-    removeGarmentOverlay("placket");
-    const placket = new fabric.Rect({
-      left:472, top:130, width:80, height:450, rx:4, ry:4,
-      fill:color, opacity:0.5, selectable:false, evented:false,
-      data:{ garmentType:"placket" },
-    });
-    // Buttons
-    [220,330,440,550].forEach(y => {
-      const btn = new fabric.Circle({
-        left:500, top:y, radius:14,
-        fill:"#ffffff", opacity:0.9,
-        stroke:color, strokeWidth:2,
-        selectable:false, evented:false,
-        data:{ garmentType:"placket" },
-      });
-      fc.add(btn);
-    });
-    fc.add(placket);
-  }, [removeGarmentOverlay]);
-
-  // Draw side panels
-  const drawPanel = useCallback((color: string) => {
-    const fc = fcRef.current; if (!fc) return;
-    removeGarmentOverlay("panel");
-    const lPanel = new fabric.Rect({
-      left:30, top:130, width:120, height:680, rx:0, ry:0,
-      fill:color, opacity:0.55, selectable:false, evented:false,
-      data:{ garmentType:"panel" },
-    });
-    const rPanel = new fabric.Rect({
-      left:874, top:130, width:120, height:680, rx:0, ry:0,
-      fill:color, opacity:0.55, selectable:false, evented:false,
-      data:{ garmentType:"panel" },
-    });
-    fc.add(lPanel, rPanel);
-  }, [removeGarmentOverlay]);
-
-  // Draw chest diagonal stripe
-  const drawStripe = useCallback((color: string) => {
-    const fc = fcRef.current; if (!fc) return;
-    removeGarmentOverlay("stripe");
-    const stripe = new fabric.Path("M 100 130 L 440 130 L 640 520 L 300 520 Z",{
-      fill:color, opacity:0.5, selectable:false, evented:false,
-      data:{ garmentType:"stripe" },
-    });
-    fc.add(stripe);
-  }, [removeGarmentOverlay]);
-
-  // Draw pattern overlay
-  const drawPattern = useCallback((pat: "none"|"stripes"|"grid"|"dots", color: string) => {
-    const fc = fcRef.current; if (!fc) return;
-    removeGarmentOverlay("pattern");
-    if (pat === "none") { fc.renderAll(); syncTexture(); return; }
-
-    const lines: fabric.Line[] = [];
-    if (pat === "stripes") {
-      for (let i = -10; i < 25; i++) {
-        lines.push(new fabric.Line(
-          [i*80-200, 0, i*80+800, 1024],
-          { stroke:color, strokeWidth:14, opacity:0.2, selectable:false, evented:false, data:{garmentType:"pattern"} }
-        ));
-      }
-    } else if (pat === "grid") {
-      for (let i = 0; i <= 12; i++) {
-        lines.push(new fabric.Line([i*90,0,i*90,1024],{stroke:color,strokeWidth:6,opacity:0.15,selectable:false,evented:false,data:{garmentType:"pattern"}}));
-        lines.push(new fabric.Line([0,i*90,1024,i*90],{stroke:color,strokeWidth:6,opacity:0.15,selectable:false,evented:false,data:{garmentType:"pattern"}}));
-      }
-    } else if (pat === "dots") {
-      for (let x = 0; x < 12; x++) {
-        for (let y = 0; y < 12; y++) {
-          lines.push(new fabric.Circle({
-            left:x*90+30, top:y*90+30, radius:6,
-            fill:color, opacity:0.18, selectable:false, evented:false,
-            data:{garmentType:"pattern"},
-          }) as any);
-        }
-      }
-    }
-    if (lines.length) { fc.add(...lines); }
-    fc.renderAll(); syncTexture();
-  }, [removeGarmentOverlay, syncTexture]);
-
-  // Toggle garment feature
-  const toggleGarment = useCallback((feature: string, value: boolean, color: string) => {
-    const fc = fcRef.current; if (!fc) return;
-    if (!value) {
-      removeGarmentOverlay(feature);
-      fc.renderAll(); syncTexture();
-    } else {
-      if (feature === "collar")  drawCollar(color);
-      if (feature === "sleeve")  drawSleeves(color);
-      if (feature === "placket") drawPlacket(color);
-      if (feature === "panel")   drawPanel(color);
-      if (feature === "stripe")  drawStripe(color);
-      fc.renderAll(); syncTexture();
-    }
-  }, [removeGarmentOverlay, drawCollar, drawSleeves, drawPlacket, drawPanel, drawStripe, syncTexture]);
-
-  // ── Material color ────────────────────────────────────────────────────────
-  const applyPartColor = useCallback((idx: number, hex: string) => {
-    const fc = fcRef.current;
-    setMats(prev => {
-      const next = [...prev];
-      if (!next[idx]) return prev;
-      next[idx] = { ...next[idx], color:hex };
-      if (idx === 0) {
-        // Body — paint the canvas background so the texture carries the color
-        baseBgRef.current = hex;
-        // Don't clobber an active all-over pattern; the colour is restored when it's removed.
-        if (!allOverPrintId) setFabricBg(fc, hex);
-        syncTexture();
-        try { next[0].mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1, 1, 1, 1]); }
-        catch (e) { console.error("[customize] setBaseColorFactor (body white) failed:", e); }
-      } else {
-        // Other parts (collar, sleeves, etc) — apply color directly to the material
-        try { next[idx].mat?.pbrMetallicRoughness?.setBaseColorFactor?.(hexToRgba(hex)); }
-        catch (e) { console.error("[customize] setBaseColorFactor failed:", e); }
-      }
-      return next;
-    });
-  }, [syncTexture, allOverPrintId]);
-
-  // Apply palette to active garment part
-  const applyPalette = (hex: string) => {
-    applyPartColor(activePart, hex);
-    const el = document.getElementById("cp-custom") as HTMLInputElement | null;
-    if (el) el.value = hex;
-  };
-
-  // Primary color → canvas bg + mat[0]
-  const applyPrimary = (hex: string) => {
-    setPrimaryColor(hex); setCanvasBg(hex);
-    const fc = fcRef.current;
-    baseBgRef.current = hex;
-    if (!allOverPrintId) setFabricBg(fc, hex);
-    syncTexture();
-    if (mats[0]) { applyPartColor(0, hex); }
-  };
-
-  // ── PRINT LIBRARY ────────────────────────────────────────────────────────
-  const loadHTMLImage = (url: string): Promise<HTMLImageElement> =>
-    new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => resolve(img);
-      img.onerror = (e) => reject(e);
-      img.src = url;
-    });
-
-  const applyAllOverPrint = useCallback(async (p: PatternDef) => {
-    const fc = fcRef.current;
-    if (!fc) return;
-    // Invalidate any in-flight GT apply/recolor — otherwise a slow GT load
-    // could finish AFTER us and stomp our print background.
-    gtRequestIdRef.current++;
-    try {
-      const img = await loadHTMLImage(patternUrl(p.file));
-      // Pre-scale the source onto an offscreen canvas so the pattern repeats
-      // at a predictable tile size instead of being "zoomed in" by the
-      // source image's natural resolution.
-      const off = document.createElement("canvas");
-      off.width = ALL_OVER_TILE_PX;
-      off.height = ALL_OVER_TILE_PX;
-      const ctx = off.getContext("2d");
-      if (ctx) {
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, 0, 0, ALL_OVER_TILE_PX, ALL_OVER_TILE_PX);
-      }
-      // GT styles cover the whole shirt — clear them so the all-over print
-      // is actually visible and the panel state stays consistent.
-      if (activeGtStyle) {
-        clearGtStyle(fc);
-        setActiveGtStyle(null);
-      }
-      const pattern = new fabric.Pattern({ source: off, repeat: "repeat" });
-      // Bypass setFabricBg (which expects a hex string) — assign Pattern directly.
-      (fc as any).backgroundColor = pattern;
-      fc.renderAll();
-      setAllOverPrintId(p.id);
-      setActivePrintId(p.id);
-      // Body material must be pure white so the texture's true colours show through.
-      try { mats[0]?.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1, 1, 1, 1]); } catch {}
-      syncTexture();
-      toast({ title: "Print applied", description: `${p.label} mapped across the whole garment.` });
-    } catch {
-      toast({ title: "Could not load print", variant: "destructive" });
-    }
-  }, [activeGtStyle, mats, syncTexture, toast]);
-
-  const clearAllOverPrint = useCallback(() => {
-    const fc = fcRef.current;
-    if (!fc) return;
-    setFabricBg(fc, baseBgRef.current || "#ffffff");
-    fc.renderAll();
-    setAllOverPrintId(null);
-    syncTexture();
-  }, [syncTexture]);
-
-  // ── GT DESIGN STYLE SYSTEM ───────────────────────────────────────────────
-  const handleSelectGtStyle = useCallback(async (style: GtStyleDef) => {
-    const fc = fcRef.current;
-    if (!fc) return;
-    const myReq = ++gtRequestIdRef.current;
-    setActiveGtStyle(style);
-    const colors: GtColors = { ...style.defaultColors };
-    setGtColors(colors);
-    // GT styles paint flat colour zones — clear any all-over print first so
-    // the underlying repeating pattern doesn't bleed through transparent areas.
-    if (allOverPrintId) {
-      setFabricBg(fc, "#ffffff");
-      setAllOverPrintId(null);
-    }
-    // Body material must be pure white so the painted zones render true to colour.
-    try { mats[0]?.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1, 1, 1, 1]); } catch {}
-    // Await — applyGtStyle loads the 1024×1024 base texture as a FabricImage,
-    // so syncTexture() must run AFTER it's added to the canvas.
-    await applyGtStyle(fc, style, colors);
-    // Race guard: if another GT request started after us, abandon this result.
-    if (myReq !== gtRequestIdRef.current) return;
-    syncTexture();
-    toast({ title: `${style.id} applied`, description: style.label });
-  }, [allOverPrintId, mats, syncTexture, toast]);
-
-  const handleGtColorChange = useCallback(async (role: keyof GtColors, hex: string) => {
-    const fc = fcRef.current;
-    if (!fc || !activeGtStyle) return;
-    const myReq = ++gtRequestIdRef.current;
-    const updated: GtColors = { ...gtColors, [role]: hex };
-    setGtColors(updated);
-    // Await — pixel-swap recolor + re-add to canvas is async.
-    await applyGtStyle(fc, activeGtStyle, updated);
-    // Race guard: only commit if this is still the latest request.
-    if (myReq !== gtRequestIdRef.current) return;
-    syncTexture();
-  }, [activeGtStyle, gtColors, syncTexture]);
-
-  const handleClearGtStyle = useCallback(() => {
-    const fc = fcRef.current;
-    if (!fc) return;
-    clearGtStyle(fc);
-    fc.renderAll();
-    setActiveGtStyle(null);
-    setFabricBg(fc, baseBgRef.current || "#ffffff");
-    syncTexture();
-    toast({ title: "Design style removed" });
-  }, [syncTexture, toast]);
-
-  // ── PER-ZONE COLOUR ──────────────────────────────────────────────────────
-  // Paints (or removes) a flat colour rectangle on the texture canvas at the
-  // exact ZONE_PRESETS rectangle for the chosen zone. Sits ABOVE GT base
-  // textures and BELOW prints / text / logos / shapes so the user can recolour
-  // a panel without losing their decorative work.
-  const applyZoneColor = useCallback((zone: Exclude<PatternZone, "all">, hex: string) => {
-    const fc = fcRef.current;
-    if (!fc) return;
-    // Invalidate any in-flight GT apply — its async completion could otherwise
-    // re-stack the texture above our zone colour rect.
-    gtRequestIdRef.current++;
-    // Remove any prior colour rect for this zone.
-    const existing = fc.getObjects().filter((o: any) => o?.data?.kashaZoneColor === zone);
-    if (existing.length) fc.remove(...existing);
-
-    if (!hex) {
-      setZoneColors(prev => ({ ...prev, [zone]: "" }));
-      fc.renderAll();
-      syncTexture();
-      return;
-    }
-
-    const preset = ZONE_PRESETS[zone];
-    const rect = new fabric.Rect({
-      left: preset.left, top: preset.top,
-      width: preset.w,   height: preset.h,
-      fill: hex,
-      selectable: false, evented: false,
-      originX: "left",   originY: "top",
-    });
-    (rect as any).data = { kashaZoneColor: zone };
-    fc.add(rect);
-    // Stack: GT base (very back) → zone colour rects → prints → text/logos/shapes.
-    // sendObjectToBack puts rect at index 0, then we restore the GT base behind it.
-    (fc as any).sendObjectToBack?.(rect);
-    const gtBase = fc.getObjects().find((o: any) => o?.data?.tag === "__kashaGtBg__");
-    if (gtBase) (fc as any).sendObjectToBack?.(gtBase);
-    fc.renderAll();
-    setZoneColors(prev => ({ ...prev, [zone]: hex }));
-    syncTexture();
-  }, [syncTexture]);
-
-  const placePrintOnZone = useCallback(async (p: PatternDef, zone: Exclude<PatternZone, "all">) => {
-    const fc = fcRef.current;
-    if (!fc) return;
-    // Invalidate any in-flight GT apply for the same reason as applyZoneColor.
-    gtRequestIdRef.current++;
-    try {
-      const img = await fabric.FabricImage.fromURL(patternUrl(p.file), { crossOrigin: "anonymous" });
-      const preset = ZONE_PRESETS[zone];
-      // Remove any prior print already placed in this zone so the new one
-      // replaces it cleanly (so repeated clicks on a zone don't stack copies).
-      const existing = fc.getObjects().filter(
-        (o: any) => o?.data?.kashaZone === zone
-      );
-      if (existing.length) fc.remove(...existing);
-
-      const naturalW = img.width ?? preset.w;
-      const naturalH = img.height ?? preset.h;
-      // Stretch the print to fill the entire zone using the UV-mapped width
-      // and height — no static scale, so every print covers its zone fully
-      // regardless of source-image dimensions.
-      img.set({
-        left: preset.left,
-        top: preset.top,
-        originX: "left",
-        originY: "top",
-        scaleX: preset.w / naturalW,
-        scaleY: preset.h / naturalH,
-      });
-      (img as any).data = { kashaZone: zone, kashaPrintId: p.id };
-      fc.add(img);
-      fc.setActiveObject(img);
-      fc.renderAll();
-      setActivePrintId(p.id);
-      syncTexture();
-      toast({ title: "Print placed", description: `${p.label} fills the ${ZONE_LABEL[zone]} — drag in Canvas tab to reposition.` });
-    } catch {
-      toast({ title: "Could not load print", variant: "destructive" });
-    }
-  }, [syncTexture, toast]);
-
-  // Secondary color → mat[1] + redraw garment overlays that use secondary
-  const applySecondary = (hex: string) => {
-    setSecondaryColor(hex);
-    if (mats[1]) { applyPartColor(1, hex); }
-    // Redraw active garment overlays with new secondary color
-    const fc = fcRef.current; if (!fc) return;
-    if (gCollar)  drawCollar(hex);
-    if (gSleeves) drawSleeves(hex);
-    if (gPlacket) drawPlacket(hex);
-    if (gPanel)   drawPanel(hex);
-    if (gStripe)  drawStripe(hex);
-    fc.renderAll(); syncTexture();
-  };
-
-  // Apply preset
-  const applyPreset = (p: typeof PRESETS[0]) => {
-    setPresetName(p.name);
-    applyPrimary(p.primary);
-    applySecondary(p.secondary);
-    toast({ title: `Preset ${p.name} applied`, description:`${p.primary} · ${p.secondary}` });
-  };
-
-  // Canvas bg change (manual)
-  const setFcBg = (hex: string) => {
-    setCanvasBg(hex); setPrimaryColor(hex);
-    const fc = fcRef.current;
-    setFabricBg(fc, hex);
-    syncTexture();
-    if (mats[0]) applyPartColor(0, hex);
-  };
-
-  // ── Text ─────────────────────────────────────────────────────────────────
-  const addText = async () => {
-    const fc = fcRef.current;
-    if (!fc) {
-      console.error("[customize] addText: canvas not initialised");
-      toast({ title:"Canvas not ready", description:"Try again in a moment.", variant:"destructive" });
-      return;
-    }
-    // document.fonts.ready can hang in some browsers/environments — guard with timeout
-    try {
-      await Promise.race([
-        document.fonts.ready,
-        new Promise(r => setTimeout(r, 300)),
-      ]);
-    } catch {}
-    const pos = PLACEMENTS[txtPlacement] || { left:512, top:512 };
-    const TextCtor = (fabric as any).FabricText || (fabric as any).Text;
-    const t = new TextCtor(txtVal || "Your Text", {
-      left: pos.left, top: pos.top,
-      originX: "center", originY: "center",
-      fontFamily: txtFont, fontSize: txtSize, fill: txtColor,
-      fontWeight: "bold",
-      // The body UVs of the GLB are horizontally mirrored when wrapped onto
-      // the 3D mesh: typing "Akash" on the canvas would show "hsakA" on the
-      // shirt. Pre-flipping on X cancels that mirror so it reads correctly.
-      // Patterns/prints are repeating + roughly symmetric so the mirror is
-      // not visible on them — only directional content (text, logos) needs it.
-      flipX: true,
-    });
-    fc.add(t);
-    fc.setActiveObject(t);
-    fc.renderAll();
-    syncTexture();
-    console.debug("[customize] addText:", { text: txtVal, pos, totalObjects: fc.getObjects().length });
-    toast({ title:"Text added", description:"Switch to the Canvas tab to drag it." });
-  };
-  const removeText = () => {
-    const fc = fcRef.current; if (!fc) return;
-    const o = fc.getActiveObject();
-    if (o) { fc.remove(o); fc.renderAll(); syncTexture(); }
-  };
-
-  // ── Logo ──────────────────────────────────────────────────────────────────
-  const addLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const src = ev.target?.result as string;
-      setLogoPreview(src);
-      const img = await fabric.FabricImage.fromURL(src);
-      const pos = PLACEMENTS[logoPlacement] || { left:512, top:512 };
-      const maxW = parseInt(document.getElementById("logo-size-input")?.getAttribute("value")||"200");
-      if (img.width && img.width > maxW) img.scaleToWidth(maxW);
-      // flipX cancels the body-UV horizontal mirror so the logo reads correctly
-      // on the 3D shirt — same fix as text. Symmetric logos won't notice.
-      img.set({ left:pos.left, top:pos.top, originX:"center", originY:"center", flipX:true });
-      const fc = fcRef.current; if (!fc) return;
-      fc.add(img); fc.setActiveObject(img);
-      logoObjRef.current = img;
-      fc.renderAll(); syncTexture();
-      toast({ title:"Logo added", description:"Drag on Canvas tab to reposition." });
-    };
+    reader.onload = ev => setLogoUrl(ev.target?.result as string);
     reader.readAsDataURL(file);
-    e.target.value = "";
-  };
-  const applyLogo = () => {
-    const o = logoObjRef.current || fcRef.current?.getActiveObject();
-    if (!o) { toast({ title:"No logo", description:"Upload a logo first.", variant:"destructive" }); return; }
-    const pos = PLACEMENTS[logoPlacement] || { left:512, top:512 };
-    o.set({ left:pos.left, top:pos.top, originX:"center", originY:"center" });
-    o.scale(logoScale);
-    fcRef.current?.renderAll(); syncTexture();
-    toast({ title:"Logo repositioned" });
-  };
-  const updateLogoSize = (v: number) => {
-    setLogoScale(v / 100);
-    const o = logoObjRef.current || fcRef.current?.getActiveObject();
-    if (o) { o.scaleToWidth(v); fcRef.current?.renderAll(); syncTexture(); }
-  };
-  const removeLogo = () => {
-    const fc = fcRef.current; if (!fc) return;
-    const o = logoObjRef.current || fc.getActiveObject();
-    if (o) { fc.remove(o); logoObjRef.current = null; setLogoPreview(null); fc.renderAll(); syncTexture(); }
   };
 
-  // ── Shapes ────────────────────────────────────────────────────────────────
-  // All shapes drop at the user's currently-selected Placement so they land
-  // on the same UV island the Patterns library uses (single source of truth).
-  // Stroke colours are direction-agnostic so no flipX is needed here.
-  const _shapePos = () => PLACEMENTS[shapePlacement] || { left: 512, top: 512 };
-  const addLine = () => {
-    const fc = fcRef.current; if (!fc) return;
-    const p = _shapePos();
-    fc.add(new fabric.Line([0,0,500,0],{stroke:shapeColor,strokeWidth:strokeW,left:p.left,top:p.top,originX:"center",originY:"center"}));
-    fc.renderAll(); syncTexture();
-  };
-  const addCurve = () => {
-    const fc = fcRef.current; if (!fc) return;
-    const p = _shapePos();
-    fc.add(new fabric.Path("M 0 80 Q 250 -80 500 80",{fill:"",stroke:shapeColor,strokeWidth:strokeW,left:p.left,top:p.top,originX:"center",originY:"center"}));
-    fc.renderAll(); syncTexture();
-  };
-  const addRect = () => {
-    const fc = fcRef.current; if (!fc) return;
-    const p = _shapePos();
-    fc.add(new fabric.Rect({width:300,height:180,fill:"transparent",stroke:shapeColor,strokeWidth:strokeW,left:p.left,top:p.top,originX:"center",originY:"center"}));
-    fc.renderAll(); syncTexture();
-  };
-  const addCircle = () => {
-    const fc = fcRef.current; if (!fc) return;
-    const p = _shapePos();
-    fc.add(new fabric.Circle({radius:140,fill:"transparent",stroke:shapeColor,strokeWidth:strokeW,left:p.left,top:p.top,originX:"center",originY:"center"}));
-    fc.renderAll(); syncTexture();
-  };
-  const addStripes = () => {
-    const fc = fcRef.current; if (!fc) return;
-    const p = _shapePos();
-    const lines = Array.from({length:14},(_,i) => new fabric.Line([-600,i*80-520,600,i*80-520],{stroke:shapeColor,strokeWidth:strokeW}));
-    fc.add(new fabric.Group(lines,{left:p.left,top:p.top,originX:"center",originY:"center"}));
-    fc.renderAll(); syncTexture();
-  };
-  const removeSel = () => {
-    const fc = fcRef.current; if (!fc) return;
-    const o = fc.getActiveObject();
-    if (o) { fc.remove(o); fc.renderAll(); syncTexture(); }
-  };
-  const clearCanvas = () => {
-    const fc = fcRef.current; if (!fc) return;
-    fc.getObjects().forEach(o => fc.remove(o)); fc.renderAll(); syncTexture();
-    toast({ title:"Canvas cleared" });
-  };
-
-  // ── Selected element adjustments ──────────────────────────────────────────
-  const setElS = (v: number) => {
-    const o = fcRef.current?.getActiveObject();
-    if (o) { o.scale(v); fcRef.current?.renderAll(); syncTexture(); }
-    setElScale(v);
-  };
-  const setElPos = (k:"left"|"top", v: number) => {
-    const o = fcRef.current?.getActiveObject(); if (!o) return;
-    o.set(k, v); fcRef.current?.renderAll(); syncTexture();
-    if (k==="left") setElX(v); else setElY(v);
-  };
-
-  // ── Snapshot the 3D model (the customer-facing view, with the design
-  //     baked onto the t-shirt) — falls back to the flat canvas if model-
-  //     viewer isn't ready yet.
-  const snapshotModel = useCallback(async (): Promise<string> => {
-    const mv: any = mvRef.current;
-    const fc = fcRef.current;
-    // Make sure the latest design is on the model before we snapshot
-    try { await syncTexture(); } catch {}
-    // Give the renderer one frame to commit the texture update
-    await new Promise(r => requestAnimationFrame(() => r(null)));
-    if (mv && typeof mv.toDataURL === "function") {
-      try {
-        return mv.toDataURL("image/png", 1.0);
-      } catch (e) {
-        console.warn("[customize] mv.toDataURL failed, falling back to canvas snapshot", e);
-      }
-    }
-    if (fc) return fc.toDataURL({ format: "png", quality: 0.95, multiplier: 1 });
-    throw new Error("Nothing to snapshot");
-  }, [syncTexture]);
-
-  // ── Export the customized 3D t-shirt as a PNG ────────────────────────────
-  const exportCanvas = async () => {
-    try {
-      const dataUrl = await snapshotModel();
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = `kasha-design-${Date.now()}.png`;
-      a.click();
-      toast({ title: "Design exported" });
-    } catch (e: any) {
-      toast({ title: "Export failed", description: e.message, variant: "destructive" });
-    }
-  };
-
-  // ── Save mutation ──────────────────────────────────────────────────────────
-  const saveMut = useMutation({
+  // ─── Order mutation ────────────────────────────────────────────────────
+  const orderMut = useMutation({
     mutationFn: async () => {
-      const fc = fcRef.current;
-      if (!fc) throw new Error("Canvas not ready");
-      if (!designName.trim()) throw new Error("Enter a design name first");
-      const matColors = mats.map(m => m.color);
-      const garmentState = { sleeves:gSleeves, collar:gCollar, placket:gPlacket, panel:gPanel, stripe:gStripe, pattern };
-      const canvasJSON = JSON.stringify((fc as any).toJSON(["data"]));
-      // Preview thumbnail = snapshot of the 3D model (with the design baked
-      // onto the t-shirt). textureUrl = full 1024px PNG, used by the admin
-      // viewer to re-apply the exact design on a fresh model-viewer.
-      const snap = await snapshotModel();
-      const textureUrl = lastTextureUrlRef.current;
-      return apiFetch("/api/customizations", { method:"POST", body: JSON.stringify({
-        productId: id,
-        name: designName,
-        color: primaryColor,
-        size,
-        partsEnabled: { qty, matColors, canvasBg, presetName },
-        canvasData: JSON.stringify({ canvasJSON, textureUrl, matColors, canvasBg, primaryColor, secondaryColor, garmentState, presetName }),
-        previewImageUrl: snap,
-      })});
+      if (!user) throw new Error("Please sign in to place an order");
+      const customization = {
+        styleType,
+        mainColor: styleType === "solid" ? mainColor : undefined,
+        printId: styleType === "print" ? printId : undefined,
+        pattern: styleType === "pattern" ? { id: patternId, a: patternA, b: patternB } : undefined,
+        sleeveLen,
+        partColors,
+        logo: logoUrl ? { dataUrl: logoUrl, position: logoPos, size: logoSize } : null,
+        size: customEnabled ? "Custom" : size,
+        customSize: customEnabled ? customSize : undefined,
+      };
+      const cust = await apiFetch("/api/customizations", {
+        method: "POST",
+        body: JSON.stringify({
+          productId: id,
+          name: `${product?.name || "Custom"} ${styleType}`,
+          color: mainColor,
+          size: customEnabled ? "Custom" : size,
+          partsEnabled: { collar: true, front: true, back: true, sleeves: true },
+          canvasData: JSON.stringify(customization),
+          previewImageUrl: null,
+        }),
+      });
+      return apiFetch("/api/cart/items", {
+        method: "POST",
+        body: JSON.stringify({
+          productId: id,
+          customizationId: cust.id,
+          quantity: qty,
+          size: customEnabled ? "Custom" : size,
+        }),
+      });
     },
     onSuccess: () => {
-      toast({ title:"Design Saved ✓", description:"Your bespoke design has been saved." });
-      queryClient.invalidateQueries({ queryKey:["customization", id] });
+      toast({ title: "Added to cart", description: "Your custom design is in the cart." });
+      setLocation("/cart");
     },
-    onError: (err:any) => toast({ title:"Error", description:err.message, variant:"destructive" }),
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  // ── Add to Cart ────────────────────────────────────────────────────────────
-  const cartMut = useMutation({
-    mutationFn: async () => {
-      const fc = fcRef.current; if (!fc) throw new Error("Canvas not ready");
-      const matColors = mats.map(m => m.color);
-      const garmentState = { sleeves:gSleeves, collar:gCollar, placket:gPlacket, panel:gPanel, stripe:gStripe, pattern };
-      // Cart preview = snapshot of the 3D model with design baked on.
-      const snap = await snapshotModel();
-      const textureUrl = lastTextureUrlRef.current;
-      const cust = await apiFetch("/api/customizations", { method:"POST", body: JSON.stringify({
-        productId: id,
-        name: designName || `${product?.name} Custom`,
-        color: primaryColor, size,
-        partsEnabled: { qty, matColors, canvasBg, presetName },
-        canvasData: JSON.stringify({ canvasJSON:JSON.stringify((fc as any).toJSON(["data"])), textureUrl, matColors, canvasBg, primaryColor, secondaryColor, garmentState, presetName }),
-        previewImageUrl: snap,
-      })});
-      return apiFetch("/api/cart/items", { method:"POST", body: JSON.stringify({
-        productId:id, customizationId:cust.id, quantity:qty, size,
-      })});
-    },
-    onSuccess: () => { toast({ title:"Added to Cart" }); setLocation("/cart"); },
-    onError: (err:any) => toast({ title:"Error", description:err.message, variant:"destructive" }),
-  });
+  // ─── Style summary ─────────────────────────────────────────────────────
+  const styleSummary = useMemo(() => {
+    if (styleType === "solid") return `Solid · ${colorName(mainColor)}`;
+    if (styleType === "print") return `Print · ${PRINTS.find(p => p.id === printId)?.label}`;
+    return `Pattern · ${PATTERNS.find(p => p.id === patternId)?.label}`;
+  }, [styleType, mainColor, printId, patternId]);
 
-  // ── Design summary (live) ─────────────────────────────────────────────────
-  const summary = [
-    { label:"Style",    val: presetName },
-    { label:"Primary",  val: <span style={{ display:"flex",alignItems:"center",gap:4 }}><span style={{ width:12,height:12,borderRadius:"50%",background:primaryColor,display:"inline-block",border:"1px solid rgba(255,255,255,.2)" }}/>{primaryColor}</span> },
-    { label:"Trim",     val: <span style={{ display:"flex",alignItems:"center",gap:4 }}><span style={{ width:12,height:12,borderRadius:"50%",background:secondaryColor,display:"inline-block",border:"1px solid rgba(255,255,255,.2)" }}/>{secondaryColor}</span> },
-    { label:"Sleeves",  val: gSleeves?"Yes":"No" },
-    { label:"Collar",   val: gCollar?"Yes":"No" },
-    { label:"Placket",  val: gPlacket?"Yes":"No" },
-    { label:"Panel",    val: gPanel?"Yes":"No" },
-    { label:"Stripe",   val: gStripe?"Yes":"No" },
-    { label:"Pattern",  val: pattern },
-    { label:"Size/Qty", val: `${size} × ${qty}` },
-  ];
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="min-h-[70vh] flex items-center justify-center">
+          <div
+            style={{
+              width: 36, height: 36,
+              border: `2px solid ${BD}`, borderTopColor: GOLD,
+              borderRadius: "50%",
+              animation: "spin 0.9s linear infinite",
+            }}
+          />
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        </div>
+      </Layout>
+    );
+  }
 
-  // ── Shared style helpers ──────────────────────────────────────────────────
-  const btnStyle = (v:"primary"|"secondary"|"danger"|"ghost"="ghost"): React.CSSProperties => {
-    const base: React.CSSProperties = { width:"100%",padding:"8px",borderRadius:"8px",border:"none",fontFamily:"inherit",fontSize:"12px",fontWeight:600,cursor:"pointer",transition:"all .15s",letterSpacing:".02em" };
-    if (v==="primary")   return { ...base, background:V.ac, color:V.bg };
-    if (v==="secondary") return { ...base, background:V.sf2, color:V.tx, border:`1px solid ${V.bd}` };
-    if (v==="danger")    return { ...base, background:"rgba(196,92,92,.15)", color:"#c45c5c", border:"1px solid rgba(196,92,92,.2)" };
-    return { ...base, background:V.sf2, color:V.tx, border:`1px solid ${V.bd}` };
-  };
-  const inp: React.CSSProperties = { width:"100%",padding:"8px 10px",background:"rgba(0,0,0,.4)",border:`1px solid ${V.bd}`,borderRadius:"8px",color:V.tx,fontFamily:"inherit",fontSize:"12px",outline:"none" };
-  const slr: React.CSSProperties = { display:"flex",alignItems:"center",gap:"8px",marginTop:"4px" };
-  const lbl: React.CSSProperties = { fontSize:"10px",color:V.mu,width:"44px",flexShrink:0 };
-  const sl: React.CSSProperties  = { fontSize:"10px",letterSpacing:".1em",textTransform:"uppercase",color:V.mu,fontWeight:600,marginBottom:"7px" };
-  const sb: React.CSSProperties  = { padding:"12px 0",borderBottom:`1px solid ${V.bd}` };
+  if (!product) {
+    return (
+      <Layout>
+        <div className="min-h-[70vh] flex items-center justify-center text-white/60">Product not found.</div>
+      </Layout>
+    );
+  }
 
-  const togBtn = (on:boolean, toggle:()=>void) => (
-    <button onClick={toggle} style={{ width:"34px",height:"18px",background:on?V.ac:V.bd2,borderRadius:"9px",cursor:"pointer",border:"none",position:"relative",transition:"background .2s",flexShrink:0 }}>
-      <div style={{ position:"absolute",top:"2px",left:on?"18px":"2px",width:"14px",height:"14px",background:"#fff",borderRadius:"50%",transition:"left .2s",boxShadow:"0 1px 2px rgba(0,0,0,.3)" }} />
-    </button>
-  );
-
-  const placeBtns = (options: string[], active: string, setActive: (s:string)=>void) => (
-    <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"5px",marginTop:"6px" }}>
-      {options.map(opt => (
-        <button key={opt} onClick={()=>setActive(opt)} style={{
-          padding:"6px 0",fontSize:"10px",fontWeight:500,fontFamily:"inherit",cursor:"pointer",textAlign:"center",
-          borderRadius:"7px",border:`1.5px solid ${active===opt?V.ac:V.bd}`,
-          background:active===opt?"rgba(201,168,124,.15)":V.sf,
-          color:active===opt?V.ac:V.mu,transition:"all .15s",
-        }}>
-          {opt.replace(/-/g," ").replace(/\b\w/g,c=>c.toUpperCase())}
-        </button>
-      ))}
-    </div>
-  );
-
-  // ── Loading / error states ────────────────────────────────────────────────
-  if (isLoading) return (
-    <div style={{ height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:V.bg }}>
-      <div style={{ width:36,height:36,border:`2px solid ${V.bd2}`,borderTopColor:V.ac,borderRadius:"50%",animation:"spin .9s linear infinite" }} />
-    </div>
-  );
-  if (!product) return null;
-
-  const PLACEMENT_OPTS = ["front-chest","front-center","back-top","back-center","sleeve-left","sleeve-right"];
-  // Pattern T-Shirts (category === "pattern") use a fixed GT pattern and only allow
-  // text / logo / canvas / colour-combinations. Fabric T-Shirts use prints — no GT
-  // switcher. Shapes are removed for ALL flows per client spec.
-  const isPattern = product?.category === "pattern";
-  const TABS = (isPattern
-    ? ["text","logo","canvas","colors"]
-    : ["text","logo","canvas","design"]) as readonly ("text"|"logo"|"canvas"|"colors"|"design")[];
-
-  // ── SKU per client spec ────────────────────────────────────────────────────
-  // Format: "<BODY> <DESIGN> <SIZE>"
-  //   BODY    = product name (e.g. KS1000B). For pattern products the name is
-  //             "Group Pattern T-Shirt [gt:GTxxx]" — strip the [gt:...] suffix.
-  //   DESIGN  = print code (GP016) or pattern code (GT001) or color combo (GREYNAVY)
-  //   SIZE    = "S"|"M"|"L"|"XL" or "C" for Custom
-  const lockedGtId = (() => {
-    const m = product?.name?.match(/\[gt:(GT\d+)\]/);
-    return m ? m[1] : null;
-  })();
-  // BODY = the leading "KS####<letter>" silhouette token from the product name.
-  // Falls back to the full cleaned name if no KS#### token is present.
-  const bodyCode = (() => {
-    const cleaned = (product?.name || "").replace(/\s*\[gt:GT\d+\]\s*$/, "").trim();
-    const m = cleaned.match(/^(KS\d+[A-Z])/);
-    return m ? m[1] : cleaned;
-  })();
-  const sizeCode = size === "Custom" ? "C" : size;
-  const designCode = (() => {
-    if (isPattern && (activeGtStyle?.id || lockedGtId)) return activeGtStyle?.id || lockedGtId!;
-    if (activePrintId) {
-      // Map print id → standardized "GP###" code based on its index in PATTERNS.
-      // This produces the canonical KA.SHA print SKU code (e.g. GP001, GP016)
-      // rather than leaking the human-readable id like "PAISLEY".
-      const idx = PATTERNS.findIndex(x => x.id === activePrintId);
-      return idx >= 0 ? `GP${String(idx + 1).padStart(3, "0")}` : activePrintId.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    }
-    // Color-combo fallback: derive a short tag from the active GT colors or zoneColors
-    const cols = Object.values(zoneColors).filter(Boolean) as string[];
-    if (cols.length >= 2) return cols.slice(0, 2).map(c => c.replace("#","").toUpperCase()).join("");
-    if (activeGtStyle) return activeGtStyle.id;
-    return "";
-  })();
-  const skuFull = [bodyCode, designCode, sizeCode].filter(Boolean).join(" ");
-
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display:"flex",flexDirection:"column",height:"100vh",background:V.bg,color:V.tx,fontFamily:"'Josefin Sans',sans-serif",overflow:"hidden" }}>
-
-      {/* ── HEADER (Custom Studio toolbar) ── */}
-      <header style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",height:"56px",borderBottom:`1px solid ${V.bd2}`,background:"rgba(8,10,18,0.95)",backdropFilter:"blur(20px)",flexShrink:0,zIndex:50 }}>
-        {/* Left: brand + back */}
-        <div style={{ display:"flex",alignItems:"center",gap:"16px" }}>
-          <Link href={`/products/${id}`} style={{ color:V.mu,fontSize:"11px",textDecoration:"none",letterSpacing:"0.2em",textTransform:"uppercase" }}>← Back</Link>
-          <div style={{ width:"1px",height:"20px",background:V.bd }} />
-          <Link href="/" style={{ display:"flex",alignItems:"center",gap:"10px",textDecoration:"none" }}>
-            <img src="/images/kasha-logo-new.jpeg" alt="Ka·Sha" style={{ height:30,filter:"invert(1) brightness(1.1)",mixBlendMode:"screen" }} />
-            <div style={{ display:"flex",flexDirection:"column",lineHeight:1 }}>
-              <span style={{ fontFamily:"'Cormorant Garamond',serif",fontSize:18,letterSpacing:"0.15em",color:V.tx }}>Ka·Sha</span>
-              <span style={{ fontSize:7,letterSpacing:"0.4em",color:V.ac,textTransform:"uppercase",marginTop:2 }}>Custom Studio</span>
-            </div>
-          </Link>
-        </div>
-
-        {/* Center: Undo / Redo / Save / Share / Contact */}
-        <div style={{ display:"flex",alignItems:"center",gap:"4px" }}>
-          {[
-            { label:"Undo", onClick:()=>{ const fc=fcRef.current; if(!fc)return; const objs=fc.getObjects(); const last=objs[objs.length-1]; if(last){ fc.remove(last); fc.renderAll(); syncTexture(); } } },
-            { label:"Redo", onClick:()=>toast({title:"Redo",description:"Redo coming soon"}) },
-          ].map(b => (
-            <button key={b.label} onClick={b.onClick}
-              style={{ padding:"7px 14px",background:"transparent",border:`1px solid ${V.bd}`,color:V.mu,fontSize:9,letterSpacing:"0.25em",textTransform:"uppercase",cursor:"pointer",fontFamily:"'Josefin Sans',sans-serif",transition:"all .15s" }}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color=V.ac;(e.currentTarget as HTMLElement).style.borderColor=V.bd2;}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=V.mu;(e.currentTarget as HTMLElement).style.borderColor=V.bd;}}>
-              {b.label}
-            </button>
-          ))}
-          <Show when="signed-in">
-            <button onClick={()=>saveMut.mutate()} disabled={saveMut.isPending}
-              style={{ padding:"7px 18px",background:V.ac,border:"none",color:"#fff",fontSize:9,letterSpacing:"0.28em",textTransform:"uppercase",cursor:"pointer",fontFamily:"'Josefin Sans',sans-serif",fontWeight:500,opacity:saveMut.isPending?0.6:1,marginLeft:6 }}>
-              {saveMut.isPending?"Saving…":"Save"}
-            </button>
-          </Show>
-          <Show when="signed-out">
-            <Link href="/sign-in" style={{ padding:"7px 18px",border:`1px solid ${V.bd2}`,color:V.ac,fontSize:9,letterSpacing:"0.28em",textTransform:"uppercase",textDecoration:"none",fontFamily:"'Josefin Sans',sans-serif",marginLeft:6 }}>
-              Sign in
-            </Link>
-          </Show>
-          <button onClick={()=>{
-            const url=window.location.href;
-            navigator.clipboard?.writeText(url).then(()=>toast({title:"Link copied",description:url}));
-          }} style={{ padding:"7px 14px",background:"transparent",border:`1px solid ${V.bd}`,color:V.mu,fontSize:9,letterSpacing:"0.25em",textTransform:"uppercase",cursor:"pointer",fontFamily:"'Josefin Sans',sans-serif",marginLeft:4 }}>
-            Share
-          </button>
-          <Link href="/contact" style={{ padding:"7px 14px",background:"transparent",border:`1px solid ${V.bd}`,color:V.mu,fontSize:9,letterSpacing:"0.25em",textTransform:"uppercase",textDecoration:"none",fontFamily:"'Josefin Sans',sans-serif" }}>
-            Contact
-          </Link>
-        </div>
-
-        {/* Right: Tutorials + Order */}
-        <div style={{ display:"flex",alignItems:"center",gap:"6px" }}>
-          <a href="#tutorials" style={{ padding:"7px 14px",background:"transparent",border:`1px solid ${V.bd2}`,color:V.ac,fontSize:9,letterSpacing:"0.28em",textTransform:"uppercase",textDecoration:"none",fontFamily:"'Josefin Sans',sans-serif" }}>
-            Tutorials
-          </a>
-          <button onClick={()=>cartMut.mutate()} disabled={cartMut.isPending||saveMut.isPending}
-            style={{ padding:"8px 22px",background:V.ac,border:"none",color:"#fff",fontSize:9,letterSpacing:"0.3em",textTransform:"uppercase",cursor:"pointer",fontFamily:"'Josefin Sans',sans-serif",fontWeight:500,opacity:cartMut.isPending?0.6:1 }}>
-            {cartMut.isPending?"Adding…":"Order"}
-          </button>
-        </div>
-      </header>
-
-      {/* ── WORKSPACE ── */}
-      <div style={{ display:"flex",flex:1,overflow:"hidden" }}>
-
-        {/* ════ LEFT PANEL ════ */}
-        <div style={{ width:"260px",minWidth:"260px",borderRight:`1px solid ${V.bd}`,overflowY:"auto",padding:"14px 12px",display:"flex",flexDirection:"column",gap:0,scrollbarWidth:"thin",background:V.bg }}>
-
-          {/* Garment Parts — fixed 5 zones (Front, Back, L-Sleeve, R-Sleeve, Collar) */}
-          <div style={sb}>
-            <div style={sl}>Garment Parts</div>
-            <p style={{ margin:"0 0 8px",fontSize:"10px",color:V.mu,lineHeight:1.5 }}>
-              Pick a part, then choose a colour from the palette below. Click ✕ to clear.
-            </p>
-            <div style={{ display:"flex",flexDirection:"column",gap:"6px" }}>
-              {COLOR_ZONES.map(z => {
-                const active = activeColorZone === z.id;
-                const col    = zoneColors[z.id];
-                return (
-                  <div key={z.id} onClick={()=>setActiveColorZone(z.id)} style={{
-                    display:"flex",alignItems:"center",justifyContent:"space-between",
-                    background:active?`rgba(201,168,124,.12)`:"rgba(0,0,0,.25)",
-                    padding:"9px 11px",borderRadius:"9px",
-                    border:`1px solid ${active?V.ac:V.bd}`,
-                    cursor:"pointer",transition:"border-color .15s",
-                  }}>
-                    <div>
-                      <div style={{ fontSize:"11px",fontWeight:500 }}>{z.label}</div>
-                      <div style={{ fontSize:"10px",color:V.ac,marginTop:"1px" }}>
-                        {col ? col.toUpperCase() : "No colour"}
-                      </div>
-                    </div>
-                    <div style={{ display:"flex",alignItems:"center",gap:"6px" }}>
-                      <input type="color" value={col || "#ffffff"}
-                        onClick={e=>e.stopPropagation()}
-                        onChange={e=>{
-                          setActiveColorZone(z.id);
-                          if (fullBody) {
-                            COLOR_ZONES.forEach(zz => applyZoneColor(zz.id, e.target.value));
-                          } else {
-                            applyZoneColor(z.id, e.target.value);
-                          }
-                        }}
-                        style={{ width:"30px",height:"24px",border:"none",cursor:"pointer",background:"none",borderRadius:"5px",padding:0 }}
-                      />
-                      {col && (
-                        <button
-                          onClick={e=>{
-                            e.stopPropagation();
-                            if (fullBody) {
-                              COLOR_ZONES.forEach(zz => applyZoneColor(zz.id, ""));
-                            } else {
-                              applyZoneColor(z.id, "");
-                            }
-                          }}
-                          title="Clear this zone"
-                          style={{ background:"none",border:`1px solid ${V.bd}`,color:V.mu,
-                                   cursor:"pointer",fontSize:"11px",borderRadius:"5px",
-                                   width:"22px",height:"24px",lineHeight:"1",padding:0 }}
-                        >×</button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Options */}
-          <div style={sb}>
-            <div style={sl}>Options</div>
-            <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${V.bd}` }}>
-              <div>
-                <div style={{ fontSize:"12px",fontWeight:500 }}>Apply for Full Body Design</div>
-                <div style={{ fontSize:"10px",color:V.mu }}>Paint all 5 zones at once</div>
-              </div>
-              {togBtn(fullBody, () => {
-                const next = !fullBody; setFullBody(next);
-                if (next) {
-                  // When turned on, the Color Palette / inline pickers paint
-                  // every zone simultaneously (Front, Back, Sleeves, Collar).
-                  setActiveColorZone("front" as any);
-                }
-              })}
-            </div>
-            <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0" }}>
-              <div>
-                <div style={{ fontSize:"12px",fontWeight:500 }}>Auto Rotate</div>
-                <div style={{ fontSize:"10px",color:V.mu }}>Spin 3D preview</div>
-              </div>
-              {togBtn(autoRotate, () => {
-                const next = !autoRotate; setAutoRotate(next);
-                const mv = mvRef.current;
-                if (mv) { if (next) mv.setAttribute("auto-rotate",""); else mv.removeAttribute("auto-rotate"); }
-              })}
-            </div>
-          </div>
-
-          {/* Size — Standard S/M/L/XL or Custom (manual measurement) */}
-          <div style={sb}>
-            <div style={sl}>Size</div>
-            <div style={{ display:"flex",flexWrap:"wrap",gap:"5px" }}>
-              {SIZES.map(s => (
-                <button key={s} onClick={()=>setSize(s)} style={{
-                  flex:1,minWidth:"34px",padding:"7px 0",
-                  background:size===s?V.ac:"rgba(0,0,0,.3)",
-                  border:`1px solid ${size===s?V.ac:V.bd}`,
-                  borderRadius:"8px",color:size===s?V.bg:V.mu,
-                  fontFamily:"inherit",fontSize:"11px",fontWeight:600,cursor:"pointer",
-                }}>{s}</button>
-              ))}
-            </div>
-            {size === "Custom" && (
-              <input
-                type="text"
-                value={customSize}
-                onChange={e=>setCustomSize(e.target.value)}
-                placeholder="e.g. Chest 42, Length 28"
+    <Layout>
+      <div style={{ background: BG, color: TX, fontFamily: FONT_UI }} className="min-h-[calc(100vh-64px)]">
+        {/* Page header */}
+        <div
+          style={{
+            background: CARD_2,
+            borderBottom: `1px solid ${BD_GOLD}`,
+            padding: "32px 24px",
+          }}
+        >
+          <div className="max-w-[1200px] mx-auto flex items-end justify-between flex-wrap gap-4">
+            <div>
+              <div
                 style={{
-                  marginTop:"8px",width:"100%",padding:"8px 10px",
-                  background:"rgba(0,0,0,.3)",border:`1px solid ${V.ac}`,
-                  borderRadius:"7px",color:V.tx,fontSize:"11px",fontFamily:"inherit",
-                  outline:"none",boxSizing:"border-box",
+                  fontFamily: FONT_UI,
+                  fontSize: 9,
+                  letterSpacing: "0.4em",
+                  color: GOLD,
+                  textTransform: "uppercase",
+                  marginBottom: 10,
+                }}
+              >
+                Custom Studio
+              </div>
+              <h1
+                className="text-white"
+                style={{
+                  fontFamily: FONT_DISPLAY,
+                  fontSize: "clamp(28px, 3.5vw, 42px)",
+                  fontWeight: 400,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {product.name}
+              </h1>
+              <div
+                style={{
+                  fontFamily: FONT_UI,
+                  fontSize: 11,
+                  letterSpacing: "0.18em",
+                  color: GOLD,
+                  marginTop: 6,
+                }}
+              >
+                {formatPrice(product.priceInPaise)}
+              </div>
+            </div>
+            <Link
+              href={`/products/${id}`}
+              style={{
+                fontFamily: FONT_UI,
+                fontSize: 10,
+                letterSpacing: "0.28em",
+                color: MUTED,
+                textTransform: "uppercase",
+                textDecoration: "none",
+              }}
+              className="hover:!text-white transition-colors"
+            >
+              ← Back to product
+            </Link>
+          </div>
+        </div>
+
+        {/* Wizard */}
+        <div className="max-w-[1200px] mx-auto px-6 py-10">
+          <Stepper step={step} setStep={setStep} />
+
+          <div
+            className="grid gap-6 mt-8"
+            style={{ gridTemplateColumns: "minmax(0,1fr) 280px" }}
+          >
+            <div>
+              {step === 1 && (
+                <Step1Style
+                  styleType={styleType} setStyleType={setStyleType}
+                  mainColor={mainColor} setMainColor={setSolidMain}
+                  printId={printId} setPrintId={setPrintId}
+                  patternId={patternId} setPatternId={setPatternId}
+                  patternA={patternA} setPatternA={setPatternA}
+                  patternB={patternB} setPatternB={setPatternB}
+                  sleeveLen={sleeveLen} setSleeveLen={setSleeveLen}
+                  onNext={() => setStep(2)}
+                />
+              )}
+              {step === 2 && (
+                <Step2Parts
+                  partColors={partColors} setPartColor={setPartColor}
+                  activePart={activePart} setActivePart={setActivePart}
+                  applyAll={applyPartToAll}
+                  onBack={() => setStep(1)} onNext={() => setStep(3)}
+                />
+              )}
+              {step === 3 && (
+                <Step3Logo
+                  logoUrl={logoUrl} setLogoUrl={setLogoUrl}
+                  logoPos={logoPos} setLogoPos={setLogoPos}
+                  logoSize={logoSize} setLogoSize={setLogoSize}
+                  fileRef={fileRef} onFile={onLogoFile}
+                  onBack={() => setStep(2)} onNext={() => setStep(4)}
+                />
+              )}
+              {step === 4 && (
+                <Step4Size
+                  size={size} setSize={setSize}
+                  showChart={showChart} setShowChart={setShowChart}
+                  customEnabled={customEnabled} setCustomEnabled={setCustomEnabled}
+                  customSize={customSize} setCustomSize={setCustomSize}
+                  qty={qty} setQty={setQty}
+                  onBack={() => setStep(3)}
+                  onSubmit={() => orderMut.mutate()}
+                  loading={orderMut.isPending}
+                />
+              )}
+            </div>
+
+            <PreviewPanel
+              partColors={partColors}
+              styleType={styleType}
+              styleSummary={styleSummary}
+              sleeveLen={sleeveLen}
+              logoUrl={logoUrl}
+              logoPos={logoPos}
+              logoSize={logoSize}
+              size={customEnabled ? "Custom" : size}
+              printId={printId}
+              patternId={patternId}
+              patternA={patternA}
+              patternB={patternB}
+            />
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+}
+
+// ── Stepper ────────────────────────────────────────────────────────────────
+function Stepper({ step, setStep }: { step: number; setStep: (n: number) => void }) {
+  const labels = ["Style", "Parts", "Logo", "Size"];
+  return (
+    <div className="flex items-center gap-0">
+      {labels.map((label, i) => {
+        const n = i + 1;
+        const active = n === step;
+        const done = n < step;
+        return (
+          <div key={n} className="flex items-center" style={{ flex: i === labels.length - 1 ? "0 0 auto" : "1 1 auto" }}>
+            <button
+              onClick={() => setStep(n)}
+              className="flex items-center gap-2.5 transition-colors"
+              style={{
+                fontFamily: FONT_UI,
+                fontSize: 10,
+                letterSpacing: "0.28em",
+                textTransform: "uppercase",
+                color: active ? GOLD : done ? "rgba(255,255,255,0.7)" : MUTED_2,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "8px 12px",
+              }}
+            >
+              <span
+                style={{
+                  width: 26, height: 26, borderRadius: "50%",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 11, fontWeight: 500,
+                  background: active ? GOLD : done ? "rgba(184,146,90,0.15)" : "transparent",
+                  color: active ? "#fff" : done ? GOLD : MUTED_2,
+                  border: active ? `1px solid ${GOLD}` : `1px solid ${done ? BD_GOLD : BD}`,
+                  letterSpacing: 0,
+                }}
+              >
+                {n}
+              </span>
+              <span>{label}</span>
+            </button>
+            {i < labels.length - 1 && (
+              <div
+                style={{
+                  flex: 1,
+                  height: 1,
+                  background: done ? BD_GOLD : BD,
+                  minWidth: 24,
+                  margin: "0 4px",
                 }}
               />
             )}
           </div>
+        );
+      })}
+    </div>
+  );
+}
 
-          {/* Quantity */}
-          <div style={sb}>
-            <div style={sl}>Quantity</div>
-            <div style={{ display:"flex",alignItems:"center",gap:"9px" }}>
-              <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{ width:"28px",height:"28px",background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:"6px",color:V.tx,fontSize:"15px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"inherit" }}>−</button>
-              <span style={{ fontSize:"15px",fontWeight:600,minWidth:"26px",textAlign:"center" }}>{qty}</span>
-              <button onClick={()=>setQty(q=>q+1)} style={{ width:"28px",height:"28px",background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:"6px",color:V.tx,fontSize:"15px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"inherit" }}>+</button>
-            </div>
-          </div>
+// ── Panel wrapper ──────────────────────────────────────────────────────────
+function Panel({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        background: CARD,
+        border: `1px solid ${BD}`,
+        borderRadius: 8,
+        padding: "24px 26px",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
-          {/* Save / Export */}
-          <div style={{ padding:"12px 0" }}>
-            <Show when="signed-in">
-              <button onClick={()=>saveMut.mutate()} disabled={saveMut.isPending}
-                style={{ ...btnStyle("primary"),marginBottom:"7px" }}>
-                {saveMut.isPending?"Saving…":"💾 Save This Design"}
-              </button>
-            </Show>
-            <button onClick={exportCanvas} style={btnStyle("secondary")}>📷 Export Design Canvas</button>
-          </div>
-        </div>
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="text-white"
+      style={{
+        fontFamily: FONT_DISPLAY,
+        fontSize: 18,
+        fontWeight: 500,
+        marginBottom: 14,
+        letterSpacing: "0.01em",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
-        {/* ════ CENTER: 3D VIEWER ════ */}
-        <div style={{ flex:1,position:"relative",background:"radial-gradient(ellipse at center,#1a1612 0%,#080604 100%)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden" }}>
+function NavRow({ onBack, onNext, nextLabel, loading }: { onBack?: () => void; onNext: () => void; nextLabel: string; loading?: boolean }) {
+  return (
+    <div
+      className="flex items-center justify-between mt-6 pt-5"
+      style={{ borderTop: `1px solid ${BD}` }}
+    >
+      {onBack ? (
+        <button
+          onClick={onBack}
+          style={{
+            fontFamily: FONT_UI,
+            fontSize: 10,
+            letterSpacing: "0.28em",
+            textTransform: "uppercase",
+            color: MUTED,
+            background: "transparent",
+            border: `1px solid ${BD}`,
+            padding: "10px 18px",
+            cursor: "pointer",
+          }}
+          className="hover:!text-white"
+        >
+          ← Back
+        </button>
+      ) : <span />}
+      <button
+        onClick={onNext}
+        disabled={loading}
+        style={{
+          fontFamily: FONT_UI,
+          fontSize: 10,
+          letterSpacing: "0.3em",
+          textTransform: "uppercase",
+          color: "#fff",
+          background: GOLD,
+          border: "none",
+          padding: "12px 24px",
+          cursor: loading ? "wait" : "pointer",
+          opacity: loading ? 0.6 : 1,
+          fontWeight: 500,
+        }}
+        onMouseEnter={e => !loading && ((e.target as HTMLElement).style.background = GOLD_LIGHT)}
+        onMouseLeave={e => !loading && ((e.target as HTMLElement).style.background = GOLD)}
+      >
+        {loading ? "Working…" : nextLabel}
+      </button>
+    </div>
+  );
+}
 
-          {/* Loading overlay */}
-          <div id="mv-overlay" style={{ position:"absolute",inset:0,background:V.bg,display:webglAvailable?"flex":"none",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"12px",zIndex:10,transition:"opacity .5s" }}>
-            <div style={{ width:"36px",height:"36px",border:`2px solid ${V.bd2}`,borderTopColor:V.ac,borderRadius:"50%",animation:"spin .9s linear infinite" }} />
-            <p style={{ fontSize:"12px",color:V.mu }}>Loading 3D T-Shirt…</p>
-          </div>
+// ── Swatch ─────────────────────────────────────────────────────────────────
+function Swatch({ color, selected, onClick, size = 32 }: { color: string; selected?: boolean; onClick?: () => void; size?: number }) {
+  const isLight = ["#FFFFFF", "#e8e0d8", "#d4c5a9"].includes(color);
+  return (
+    <button
+      onClick={onClick}
+      title={colorName(color)}
+      style={{
+        width: size, height: size, borderRadius: "50%",
+        background: color,
+        border: selected ? `2px solid ${GOLD}` : isLight ? "1px solid rgba(255,255,255,0.2)" : "2px solid transparent",
+        outline: selected ? `2px solid ${BG}` : "none",
+        outlineOffset: -4,
+        cursor: "pointer",
+        padding: 0,
+        transition: "transform .15s",
+      }}
+      className={selected ? "" : "hover:scale-110"}
+    />
+  );
+}
 
-          {/* model-viewer (WebGL) */}
-          {mvReady && product.modelUrl && webglAvailable && (
-            <model-viewer
-              ref={mvRef}
-              src={product.modelUrl}
-              camera-controls
-              auto-rotate
-              rotation-per-second="8deg"
-              shadow-intensity="1.5"
-              environment-image="neutral"
-              exposure="1.1"
-              camera-orbit="0deg 75deg 2.5m"
-              min-camera-orbit="auto auto 1.5m"
-              max-camera-orbit="auto auto 5m"
-              interaction-prompt="none"
-              style={{ width:"100%",height:"100%","--poster-color":"transparent" } as any}
-            />
-          )}
+// ── Step 1: Style ─────────────────────────────────────────────────────────
+function Step1Style(p: {
+  styleType: StyleType; setStyleType: (s: StyleType) => void;
+  mainColor: string; setMainColor: (c: string) => void;
+  printId: string; setPrintId: (id: string) => void;
+  patternId: string; setPatternId: (id: string) => void;
+  patternA: string; setPatternA: (c: string) => void;
+  patternB: string; setPatternB: (c: string) => void;
+  sleeveLen: "half" | "full"; setSleeveLen: (s: "half" | "full") => void;
+  onNext: () => void;
+}) {
+  return (
+    <Panel>
+      <SectionTitle>Choose base style</SectionTitle>
+      <TabRow
+        options={[
+          { id: "solid", label: "Solids" },
+          { id: "print", label: "Prints" },
+          { id: "pattern", label: "Patterns" },
+        ]}
+        active={p.styleType}
+        onChange={(v) => p.setStyleType(v as StyleType)}
+      />
 
-          {/* Fallback when no WebGL or no model */}
-          {(!product.modelUrl || !webglAvailable) && (
-            <div style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:"16px",color:V.mu,padding:"24px",maxWidth:"320px",textAlign:"center" }}>
-              {product.thumbnailUrl ? (
-                <img src={product.thumbnailUrl} alt={product.name} style={{ maxHeight:"360px",objectFit:"contain",borderRadius:"12px",opacity:0.85 }} />
-              ) : (
-                <div style={{ fontSize:"64px",opacity:.2 }}>👕</div>
-              )}
-              <p style={{ fontSize:"11px",lineHeight:1.6 }}>
-                {!webglAvailable
-                  ? "3D preview requires WebGL. All design tools are fully functional — your design will be applied to the 3D model."
-                  : "No 3D model uploaded for this product."}
-              </p>
-            </div>
-          )}
-
-          {/* Hint pill */}
-          <div style={{ position:"absolute",bottom:"14px",left:"50%",transform:"translateX(-50%)",fontSize:"10px",color:V.mu,background:"rgba(0,0,0,.55)",padding:"4px 12px",borderRadius:"20px",pointerEvents:"none",letterSpacing:".04em" }}>
-            Drag to rotate · Scroll to zoom
-          </div>
-
-          {/* Product badge */}
-          <div style={{ position:"absolute",top:"14px",left:"14px",background:"rgba(8,6,4,.85)",border:`1px solid ${V.bd}`,borderRadius:"9px",padding:"8px 12px",backdropFilter:"blur(8px)" }}>
-            <div style={{ fontSize:"11px",fontWeight:600,color:V.ac }}>{product.name}</div>
-            <div style={{ fontSize:"10px",color:V.mu }}>{formatPrice(product.priceInPaise)}</div>
-          </div>
-
-          {/* SKU badge — live style number per client spec (BODY DESIGN SIZE) */}
-          <div style={{ position:"absolute",top:"14px",right:"14px",background:"rgba(8,6,4,.85)",border:`1px solid ${V.bd}`,borderRadius:"9px",padding:"6px 10px",backdropFilter:"blur(8px)",maxWidth:"320px" }}>
-            <div style={{ fontSize:"9px",color:V.mu,letterSpacing:".08em",textTransform:"uppercase" }}>Style Number</div>
-            <div style={{ fontSize:"12px",fontWeight:600,color:V.ac,fontFamily:"'Courier New',monospace" }}>{skuFull || presetName}</div>
-          </div>
-        </div>
-
-        {/* ════ RIGHT PANEL: Design Tools ════ */}
-        <div style={{ width:"300px",minWidth:"300px",borderLeft:`1px solid ${V.bd}`,overflowY:"auto",display:"flex",flexDirection:"column",scrollbarWidth:"thin",background:V.bg }}>
-
-          {/* Tab bar */}
-          <div style={{ display:"flex",borderBottom:`1px solid ${V.bd}`,flexShrink:0,flexWrap:"wrap" }}>
-            {TABS.map(t => (
-              <button key={t} onClick={()=>setRightTab(t)} style={{
-                flex:"1 1 auto",padding:"8px 4px",background:"none",border:"none",
-                color:rightTab===t?V.ac:V.mu,fontFamily:"inherit",fontSize:"10px",fontWeight:600,
-                letterSpacing:".06em",textTransform:"uppercase",cursor:"pointer",
-                borderBottom:`2px solid ${rightTab===t?V.ac:"transparent"}`,transition:"all .15s",
-                minWidth:"40px",
-              }}>{t}</button>
+      {p.styleType === "solid" && (
+        <>
+          <SubTitle>Pick a colour</SubTitle>
+          <div className="grid grid-cols-8 gap-2 mb-3">
+            {COLORS.map(c => (
+              <Swatch key={c.hex} color={c.hex} selected={p.mainColor === c.hex} onClick={() => p.setMainColor(c.hex)} />
             ))}
           </div>
+          <Note>You can override individual parts in Step 2.</Note>
+        </>
+      )}
 
-          {/* ── COLORS TAB ── Design Styles (GT001–GT032) + Design Summary */}
-          {rightTab==="colors" && (
-            <div style={{ padding:"14px 12px",display:"flex",flexDirection:"column",gap:"16px" }}>
+      {p.styleType === "print" && (
+        <>
+          <SubTitle>Print library</SubTitle>
+          <div className="grid grid-cols-4 gap-2.5 mb-3">
+            {PRINTS.map(pr => (
+              <button
+                key={pr.id}
+                onClick={() => p.setPrintId(pr.id)}
+                style={{
+                  aspectRatio: "1",
+                  borderRadius: 6,
+                  border: p.printId === pr.id ? `2px solid ${GOLD}` : `1px solid ${BD}`,
+                  background: pr.bg,
+                  cursor: "pointer",
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "flex-end",
+                  justifyContent: "center",
+                  padding: "0 0 6px",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: FONT_UI,
+                    fontSize: 9,
+                    letterSpacing: "0.15em",
+                    textTransform: "uppercase",
+                    color: "#fff",
+                    background: "rgba(0,0,0,0.55)",
+                    padding: "2px 6px",
+                    borderRadius: 2,
+                  }}
+                >
+                  {pr.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
-              {/* GT Design Style System
-                  - FABRIC flow: full picker (groups + GT001-032 swatches)
-                  - PATTERN flow: HIDDEN — pattern is locked to the product. Customer
-                    only edits color combinations of the already-active pattern below. */}
-              <div>
-                {!isPattern && (<>
-                <div style={sl}>Design Styles (GT001–GT032)</div>
-                <p style={{ margin:"0 0 8px",fontSize:"10px",color:V.mu,lineHeight:1.5 }}>
-                  Pick a predefined style — it applies to the right shirt zones automatically. Then recolour to taste.
-                </p>
-
-                <div style={{ display:"flex",flexDirection:"column",gap:"6px" }}>
-                  {GT_GROUPS.map((group) => {
-                    const groupStyles = GT_STYLES.filter((s) => s.group === group.id);
-                    const isOpen = gtGroupOpen === group.id;
-                    return (
-                      <div key={group.id} style={{ border:`1px solid ${V.bd}`,borderRadius:"8px",overflow:"hidden" }}>
-                        <button
-                          onClick={() => setGtGroupOpen(isOpen ? null : group.id)}
-                          style={{
-                            width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
-                            padding:"7px 10px",
-                            background: isOpen ? "rgba(201,168,124,.10)" : V.sf,
-                            border:"none",cursor:"pointer",fontFamily:"inherit",
-                            color: isOpen ? V.ac : V.mu,
-                            fontWeight:600,fontSize:"11px",letterSpacing:"0.5px",
-                          }}
-                        >
-                          <span>{group.label}  <span style={{ opacity:0.55,fontWeight:400 }}>({groupStyles.length})</span></span>
-                          <span style={{ fontSize:"9px" }}>{isOpen ? "▲" : "▼"}</span>
-                        </button>
-                        {isOpen && (
-                          <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"4px",padding:"6px",background:V.sf }}>
-                            {groupStyles.map((style) => {
-                              const isActive = activeGtStyle?.id === style.id;
-                              return (
-                                <button
-                                  key={style.id}
-                                  onClick={() => handleSelectGtStyle(style)}
-                                  title={`${style.id} — ${style.label}`}
-                                  style={{
-                                    padding:0,borderRadius:"6px",overflow:"hidden",cursor:"pointer",
-                                    border: isActive ? `2px solid ${V.ac}` : `1px solid ${V.bd}`,
-                                    boxShadow: isActive ? `0 0 0 2px rgba(201,168,124,.25)` : "none",
-                                    background:"none",
-                                  }}
-                                >
-                                  <GtSwatch style={style} isActive={isActive} accent={V.ac} />
-                                  <div style={{
-                                    background:"rgba(0,0,0,0.55)",
-                                    color: isActive ? V.ac : "#f8f4e9",
-                                    fontSize:"9px",fontWeight:700,padding:"2px 0",textAlign:"center",letterSpacing:"0.5px",
-                                  }}>{style.id}</div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                </>)}
-
-                {isPattern && activeGtStyle && (
-                  <div style={{
-                    background:V.sf,border:`1px solid ${V.ac}`,borderRadius:"8px",
-                    padding:"10px",marginBottom:"10px",
-                  }}>
-                    <div style={{ fontSize:"10px",color:V.mu,letterSpacing:".06em",textTransform:"uppercase",marginBottom:"4px" }}>
-                      Locked Pattern
-                    </div>
-                    <div style={{ fontSize:"13px",fontWeight:600,color:V.ac }}>
-                      {activeGtStyle.id} — {activeGtStyle.label}
-                    </div>
-                    <div style={{ fontSize:"10px",color:V.mu,marginTop:"4px",lineHeight:1.5 }}>
-                      To use a different pattern, return to the home page and pick another.
-                    </div>
-                  </div>
-                )}
-
-                {activeGtStyle && (
-                  <div style={{
-                    marginTop:"10px",
-                    background:V.sf,border:`1px solid ${V.bd}`,borderRadius:"8px",padding:"10px",
-                    display:"flex",flexDirection:"column",gap:"9px",
-                  }}>
-                    <div style={{ fontSize:"12px",fontWeight:600,color:V.tx }}>
-                      {activeGtStyle.id} — {activeGtStyle.label}
-                    </div>
-
-                    <div style={{ display:"flex",alignItems:"center",gap:"10px" }}>
-                      <input
-                        type="color"
-                        value={gtColors.primary}
-                        onChange={(e) => handleGtColorChange("primary", e.target.value)}
-                        style={{ width:34,height:34,border:"none",cursor:"pointer",borderRadius:"6px",padding:0,background:"none" }}
-                      />
-                      <div>
-                        <div style={{ fontSize:"11px",fontWeight:600,color:V.tx }}>Primary</div>
-                        <div style={{ fontSize:"10px",color:V.mu }}>Body / main panels</div>
-                      </div>
-                    </div>
-
-                    <div style={{ display:"flex",alignItems:"center",gap:"10px" }}>
-                      <input
-                        type="color"
-                        value={gtColors.accent}
-                        onChange={(e) => handleGtColorChange("accent", e.target.value)}
-                        style={{ width:34,height:34,border:"none",cursor:"pointer",borderRadius:"6px",padding:0,background:"none" }}
-                      />
-                      <div>
-                        <div style={{ fontSize:"11px",fontWeight:600,color:V.tx }}>Accent</div>
-                        <div style={{ fontSize:"10px",color:V.mu }}>Collar / cuffs / panels</div>
-                      </div>
-                    </div>
-
-                    {activeGtStyle.defaultColors.tertiary !== undefined && (
-                      <div style={{ display:"flex",alignItems:"center",gap:"10px" }}>
-                        <input
-                          type="color"
-                          value={gtColors.tertiary ?? activeGtStyle.defaultColors.tertiary}
-                          onChange={(e) => handleGtColorChange("tertiary", e.target.value)}
-                          style={{ width:34,height:34,border:"none",cursor:"pointer",borderRadius:"6px",padding:0,background:"none" }}
-                        />
-                        <div>
-                          <div style={{ fontSize:"11px",fontWeight:600,color:V.tx }}>Third Colour</div>
-                          <div style={{ fontSize:"10px",color:V.mu }}>Collar highlight</div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <div style={{ fontSize:"10px",color:V.mu,marginBottom:"5px",letterSpacing:"0.5px",textTransform:"uppercase" }}>
-                        Quick palette → primary
-                      </div>
-                      <div style={{ display:"flex",flexWrap:"wrap",gap:"4px" }}>
-                        {GT_PALETTE.map((hex) => (
-                          <button
-                            key={hex}
-                            onClick={() => handleGtColorChange("primary", hex)}
-                            title={hex}
-                            style={{
-                              width:20,height:20,borderRadius:"50%",background:hex,
-                              border: gtColors.primary.toLowerCase() === hex.toLowerCase()
-                                ? `2px solid ${V.ac}` : `1px solid ${V.bd}`,
-                              cursor:"pointer",padding:0,flexShrink:0,
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={handleClearGtStyle}
-                      style={{
-                        padding:"7px",background:"transparent",
-                        color:"#c4727a",border:"1px solid rgba(196,114,122,.45)",borderRadius:"6px",
-                        fontFamily:"inherit",fontWeight:600,fontSize:"11px",cursor:"pointer",
-                      }}
-                    >
-                      ✕ Remove design style
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Design Summary (kept) */}
-              <div style={{ background:V.sf,border:`1px solid ${V.bd}`,borderRadius:"9px",padding:"12px" }}>
-                <div style={sl}>Design Summary</div>
-                {summary.map(r => (
-                  <div key={r.label} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:`1px solid ${V.bd}` }}>
-                    <span style={{ fontSize:"11px",color:V.mu }}>{r.label}</span>
-                    <span style={{ fontSize:"11px",color:V.tx,fontWeight:500 }}>{r.val as any}</span>
-                  </div>
+      {p.styleType === "pattern" && (
+        <>
+          <SubTitle>Pattern type</SubTitle>
+          <div className="grid grid-cols-4 gap-2.5 mb-4">
+            {PATTERNS.map(pt => (
+              <button
+                key={pt.id}
+                onClick={() => p.setPatternId(pt.id)}
+                style={{
+                  aspectRatio: "1",
+                  borderRadius: 6,
+                  border: p.patternId === pt.id ? `2px solid ${GOLD}` : `1px solid ${BD}`,
+                  background: pt.bg,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "flex-end",
+                  justifyContent: "center",
+                  padding: "0 0 6px",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: FONT_UI,
+                    fontSize: 9,
+                    letterSpacing: "0.15em",
+                    textTransform: "uppercase",
+                    color: "#fff",
+                    background: "rgba(0,0,0,0.55)",
+                    padding: "2px 6px",
+                    borderRadius: 2,
+                  }}
+                >
+                  {pt.label}
+                </span>
+              </button>
+            ))}
+          </div>
+          <Divider />
+          <SubTitle>Pattern colours</SubTitle>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <MicroLabel>Colour A</MicroLabel>
+              <div className="grid grid-cols-6 gap-1.5">
+                {COLORS.slice(0, 12).map(c => (
+                  <Swatch key={c.hex} color={c.hex} selected={p.patternA === c.hex} onClick={() => p.setPatternA(c.hex)} size={26} />
                 ))}
               </div>
             </div>
-          )}
-
-          {/* ── DESIGN TAB ── two sections: Print Library + Garment Options */}
-          {rightTab==="design" && (
-            <div style={{ padding:"14px 12px",display:"flex",flexDirection:"column",gap:"16px" }}>
-
-              {/* SECTION 1: Print Library */}
-              <div>
-                <div style={sl}>Print Library</div>
-                <p style={{ margin:"0 0 8px",fontSize:"10px",color:V.mu,lineHeight:1.5 }}>
-                  Pick a print, then apply it across the whole garment or place it on a single zone. You can stack multiple prints — drag them on the Canvas tab.
-                </p>
-                <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"5px" }}>
-                  {PATTERNS.map((p) => {
-                    const sel = activePrintId === p.id;
-                    const all = allOverPrintId === p.id;
-                    return (
-                      <button
-                        key={p.id}
-                        onClick={() => setActivePrintId(p.id)}
-                        title={p.label}
-                        style={{
-                          position:"relative",padding:0,aspectRatio:"1/1",borderRadius:"7px",overflow:"hidden",cursor:"pointer",
-                          background:`url(${patternUrl(p.file)}) center/cover`,
-                          border:sel?`2px solid ${V.ac}`:`1px solid ${V.bd}`,
-                          boxShadow:sel?`0 0 0 2px rgba(201,168,124,.25)`:"none",
-                        }}
-                      >
-                        {all && (
-                          <span style={{
-                            position:"absolute",top:3,right:3,fontSize:"8px",fontWeight:800,
-                            background:V.ac,color:"#fff",padding:"1px 4px",borderRadius:"3px",letterSpacing:"0.5px",
-                          }}>ALL</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {activePrintId && (() => {
-                  const p = PATTERNS.find(x => x.id === activePrintId);
-                  if (!p) return null;
-                  return (
-                    <div style={{ marginTop:"10px",background:V.sf,border:`1px solid ${V.bd}`,borderRadius:"7px",padding:"10px",display:"flex",flexDirection:"column",gap:"8px" }}>
-                      <div style={{ display:"flex",alignItems:"center",gap:"8px" }}>
-                        <div style={{ width:32,height:32,borderRadius:5,background:`url(${patternUrl(p.file)}) center/cover`,flexShrink:0 }} />
-                        <div style={{ flex:1 }}>
-                          <div style={{ fontSize:"11px",fontWeight:600 }}>{p.label}</div>
-                          <div style={{ display:"flex",gap:3,marginTop:3 }}>
-                            {p.swatchColors.map(c => (
-                              <span key={c} style={{ width:10,height:10,borderRadius:"50%",background:c,border:`1px solid ${V.bd}` }} />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => applyAllOverPrint(p)}
-                        style={{ ...btnStyle("primary"),padding:"7px 0",fontSize:"11px",fontWeight:700 }}
-                      >
-                        {allOverPrintId === p.id ? "✓ Applied All-Over" : "Apply to whole T-shirt"}
-                      </button>
-
-                      <div style={{ fontSize:"9px",color:V.mu,textTransform:"uppercase",letterSpacing:"1px",marginTop:2 }}>
-                        Or place on a zone
-                      </div>
-                      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px" }}>
-                        {(["front","back","leftSleeve","rightSleeve","collar"] as const).map(zone => (
-                          <button
-                            key={zone}
-                            onClick={() => placePrintOnZone(p, zone)}
-                            style={{ ...btnStyle("secondary"),padding:"6px 0",fontSize:"10px",fontWeight:600 }}
-                          >
-                            + {ZONE_LABEL[zone]}
-                          </button>
-                        ))}
-                      </div>
-
-                      {allOverPrintId && (
-                        <button
-                          onClick={clearAllOverPrint}
-                          style={{ ...btnStyle("danger"),padding:"6px 0",fontSize:"10px",fontWeight:600 }}
-                        >
-                          ✕ Remove all-over print
-                        </button>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* SECTION 2: Garment Options */}
-              <div>
-                <div style={sl}>Garment Options</div>
-                {([
-                  { key:"sleeves", label:"Sleeves",        desc:"Short sleeve design",      val:gSleeves, set:(v:boolean)=>{ setGSleeves(v); toggleGarment("sleeve",v,secondaryColor); } },
-                  { key:"collar",  label:"Collar",         desc:"Polo collar style",        val:gCollar,  set:(v:boolean)=>{ setGCollar(v);  toggleGarment("collar",v,secondaryColor); } },
-                  { key:"placket", label:"Button Placket", desc:"Front 3-button placket",   val:gPlacket, set:(v:boolean)=>{ setGPlacket(v); toggleGarment("placket",v,secondaryColor); } },
-                  { key:"panel",   label:"Side Panel",     desc:"Contrast color panels",    val:gPanel,   set:(v:boolean)=>{ setGPanel(v);   toggleGarment("panel",v,secondaryColor); } },
-                  { key:"stripe",  label:"Chest Stripe",   desc:"Diagonal accent stripe",   val:gStripe,  set:(v:boolean)=>{ setGStripe(v);  toggleGarment("stripe",v,secondaryColor); } },
-                ] as const).map(item => (
-                  <div key={item.key} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 0",borderBottom:`1px solid ${V.bd}` }}>
-                    <div>
-                      <div style={{ fontSize:"12px",fontWeight:500 }}>{item.label}</div>
-                      <div style={{ fontSize:"10px",color:V.mu }}>{item.desc}</div>
-                    </div>
-                    {togBtn(item.val, ()=>item.set(!item.val))}
-                  </div>
+            <div>
+              <MicroLabel>Colour B</MicroLabel>
+              <div className="grid grid-cols-6 gap-1.5">
+                {COLORS.slice(0, 12).map(c => (
+                  <Swatch key={c.hex} color={c.hex} selected={p.patternB === c.hex} onClick={() => p.setPatternB(c.hex)} size={26} />
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* ── TEXT TAB ── */}
-          {rightTab==="text" && (
-            <div style={{ padding:"14px 12px",display:"flex",flexDirection:"column",gap:"14px" }}>
-              <div>
-                <div style={sl}>Text Content</div>
-                <input type="text" value={txtVal} onChange={e=>setTxtVal(e.target.value)}
-                  placeholder="e.g. GOLF CLUB 2024" maxLength={40} style={inp} />
-              </div>
-              <div style={{ display:"flex",gap:"7px",alignItems:"center" }}>
-                <input type="color" value={txtColor} onChange={e=>setTxtColor(e.target.value)}
-                  style={{ width:"34px",height:"28px",borderRadius:"7px",cursor:"pointer",background:"none",padding:0,border:"none" }} />
-                <span style={{ fontSize:"11px",color:V.mu }}>Color</span>
-                <select value={txtFont} onChange={e=>setTxtFont(e.target.value)} style={{ ...inp,flex:1,padding:"5px 7px" }}>
-                  {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <div style={sl}>Font Size</div>
-                <div style={slr}>
-                  <label style={lbl}>Size</label>
-                  <input type="range" min={20} max={200} value={txtSize} onChange={e=>setTxtSize(+e.target.value)}
-                    style={{ flex:1,height:"3px",background:V.bd2,borderRadius:"2px",outline:"none",WebkitAppearance:"none",appearance:"none" }} />
-                  <span style={{ fontSize:"10px",color:V.mu,minWidth:"26px",textAlign:"right" }}>{txtSize}</span>
-                </div>
-              </div>
-              <div>
-                <div style={sl}>Placement</div>
-                {placeBtns(PLACEMENT_OPTS, txtPlacement, setTxtPlacement)}
-              </div>
-              <div style={{ display:"flex",gap:"5px" }}>
-                <button onClick={addText} style={{ ...btnStyle("primary"),flex:1,padding:"8px 0",fontSize:"11px" }}>Apply Text to Shirt</button>
-                <button onClick={removeText} style={{ ...btnStyle("danger"),flex:1,padding:"8px 0",fontSize:"11px" }}>Remove</button>
-              </div>
-              <div style={{ background:"rgba(201,168,124,.07)",border:`1px solid rgba(201,168,124,.18)`,borderRadius:"7px",padding:"9px" }}>
-                <p style={{ fontSize:"10px",color:V.ac,lineHeight:1.5 }}>💡 Add text then drag it on the Canvas tab to fine-tune position. Updates the 3D model live.</p>
-              </div>
-            </div>
-          )}
-
-          {/* ── LOGO TAB ── */}
-          {rightTab==="logo" && (
-            <div style={{ padding:"14px 12px",display:"flex",flexDirection:"column",gap:"14px" }}>
-              <div>
-                <div style={sl}>Upload Logo / Graphic</div>
-                <label style={{ display:"block",border:`1.5px dashed ${V.bd2}`,borderRadius:"9px",padding:"16px",textAlign:"center",cursor:"pointer",transition:"all .15s" }}
-                  onMouseEnter={e=>(e.currentTarget.style.borderColor=V.ac)}
-                  onMouseLeave={e=>(e.currentTarget.style.borderColor=V.bd2)}>
-                  <div style={{ fontSize:"20px" }}>⬆</div>
-                  <p style={{ fontSize:"11px",color:V.mu,marginTop:"3px" }}><strong style={{ color:V.ac }}>Click to upload</strong></p>
-                  <p style={{ fontSize:"10px",color:V.mu }}>PNG, SVG, JPG (max 2MB) — PNG with transparency recommended</p>
-                  <input type="file" accept="image/*" onChange={addLogo} style={{ display:"none" }} />
-                </label>
-              </div>
-              {logoPreview && (
-                <div>
-                  <div style={sl}>Preview</div>
-                  <img src={logoPreview} alt="Logo" style={{ maxWidth:"100%",borderRadius:"7px",border:`1px solid ${V.bd}` }} />
-                </div>
-              )}
-              <div>
-                <div style={sl}>Logo Placement</div>
-                {placeBtns(PLACEMENT_OPTS, logoPlacement, setLogoPlacement)}
-              </div>
-              <div>
-                <div style={sl}>Logo Size</div>
-                <div style={slr}>
-                  <label style={lbl}>Size</label>
-                  <input id="logo-size-input" type="range" min={40} max={400} step={10} defaultValue={200}
-                    onChange={e=>updateLogoSize(+e.target.value)}
-                    style={{ flex:1,height:"3px",background:V.bd2,borderRadius:"2px",outline:"none",WebkitAppearance:"none",appearance:"none" }} />
-                  <span style={{ fontSize:"10px",color:V.mu,minWidth:"34px",textAlign:"right" }}>{Math.round(logoScale*200)}px</span>
-                </div>
-              </div>
-              <div style={{ display:"flex",gap:"5px" }}>
-                <button onClick={applyLogo} style={{ ...btnStyle("primary"),flex:1,padding:"8px 0",fontSize:"11px" }}>Apply Logo</button>
-                <button onClick={removeLogo} style={{ ...btnStyle("danger"),flex:1,padding:"8px 0",fontSize:"11px" }}>Remove Logo</button>
-              </div>
-            </div>
-          )}
-
-          {/* ── SHAPES TAB ── */}
-          {rightTab==="shapes" && (
-            <div style={{ padding:"14px 12px",display:"flex",flexDirection:"column",gap:"14px" }}>
-              <div>
-                <div style={sl}>Shape / Stroke Color</div>
-                <div style={{ display:"flex",alignItems:"center",gap:"7px" }}>
-                  <input type="color" value={shapeColor} onChange={e=>setShapeColor(e.target.value)}
-                    style={{ width:"34px",height:"28px",borderRadius:"7px",cursor:"pointer",background:"none",padding:0,border:"none" }} />
-                  <span style={{ fontSize:"11px",color:V.mu }}>Shape color</span>
-                </div>
-              </div>
-              <div>
-                <div style={sl}>Stroke Width</div>
-                <div style={slr}>
-                  <label style={lbl}>Width</label>
-                  <input type="range" min={2} max={60} value={strokeW} onChange={e=>setStrokeW(+e.target.value)}
-                    style={{ flex:1,height:"3px",background:V.bd2,borderRadius:"2px",outline:"none",WebkitAppearance:"none",appearance:"none" }} />
-                  <span style={{ fontSize:"10px",color:V.mu,minWidth:"26px",textAlign:"right" }}>{strokeW}</span>
-                </div>
-              </div>
-              <div>
-                <div style={sl}>Placement</div>
-                {placeBtns(PLACEMENT_OPTS, shapePlacement, setShapePlacement)}
-              </div>
-              <div>
-                <div style={sl}>Add Shape</div>
-                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"5px" }}>
-                  <button onClick={addLine} style={{ ...btnStyle("secondary"),padding:"7px 0",fontSize:"11px" }}>— Line</button>
-                  <button onClick={addCurve} style={{ ...btnStyle("secondary"),padding:"7px 0",fontSize:"11px" }}>⌒ Curve</button>
-                  <button onClick={addRect} style={{ ...btnStyle("secondary"),padding:"7px 0",fontSize:"11px" }}>▭ Rectangle</button>
-                  <button onClick={addCircle} style={{ ...btnStyle("secondary"),padding:"7px 0",fontSize:"11px" }}>○ Circle</button>
-                  <button onClick={addStripes} style={{ ...btnStyle("secondary"),padding:"7px 0",fontSize:"11px",gridColumn:"span 2" }}>≡ Stripe Pattern</button>
-                </div>
-              </div>
-              <button onClick={removeSel} style={{ ...btnStyle("danger"),padding:"7px 0",fontSize:"11px" }}>Remove Selected</button>
-            </div>
-          )}
-
-          {/* ── CANVAS TAB ── */}
-          {rightTab==="canvas" && (
-            <div style={{ padding:"14px 12px",display:"flex",flexDirection:"column",gap:"14px" }}>
-              <div>
-                <div style={sl}>Texture Background Color</div>
-                <div style={{ display:"flex",alignItems:"center",gap:"7px" }}>
-                  <input type="color" value={canvasBg} onChange={e=>setFcBg(e.target.value)}
-                    style={{ width:"34px",height:"28px",borderRadius:"7px",cursor:"pointer",background:"none",padding:0,border:"none" }} />
-                  <span style={{ fontSize:"11px",color:V.mu }}>Canvas background (= primary color)</span>
-                </div>
-              </div>
-              <div>
-                <div style={sl}>Adjust Selected Element</div>
-                <div style={slr}>
-                  <label style={lbl}>Scale</label>
-                  <input type="range" min={0.1} max={5} step={0.05} value={elScale} onChange={e=>setElS(+e.target.value)}
-                    style={{ flex:1,height:"3px",background:V.bd2,borderRadius:"2px",outline:"none",WebkitAppearance:"none",appearance:"none" }} />
-                  <span style={{ fontSize:"10px",color:V.mu,minWidth:"32px",textAlign:"right" }}>{elScale.toFixed(1)}×</span>
-                </div>
-                <div style={slr}>
-                  <label style={lbl}>Pos X</label>
-                  <input type="range" min={0} max={1024} step={5} value={elX} onChange={e=>setElPos("left",+e.target.value)}
-                    style={{ flex:1,height:"3px",background:V.bd2,borderRadius:"2px",outline:"none",WebkitAppearance:"none",appearance:"none" }} />
-                  <span style={{ fontSize:"10px",color:V.mu,minWidth:"32px",textAlign:"right" }}>{elX}</span>
-                </div>
-                <div style={slr}>
-                  <label style={lbl}>Pos Y</label>
-                  <input type="range" min={0} max={1024} step={5} value={elY} onChange={e=>setElPos("top",+e.target.value)}
-                    style={{ flex:1,height:"3px",background:V.bd2,borderRadius:"2px",outline:"none",WebkitAppearance:"none",appearance:"none" }} />
-                  <span style={{ fontSize:"10px",color:V.mu,minWidth:"32px",textAlign:"right" }}>{elY}</span>
-                </div>
-              </div>
-              <div style={{ display:"flex",gap:"5px" }}>
-                <button onClick={clearCanvas} style={{ ...btnStyle("secondary"),flex:1,padding:"6px 0",fontSize:"11px" }}>Clear All</button>
-                <button onClick={removeSel} style={{ ...btnStyle("danger"),flex:1,padding:"6px 0",fontSize:"11px" }}>Remove Sel.</button>
-              </div>
-              {/* Live Fabric canvas preview — always-mounted canvas is shown here */}
-              <div>
-                <div style={{ ...sl,marginBottom:"8px" }}>Live Canvas — drag elements to reposition</div>
-              </div>
-            </div>
-          )}
-
-          {/*
-           * ALWAYS-MOUNTED FABRIC CANVAS
-           * This div must NEVER be conditionally rendered.
-           * When off the canvas tab it sits off-screen so the DOM element
-           * (and therefore fcRef.current) is always valid, making save /
-           * export / color-sync work from every tab.
-           */}
-          {/*
-           * The Fabric canvas MUST stay 1024×1024 internally and the wrapper
-           * MUST remain visible to the browser (opacity 0.01, NOT hidden) —
-           * otherwise toDataURL() returns a blank PNG and the texture sent
-           * to the 3D model is empty. We display the visible preview via a
-           * CSS transform-scale on a child wrapper so the underlying pixel
-           * buffer is never resized.
-           */}
-          <div
-            id="fc-wrapper"
-            style={rightTab === "canvas"
-              ? { background:"#fff",borderRadius:"9px",overflow:"hidden",border:`1px solid ${V.bd2}`,width:"100%",aspectRatio:"1/1",position:"relative",margin:"0 0 14px 0" }
-              : { position:"fixed",left:"-9999px",top:0,width:"1024px",height:"1024px",pointerEvents:"none",opacity:0.01,zIndex:-1 }
-            }
-          >
-            <div id="fc-scale-host" style={{ position:"absolute", left:0, top:0, width:"1024px", height:"1024px", transformOrigin:"top left" }}>
-              <canvas ref={canvasElRef} />
             </div>
           </div>
-        </div>
+        </>
+      )}
+
+      <Divider />
+      <SubTitle>Sleeve length</SubTitle>
+      <div className="flex gap-2 mb-2">
+        {(["half", "full"] as const).map(opt => {
+          const on = p.sleeveLen === opt;
+          return (
+            <button
+              key={opt}
+              onClick={() => p.setSleeveLen(opt)}
+              style={{
+                flex: 1,
+                padding: "11px 0",
+                fontFamily: FONT_UI,
+                fontSize: 10,
+                letterSpacing: "0.28em",
+                textTransform: "uppercase",
+                background: on ? GOLD : "transparent",
+                color: on ? "#fff" : MUTED,
+                border: on ? `1px solid ${GOLD}` : `1px solid ${BD}`,
+                cursor: "pointer",
+              }}
+            >
+              {opt} sleeve
+            </button>
+          );
+        })}
       </div>
 
-      <style>{`
-        @keyframes spin { to { transform:rotate(360deg); } }
-        ::-webkit-scrollbar { width:3px; }
-        ::-webkit-scrollbar-thumb { background:${V.bd2}; border-radius:2px; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:13px; height:13px; background:${V.ac}; border-radius:50%; cursor:pointer; border:2px solid #fff; }
-        input[type=range] { -webkit-appearance:none; appearance:none; }
-      `}</style>
+      <NavRow onNext={p.onNext} nextLabel="Next: Customise parts →" />
+    </Panel>
+  );
+}
+
+// ── Step 2: Parts ─────────────────────────────────────────────────────────
+function Step2Parts(p: {
+  partColors: Record<Part, string>; setPartColor: (c: string) => void;
+  activePart: Part; setActivePart: (pt: Part) => void;
+  applyAll: () => void;
+  onBack: () => void; onNext: () => void;
+}) {
+  return (
+    <Panel>
+      <SectionTitle>Customise individual parts</SectionTitle>
+      <div className="flex items-center gap-3 mb-4">
+        <span style={{ fontFamily: FONT_UI, fontSize: 11, color: MUTED, letterSpacing: "0.05em" }}>
+          Quick apply:
+        </span>
+        <button
+          onClick={p.applyAll}
+          style={{
+            fontFamily: FONT_UI,
+            fontSize: 9,
+            letterSpacing: "0.25em",
+            textTransform: "uppercase",
+            color: GOLD,
+            background: "transparent",
+            border: `1px solid ${BD_GOLD}`,
+            padding: "5px 12px",
+            cursor: "pointer",
+          }}
+        >
+          Apply to all parts
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-2 mb-5">
+        {PARTS.map(part => {
+          const selected = p.activePart === part.id;
+          const col = p.partColors[part.id];
+          return (
+            <button
+              key={part.id}
+              onClick={() => p.setActivePart(part.id)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "12px 14px",
+                background: selected ? "rgba(184,146,90,0.08)" : "transparent",
+                border: selected ? `1px solid ${BD_GOLD}` : `1px solid ${BD}`,
+                cursor: "pointer",
+                textAlign: "left",
+              }}
+            >
+              <span
+                style={{
+                  width: 22, height: 22, borderRadius: "50%",
+                  background: col,
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  flexShrink: 0,
+                }}
+              />
+              <span
+                className="text-white flex-1"
+                style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 500 }}
+              >
+                {part.label}
+              </span>
+              <span
+                style={{
+                  fontFamily: FONT_UI,
+                  fontSize: 9,
+                  letterSpacing: "0.22em",
+                  textTransform: "uppercase",
+                  color: selected ? GOLD : MUTED,
+                  border: `1px solid ${selected ? BD_GOLD : BD}`,
+                  padding: "3px 8px",
+                  borderRadius: 12,
+                }}
+              >
+                {colorName(col)}
+              </span>
+              <span style={{ color: MUTED_2, fontSize: 14 }}>›</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <SubTitle>
+        Colour for{" "}
+        <span style={{ color: GOLD, fontFamily: FONT_DISPLAY, fontStyle: "italic" }}>
+          {PARTS.find(pt => pt.id === p.activePart)?.label}
+        </span>
+      </SubTitle>
+      <div className="grid grid-cols-8 gap-2">
+        {COLORS.map(c => (
+          <Swatch
+            key={c.hex}
+            color={c.hex}
+            selected={p.partColors[p.activePart] === c.hex}
+            onClick={() => p.setPartColor(c.hex)}
+          />
+        ))}
+      </div>
+
+      <NavRow onBack={p.onBack} onNext={p.onNext} nextLabel="Next: Add logo →" />
+    </Panel>
+  );
+}
+
+// ── Step 3: Logo ──────────────────────────────────────────────────────────
+function Step3Logo(p: {
+  logoUrl: string | null; setLogoUrl: (u: string | null) => void;
+  logoPos: Pos; setLogoPos: (pos: Pos) => void;
+  logoSize: number; setLogoSize: (n: number) => void;
+  fileRef: React.RefObject<HTMLInputElement | null>;
+  onFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBack: () => void; onNext: () => void;
+}) {
+  return (
+    <Panel>
+      <SectionTitle>
+        Upload your logo{" "}
+        <span style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: MUTED_2, fontWeight: 400 }}>
+          (optional)
+        </span>
+      </SectionTitle>
+      <input ref={p.fileRef} type="file" accept="image/*" onChange={p.onFile} className="hidden" />
+      <button
+        onClick={() => p.fileRef.current?.click()}
+        style={{
+          width: "100%",
+          border: `1px dashed ${BD_GOLD}`,
+          background: "rgba(184,146,90,0.04)",
+          padding: "30px 20px",
+          textAlign: "center",
+          cursor: "pointer",
+          borderRadius: 6,
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ fontSize: 32, color: GOLD, marginBottom: 8 }}>↑</div>
+        <div style={{ fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: TX, marginBottom: 4 }}>
+          Click to upload
+        </div>
+        <div style={{ fontFamily: FONT_UI, fontSize: 10, color: MUTED, letterSpacing: "0.05em" }}>
+          PNG, SVG, or JPG · max 5 MB · transparent bg recommended
+        </div>
+      </button>
+
+      <div
+        style={{
+          width: "100%",
+          aspectRatio: "2",
+          background: CARD_2,
+          border: `1px solid ${BD}`,
+          borderRadius: 6,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 20,
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        {p.logoUrl ? (
+          <img src={p.logoUrl} alt="Logo preview" style={{ maxHeight: "85%", maxWidth: "85%", objectFit: "contain" }} />
+        ) : (
+          <span style={{ fontFamily: FONT_UI, fontSize: 10, color: MUTED, letterSpacing: "0.2em", textTransform: "uppercase" }}>
+            Logo preview will appear here
+          </span>
+        )}
+        {p.logoUrl && (
+          <button
+            onClick={() => p.setLogoUrl(null)}
+            style={{
+              position: "absolute", top: 8, right: 8,
+              background: "rgba(0,0,0,0.6)",
+              color: "#fff", border: `1px solid ${BD}`,
+              fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.2em",
+              textTransform: "uppercase", padding: "3px 8px", cursor: "pointer",
+            }}
+          >
+            Remove
+          </button>
+        )}
+      </div>
+
+      <SubTitle>Logo position</SubTitle>
+      <div className="grid grid-cols-3 gap-1.5 mb-5" style={{ maxWidth: 160 }}>
+        {POSITIONS.map(po => {
+          const on = p.logoPos === po.id;
+          return (
+            <button
+              key={po.id}
+              onClick={() => p.setLogoPos(po.id)}
+              style={{
+                aspectRatio: "1",
+                background: on ? "rgba(184,146,90,0.15)" : "transparent",
+                border: on ? `1px solid ${GOLD}` : `1px solid ${BD}`,
+                color: on ? GOLD : MUTED,
+                fontSize: 14,
+                cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+              {po.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <div className="flex justify-between mb-2" style={{ fontFamily: FONT_UI, fontSize: 11, color: MUTED, letterSpacing: "0.05em" }}>
+          <span>Logo size</span>
+          <span style={{ color: GOLD }}>{p.logoSize}%</span>
+        </div>
+        <input
+          type="range"
+          min={10}
+          max={100}
+          step={5}
+          value={p.logoSize}
+          onChange={e => p.setLogoSize(parseInt(e.target.value))}
+          style={{ width: "100%", accentColor: GOLD }}
+        />
+      </div>
+
+      <NavRow onBack={p.onBack} onNext={p.onNext} nextLabel="Next: Size →" />
+    </Panel>
+  );
+}
+
+// ── Step 4: Size ──────────────────────────────────────────────────────────
+function Step4Size(p: {
+  size: Size; setSize: (s: Size) => void;
+  showChart: boolean; setShowChart: (b: boolean) => void;
+  customEnabled: boolean; setCustomEnabled: (b: boolean) => void;
+  customSize: { chest: string; shoulder: string; hip: string; sleeve: string };
+  setCustomSize: (cs: any) => void;
+  qty: number; setQty: (n: number) => void;
+  onBack: () => void; onSubmit: () => void; loading: boolean;
+}) {
+  return (
+    <Panel>
+      <SectionTitle>Choose your size</SectionTitle>
+      <div className="flex gap-2 flex-wrap mb-3">
+        {SIZES.map(s => {
+          const on = p.size === s && !p.customEnabled;
+          return (
+            <button
+              key={s}
+              disabled={p.customEnabled}
+              onClick={() => p.setSize(s)}
+              style={{
+                width: 48, height: 48,
+                background: on ? GOLD : "transparent",
+                color: on ? "#fff" : p.customEnabled ? MUTED_2 : MUTED,
+                border: on ? `1px solid ${GOLD}` : `1px solid ${BD}`,
+                fontFamily: FONT_UI,
+                fontSize: 12,
+                fontWeight: 500,
+                letterSpacing: "0.1em",
+                cursor: p.customEnabled ? "not-allowed" : "pointer",
+                opacity: p.customEnabled ? 0.4 : 1,
+              }}
+            >
+              {s}
+            </button>
+          );
+        })}
+      </div>
+      <Note>
+        Standard sizes are based on chest circumference —{" "}
+        <button
+          onClick={() => p.setShowChart(!p.showChart)}
+          style={{ background: "none", border: "none", color: GOLD, textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit", padding: 0 }}
+        >
+          {p.showChart ? "hide chart" : "view size chart"}
+        </button>
+      </Note>
+
+      {p.showChart && (
+        <div style={{ marginTop: 12, border: `1px solid ${BD}`, borderRadius: 6, overflow: "hidden" }}>
+          <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse", fontFamily: FONT_UI }}>
+            <thead>
+              <tr style={{ background: CARD_2 }}>
+                <th style={{ padding: "8px 12px", textAlign: "left", color: MUTED, fontWeight: 500, letterSpacing: "0.18em", textTransform: "uppercase", fontSize: 9 }}>Size</th>
+                <th style={{ padding: "8px 12px", textAlign: "center", color: MUTED, fontWeight: 500, letterSpacing: "0.18em", textTransform: "uppercase", fontSize: 9 }}>Chest</th>
+                <th style={{ padding: "8px 12px", textAlign: "center", color: MUTED, fontWeight: 500, letterSpacing: "0.18em", textTransform: "uppercase", fontSize: 9 }}>Shoulder</th>
+                <th style={{ padding: "8px 12px", textAlign: "center", color: MUTED, fontWeight: 500, letterSpacing: "0.18em", textTransform: "uppercase", fontSize: 9 }}>Sleeve</th>
+              </tr>
+            </thead>
+            <tbody>
+              {SIZE_CHART.map(row => (
+                <tr key={row.size} style={{ borderTop: `1px solid ${BD}`, color: TX }}>
+                  <td style={{ padding: "8px 12px", color: GOLD, letterSpacing: "0.1em" }}>{row.size}</td>
+                  <td style={{ padding: "8px 12px", textAlign: "center" }}>{row.chest}</td>
+                  <td style={{ padding: "8px 12px", textAlign: "center" }}>{row.shoulder}</td>
+                  <td style={{ padding: "8px 12px", textAlign: "center" }}>{row.sleeve}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <Divider />
+
+      <div className="flex items-center justify-between mb-3">
+        <SubTitle>Custom measurements</SubTitle>
+        <label className="flex items-center gap-2 cursor-pointer" style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: MUTED }}>
+          <input
+            type="checkbox"
+            checked={p.customEnabled}
+            onChange={e => p.setCustomEnabled(e.target.checked)}
+            style={{ width: 14, height: 14, accentColor: GOLD }}
+          />
+          Enable
+        </label>
+      </div>
+      <div style={{ opacity: p.customEnabled ? 1 : 0.4, pointerEvents: p.customEnabled ? "auto" : "none" }}>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          {[
+            { key: "chest" as const, label: "Chest (in)" },
+            { key: "shoulder" as const, label: "Shoulder (in)" },
+            { key: "hip" as const, label: "Hip (in)" },
+            { key: "sleeve" as const, label: "Sleeve (in)" },
+          ].map(f => (
+            <div key={f.key}>
+              <label style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.22em", textTransform: "uppercase", color: MUTED, display: "block", marginBottom: 5 }}>
+                {f.label}
+              </label>
+              <input
+                type="number"
+                value={p.customSize[f.key]}
+                onChange={e => p.setCustomSize({ ...p.customSize, [f.key]: e.target.value })}
+                placeholder="0"
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  background: CARD_2,
+                  border: `1px solid ${BD}`,
+                  borderRadius: 4,
+                  color: TX,
+                  fontFamily: FONT_UI,
+                  fontSize: 13,
+                  outline: "none",
+                }}
+              />
+            </div>
+          ))}
+        </div>
+        <Note>Measure over a well-fitting garment. Custom orders may take 2–3 extra days.</Note>
+      </div>
+
+      <Divider />
+
+      <SubTitle>Quantity</SubTitle>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => p.setQty(Math.max(1, p.qty - 1))}
+          style={{ width: 36, height: 36, background: "transparent", border: `1px solid ${BD}`, color: TX, cursor: "pointer", fontSize: 16 }}
+        >−</button>
+        <span style={{ minWidth: 32, textAlign: "center", fontFamily: FONT_DISPLAY, fontSize: 18 }}>{p.qty}</span>
+        <button
+          onClick={() => p.setQty(p.qty + 1)}
+          style={{ width: 36, height: 36, background: "transparent", border: `1px solid ${BD}`, color: TX, cursor: "pointer", fontSize: 16 }}
+        >+</button>
+      </div>
+
+      <Show when="signed-out">
+        <div
+          className="mt-5 p-3"
+          style={{
+            background: "rgba(184,146,90,0.08)",
+            border: `1px solid ${BD_GOLD}`,
+            fontFamily: FONT_UI,
+            fontSize: 11,
+            color: TX,
+            letterSpacing: "0.05em",
+          }}
+        >
+          <Link href="/sign-in" style={{ color: GOLD, textDecoration: "underline" }}>Sign in</Link> to place your order.
+        </div>
+      </Show>
+
+      <NavRow onBack={p.onBack} onNext={p.onSubmit} nextLabel={p.loading ? "Adding…" : "Add to cart →"} loading={p.loading} />
+    </Panel>
+  );
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function TabRow({ options, active, onChange }: { options: { id: string; label: string }[]; active: string; onChange: (id: string) => void }) {
+  return (
+    <div
+      className="flex mb-5"
+      style={{ border: `1px solid ${BD}`, borderRadius: 6, overflow: "hidden" }}
+    >
+      {options.map(o => {
+        const on = active === o.id;
+        return (
+          <button
+            key={o.id}
+            onClick={() => onChange(o.id)}
+            style={{
+              flex: 1,
+              padding: "10px 0",
+              fontFamily: FONT_UI,
+              fontSize: 10,
+              letterSpacing: "0.28em",
+              textTransform: "uppercase",
+              color: on ? "#fff" : MUTED,
+              background: on ? GOLD : "transparent",
+              border: "none",
+              cursor: "pointer",
+              fontWeight: on ? 500 : 400,
+            }}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function SubTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        fontFamily: FONT_UI,
+        fontSize: 9,
+        letterSpacing: "0.35em",
+        textTransform: "uppercase",
+        color: GOLD,
+        marginBottom: 12,
+        marginTop: 4,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function MicroLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        fontFamily: FONT_UI,
+        fontSize: 9,
+        letterSpacing: "0.25em",
+        textTransform: "uppercase",
+        color: MUTED,
+        marginBottom: 8,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Note({ children }: { children: React.ReactNode }) {
+  return (
+    <p style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.05em", color: MUTED_2, marginTop: 8, lineHeight: 1.6 }}>
+      {children}
+    </p>
+  );
+}
+
+function Divider() {
+  return <hr style={{ border: "none", borderTop: `1px solid ${BD}`, margin: "20px 0" }} />;
+}
+
+// ── Preview Panel (right side) ─────────────────────────────────────────────
+function PreviewPanel(p: {
+  partColors: Record<Part, string>;
+  styleType: StyleType;
+  styleSummary: string;
+  sleeveLen: "half" | "full";
+  logoUrl: string | null;
+  logoPos: Pos;
+  logoSize: number;
+  size: string;
+  printId: string;
+  patternId: string;
+  patternA: string;
+  patternB: string;
+}) {
+  const isPattern = p.styleType === "pattern";
+  const isPrint = p.styleType === "print";
+
+  // Logo positions on shirt body (within front rect 58,58 to 142,192)
+  const POS_COORDS: Record<Pos, { x: number; y: number }> = {
+    "top-left":   { x: 70,  y: 75  },
+    "top-center": { x: 100, y: 75  },
+    "top-right":  { x: 130, y: 75  },
+    "mid-left":   { x: 70,  y: 125 },
+    "center":     { x: 100, y: 125 },
+    "mid-right":  { x: 130, y: 125 },
+    "bot-left":   { x: 70,  y: 175 },
+    "bot-center": { x: 100, y: 175 },
+    "bot-right":  { x: 130, y: 175 },
+  };
+  const logoCoord = POS_COORDS[p.logoPos];
+  const logoBoxW = 40 * (p.logoSize / 50);
+  const logoBoxH = 28 * (p.logoSize / 50);
+
+  const patternFill = isPattern
+    ? (p.patternId === "stripes"
+        ? `repeating-linear-gradient(0deg,${p.patternA} 0,${p.patternA} 4px,${p.patternB} 4px,${p.patternB} 12px)`
+        : p.patternId === "diagonal"
+        ? `repeating-linear-gradient(45deg,${p.patternA} 0,${p.patternA} 2px,${p.patternB} 2px,${p.patternB} 10px)`
+        : p.patternId === "grid"
+        ? `${p.patternB}` : `${p.patternA}`)
+    : null;
+
+  const printDef = PRINTS.find(pr => pr.id === p.printId);
+
+  return (
+    <div
+      style={{
+        background: CARD_2,
+        border: `1px solid ${BD}`,
+        borderRadius: 8,
+        padding: "20px 22px",
+        position: "sticky",
+        top: 80,
+        alignSelf: "start",
+      }}
+    >
+      <div
+        style={{
+          fontFamily: FONT_UI,
+          fontSize: 9,
+          letterSpacing: "0.4em",
+          textTransform: "uppercase",
+          color: GOLD,
+          marginBottom: 14,
+        }}
+      >
+        Live Preview
+      </div>
+
+      {/* Shirt SVG — 200×230 */}
+      <div style={{ position: "relative", width: "100%", maxWidth: 220, margin: "0 auto" }}>
+        <svg viewBox="0 0 200 230" style={{ width: "100%", height: "auto", display: "block" }}>
+          <defs>
+            {isPrint && printDef && (
+              <pattern id="bodyFill" patternUnits="userSpaceOnUse" width="20" height="20">
+                <rect width="20" height="20" fill="#1a1a1a" />
+              </pattern>
+            )}
+          </defs>
+          {/* Right sleeve */}
+          <path
+            d={p.sleeveLen === "half"
+              ? "M55 40 L25 60 L35 80 L62 68 Z"
+              : "M55 40 L20 65 L30 100 L62 86 Z"}
+            fill={p.partColors.sleeves}
+            stroke="rgba(255,255,255,0.15)"
+            strokeWidth="0.6"
+          />
+          {/* Left sleeve */}
+          <path
+            d={p.sleeveLen === "half"
+              ? "M145 40 L175 60 L165 80 L138 68 Z"
+              : "M145 40 L180 65 L170 100 L138 86 Z"}
+            fill={p.partColors.sleeves}
+            stroke="rgba(255,255,255,0.15)"
+            strokeWidth="0.6"
+          />
+          {/* Back */}
+          <rect x="55" y="55" width="90" height="140" rx="3" fill={p.partColors.back} stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
+          {/* Front */}
+          <rect x="58" y="58" width="84" height="134" rx="3" fill={p.partColors.front} stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
+          {/* Collar */}
+          <path
+            d="M88 38 Q100 50 112 38 L115 55 Q100 70 85 55 Z"
+            fill={p.partColors.collar}
+            stroke="rgba(255,255,255,0.15)"
+            strokeWidth="0.6"
+          />
+          {/* Logo placement box */}
+          {p.logoUrl && (
+            <image
+              href={p.logoUrl}
+              x={logoCoord.x - logoBoxW / 2}
+              y={logoCoord.y - logoBoxH / 2}
+              width={logoBoxW}
+              height={logoBoxH}
+              preserveAspectRatio="xMidYMid meet"
+            />
+          )}
+        </svg>
+        {/* Print/pattern overlay on front body */}
+        {(isPrint || isPattern) && (
+          <div
+            style={{
+              position: "absolute",
+              left: `${(58 / 200) * 100}%`,
+              top: `${(58 / 230) * 100}%`,
+              width: `${(84 / 200) * 100}%`,
+              height: `${(134 / 230) * 100}%`,
+              borderRadius: 3,
+              background: isPrint ? printDef?.bg : patternFill || undefined,
+              opacity: 0.92,
+              pointerEvents: "none",
+            }}
+          />
+        )}
+      </div>
+
+      <Divider />
+      <div className="flex flex-col gap-2.5">
+        {[
+          { label: "Style", val: p.styleSummary },
+          { label: "Sleeve", val: p.sleeveLen === "half" ? "Half" : "Full" },
+          { label: "Logo", val: p.logoUrl ? "Uploaded" : "None" },
+          { label: "Size", val: p.size },
+        ].map(row => (
+          <div key={row.label} className="flex justify-between items-center" style={{ fontFamily: FONT_UI, fontSize: 11 }}>
+            <span style={{ color: MUTED, letterSpacing: "0.18em", textTransform: "uppercase", fontSize: 9 }}>
+              {row.label}
+            </span>
+            <span
+              style={{
+                color: TX,
+                background: "rgba(184,146,90,0.1)",
+                border: `1px solid ${BD_GOLD}`,
+                padding: "3px 10px",
+                borderRadius: 12,
+                fontSize: 10,
+                letterSpacing: "0.05em",
+              }}
+            >
+              {row.val}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

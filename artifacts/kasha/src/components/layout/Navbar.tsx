@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Show, useClerk, useUser } from "@clerk/react";
-import { ShoppingBag, X, Menu, User as UserIcon, ShieldCheck, Search } from "lucide-react";
+import { ShoppingBag, X, Menu, User as UserIcon, ShieldCheck } from "lucide-react";
 import { getApiUrl } from "@/lib/api";
 import { useGetCart, getGetCartQueryKey } from "@workspace/api-client-react";
 import {
@@ -81,27 +81,13 @@ export function Navbar() {
         }}
       >
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-3 shrink-0">
+        <Link href="/" className="flex items-center shrink-0" aria-label="Ka·Sha home">
           <img
             src="/images/kasha-logo-new.jpeg"
             alt="Ka·Sha"
-            className="h-10 w-auto object-contain"
+            className="h-12 w-auto object-contain"
             style={{ filter: "invert(1) brightness(1.1)", mixBlendMode: "screen" }}
           />
-          <div className="hidden sm:flex flex-col leading-none">
-            <span
-              className="text-[22px] font-medium text-white"
-              style={{ fontFamily: "'Cormorant Garamond', serif", letterSpacing: "0.15em" }}
-            >
-              Ka·Sha
-            </span>
-            <span
-              className="text-[7px] uppercase mt-0.5"
-              style={{ color: GOLD, letterSpacing: "0.45em", fontFamily: "'Josefin Sans', sans-serif" }}
-            >
-              Premium Golf Apparel
-            </span>
-          </div>
         </Link>
 
         {/* Center nav */}
@@ -158,13 +144,6 @@ export function Navbar() {
               <ShieldCheck className="w-3 h-3" /> Admin
             </Link>
           )}
-          <button
-            className="hidden sm:flex w-8 h-8 items-center justify-center hover:text-white transition-colors"
-            style={{ color: "rgba(255,255,255,0.6)" }}
-            title="Search"
-          >
-            <Search className="w-4 h-4" />
-          </button>
           <Show when="signed-in">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

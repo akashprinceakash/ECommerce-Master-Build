@@ -567,7 +567,7 @@ export default function Home() {
       {/* PRODUCT TABS */}
       <section className="px-6 md:px-20 py-16 md:py-20 max-w-[1400px] mx-auto">
         <div
-          className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-3 sm:gap-0 mb-10 pb-0"
+          className="mb-10"
           style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
         >
           <div className="pb-6">
@@ -605,16 +605,15 @@ export default function Home() {
                   className="transition-all relative -mb-px"
                   style={{
                     fontFamily: "'Josefin Sans', sans-serif",
-                    fontSize: 9,
+                    fontSize: 10,
                     letterSpacing: "0.3em",
                     textTransform: "uppercase",
                     color: on ? GOLD : "rgba(255,255,255,0.4)",
                     border: "none",
                     background: "none",
                     borderBottom: on ? `2px solid ${GOLD}` : "2px solid transparent",
-                    padding: "14px 20px md:14px 28px",
-                    paddingLeft: 20,
-                    paddingRight: 20,
+                    padding: "14px 24px 14px 0",
+                    marginRight: 32,
                   }}
                 >
                   {t === "men" ? "Men's" : t === "women" ? "Women's" : "Kids'"}
