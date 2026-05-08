@@ -184,9 +184,9 @@ function hexToRgba(hex: string): [number, number, number, number] {
 }
 
 const V = {
-  bg:"#0e0c0a", sf:"rgba(255,255,255,0.04)", sf2:"rgba(255,255,255,0.08)",
-  bd:"rgba(255,255,255,0.09)", bd2:"rgba(255,255,255,0.15)",
-  tx:"#f0ece4", mu:"#7a7470", ac:"#c9a87c",
+  bg:"#080A12", sf:"rgba(255,255,255,0.04)", sf2:"rgba(255,255,255,0.06)",
+  bd:"rgba(255,255,255,0.08)", bd2:"rgba(184,146,90,0.3)",
+  tx:"#ffffff", mu:"rgba(255,255,255,0.45)", ac:"#B8925A",
 };
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -1360,29 +1360,66 @@ export default function CustomizePage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display:"flex",flexDirection:"column",height:"100vh",background:V.bg,color:V.tx,fontFamily:"'DM Sans',sans-serif",overflow:"hidden" }}>
+    <div style={{ display:"flex",flexDirection:"column",height:"100vh",background:V.bg,color:V.tx,fontFamily:"'Josefin Sans',sans-serif",overflow:"hidden" }}>
 
-      {/* ── HEADER ── */}
-      <header style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 20px",height:"48px",borderBottom:`1px solid ${V.bd}`,background:"rgba(8,6,4,0.9)",backdropFilter:"blur(12px)",flexShrink:0,zIndex:50 }}>
-        <div style={{ display:"flex",alignItems:"center",gap:"12px" }}>
-          <Link href={`/products/${id}`} style={{ color:V.mu,fontSize:"13px",textDecoration:"none" }}>← Back</Link>
-          <div style={{ width:"1px",height:"16px",background:V.bd }} />
-          <span style={{ fontFamily:"'Playfair Display',serif",fontSize:"15px",color:V.ac,letterSpacing:".04em" }}>Golf Studio ✦ 3D Customizer</span>
+      {/* ── HEADER (Custom Studio toolbar) ── */}
+      <header style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",height:"56px",borderBottom:`1px solid ${V.bd2}`,background:"rgba(8,10,18,0.95)",backdropFilter:"blur(20px)",flexShrink:0,zIndex:50 }}>
+        {/* Left: brand + back */}
+        <div style={{ display:"flex",alignItems:"center",gap:"16px" }}>
+          <Link href={`/products/${id}`} style={{ color:V.mu,fontSize:"11px",textDecoration:"none",letterSpacing:"0.2em",textTransform:"uppercase" }}>← Back</Link>
+          <div style={{ width:"1px",height:"20px",background:V.bd }} />
+          <Link href="/" style={{ display:"flex",alignItems:"center",gap:"10px",textDecoration:"none" }}>
+            <img src="/images/kasha-logo-new.jpeg" alt="Ka·Sha" style={{ height:30,filter:"invert(1) brightness(1.1)",mixBlendMode:"screen" }} />
+            <div style={{ display:"flex",flexDirection:"column",lineHeight:1 }}>
+              <span style={{ fontFamily:"'Cormorant Garamond',serif",fontSize:18,letterSpacing:"0.15em",color:V.tx }}>Ka·Sha</span>
+              <span style={{ fontSize:7,letterSpacing:"0.4em",color:V.ac,textTransform:"uppercase",marginTop:2 }}>Custom Studio</span>
+            </div>
+          </Link>
         </div>
-        <div style={{ display:"flex",alignItems:"center",gap:"8px" }}>
-          <input value={designName} onChange={e=>setDesignName(e.target.value)} placeholder="Name your design…" style={{ ...inp,width:"160px",fontSize:"12px" }} />
+
+        {/* Center: Undo / Redo / Save / Share / Contact */}
+        <div style={{ display:"flex",alignItems:"center",gap:"4px" }}>
+          {[
+            { label:"Undo", onClick:()=>{ const fc=fcRef.current; if(!fc)return; const objs=fc.getObjects(); const last=objs[objs.length-1]; if(last){ fc.remove(last); fc.renderAll(); syncTexture(); } } },
+            { label:"Redo", onClick:()=>toast({title:"Redo",description:"Redo coming soon"}) },
+          ].map(b => (
+            <button key={b.label} onClick={b.onClick}
+              style={{ padding:"7px 14px",background:"transparent",border:`1px solid ${V.bd}`,color:V.mu,fontSize:9,letterSpacing:"0.25em",textTransform:"uppercase",cursor:"pointer",fontFamily:"'Josefin Sans',sans-serif",transition:"all .15s" }}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color=V.ac;(e.currentTarget as HTMLElement).style.borderColor=V.bd2;}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=V.mu;(e.currentTarget as HTMLElement).style.borderColor=V.bd;}}>
+              {b.label}
+            </button>
+          ))}
           <Show when="signed-in">
             <button onClick={()=>saveMut.mutate()} disabled={saveMut.isPending}
-              style={{ padding:"6px 14px",borderRadius:"8px",border:"none",background:V.ac,color:V.bg,fontSize:"12px",fontWeight:600,cursor:"pointer",opacity:saveMut.isPending?0.6:1 }}>
-              {saveMut.isPending?"Saving…":"💾 Save"}
+              style={{ padding:"7px 18px",background:V.ac,border:"none",color:"#fff",fontSize:9,letterSpacing:"0.28em",textTransform:"uppercase",cursor:"pointer",fontFamily:"'Josefin Sans',sans-serif",fontWeight:500,opacity:saveMut.isPending?0.6:1,marginLeft:6 }}>
+              {saveMut.isPending?"Saving…":"Save"}
             </button>
           </Show>
           <Show when="signed-out">
-            <Link href="/sign-in" style={{ padding:"6px 14px",borderRadius:"8px",border:`1px solid ${V.bd}`,color:V.mu,fontSize:"12px",textDecoration:"none" }}>Sign in to save</Link>
+            <Link href="/sign-in" style={{ padding:"7px 18px",border:`1px solid ${V.bd2}`,color:V.ac,fontSize:9,letterSpacing:"0.28em",textTransform:"uppercase",textDecoration:"none",fontFamily:"'Josefin Sans',sans-serif",marginLeft:6 }}>
+              Sign in
+            </Link>
           </Show>
+          <button onClick={()=>{
+            const url=window.location.href;
+            navigator.clipboard?.writeText(url).then(()=>toast({title:"Link copied",description:url}));
+          }} style={{ padding:"7px 14px",background:"transparent",border:`1px solid ${V.bd}`,color:V.mu,fontSize:9,letterSpacing:"0.25em",textTransform:"uppercase",cursor:"pointer",fontFamily:"'Josefin Sans',sans-serif",marginLeft:4 }}>
+            Share
+          </button>
+          <Link href="/contact" style={{ padding:"7px 14px",background:"transparent",border:`1px solid ${V.bd}`,color:V.mu,fontSize:9,letterSpacing:"0.25em",textTransform:"uppercase",textDecoration:"none",fontFamily:"'Josefin Sans',sans-serif" }}>
+            Contact
+          </Link>
+        </div>
+
+        {/* Right: Tutorials + Order */}
+        <div style={{ display:"flex",alignItems:"center",gap:"6px" }}>
+          <a href="#tutorials" style={{ padding:"7px 14px",background:"transparent",border:`1px solid ${V.bd2}`,color:V.ac,fontSize:9,letterSpacing:"0.28em",textTransform:"uppercase",textDecoration:"none",fontFamily:"'Josefin Sans',sans-serif" }}>
+            Tutorials
+          </a>
           <button onClick={()=>cartMut.mutate()} disabled={cartMut.isPending||saveMut.isPending}
-            style={{ padding:"6px 14px",borderRadius:"8px",border:"none",background:"#2d6a4f",color:"white",fontSize:"12px",fontWeight:600,cursor:"pointer",opacity:cartMut.isPending?0.6:1 }}>
-            {cartMut.isPending?"Adding…":"🛒 Add to Cart"}
+            style={{ padding:"8px 22px",background:V.ac,border:"none",color:"#fff",fontSize:9,letterSpacing:"0.3em",textTransform:"uppercase",cursor:"pointer",fontFamily:"'Josefin Sans',sans-serif",fontWeight:500,opacity:cartMut.isPending?0.6:1 }}>
+            {cartMut.isPending?"Adding…":"Order"}
           </button>
         </div>
       </header>

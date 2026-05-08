@@ -9,11 +9,12 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   return (
     <CartProvider>
-      <div className="min-h-[100dvh] flex flex-col bg-white text-black font-sans selection:bg-black selection:text-white">
+      <div
+        className="min-h-[100dvh] flex flex-col text-white selection:bg-[#B8925A] selection:text-white"
+        style={{ background: "#080A12", fontFamily: "'Josefin Sans', sans-serif" }}
+      >
         <Navbar />
-        <main className="flex-1 w-full">
-          {children}
-        </main>
+        <main className="flex-1 w-full pt-16">{children}</main>
         <Footer />
       </div>
     </CartProvider>

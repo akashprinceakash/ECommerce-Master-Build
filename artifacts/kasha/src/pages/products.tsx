@@ -209,20 +209,43 @@ export default function ProductsPage() {
   return (
     <Layout>
       {/* Page Header */}
-      <div className="bg-gray-50 border-b border-gray-200 py-10 px-6">
+      <div
+        className="py-12 px-6"
+        style={{
+          background: "#0D1220",
+          borderBottom: "1px solid rgba(184,146,90,0.3)",
+        }}
+      >
         <div className="max-w-[1400px] mx-auto">
-          <div className="flex items-center gap-2 text-[11px] text-gray-400 font-medium mb-4">
-            <Link href="/" className="hover:text-black transition-colors">HOME</Link>
+          <div
+            className="flex items-center gap-2 text-[10px] font-medium mb-5 uppercase"
+            style={{
+              fontFamily: "'Josefin Sans', sans-serif",
+              letterSpacing: "0.28em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            <Link href="/" className="hover:!text-[#B8925A] transition-colors">HOME</Link>
             <ChevronRight className="w-3 h-3" />
-            <Link href="/products" className="hover:text-black transition-colors">SHOP</Link>
+            <Link href="/products" className="hover:!text-[#B8925A] transition-colors">SHOP</Link>
             {breadcrumb && (
               <>
                 <ChevronRight className="w-3 h-3" />
-                <span className="text-black uppercase">{breadcrumb}</span>
+                <span style={{ color: "#B8925A" }}>{breadcrumb}</span>
               </>
             )}
           </div>
-          <h1 className="text-4xl md:text-5xl font-black text-black">{heading}</h1>
+          <h1
+            className="text-white"
+            style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "clamp(32px, 4vw, 48px)",
+              fontWeight: 400,
+              letterSpacing: "0.02em",
+            }}
+          >
+            {heading}
+          </h1>
         </div>
       </div>
 
@@ -234,22 +257,24 @@ export default function ProductsPage() {
               <Link
                 href="/products"
                 aria-current={!gender && !type ? "page" : undefined}
-                className={`block py-2 text-[12px] tracking-[0.18em] uppercase font-semibold border-b border-gray-200 ${
-                  !gender && !type ? "text-black" : "text-gray-500 hover:text-black"
+                className={`block py-3 text-[11px] tracking-[0.28em] uppercase font-medium ${
+                  !gender && !type ? "text-[#B8925A]" : "text-white/60 hover:text-white"
                 }`}
+                style={{ fontFamily: "'Josefin Sans', sans-serif", borderBottom: "1px solid rgba(255,255,255,0.08)" }}
               >
                 All Products
               </Link>
               {sidebar.map((section) => {
                 const sectionActive = gender === section.gender;
                 return (
-                  <div key={section.gender} className="border-b border-gray-200">
+                  <div key={section.gender} style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
                     <Link
                       href={buildHref(section.gender, undefined)}
                       aria-current={sectionActive && !type ? "page" : undefined}
-                      className={`block py-3 text-[12px] tracking-[0.18em] uppercase font-semibold ${
-                        sectionActive ? "text-black" : "text-gray-700 hover:text-black"
+                      className={`block py-3 text-[11px] tracking-[0.28em] uppercase font-medium ${
+                        sectionActive ? "text-[#B8925A]" : "text-white/80 hover:text-white"
                       }`}
+                      style={{ fontFamily: "'Josefin Sans', sans-serif" }}
                     >
                       {section.label}
                     </Link>
@@ -263,13 +288,14 @@ export default function ProductsPage() {
                             <Link
                               href={buildHref(section.gender, it.type, it.style)}
                               aria-current={itemActive ? "page" : undefined}
-                              className={`block py-1.5 text-[11px] tracking-[0.12em] uppercase border-l-2 ${
+                              className={`block py-1.5 text-[10px] tracking-[0.22em] uppercase border-l-2 ${
                                 isSubItem ? "pl-7" : "pl-3"
                               } ${
                                 itemActive
-                                  ? "border-[#B8925A] text-black font-medium"
-                                  : "border-transparent text-gray-500 hover:text-black hover:border-gray-300"
+                                  ? "border-[#B8925A] text-[#B8925A] font-medium"
+                                  : "border-transparent text-white/45 hover:text-white hover:border-white/20"
                               }`}
+                              style={{ fontFamily: "'Josefin Sans', sans-serif" }}
                             >
                               {it.label}
                             </Link>
@@ -282,12 +308,17 @@ export default function ProductsPage() {
               })}
 
               {/* Quick "type only" links — adapt to the active gender */}
-              <div className="mt-6">
-                <div className="text-[10px] tracking-[0.2em] uppercase text-gray-400 mb-2">Browse by type</div>
+              <div className="mt-6" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>
+                <div
+                  className="text-[9px] uppercase mb-3"
+                  style={{ letterSpacing: "0.35em", color: "#B8925A" }}
+                >
+                  Browse by type
+                </div>
                 <Link
                   href={buildHref(gender, "tshirts")}
-                  className={`block py-1.5 text-[11px] tracking-[0.12em] uppercase ${
-                    type === "tshirts" && !styleFilter ? "text-black font-medium" : "text-gray-500 hover:text-black"
+                  className={`block py-1.5 text-[10px] tracking-[0.22em] uppercase ${
+                    type === "tshirts" && !styleFilter ? "text-[#B8925A] font-medium" : "text-white/45 hover:text-white"
                   }`}
                 >
                   All T-shirts
@@ -295,8 +326,8 @@ export default function ProductsPage() {
                 {gender === "women" ? (
                   <Link
                     href={buildHref(gender, "skirts")}
-                    className={`block py-1.5 text-[11px] tracking-[0.12em] uppercase ${
-                      type === "skirts" ? "text-black font-medium" : "text-gray-500 hover:text-black"
+                    className={`block py-1.5 text-[10px] tracking-[0.22em] uppercase ${
+                      type === "skirts" ? "text-[#B8925A] font-medium" : "text-white/45 hover:text-white"
                     }`}
                   >
                     All Skirts / Skorts
@@ -304,8 +335,8 @@ export default function ProductsPage() {
                 ) : gender === "kids" ? (
                   <Link
                     href={buildHref(gender, "bottoms")}
-                    className={`block py-1.5 text-[11px] tracking-[0.12em] uppercase ${
-                      type === "bottoms" ? "text-black font-medium" : "text-gray-500 hover:text-black"
+                    className={`block py-1.5 text-[10px] tracking-[0.22em] uppercase ${
+                      type === "bottoms" ? "text-[#B8925A] font-medium" : "text-white/45 hover:text-white"
                     }`}
                   >
                     All Bottoms
@@ -313,8 +344,8 @@ export default function ProductsPage() {
                 ) : (
                   <Link
                     href={buildHref(gender, "trousers")}
-                    className={`block py-1.5 text-[11px] tracking-[0.12em] uppercase ${
-                      type === "trousers" ? "text-black font-medium" : "text-gray-500 hover:text-black"
+                    className={`block py-1.5 text-[10px] tracking-[0.22em] uppercase ${
+                      type === "trousers" ? "text-[#B8925A] font-medium" : "text-white/45 hover:text-white"
                     }`}
                   >
                     All Trousers
@@ -333,40 +364,84 @@ export default function ProductsPage() {
                 ))}
               </div>
             ) : error ? (
-              <div className="py-20 text-center text-gray-500">
+              <div className="py-20 text-center text-white/45">
                 <p>Failed to load products. Please try again later.</p>
               </div>
             ) : products?.length === 0 && type === "skirts" ? (
-              <div className="border border-gray-200 bg-white p-12 md:p-16 text-center">
-                <div className="text-[10px] tracking-[0.3em] uppercase text-[#B8925A] mb-3">Coming Soon</div>
-                <h2 className="text-3xl md:text-4xl font-light text-black mb-4" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+              <div
+                className="p-12 md:p-16 text-center"
+                style={{
+                  background: "#0F1622",
+                  border: "1px solid rgba(184,146,90,0.3)",
+                  borderRadius: 8,
+                }}
+              >
+                <div
+                  className="text-[9px] uppercase mb-3"
+                  style={{
+                    fontFamily: "'Josefin Sans', sans-serif",
+                    letterSpacing: "0.4em",
+                    color: "#B8925A",
+                  }}
+                >
+                  Coming Soon
+                </div>
+                <h2
+                  className="text-white mb-4"
+                  style={{
+                    fontFamily: "'Cormorant Garamond', serif",
+                    fontSize: "clamp(28px, 3vw, 36px)",
+                    fontWeight: 400,
+                  }}
+                >
                   Skirts &amp; Skorts
                 </h2>
-                <p className="text-gray-500 max-w-md mx-auto mb-8 leading-relaxed">
+                <p
+                  className="max-w-md mx-auto mb-8"
+                  style={{
+                    fontFamily: "'Josefin Sans', sans-serif",
+                    fontSize: 11,
+                    color: "rgba(255,255,255,0.45)",
+                    lineHeight: 1.8,
+                    letterSpacing: "0.06em",
+                  }}
+                >
                   Tailored skirts and built-in skort shorts in our signature stretch fabric — landing in the next drop.
                   Want yours sooner? Build it in the Custom Studio today.
                 </p>
                 <div className="flex flex-wrap justify-center gap-3">
                   <Link
                     href="/products/1/customize"
-                    className="text-[11px] tracking-[0.22em] uppercase text-white bg-black px-7 py-3.5 hover:bg-gray-900 transition-colors"
+                    className="text-[10px] uppercase text-white px-7 py-3.5 transition-all"
+                    style={{
+                      fontFamily: "'Josefin Sans', sans-serif",
+                      letterSpacing: "0.28em",
+                      background: "#B8925A",
+                    }}
                   >
                     Open Custom Studio
                   </Link>
                   <Link
                     href={buildHref(gender, "tshirts")}
-                    className="text-[11px] tracking-[0.22em] uppercase text-black border border-gray-300 px-7 py-3.5 hover:border-black transition-colors"
+                    className="text-[10px] uppercase px-7 py-3.5 transition-all hover:!text-white"
+                    style={{
+                      fontFamily: "'Josefin Sans', sans-serif",
+                      letterSpacing: "0.28em",
+                      color: "rgba(255,255,255,0.6)",
+                      border: "1px solid rgba(255,255,255,0.25)",
+                    }}
                   >
                     Browse T-shirts
                   </Link>
                 </div>
               </div>
             ) : products?.length === 0 ? (
-              <div className="py-20 text-center text-gray-500">
+              <div className="py-20 text-center text-white/45">
                 <p className="mb-4">No products found in this category yet.</p>
                 <button
                   onClick={() => navigate("/products")}
-                  className="text-[12px] uppercase tracking-[0.18em] underline"
+                  className="text-[11px] uppercase tracking-[0.22em] underline text-[#B8925A]"
+                  style={{ fontFamily: "'Josefin Sans', sans-serif" }}
                 >
                   View all products
                 </button>
@@ -390,7 +465,15 @@ export default function ProductsPage() {
                       transition={{ duration: 0.35, delay: Math.min(i, 8) * 0.04 }}
                     >
                       <Link href={`/products/${product.id}`} className="group block">
-                        <div className="relative aspect-[3/4] overflow-hidden bg-gray-100 mb-3">
+                        <div
+                          className="relative aspect-[3/4] overflow-hidden mb-3 transition-all"
+                          style={{
+                            background: "#0F1622",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                          }}
+                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.3)")}
+                          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)")}
+                        >
                           {imgSrc ? (
                             <img
                               src={imgSrc}
@@ -400,20 +483,51 @@ export default function ProductsPage() {
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <span className="text-gray-300 font-black tracking-widest text-xl">KA.SHA</span>
+                              <span
+                                style={{
+                                  color: "rgba(184,146,90,0.4)",
+                                  fontFamily: "'Cormorant Garamond', serif",
+                                  fontSize: 28,
+                                  letterSpacing: "0.3em",
+                                }}
+                              >
+                                KS
+                              </span>
                             </div>
                           )}
                           {!product.available && (
-                            <div className="absolute top-2 right-2 bg-black text-white text-[9px] font-bold tracking-[0.1em] px-2 py-0.5">
-                              SOLD OUT
+                            <div
+                              className="absolute top-2 right-2 text-white text-[8px] uppercase px-2 py-0.5"
+                              style={{
+                                background: "#B8925A",
+                                fontFamily: "'Josefin Sans', sans-serif",
+                                letterSpacing: "0.2em",
+                              }}
+                            >
+                              Sold Out
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
                         </div>
-                        <h3 className="text-[13px] font-semibold text-black mb-0.5 group-hover:underline">
+                        <h3
+                          className="text-white mb-1 group-hover:!text-[#B8925A] transition-colors"
+                          style={{
+                            fontFamily: "'Cormorant Garamond', serif",
+                            fontSize: 16,
+                            fontWeight: 500,
+                          }}
+                        >
                           {product.name}
                         </h3>
-                        <p className="text-[12px] text-gray-500">{formatPrice(product.priceInPaise)}</p>
+                        <p
+                          style={{
+                            fontFamily: "'Josefin Sans', sans-serif",
+                            fontSize: 10,
+                            letterSpacing: "0.18em",
+                            color: "#B8925A",
+                          }}
+                        >
+                          {formatPrice(product.priceInPaise)}
+                        </p>
                       </Link>
                     </motion.div>
                   );
@@ -430,9 +544,9 @@ export default function ProductsPage() {
 function ProductSkeleton() {
   return (
     <div className="space-y-3">
-      <Skeleton className="aspect-[3/4] w-full rounded-none bg-gray-100" />
-      <Skeleton className="h-4 w-2/3 bg-gray-100" />
-      <Skeleton className="h-3 w-1/3 bg-gray-100" />
+      <Skeleton className="aspect-[3/4] w-full rounded-none bg-white/[0.04]" />
+      <Skeleton className="h-4 w-2/3 bg-white/[0.04]" />
+      <Skeleton className="h-3 w-1/3 bg-white/[0.04]" />
     </div>
   );
 }

@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Show, useClerk, useUser } from "@clerk/react";
-import { ShoppingBag, X, Menu, User as UserIcon, ShieldCheck } from "lucide-react";
+import { ShoppingBag, X, Menu, User as UserIcon, ShieldCheck, Search } from "lucide-react";
 import { getApiUrl } from "@/lib/api";
 import { useGetCart, getGetCartQueryKey } from "@workspace/api-client-react";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,21 +11,30 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { CartDrawer } from "@/components/layout/CartDrawer";
 import { useCart } from "@/contexts/CartContext";
+
+const GOLD = "#B8925A";
+const GOLD_LIGHT = "#D4A96A";
 
 export function Navbar() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const { openCart, isCartOpen, closeCart } = useCart();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [scrolled, setScrolled] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [location] = useLocation();
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     if (!user) { setIsAdmin(false); return; }
-    const checkAdmin = async () => {
+    (async () => {
       try {
         const clerk = (window as any).Clerk;
         const token = clerk?.session ? await clerk.session.getToken() : null;
@@ -35,212 +43,273 @@ export function Navbar() {
         const res = await fetch(`${getApiUrl()}/api/admin/check`, { headers });
         setIsAdmin(res.ok);
       } catch { setIsAdmin(false); }
-    };
-    checkAdmin();
+    })();
   }, [user]);
 
   const { data: cart } = useGetCart({
-    query: {
-      enabled: !!user,
-      queryKey: getGetCartQueryKey()
-    }
+    query: { enabled: !!user, queryKey: getGetCartQueryKey() },
   });
-
   const cartItemCount = cart?.itemCount || 0;
 
-  const mainLinks = [
-    { label: "SHOP", href: "/products" },
-    { label: "CUSTOM STUDIO", href: "/products/1/customize" },
-    { label: "ABOUT", href: "/heritage" },
+  const links = [
+    { label: "Home", href: "/" },
+    { label: "Men's", href: "/products?gender=men" },
+    { label: "Women's", href: "/products?gender=women" },
+    { label: "Kids'", href: "/products?gender=kids" },
   ];
 
-  const categoryLinks = [
-    { label: "MEN", href: "/products?gender=men" },
-    { label: "WOMEN", href: "/products?gender=women" },
-    { label: "KIDS", href: "/products?gender=kids" },
-  ];
+  const isActive = (href: string) => {
+    if (href === "/") return location === "/";
+    if (href.startsWith("/products")) {
+      const target = new URLSearchParams(href.split("?")[1] || "").get("gender");
+      const current = typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("gender")
+        : null;
+      return location.startsWith("/products") && target === current;
+    }
+    return location.startsWith(href);
+  };
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
-        <div className="mx-auto px-6 max-w-[1400px]">
-          {/* Main nav row */}
-          <div className="h-[84px] flex items-center justify-between gap-4">
-            {/* Left: Mobile menu + Logo */}
-            <div className="flex items-center gap-4">
-              <button
-                className="md:hidden flex items-center justify-center w-9 h-9"
-                onClick={() => setMobileOpen(true)}
-              >
-                <Menu className="h-5 w-5 text-black" />
-              </button>
+      <header
+        className="fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-6 md:px-10 transition-colors duration-300"
+        style={{
+          background: scrolled ? "rgba(8,10,18,0.98)" : "rgba(8,10,18,0.92)",
+          borderBottom: "1px solid rgba(184,146,90,0.3)",
+          backdropFilter: "blur(20px)",
+        }}
+      >
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-3 shrink-0">
+          <img
+            src="/images/kasha-logo-new.jpeg"
+            alt="Ka·Sha"
+            className="h-10 w-auto object-contain"
+            style={{ filter: "invert(1) brightness(1.1)", mixBlendMode: "screen" }}
+          />
+          <div className="hidden sm:flex flex-col leading-none">
+            <span
+              className="text-[22px] font-medium text-white"
+              style={{ fontFamily: "'Cormorant Garamond', serif", letterSpacing: "0.15em" }}
+            >
+              Ka·Sha
+            </span>
+            <span
+              className="text-[7px] uppercase mt-0.5"
+              style={{ color: GOLD, letterSpacing: "0.45em", fontFamily: "'Josefin Sans', sans-serif" }}
+            >
+              Premium Golf Apparel
+            </span>
+          </div>
+        </Link>
 
-              <Link href="/" className="flex items-center gap-2 shrink-0">
-                <img
-                  src="/images/kasha-logo.png"
-                  alt="KA.SHA"
-                  className="h-14 w-auto object-contain"
+        {/* Center nav */}
+        <nav className="hidden lg:flex items-center gap-9">
+          {links.map((l) => {
+            const active = isActive(l.href);
+            return (
+              <Link
+                key={l.label}
+                href={l.href}
+                className="relative text-[10px] uppercase transition-colors hover:text-white"
+                style={{
+                  fontFamily: "'Josefin Sans', sans-serif",
+                  letterSpacing: "0.28em",
+                  color: active ? GOLD : "rgba(255,255,255,0.6)",
+                }}
+              >
+                {l.label}
+                <span
+                  className="absolute -bottom-1 left-0 h-px transition-all duration-300"
+                  style={{ width: active ? "100%" : 0, background: GOLD }}
                 />
               </Link>
-            </div>
+            );
+          })}
+          <Link
+            href="/products/1/customize"
+            className="text-[10px] uppercase text-white px-5 py-2 transition-colors"
+            style={{
+              fontFamily: "'Josefin Sans', sans-serif",
+              letterSpacing: "0.2em",
+              background: GOLD,
+            }}
+            onMouseEnter={(e) => ((e.target as HTMLElement).style.background = GOLD_LIGHT)}
+            onMouseLeave={(e) => ((e.target as HTMLElement).style.background = GOLD)}
+          >
+            Custom Studio
+          </Link>
+        </nav>
 
-            {/* Center: Main nav links */}
-            <nav className="hidden md:flex items-center gap-8">
-              {mainLinks.map(link => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  className="text-[13px] font-bold tracking-[0.14em] text-gray-700 hover:text-black transition-colors whitespace-nowrap"
+        {/* Right actions */}
+        <div className="flex items-center gap-4">
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="hidden md:flex items-center gap-1.5 text-[9px] uppercase px-3 py-1.5 border"
+              style={{
+                fontFamily: "'Josefin Sans', sans-serif",
+                letterSpacing: "0.25em",
+                color: GOLD,
+                borderColor: "rgba(184,146,90,0.3)",
+              }}
+            >
+              <ShieldCheck className="w-3 h-3" /> Admin
+            </Link>
+          )}
+          <button
+            className="hidden sm:flex w-8 h-8 items-center justify-center hover:text-white transition-colors"
+            style={{ color: "rgba(255,255,255,0.6)" }}
+            title="Search"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+          <Show when="signed-in">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="w-8 h-8 flex items-center justify-center hover:text-white transition-colors"
+                  style={{ color: "rgba(255,255,255,0.6)" }}
                 >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-
-            {/* Right: Categories + Customise + Account + Cart */}
-            <div className="flex items-center gap-3">
-              <div className="hidden md:flex items-center gap-1">
-                {categoryLinks.map(link => (
-                  <Link
-                    key={link.label}
-                    href={link.href}
-                    className={`text-[13px] font-bold tracking-[0.12em] px-3.5 py-1.5 transition-colors ${
-                      activeCategory === link.label
-                        ? "text-black border-b-2 border-black"
-                        : "text-gray-600 hover:text-black"
-                    }`}
-                    onClick={() => setActiveCategory(link.label)}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-
-              {isAdmin && (
-                <Link href="/admin">
-                  <button className="hidden md:flex items-center gap-1.5 bg-emerald-600 text-white text-[12px] font-bold tracking-[0.14em] px-5 py-3 hover:bg-emerald-700 transition-colors whitespace-nowrap">
-                    <ShieldCheck className="w-3 h-3" /> ADMIN
-                  </button>
-                </Link>
-              )}
-              <Link href="/products/1/customize">
-                <button className="hidden md:flex items-center bg-black text-white text-[12px] font-bold tracking-[0.14em] px-6 py-3 hover:bg-gray-900 transition-colors whitespace-nowrap">
-                  CUSTOMISE
+                  <UserIcon className="w-4 h-4" />
                 </button>
-              </Link>
-
-              <Show when="signed-in">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 transition-colors">
-                      <UserIcon className="h-4.5 w-4.5 text-gray-700" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52 rounded-none shadow-lg border-gray-200">
-                    <div className="px-3 py-2 border-b">
-                      <p className="text-sm font-medium">{user?.fullName || "Account"}</p>
-                      <p className="text-xs text-gray-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
-                    </div>
-                    <DropdownMenuItem asChild>
-                      <Link href="/profile" className="w-full cursor-pointer text-sm">Profile</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/orders" className="w-full cursor-pointer text-sm">Orders</Link>
-                    </DropdownMenuItem>
-                    {isAdmin && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                          <Link href="/admin" className="w-full cursor-pointer text-sm font-semibold text-emerald-700 flex items-center gap-2">
-                            <ShieldCheck className="w-3.5 h-3.5" /> Admin Panel
-                          </Link>
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="cursor-pointer text-sm text-red-600 focus:text-red-600"
-                      onClick={() => signOut()}
-                    >
-                      Sign out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </Show>
-
-              <Show when="signed-out">
-                <Link href="/sign-in">
-                  <button className="hidden sm:flex text-[13px] font-bold tracking-[0.12em] text-gray-700 hover:text-black transition-colors">
-                    SIGN IN
-                  </button>
-                </Link>
-              </Show>
-
-              <button
-                className="flex items-center justify-center w-9 h-9 relative hover:bg-gray-100 rounded-full transition-colors"
-                onClick={openCart}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-52 rounded-none border-0"
+                style={{ background: "#0F1622", border: "1px solid rgba(184,146,90,0.3)", color: "white" }}
               >
-                <ShoppingBag className="h-5 w-5 text-black" />
-                {cartItemCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-bold text-white">
-                    {cartItemCount}
-                  </span>
+                <div className="px-3 py-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                  <p className="text-sm font-medium text-white">{user?.fullName || "Account"}</p>
+                  <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.45)" }}>
+                    {user?.primaryEmailAddress?.emailAddress}
+                  </p>
+                </div>
+                <DropdownMenuItem asChild className="focus:bg-white/5 focus:text-white">
+                  <Link href="/profile" className="w-full cursor-pointer text-sm">Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="focus:bg-white/5 focus:text-white">
+                  <Link href="/orders" className="w-full cursor-pointer text-sm">Orders</Link>
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator className="bg-white/10" />
+                    <DropdownMenuItem asChild className="focus:bg-white/5">
+                      <Link href="/admin" className="w-full cursor-pointer text-sm flex items-center gap-2" style={{ color: GOLD }}>
+                        <ShieldCheck className="w-3.5 h-3.5" /> Admin Panel
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
                 )}
-              </button>
-            </div>
-          </div>
+                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuItem
+                  className="cursor-pointer text-sm text-red-400 focus:text-red-300 focus:bg-white/5"
+                  onClick={() => signOut()}
+                >
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </Show>
+          <Show when="signed-out">
+            <Link
+              href="/sign-in"
+              className="hidden sm:block text-[10px] uppercase hover:text-white transition-colors"
+              style={{
+                fontFamily: "'Josefin Sans', sans-serif",
+                letterSpacing: "0.28em",
+                color: "rgba(255,255,255,0.6)",
+              }}
+            >
+              Sign In
+            </Link>
+          </Show>
+          <button
+            className="w-8 h-8 flex items-center justify-center relative hover:text-white transition-colors"
+            style={{ color: "rgba(255,255,255,0.6)" }}
+            onClick={openCart}
+          >
+            <ShoppingBag className="w-4 h-4" />
+            {cartItemCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                style={{ background: GOLD }}
+              >
+                {cartItemCount}
+              </span>
+            )}
+          </button>
+          <button
+            className="lg:hidden w-8 h-8 flex items-center justify-center"
+            style={{ color: "rgba(255,255,255,0.6)" }}
+            onClick={() => setMobileOpen(true)}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
         </div>
       </header>
 
-      {/* Mobile Menu */}
+      {/* Mobile menu */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col">
-          <div className="flex items-center justify-between px-6 h-16 border-b">
-            <img src="/images/kasha-logo.png" alt="KA.SHA" className="h-9 w-auto object-contain" />
-            <button onClick={() => setMobileOpen(false)}>
-              <X className="h-6 w-6" />
+        <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: "#080A12" }}>
+          <div
+            className="flex items-center justify-between px-6 h-16"
+            style={{ borderBottom: "1px solid rgba(184,146,90,0.3)" }}
+          >
+            <span
+              className="text-[20px] font-medium text-white"
+              style={{ fontFamily: "'Cormorant Garamond', serif", letterSpacing: "0.15em" }}
+            >
+              Ka·Sha
+            </span>
+            <button onClick={() => setMobileOpen(false)} className="text-white/60">
+              <X className="w-6 h-6" />
             </button>
           </div>
-          <nav className="flex flex-col p-6 gap-6">
-            {mainLinks.map(link => (
+          <nav className="flex flex-col p-6 gap-5">
+            {links.map((l) => (
               <Link
-                key={link.label}
-                href={link.href}
-                className="text-[15px] font-bold tracking-[0.1em] text-black"
+                key={l.label}
+                href={l.href}
                 onClick={() => setMobileOpen(false)}
+                className="text-[14px] uppercase text-white/80"
+                style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.28em" }}
               >
-                {link.label}
+                {l.label}
               </Link>
             ))}
-            <div className="border-t pt-4 flex gap-4">
-              {categoryLinks.map(link => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  className="text-sm font-semibold text-gray-700"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-            <Link href="/products/1/customize" onClick={() => setMobileOpen(false)}>
-              <button className="w-full bg-black text-white text-[12px] font-bold tracking-[0.12em] py-3">
-                CUSTOMISE
-              </button>
+            <Link
+              href="/products/1/customize"
+              onClick={() => setMobileOpen(false)}
+              className="mt-3 text-[12px] uppercase text-white text-center py-3"
+              style={{
+                fontFamily: "'Josefin Sans', sans-serif",
+                letterSpacing: "0.2em",
+                background: GOLD,
+              }}
+            >
+              Custom Studio
             </Link>
             <Show when="signed-out">
-              <Link href="/sign-in" onClick={() => setMobileOpen(false)}>
-                <button className="w-full border border-black text-black text-[12px] font-bold tracking-[0.12em] py-3">
-                  SIGN IN
-                </button>
+              <Link
+                href="/sign-in"
+                onClick={() => setMobileOpen(false)}
+                className="text-[12px] uppercase text-center py-3 border"
+                style={{
+                  fontFamily: "'Josefin Sans', sans-serif",
+                  letterSpacing: "0.2em",
+                  color: "rgba(255,255,255,0.7)",
+                  borderColor: "rgba(255,255,255,0.15)",
+                }}
+              >
+                Sign In
               </Link>
             </Show>
           </nav>
         </div>
       )}
 
-      {/* Cart Drawer */}
       <CartDrawer open={isCartOpen} onClose={closeCart} cart={cart} />
     </>
   );
