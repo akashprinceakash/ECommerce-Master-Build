@@ -1,0 +1,237 @@
+Revise and redesign the entire Ka.Sha homepage and product navigation flow according to the attached luxury golf apparel wireframe. Do not directly copy the provided HTML structure, but recreate the same premium visual hierarchy, UI/UX flow, spacing system, layout composition, luxury styling, and customer experience in an original implementation.
+
+Important Requirements:
+
+* Keep the existing header/navbar structure exactly the same as earlier across all pages.
+* Remove “Shop Tailor Prints” from the navbar.
+* Navbar should remain fixed/sticky globally on every page.
+* Page content must begin properly below the fixed navbar with correct spacing/margins so nothing overlaps.
+* Footer remains unchanged across the application.
+
+Overall Design Direction:
+
+* Premium luxury golf apparel brand aesthetic
+* Dark elegant UI with gold/beige accent colors
+* Modern fashion eCommerce experience
+* Smooth hover animations and transitions
+* High-end typography and spacious layout
+* Clean card-based product presentation
+* Responsive across desktop/tablet/mobile
+* UI/UX should visually feel very close to the attached wireframe
+
+Homepage Layout Requirements:
+
+1. Hero Section
+
+* Large luxury hero carousel/banner matching the wireframe style
+* Dark cinematic gradient overlays
+* Premium golf/fashion imagery
+* Smooth carousel transitions
+* CTA buttons:
+
+  * Shop Collection
+  * Custom Studio
+* Slide indicators and progress bar
+* Elegant typography hierarchy
+
+2. Tab-Based Product Categories
+   Create interactive tabs:
+
+* Men’s
+* Women’s
+* Kids
+
+Switch content dynamically without page reload.
+
+Each tab should contain premium category cards similar to the wireframe:
+
+* Luxury image area
+* Product category
+* Product title
+* Small product description
+* Tags/chips
+* Shop CTA
+* Hover scaling animation
+* Rounded corners and subtle borders
+
+Very Important Product Rules:
+Images are extremely important.
+Do NOT use random placeholder images.
+
+The images themselves must clearly communicate:
+
+* Men’s products
+* Women’s products
+* Kids products
+
+Use correct fashion/golf apparel imagery for each category.
+
+Men’s Section:
+
+* Only show men’s t-shirts and men’s trousers
+* No women products should appear here
+
+Women’s Section:
+
+* Only show women’s t-shirts
+* Replace trousers with:
+
+  * Skirts
+  * Skorts
+* If skirts/skorts products are missing, create and add them
+* No men’s products should appear here
+
+Kids Section:
+
+* Boys t-shirts
+* Girls t-shirts
+* Kids bottoms/skorts/trousers
+
+Pattern & Print Navigation Logic:
+You now have a clear structure for patterns and prints based on the wireframe.
+
+“Ka·Sha Signature”
+Text:
+“Solids · 8 colours · 8 patterns · prints”
+
+This section represents:
+
+* GT001 → GT0032 pattern collections
+
+When the user clicks:
+Home → Men’s → Ka·Sha Signature
+
+Navigate to:
+Products Page → Men’s → T-Shirts → Patterns
+
+Display:
+
+* GT001–GT0032 pattern-based products
+* Pattern categories
+* Fabric variations
+* Color variations
+
+“Flair”
+Text:
+“Statement prints & limited-run designs”
+
+When the user clicks:
+Home → Men’s → Flair
+
+Navigate to:
+Products Page → Men’s → T-Shirts → Prints
+
+Display:
+
+* Printed t-shirts
+* Seasonal prints
+* Limited-run print designs
+
+Required Product Structure:
+
+Home → Men’s
+
+1. Ka·Sha Signature
+   → Product Page
+   → Men’s
+   → T-Shirts
+   → Patterns
+   → Trousers
+
+2. Flair
+   → Product Page
+   → Men’s
+   → T-Shirts
+   → Prints
+   → Trousers
+
+Home → Women’s
+
+1. Ka·Sha Signature
+   → Product Page
+   → Women’s
+   → T-Shirts
+   → Patterns
+   → Skirts / Skorts
+
+2. Flair
+   → Product Page
+   → Women’s
+   → T-Shirts
+   → Prints
+   → Skirts / Skorts
+
+Home → Kids
+
+1. Boys’ T-Shirts
+   → Product Page
+   → Kids
+   → T-Shirts
+   → Patterns
+   → Bottoms
+
+2. Girls’ T-Shirts
+   → Product Page
+   → Kids
+   → T-Shirts
+   → Prints
+   → Bottoms
+
+Custom Studio Section:
+
+* Add a premium luxury banner image similar to the wireframe
+* Dark theme with gold accent styling
+* Include:
+
+  * Color customization
+  * Pattern selection
+  * Print selection
+  * Upload logo
+  * Add text
+  * Collar/trim customization
+* CTA:
+  “Start Designing”
+
+3D Customization Page Requirements:
+The 3D customization page theme must perfectly match the Ka.Sha luxury application branding.
+
+Layout Structure:
+
+* Left Sidebar:
+
+  * Text tools
+  * Logos
+  * Designs
+  * Shapes
+  * Uploads
+  * Colors
+  * Layers
+  * Pattern selection
+* Center:
+
+  * Large interactive 3D model viewer
+* Right Bottom Section:
+
+  * Design details
+  * Selected customization info
+  * Product summary
+
+Important:
+
+
+* Make the interface customer-friendly and modern
+* Follow the uploaded reference screenshot style closely
+* Keep the interface clean and easy to understand
+* Luxury customization studio aesthetic
+* Smooth transitions and interactions
+
+Additional UI/UX Expectations:
+
+* Use proper spacing and luxury composition
+* Premium card shadows and borders
+* Elegant typography hierarchy
+* Consistent gold accent usage
+* Smooth hover animations
+* Professional responsive design
+* Keep the visual language consistent throughout all pages
+* Homepage should visually resemble the attached wireframe structure and client expectation while remaining an original implementation.

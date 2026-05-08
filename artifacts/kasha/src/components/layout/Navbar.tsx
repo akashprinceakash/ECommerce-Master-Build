@@ -50,8 +50,7 @@ export function Navbar() {
 
   const mainLinks = [
     { label: "SHOP", href: "/products" },
-    { label: "TAILOR YOUR PLAY", href: "/products?category=bespoke" },
-    { label: "PRINTS", href: "/products?category=prints" },
+    { label: "CUSTOM STUDIO", href: "/products/1/customize" },
     { label: "ABOUT", href: "/heritage" },
   ];
 

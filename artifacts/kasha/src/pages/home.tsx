@@ -1,616 +1,569 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
-import { CartProvider } from "@/contexts/CartContext";
-import { formatPrice } from "@/lib/format";
-import { getLastGender } from "@/lib/genderPreference";
+import { Layout } from "@/components/layout/Layout";
+import { setLastGender, type Gender } from "@/lib/genderPreference";
 
-const POLO_IMAGES = [
-  "/images/golf/polo-pink-black.jpeg",
-  "/images/golf/polo-green-black.jpeg",
-  "/images/golf/polo-pink-curve.jpeg",
-  "/images/golf/polo-beige-brown.png",
-];
-
-const FALLBACK_NAMES = [
-  "Solid Polo — Men's",
-  "Classic Argyle — Men's",
-  "Heritage Stripe — Men's",
-  "Glen Check — Men's",
-  "Houndstooth — Men's",
-  "Geometric — Men's",
-  "Solid Polo — Women's",
-  "Junior Polo — Kids'",
-];
-
-const FALLBACK_BADGES = ["Bestseller", "", "", "New", "", "", "Women's", "Kids'"];
-const FALLBACK_PRICES = [
-  "From ₹ 3,200",
-  "From ₹ 3,600",
-  "From ₹ 3,400",
-  "From ₹ 3,600",
-  "From ₹ 3,600",
-  "From ₹ 3,600",
-  "From ₹ 3,200",
-  "From ₹ 1,800",
-];
-
-const FALLBACK_SWATCHES: string[][] = [
-  ["sw-navy", "sw-white", "sw-forest", "sw-charcoal", "sw-coral", "sw-burg", "sw-olive", "sw-sky"],
-  ["sw-navy", "sw-forest", "sw-burg"],
-  ["sw-navy", "sw-forest", "sw-burg", "sw-sky"],
-  ["sw-navy", "sw-forest", "sw-charcoal"],
-  ["sw-navy", "sw-charcoal", "sw-ivory"],
-  ["sw-navy", "sw-charcoal", "sw-olive"],
-  ["sw-white", "sw-navy", "sw-coral", "sw-sky", "sw-olive"],
-  ["sw-forest", "sw-navy", "sw-coral"],
-];
-
-const SWATCH_HEX: Record<string, string> = {
-  "sw-navy": "#1a2540",
-  "sw-white": "#f0ece4",
-  "sw-forest": "#2e4a34",
-  "sw-charcoal": "#484848",
-  "sw-coral": "#b86040",
-  "sw-burg": "#6e2030",
-  "sw-olive": "#5a6030",
-  "sw-sky": "#5888aa",
-  "sw-ivory": "#e0d8c8",
+type SlideDef = {
+  eye: string;
+  title: React.ReactNode;
+  sub: string;
+  photo: string;
+  primary: { label: string; href: string };
+  secondary?: { label: string; href: string };
 };
 
-function Swatches({ keys, mb = 7 }: { keys: string[]; mb?: number }) {
-  return (
-    <div className="sc-swatches" style={{ display: "flex", gap: 5, marginBottom: mb }}>
-      {keys.map((k, i) => (
-        <div
-          key={i}
-          className={`sw ${k}`}
-          style={{
-            width: 11,
-            height: 11,
-            borderRadius: "50%",
-            border: "0.5px solid rgba(0,0,0,0.12)",
-            background: SWATCH_HEX[k] || "#999",
-          }}
-        />
-      ))}
-    </div>
-  );
-}
+const SLIDES: SlideDef[] = [
+  {
+    eye: "New Season · Golf Collection",
+    title: (
+      <>
+        Dressed for the<br />clubhouse. Built<br />for every birdie.
+      </>
+    ),
+    sub: "Men · Women · Kids · Custom",
+    photo: "/images/hero/slide-1.jpg",
+    primary: { label: "Shop the Collection", href: "/products" },
+    secondary: { label: "Custom Studio", href: "/products/1/customize" },
+  },
+  {
+    eye: "Ready to Wear · 8 Patterns",
+    title: (
+      <>
+        Solids. Stripes.<br />Argyle. Checks.<br />Your course, your style.
+      </>
+    ),
+    sub: "Off-the-shelf · Ships in 5 days",
+    photo: "/images/hero/slide-2.jpg",
+    primary: { label: "Shop T-Shirts", href: "/products?type=tshirts" },
+    secondary: { label: "Custom Studio", href: "/products/1/customize" },
+  },
+  {
+    eye: "Bespoke Studio",
+    title: (
+      <>
+        Your colour.<br />Your logo.<br />Your shirt.
+      </>
+    ),
+    sub: "Colour · Print · Fit · Logo · Text · Trim",
+    photo: "/images/hero/slide-3.jpg",
+    primary: { label: "Open the Custom Studio", href: "/products/1/customize" },
+    secondary: { label: "View collection", href: "/products" },
+  },
+  {
+    eye: "Tournaments · Academies · Clubs",
+    title: (
+      <>
+        One shirt.<br />Five hundred.<br />Delivered on brief.
+      </>
+    ),
+    sub: "Bulk from 12 pieces · Pantone-matched",
+    photo: "/images/hero/slide-4.jpg",
+    primary: { label: "Get a Quote", href: "/products/1/customize" },
+    secondary: { label: "View collection", href: "/products" },
+  },
+];
 
-function HomeInner() {
+type CardDef = {
+  eye: string;
+  title: string;
+  sub: string;
+  tags: string[];
+  href: string;
+  image: string;
+  tone?: "light" | "dark";
+  badge?: string;
+  cta?: string;
+};
+
+const MEN_CARDS: CardDef[] = [
+  {
+    eye: "T-Shirts",
+    title: "Ka·Sha Signature",
+    sub: "Solids · 8 colours · 8 patterns · prints",
+    tags: ["Solid", "8 Patterns", "Prints"],
+    href: "/products?gender=men&type=tshirts&style=patterns",
+    image: "/images/collection/look-3.jpeg",
+    badge: "Core Range",
+  },
+  {
+    eye: "T-Shirts",
+    title: "Flair",
+    sub: "Statement prints & limited-run designs",
+    tags: ["Limited prints", "Seasonal"],
+    href: "/products?gender=men&type=tshirts&style=prints",
+    image: "/images/collection/look-19.jpeg",
+    badge: "Seasonal",
+  },
+  {
+    eye: "Bottoms",
+    title: "Pro Tour Trouser",
+    sub: "Glove dock · Tee holder · 4-way stretch",
+    tags: ["4 colours", "Athletic fit"],
+    href: "/products?gender=men&type=trousers",
+    image: "/images/collection/look-8.jpeg",
+  },
+  {
+    eye: "Bespoke",
+    title: "Custom Studio",
+    sub: "Your colour, logo & fit — 1 piece or 500",
+    tags: ["Design yours"],
+    href: "/products/1/customize",
+    image: "/images/hero/slide-3.jpg",
+    tone: "dark",
+    cta: "Design yours →",
+  },
+];
+
+const WOMEN_CARDS: CardDef[] = [
+  {
+    eye: "T-Shirts",
+    title: "Ka·Sha Signature",
+    sub: "Tailored fit · 8 colours · 8 patterns",
+    tags: ["Tailored", "8 Patterns", "Prints"],
+    href: "/products?gender=women&type=tshirts&style=patterns",
+    image: "/images/collection/look-1.jpeg",
+    badge: "Core Range",
+  },
+  {
+    eye: "T-Shirts",
+    title: "Flair",
+    sub: "Statement prints & limited-run designs",
+    tags: ["Limited prints", "Seasonal"],
+    href: "/products?gender=women&type=tshirts&style=prints",
+    image: "/images/collection/look-15.jpeg",
+    badge: "Seasonal",
+  },
+  {
+    eye: "Bottoms",
+    title: "Pro Tour Skort",
+    sub: "Tailored skirt · Inner shorts · 4-way stretch",
+    tags: ["Skirt", "Skort"],
+    href: "/products?gender=women&type=skirts",
+    image: "/images/collection/look-25.jpeg",
+  },
+  {
+    eye: "Bespoke",
+    title: "Custom Studio",
+    sub: "Tailored to you — 1 piece or 500",
+    tags: ["Design yours"],
+    href: "/products/1/customize",
+    image: "/images/hero/slide-3.jpg",
+    tone: "dark",
+    cta: "Design yours →",
+  },
+];
+
+const KIDS_CARDS: CardDef[] = [
+  {
+    eye: "T-Shirts",
+    title: "Boys' Range",
+    sub: "Junior fit · Patterns & prints",
+    tags: ["Patterns", "Prints"],
+    href: "/products?gender=kids&type=tshirts&style=patterns",
+    image: "/images/hero/slide-kids.png",
+    badge: "Junior",
+  },
+  {
+    eye: "T-Shirts",
+    title: "Girls' Range",
+    sub: "Tailored junior fit · Soft prints",
+    tags: ["Patterns", "Prints"],
+    href: "/products?gender=kids&type=tshirts&style=prints",
+    image: "/images/hero/slide-kids.png",
+    badge: "Junior",
+  },
+  {
+    eye: "Bottoms",
+    title: "Kids' Bottoms",
+    sub: "Trousers, skorts & all-day comfort",
+    tags: ["Trousers", "Skorts"],
+    href: "/products?gender=kids&type=bottoms",
+    image: "/images/hero/slide-kids.png",
+  },
+  {
+    eye: "Bespoke",
+    title: "Custom Studio",
+    sub: "Names, crests, academy colours",
+    tags: ["Design yours"],
+    href: "/products/1/customize",
+    image: "/images/hero/slide-3.jpg",
+    tone: "dark",
+    cta: "Design yours →",
+  },
+];
+
+const TAB_CONFIG: { key: Gender; label: string; cards: CardDef[] }[] = [
+  { key: "men", label: "Men's", cards: MEN_CARDS },
+  { key: "women", label: "Women's", cards: WOMEN_CARDS },
+  { key: "kids", label: "Kids'", cards: KIDS_CARDS },
+];
+
+export default function Home() {
   const [, navigate] = useLocation();
   const [cur, setCur] = useState(0);
-  const [barKey, setBarKey] = useState(0);
+  const [tab, setTab] = useState<Gender>("men");
+  const [progressKey, setProgressKey] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch fabric and pattern t-shirts (the "Ready to Wear Golf T-Shirts")
-  const { data: fabricProducts } = useListProducts(
-    { category: "fabric-tshirt" },
-    { query: { queryKey: getListProductsQueryKey({ category: "fabric-tshirt" }) } }
-  );
-  const { data: patternProducts } = useListProducts(
-    { category: "pattern" },
-    { query: { queryKey: getListProductsQueryKey({ category: "pattern" }) } }
-  );
-
-  const golfShirts = [...(fabricProducts || []), ...(patternProducts || [])].slice(0, 8);
-
+  // Carousel auto-advance
   useEffect(() => {
-    const id = setInterval(() => {
-      setCur((c) => (c + 1) % 4);
-      setBarKey((k) => k + 1);
-    }, 5400);
-    return () => clearInterval(id);
+    intervalRef.current = setInterval(() => {
+      setCur((c) => (c + 1) % SLIDES.length);
+      setProgressKey((k) => k + 1);
+    }, 6500);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, []);
 
-  const goTo = (n: number) => {
-    setCur(((n % 4) + 4) % 4);
-    setBarKey((k) => k + 1);
+  const goTo = (i: number) => {
+    setCur(((i % SLIDES.length) + SLIDES.length) % SLIDES.length);
+    setProgressKey((k) => k + 1);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = setInterval(() => {
+        setCur((c) => (c + 1) % SLIDES.length);
+        setProgressKey((k) => k + 1);
+      }, 6500);
+    }
+  };
+
+  const handleTabChange = (g: Gender) => {
+    setTab(g);
+    setLastGender(g);
   };
 
   return (
-    <div className="kasha-page">
+    <Layout>
       <style>{`
-        .kasha-page, .kasha-page *, .kasha-page *::before, .kasha-page *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        .kasha-page { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background:#f5f3ef; color:#1a1a1a; overflow-x:hidden; min-height:100vh; }
-        .kasha-page a { text-decoration:none; }
-        .kasha-page ul { list-style:none; }
-
-        /* NAV */
-        .kp-nav { position: fixed; top:0; left:0; right:0; z-index:200; height:56px; background: rgba(245,243,239,0.97); border-bottom:.5px solid #c8c4bc; display:flex; align-items:center; padding:0 48px; }
-        .kp-nav-left { display:flex; gap:28px; align-items:center; }
-        .kp-nav-left a { font-size:10px; letter-spacing:.2em; color:#0f1622; text-transform:uppercase; opacity:.55; transition:opacity .2s; }
-        .kp-nav-left a:hover { opacity:1; }
-        .kp-nav-brand { position:absolute; left:50%; transform:translateX(-50%); font-size:19px; font-weight:200; letter-spacing:.42em; color:#0f1622; text-transform:uppercase; white-space:nowrap; }
-        .kp-nav-brand em { color:#B8925A; font-style:normal; }
-        .kp-nav-right { margin-left:auto; display:flex; gap:24px; align-items:center; }
-        .kp-nav-right a { font-size:10px; letter-spacing:.18em; color:#0f1622; text-transform:uppercase; opacity:.55; transition:opacity .2s; }
-        .kp-nav-right a:hover { opacity:1; }
-        .kp-nav-shop { font-size:9px !important; letter-spacing:.22em !important; color:#0f1622 !important; background:#B8925A !important; padding:7px 16px; opacity:1 !important; }
-        .kp-nav-shop:hover { background:#ca9f64 !important; }
-
-        /* HERO */
-        .kp-hero { margin-top:56px; position:relative; height: calc(100vh - 56px); min-height:580px; overflow:hidden; }
-        .kp-slide { position:absolute; inset:0; opacity:0; transition: opacity 1.2s ease; display:flex; align-items:flex-end; }
-        .kp-slide.active { opacity:1; }
-        .kp-slide::after { content:''; position:absolute; inset:0; background: linear-gradient(to bottom, transparent 28%, rgba(8,10,18,0.72) 100%); }
-        .kp-s1 { background: linear-gradient(155deg,#1a2535 0%,#2d3f52 45%,#8aaab8 100%) center/cover no-repeat, #1a2535; }
-        .kp-s2 { background: linear-gradient(148deg,#1c2d20 0%,#304838 48%,#6a9878 100%) center/cover no-repeat, #1c2d20; }
-        .kp-s3 { background: linear-gradient(152deg,#2c1f12 0%,#4a3522 48%,#b09060 100%) center/cover no-repeat, #2c1f12; }
-        .kp-s4 { background: linear-gradient(150deg,#1e1a2c 0%,#2e2848 48%,#8070b0 100%) center/cover no-repeat, #1e1a2c; }
-        .kp-photo { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center; z-index:0; }
-        .kp-slide::before { content:''; position:absolute; inset:0; background: linear-gradient(135deg, rgba(8,10,18,0.55) 0%, rgba(8,10,18,0.25) 50%, rgba(8,10,18,0.15) 100%); z-index:1; }
-        .kp-slide-content { position:relative; z-index:2; padding: 0 64px 72px; }
-        .kp-eye { font-size:9px; letter-spacing:.36em; color:#B8925A; text-transform:uppercase; margin-bottom:14px; opacity:0; transform:translateY(12px); transition: opacity .7s ease .3s, transform .7s ease .3s; }
-        .kp-slide.active .kp-eye { opacity:1; transform:translateY(0); }
-        .kp-head { font-size: clamp(38px,5.5vw,66px); font-weight:200; letter-spacing:.04em; color:#fff; line-height:1.12; margin-bottom:16px; opacity:0; transform:translateY(18px); transition: opacity .85s ease .5s, transform .85s ease .5s; }
-        .kp-slide.active .kp-head { opacity:1; transform:translateY(0); }
-        .kp-sub { font-size:11px; letter-spacing:.18em; color:rgba(255,255,255,.48); text-transform:uppercase; margin-bottom:34px; opacity:0; transform:translateY(10px); transition: opacity .7s ease .7s, transform .7s ease .7s; }
-        .kp-slide.active .kp-sub { opacity:1; transform:translateY(0); }
-        .kp-btn { display:inline-block; font-size:9px; letter-spacing:.26em; color:#0f1622; background:#B8925A; padding:13px 28px; text-transform:uppercase; opacity:0; transform:translateY(8px); transition: opacity .65s ease .9s, transform .65s ease .9s, background .2s; cursor:pointer; }
-        .kp-slide.active .kp-btn { opacity:1; transform:translateY(0); }
-        .kp-btn:hover { background:#ca9f64; }
-        .kp-cbadge { display:inline-flex; align-items:center; gap:8px; margin-bottom:20px; font-size:9px; letter-spacing:.26em; color:rgba(255,255,255,.6); text-transform:uppercase; opacity:0; transform:translateY(10px); transition: opacity .7s ease .7s, transform .7s ease .7s; }
-        .kp-slide.active .kp-cbadge { opacity:1; transform:translateY(0); }
-        .kp-cbadge::before { content:''; width:20px; height:1px; background:#B8925A; }
-        .kp-dots { position:absolute; bottom:28px; right:64px; z-index:10; display:flex; gap:8px; align-items:center; }
-        .kp-dot { width:5px; height:5px; background:rgba(255,255,255,.3); cursor:pointer; transition:all .3s; }
-        .kp-dot.active { width:22px; background:#B8925A; }
-        .kp-bar { position:absolute; bottom:0; left:0; height:1.5px; background:#B8925A; width:0%; z-index:10; animation: kp-bar 5.2s linear forwards; }
-        @keyframes kp-bar { from { width:0%; } to { width:100%; } }
-
-        /* SECTION HEADER */
-        .kp-sec { padding: 52px 48px 28px; display:flex; align-items:baseline; justify-content:space-between; border-bottom:.5px solid #c8c4bc; }
-        .kp-sec-left .kp-sec-eye { font-size:9px; letter-spacing:.32em; color:#B8925A; text-transform:uppercase; margin-bottom:8px; }
-        .kp-sec-left h2 { font-size:20px; font-weight:200; letter-spacing:.14em; color:#0f1622; text-transform:uppercase; }
-        .kp-sec-right { font-size:9.5px; letter-spacing:.18em; color:#888; text-transform:uppercase; border-bottom:.5px solid #c8c4bc; padding-bottom:2px; white-space:nowrap; transition: color .2s, border-color .2s; }
-        .kp-sec-right:hover { color:#B8925A; border-color:#B8925A; }
-
-        /* SHIRT GRID */
-        .kp-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:1px; background:#c8c4bc; }
-        .kp-card { background:#f5f3ef; cursor:pointer; position:relative; color:inherit; display:block; }
-        .kp-card:hover .kp-cimg { transform: scale(1.04); }
-        .kp-card:hover .kp-hover { opacity:1; }
-        .kp-cwrap { aspect-ratio: 3/4; overflow:hidden; position:relative; background:#eceae4; }
-        .kp-cimg { width:100%; height:100%; display:flex; align-items:center; justify-content:center; transition: transform .55s ease; position:relative; }
-        .kp-cimg img { width:100%; height:100%; object-fit:cover; object-position:center; display:block; }
-        .kp-badge { position:absolute; top:12px; left:12px; font-size:7.5px; letter-spacing:.2em; color:#fff; background:#B8925A; padding:3px 9px; text-transform:uppercase; z-index:2; }
-        .kp-hover { position:absolute; bottom:0; left:0; right:0; background:#0f1622; color:#fff; text-align:center; font-size:8.5px; letter-spacing:.22em; text-transform:uppercase; padding:11px; opacity:0; transition: opacity .22s; z-index:2; }
-        .kp-cinfo { padding:14px 16px 18px; background:#fff; }
-        .kp-cname { font-size:10.5px; font-weight:400; letter-spacing:.14em; color:#0f1622; text-transform:uppercase; margin-bottom:6px; }
-        .kp-cprice { font-size:10px; letter-spacing:.1em; color:#555; font-weight:300; }
-
-        /* BOTTOMS */
-        .kp-brow { display:grid; grid-template-columns: 1fr 1fr; gap:1px; background:#c8c4bc; margin-top:1px; }
-        .kp-bcard { background:#fff; display:grid; grid-template-columns: 200px 1fr; cursor:pointer; }
-        .kp-bcard:hover .kp-cimg { transform: scale(1.03); }
-        .kp-bcard .kp-cwrap { aspect-ratio: auto; min-height: 220px; }
-        .kp-binfo { padding:24px; display:flex; flex-direction:column; justify-content:center; }
-        .kp-bname { font-size:11px; font-weight:400; letter-spacing:.14em; color:#0f1622; text-transform:uppercase; margin-bottom:4px; }
-        .kp-bsub { font-size:10px; letter-spacing:.06em; color:#888; margin-bottom:10px; }
-        .kp-feats { margin-bottom:12px; }
-        .kp-feats li { font-size:9.5px; letter-spacing:.1em; color:#888; text-transform:uppercase; padding:4px 0; border-bottom:.5px solid #eee; display:flex; align-items:center; gap:9px; }
-        .kp-feats li::before { content:''; width:12px; height:1px; background:#B8925A; flex-shrink:0; }
-        .kp-bprice { font-size:10px; letter-spacing:.1em; color:#555; }
-        .kp-trouser { background: linear-gradient(160deg,#1a2540,#263050); width:100%; height:100%; }
-        .kp-skort { background: linear-gradient(155deg,#2a1e2e,#4a3258); width:100%; height:100%; }
-
-        /* CUSTOM */
-        .kp-cb { background:#0f1622; border-left:3px solid #B8925A; padding:48px 64px; display:flex; align-items:center; justify-content:space-between; gap:48px; }
-        .kp-cbeye { font-size:9px; letter-spacing:.32em; color:#B8925A; text-transform:uppercase; margin-bottom:12px; }
-        .kp-cbh { font-size:24px; font-weight:200; letter-spacing:.1em; color:#fff; line-height:1.38; }
-        .kp-cbacts { display:flex; flex-direction:column; align-items:flex-start; gap:10px; flex-shrink:0; }
-        .kp-cbcta { font-size:9px; letter-spacing:.26em; color:#0f1622; background:#B8925A; padding:13px 28px; text-transform:uppercase; border:none; cursor:pointer; white-space:nowrap; transition:background .2s; }
-        .kp-cbcta:hover { background:#ca9f64; }
-        .kp-cblink { font-size:9px; letter-spacing:.18em; color:rgba(255,255,255,.38); text-transform:uppercase; cursor:pointer; background:none; border:none; border-bottom:.5px solid rgba(255,255,255,.2); padding:0 0 2px; transition:color .2s; }
-        .kp-cblink:hover { color:rgba(255,255,255,.7); }
-        .kp-cgrid { display:grid; grid-template-columns: repeat(6, 1fr); gap:1px; background:#c8c4bc; }
-        .kp-cc { background:#fff; padding:24px 20px 22px; }
-        .kp-ccn { font-size:8px; letter-spacing:.28em; color:#B8925A; text-transform:uppercase; margin-bottom:8px; }
-        .kp-cct { font-size:10.5px; font-weight:500; letter-spacing:.14em; color:#0f1622; text-transform:uppercase; margin-bottom:8px; }
-        .kp-cctags { display:flex; flex-wrap:wrap; gap:3px; }
-        .kp-cctag { font-size:7.5px; letter-spacing:.1em; color:#666; background:#f0ede7; padding:2px 7px; text-transform:uppercase; }
-
-        /* USE CASES */
-        .kp-uc-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:1px; background:#c8c4bc; }
-        .kp-uc { background:#fff; padding:28px 26px; }
-        .kp-ucn { font-size:8px; letter-spacing:.3em; color:#B8925A; text-transform:uppercase; margin-bottom:10px; }
-        .kp-uct { font-size:12px; font-weight:500; letter-spacing:.12em; color:#0f1622; text-transform:uppercase; margin-bottom:8px; }
-        .kp-ucb { font-size:12.5px; line-height:1.72; color:#666; margin-bottom:12px; }
-        .kp-uctags { display:flex; flex-wrap:wrap; gap:4px; }
-        .kp-uctag { font-size:8px; letter-spacing:.1em; color:#0f1622; background:#f0ede7; padding:2px 9px; text-transform:uppercase; }
-        .kp-uc.wide { grid-column: 1 / -1; display:grid; grid-template-columns: 1fr 2fr; gap:28px; align-items:center; }
-        .kp-uc.wide .kp-ucl { border-right:.5px solid #e8e4de; padding-right:28px; }
-
-        /* CTA STRIP */
-        .kp-cta { background:#0f1622; padding:26px 48px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
-        .kp-cta span { font-size:12px; font-weight:200; letter-spacing:.16em; color:#fff; text-transform:uppercase; }
-        .kp-cta button { font-size:9px; letter-spacing:.24em; color:#0f1622; background:#B8925A; padding:11px 24px; text-transform:uppercase; border:none; cursor:pointer; white-space:nowrap; transition:background .2s; }
-        .kp-cta button:hover { background:#ca9f64; }
-
-        /* FOOTER */
-        .kp-footer { background:#0f1622; padding:48px 48px 32px; }
-        .kp-fcols { display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap:40px; padding-bottom:36px; border-bottom:.5px solid rgba(255,255,255,.07); margin-bottom:28px; }
-        .kp-fbrand { font-size:20px; font-weight:200; letter-spacing:.42em; color:#fff; margin-bottom:10px; }
-        .kp-fbrand em { color:#B8925A; font-style:normal; }
-        .kp-ftag { font-size:9.5px; letter-spacing:.14em; color:rgba(255,255,255,.28); text-transform:uppercase; line-height:1.9; }
-        .kp-fcol h4 { font-size:8px; letter-spacing:.3em; color:rgba(255,255,255,.3); text-transform:uppercase; margin-bottom:16px; padding-bottom:8px; border-bottom:.5px solid rgba(255,255,255,.06); font-weight:500; }
-        .kp-fcol a { display:block; font-size:10px; letter-spacing:.1em; color:rgba(255,255,255,.45); text-transform:uppercase; margin-bottom:10px; transition: color .2s; }
-        .kp-fcol a:hover { color:#B8925A; }
-        .kp-fbot { display:flex; justify-content:space-between; align-items:center; }
-        .kp-fcopy { font-size:9px; letter-spacing:.1em; color:rgba(255,255,255,.18); text-transform:uppercase; }
-        .kp-fmade { font-size:9px; letter-spacing:.18em; color:rgba(184,146,90,.35); text-transform:uppercase; }
-
-        @media (max-width: 1000px) {
-          .kp-grid { grid-template-columns: repeat(2, 1fr); }
-          .kp-cgrid { grid-template-columns: repeat(3, 1fr); }
-          .kp-brow { grid-template-columns: 1fr; }
-        }
-        @media (max-width: 700px) {
-          .kp-nav { padding: 0 20px; }
-          .kp-nav-left { gap: 14px; }
-          .kp-nav-right { gap: 12px; }
-          .kp-sec, .kp-cta { padding-left:20px; padding-right:20px; }
-          .kp-slide-content { padding: 0 24px 52px; }
-          .kp-head { font-size:32px; }
-          .kp-uc-grid { grid-template-columns: 1fr; }
-          .kp-uc.wide { grid-template-columns: 1fr; }
-          .kp-uc.wide .kp-ucl { border-right:none; border-bottom:.5px solid #e8e4de; padding-right:0; padding-bottom:18px; }
-          .kp-cb { flex-direction:column; padding:32px 24px; gap:24px; }
-          .kp-fcols { grid-template-columns: 1fr 1fr; gap:28px; }
-          .kp-cgrid { grid-template-columns: repeat(2, 1fr); }
-        }
+        @keyframes ks-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+        @keyframes ks-fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
 
-      {/* NAV */}
-      <nav className="kp-nav">
-        <div className="kp-nav-left">
-          <Link href="/products?gender=men">Men</Link>
-          <Link href="/products?gender=women">Women</Link>
-          <Link href="/products?gender=kids">Kids</Link>
-        </div>
-        <Link href="/" className="kp-nav-brand">
-          Ka<em>.</em>Sha
-        </Link>
-        <div className="kp-nav-right">
-          <Link href="/products/1/customize">Bespoke &amp; Custom</Link>
-          <Link href="/products" className="kp-nav-shop">Shop Now</Link>
-        </div>
-      </nav>
-
       {/* HERO CAROUSEL */}
-      <section id="hero" className="kp-hero">
-        <div className={`kp-slide kp-s1 ${cur === 0 ? "active" : ""}`}>
-          <img className="kp-photo" src="/images/hero/slide-1.jpg" alt="" />
-          <div className="kp-slide-content">
-            <div className="kp-eye">New Season · Golf Collection</div>
-            <div className="kp-head">
-              Dressed for the<br />clubhouse. Built<br />for every birdie.
+      <section
+        className="relative w-full overflow-hidden bg-[#0f1622]"
+        style={{ height: "min(86vh, 760px)" }}
+      >
+        {SLIDES.map((s, i) => (
+          <div
+            key={i}
+            className={`absolute inset-0 transition-opacity duration-700 ${
+              i === cur ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+            }`}
+          >
+            <img
+              src={s.photo}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-black/80" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/15 to-transparent" />
+
+            <div className="relative z-10 h-full max-w-[1400px] mx-auto px-6 md:px-12 flex flex-col justify-end pb-24">
+              <div
+                className="text-[11px] tracking-[0.32em] uppercase mb-5"
+                style={{ color: "#B8925A", animation: i === cur ? "ks-fade-up 700ms ease both" : "none" }}
+              >
+                {s.eye}
+              </div>
+              <h1
+                className="text-white font-light leading-[1.05] mb-6"
+                style={{
+                  fontSize: "clamp(36px, 6vw, 76px)",
+                  fontFamily: "'Playfair Display', Georgia, serif",
+                  animation: i === cur ? "ks-fade-up 800ms ease both 60ms" : "none",
+                }}
+              >
+                {s.title}
+              </h1>
+              <div
+                className="text-[11px] tracking-[0.22em] uppercase text-white/60 mb-8"
+                style={{ animation: i === cur ? "ks-fade-up 700ms ease both 120ms" : "none" }}
+              >
+                {s.sub}
+              </div>
+              <div
+                className="flex flex-wrap gap-3"
+                style={{ animation: i === cur ? "ks-fade-up 700ms ease both 180ms" : "none" }}
+              >
+                <Link
+                  href={s.primary.href}
+                  className="inline-block text-[11px] tracking-[0.24em] uppercase text-black px-7 py-3.5 transition-colors hover:brightness-110"
+                  style={{ background: "#B8925A" }}
+                >
+                  {s.primary.label}
+                </Link>
+                {s.secondary && (
+                  <Link
+                    href={s.secondary.href}
+                    className="inline-block text-[11px] tracking-[0.24em] uppercase text-white/85 px-7 py-3.5 border border-white/30 hover:bg-white/10 transition-colors"
+                  >
+                    {s.secondary.label}
+                  </Link>
+                )}
+              </div>
             </div>
-            <div className="kp-sub">Technical golfwear · Men · Women · Kids</div>
-            <Link href="/products" className="kp-btn">
-              Shop the Collection
-            </Link>
           </div>
-        </div>
-        <div className={`kp-slide kp-s2 ${cur === 1 ? "active" : ""}`}>
-          <img className="kp-photo" src="/images/hero/slide-2.jpg" alt="" />
-          <div className="kp-slide-content">
-            <div className="kp-eye">Ready to Wear · 8 Patterns</div>
-            <div className="kp-head">
-              Solids. Stripes.<br />Argyle. Checks.<br />Your course, your style.
-            </div>
-            <div className="kp-sub">Off-the-shelf · Ships in 5 days</div>
+        ))}
+
+        {/* Slide indicators */}
+        <div className="absolute z-20 bottom-7 right-8 flex items-center gap-2.5">
+          {SLIDES.map((_, i) => (
             <button
-              type="button"
-              className="kp-btn"
-              onClick={() => {
-                const g = getLastGender();
-                const sp = new URLSearchParams();
-                if (g) sp.set("gender", g);
-                sp.set("type", "tshirts");
-                navigate(`/products?${sp.toString()}`);
-              }}
-            >
-              Shop T-Shirts
-            </button>
-          </div>
-        </div>
-        <div className={`kp-slide kp-s3 ${cur === 2 ? "active" : ""}`}>
-          <img className="kp-photo" src="/images/hero/slide-3.jpg" alt="" />
-          <div className="kp-slide-content">
-            <div className="kp-eye">Bespoke Studio</div>
-            <div className="kp-head">
-              Your colour.<br />Your logo.<br />Your shirt.
-            </div>
-            <div className="kp-cbadge">Colour · Print · Fit · Logo · Text · Trim</div>
-            <Link href="/products/1/customize" className="kp-btn">
-              Open the Custom Studio
-            </Link>
-          </div>
-        </div>
-        <div className={`kp-slide kp-s4 ${cur === 3 ? "active" : ""}`}>
-          <img className="kp-photo" src="/images/hero/slide-4.jpg" alt="" />
-          <div className="kp-slide-content">
-            <div className="kp-eye">Tournaments · Academies · Clubs</div>
-            <div className="kp-head">
-              One shirt.<br />Five hundred.<br />Delivered on brief.
-            </div>
-            <div className="kp-sub">Bulk from 12 pieces · Pantone-matched</div>
-            <Link href="/products/1/customize" className="kp-btn">
-              Get a Quote
-            </Link>
-          </div>
-        </div>
-        <div className="kp-dots">
-          {[0, 1, 2, 3].map((i) => (
-            <div
               key={i}
-              className={`kp-dot ${i === cur ? "active" : ""}`}
               onClick={() => goTo(i)}
+              aria-label={`Go to slide ${i + 1}`}
+              className="block transition-all"
+              style={
+                i === cur
+                  ? { width: 26, height: 4, borderRadius: 2, background: "#B8925A" }
+                  : { width: 6, height: 6, borderRadius: 999, background: "rgba(255,255,255,0.35)" }
+              }
             />
           ))}
         </div>
-        <div key={`bar-${barKey}-${cur}`} className="kp-bar" />
+
+        {/* Progress bar */}
+        <div className="absolute z-20 bottom-0 left-0 right-0 h-[2px] bg-white/10">
+          <div
+            key={progressKey}
+            className="h-full origin-left"
+            style={{
+              background: "#B8925A",
+              animation: "ks-progress 6500ms linear forwards",
+            }}
+          />
+        </div>
       </section>
 
-      {/* T-SHIRT GRID */}
-      <div id="shop">
-        <div className="kp-sec">
-          <div className="kp-sec-left">
-            <div className="kp-sec-eye">Ready to Wear</div>
-            <h2>Golf T-Shirts</h2>
+      {/* TAB-BASED CATEGORY GRID */}
+      <section className="bg-[#f5f3ef] py-16 md:py-24 px-4 md:px-6">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="text-center mb-10">
+            <div className="text-[10px] tracking-[0.32em] uppercase text-[#B8925A] mb-3">
+              The Collection
+            </div>
+            <h2
+              className="text-black font-light"
+              style={{ fontSize: "clamp(28px, 3.6vw, 44px)", fontFamily: "'Playfair Display', Georgia, serif" }}
+            >
+              Find your range
+            </h2>
           </div>
-          <Link href="/products" className="kp-sec-right">View all →</Link>
+
+          {/* Tab row */}
+          <div className="flex justify-center mb-10">
+            <div className="inline-flex border border-gray-300 bg-white">
+              {TAB_CONFIG.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => handleTabChange(t.key)}
+                  className={`px-7 md:px-10 py-3 text-[11px] tracking-[0.22em] uppercase font-medium transition-colors ${
+                    tab === t.key
+                      ? "bg-[#0f1622] text-white"
+                      : "text-gray-500 hover:text-black"
+                  }`}
+                  aria-pressed={tab === t.key}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Cards grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {TAB_CONFIG.find((t) => t.key === tab)!.cards.map((c, i) => (
+              <CategoryCard key={`${tab}-${i}`} card={c} />
+            ))}
+          </div>
         </div>
+      </section>
 
-        <div className="kp-grid">
-          {(golfShirts.length > 0 ? golfShirts : Array.from({ length: 8 })).map((p: any, idx) => {
-            const img = POLO_IMAGES[idx % POLO_IMAGES.length];
-            const badge = FALLBACK_BADGES[idx % FALLBACK_BADGES.length];
-            const swatches = FALLBACK_SWATCHES[idx % FALLBACK_SWATCHES.length];
-            const productId = p?.id;
-            const name = p?.name || FALLBACK_NAMES[idx % FALLBACK_NAMES.length];
-            const price = p ? formatPrice(p.priceInPaise) : FALLBACK_PRICES[idx % FALLBACK_PRICES.length];
+      {/* CUSTOM STUDIO BANNER */}
+      <section className="bg-[#0f1622] text-white px-4 md:px-6 py-16 md:py-20">
+        <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-10 items-center">
+          <div>
+            <div className="text-[10px] tracking-[0.34em] uppercase text-[#B8925A] mb-4">
+              Bespoke &amp; Custom
+            </div>
+            <h2
+              className="font-light mb-6 leading-[1.08]"
+              style={{ fontSize: "clamp(30px, 4vw, 52px)", fontFamily: "'Playfair Display', Georgia, serif" }}
+            >
+              Every detail — yours to design.<br />
+              <span className="text-white/60">One shirt or five hundred.</span>
+            </h2>
+            <p className="text-white/65 text-[14px] leading-relaxed max-w-lg mb-8">
+              Choose your colour, pick a print, drop in your logo, set the fit — our 3D Custom Studio
+              shows it all in real time before you commit.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-10 max-w-xl">
+              {[
+                "Colour",
+                "Pattern",
+                "Print",
+                "Upload Logo",
+                "Add Text",
+                "Collar / Trim",
+              ].map((f, i) => (
+                <div
+                  key={f}
+                  className="flex items-center gap-3 text-[12px] tracking-[0.08em] text-white/80"
+                >
+                  <span className="text-[#B8925A] text-[10px] tracking-[0.2em]">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  {f}
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => navigate("/products/1/customize")}
+              className="inline-flex items-center gap-3 text-[11px] tracking-[0.26em] uppercase text-black px-9 py-4 transition-colors hover:brightness-110"
+              style={{ background: "#B8925A" }}
+            >
+              Start Designing →
+            </button>
+          </div>
 
-            const inner = (
-              <>
-                <div className="kp-cwrap">
-                  <div className="kp-cimg">
-                    <img src={img} alt={name} />
+          <div className="relative aspect-[4/5] overflow-hidden border border-white/10">
+            <img
+              src="/images/hero/slide-3.jpg"
+              alt="Bespoke studio preview"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-tr from-black/60 via-transparent to-transparent" />
+            <div className="absolute bottom-5 left-5 right-5 flex items-center justify-between text-white/85">
+              <div className="text-[10px] tracking-[0.26em] uppercase">3D Studio · Live Preview</div>
+              <div className="text-[10px] tracking-[0.26em] uppercase text-[#B8925A]">Step 1 / 6</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* USE CASES STRIP */}
+      <section className="bg-white py-16 md:py-20 px-4 md:px-6">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="text-center mb-12">
+            <div className="text-[10px] tracking-[0.32em] uppercase text-[#B8925A] mb-3">
+              Built For
+            </div>
+            <h2
+              className="text-black font-light"
+              style={{ fontSize: "clamp(26px, 3.2vw, 38px)", fontFamily: "'Playfair Display', Georgia, serif" }}
+            >
+              Tournaments, academies &amp; clubs.
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {[
+              { n: "01", t: "Tournaments", d: "Player names, sponsor logos. From 12 pieces, mixed sizes.", img: "/images/collection/look-13.jpeg" },
+              { n: "02", t: "Academies", d: "Academy crest, student names. All sizes accommodated.", img: "/images/collection/look-26.jpeg" },
+              { n: "03", t: "Corporate", d: "Brand logo across five placements, colour-matched.", img: "/images/collection/look-9.jpeg" },
+              { n: "04", t: "Personal", d: "Single-piece orders. Your fit, your initials, your print.", img: "/images/collection/look-21.jpeg" },
+            ].map((u) => (
+              <div key={u.n} className="group">
+                <div className="relative aspect-[4/5] overflow-hidden bg-gray-100 mb-4">
+                  <img
+                    src={u.img}
+                    alt={u.t}
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute top-3 left-3 text-[9px] tracking-[0.24em] uppercase text-white/85 bg-black/45 px-2 py-1">
+                    {u.n}
                   </div>
-                  {badge && <div className="kp-badge">{badge}</div>}
-                  <div className="kp-hover">Quick View</div>
                 </div>
-                <div className="kp-cinfo">
-                  <div className="kp-cname">{name}</div>
-                  <Swatches keys={swatches} />
-                  <div className="kp-cprice">{price}</div>
-                </div>
-              </>
-            );
-
-            return productId ? (
-              <Link key={productId} href={`/products/${productId}`} className="kp-card">
-                {inner}
-              </Link>
-            ) : (
-              <div key={`fb-${idx}`} className="kp-card" onClick={() => navigate("/products")}>
-                {inner}
+                <h3 className="text-[15px] font-medium text-black mb-1.5">{u.t}</h3>
+                <p className="text-[12px] text-gray-500 leading-relaxed">{u.d}</p>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
+      </section>
 
-        {/* BOTTOMS */}
-        <div className="kp-sec" style={{ paddingTop: 40 }}>
-          <div className="kp-sec-left">
-            <div className="kp-sec-eye">Bottoms</div>
-            <h2>Trousers &amp; Skorts</h2>
+      {/* CLOSING CTA */}
+      <section className="bg-[#0f1622] text-white px-4 md:px-6 py-12">
+        <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="text-[12px] tracking-[0.22em] uppercase text-white/85 text-center md:text-left">
+            Start your order — one shirt or five hundred
           </div>
-          <Link href="/products" className="kp-sec-right">View all →</Link>
+          <Link
+            href="/products/1/customize"
+            className="inline-block text-[11px] tracking-[0.26em] uppercase text-black px-8 py-3.5 transition-colors hover:brightness-110"
+            style={{ background: "#B8925A" }}
+          >
+            Open the Custom Studio
+          </Link>
         </div>
-
-        <div className="kp-brow">
-          <div className="kp-bcard" onClick={() => navigate("/products")}>
-            <div className="kp-cwrap">
-              <div className="kp-cimg"><div className="kp-trouser" /></div>
-              <div className="kp-badge">Men's</div>
-            </div>
-            <div className="kp-binfo">
-              <div className="kp-bname">Pro Tour Trouser</div>
-              <div className="kp-bsub">Slim tapered · 4-way stretch</div>
-              <ul className="kp-feats">
-                <li>Velcro glove dock</li>
-                <li>3-slot tee holder</li>
-                <li>Zippered security pocket</li>
-              </ul>
-              <Swatches keys={["sw-navy", "sw-charcoal", "sw-ivory", "sw-olive"]} mb={8} />
-              <div className="kp-bprice">From ₹ 5,800</div>
-            </div>
-          </div>
-
-          <div className="kp-bcard" onClick={() => navigate("/products")}>
-            <div className="kp-cwrap">
-              <div className="kp-cimg"><div className="kp-skort" /></div>
-              <div className="kp-badge">Women's</div>
-            </div>
-            <div className="kp-binfo">
-              <div className="kp-bname">Pro Tour Skort</div>
-              <div className="kp-bsub">Tailored fit · Technical stretch</div>
-              <ul className="kp-feats">
-                <li>Inner shorts panel</li>
-                <li>Full swing freedom</li>
-                <li>Clubhouse-ready finish</li>
-              </ul>
-              <Swatches keys={["sw-navy", "sw-charcoal", "sw-ivory"]} mb={8} />
-              <div className="kp-bprice">From ₹ 4,200</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* CUSTOM SECTION */}
-      <div id="custom">
-        <div className="kp-cb">
-          <div>
-            <div className="kp-cbeye">Bespoke &amp; Custom</div>
-            <div className="kp-cbh">
-              Every detail — yours to design.
-              <br />
-              One shirt or five hundred.
-            </div>
-          </div>
-          <div className="kp-cbacts">
-            <button className="kp-cbcta" onClick={() => navigate("/products/1/customize")}>
-              Open the Custom Studio
-            </button>
-            <button className="kp-cblink" onClick={() => navigate("/products")}>
-              Bulk &amp; corporate pricing →
-            </button>
-          </div>
-        </div>
-
-        <div className="kp-cgrid">
-          {[
-            { n: "01", t: "Colour", tags: ["Pantone match", "Club colours"] },
-            { n: "02", t: "Print", tags: ["40+ prints", "Custom artwork"] },
-            { n: "03", t: "Fit & Size", tags: ["Athletic", "Classic", "Custom size"] },
-            { n: "04", t: "Logo", tags: ["5 placements", "Embroider / print"] },
-            { n: "05", t: "Text", tags: ["Name", "Initials", "Club text"] },
-            { n: "06", t: "Collar & Trim", tags: ["Contrast collar", "Tipping"] },
-          ].map((c) => (
-            <div className="kp-cc" key={c.n}>
-              <div className="kp-ccn">{c.n}</div>
-              <div className="kp-cct">{c.t}</div>
-              <div className="kp-cctags">
-                {c.tags.map((t) => (
-                  <span className="kp-cctag" key={t}>{t}</span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* USE CASES */}
-      <div className="kp-sec">
-        <div className="kp-sec-left">
-          <div className="kp-sec-eye">How Ka.Sha is Worn</div>
-          <h2>Made for Every Context on the Course</h2>
-        </div>
-      </div>
-
-      <div className="kp-uc-grid">
-        <div className="kp-uc">
-          <div className="kp-ucn">01</div>
-          <div className="kp-uct">Tournaments</div>
-          <div className="kp-ucb">Consistent kit across the field — tournament name, sponsor logo, player detail. From 12 pieces, Pantone-matched to brief.</div>
-          <div className="kp-uctags">
-            <span className="kp-uctag">From 12 pieces</span>
-            <span className="kp-uctag">Player names</span>
-            <span className="kp-uctag">Sponsor logo</span>
-          </div>
-        </div>
-        <div className="kp-uc">
-          <div className="kp-ucn">02</div>
-          <div className="kp-uct">Golf Academies</div>
-          <div className="kp-ucb">Academy crest, student name, cohort year. A uniform students are proud to wear — on the range and at the club. All sizes XS–5XL.</div>
-          <div className="kp-uctags">
-            <span className="kp-uctag">Academy crest</span>
-            <span className="kp-uctag">Student names</span>
-            <span className="kp-uctag">All sizes</span>
-          </div>
-        </div>
-        <div className="kp-uc">
-          <div className="kp-ucn">03</div>
-          <div className="kp-uct">Sponsored Shirts</div>
-          <div className="kp-ucb">Logo at five placements, colour-matched to brand guidelines. Corporate sponsors, club partners, brand ambassadors.</div>
-          <div className="kp-uctags">
-            <span className="kp-uctag">Brand logo</span>
-            <span className="kp-uctag">Colour match</span>
-            <span className="kp-uctag">5 placements</span>
-          </div>
-        </div>
-        <div className="kp-uc">
-          <div className="kp-ucn">04</div>
-          <div className="kp-uct">Personal Wardrobe</div>
-          <div className="kp-ucb">Your print, your fit, your initials. Single-piece orders handled — every detail from collar trim to interior label.</div>
-          <div className="kp-uctags">
-            <span className="kp-uctag">1-piece orders</span>
-            <span className="kp-uctag">Any print</span>
-            <span className="kp-uctag">Your fit</span>
-          </div>
-        </div>
-        <div className="kp-uc wide">
-          <div className="kp-ucl">
-            <div className="kp-ucn">05</div>
-            <div className="kp-uct">Social Golf Clubs</div>
-          </div>
-          <div>
-            <div className="kp-ucb">Shared print, club name on chest, everyone in the same shirt — without anyone settling. From 12 pieces, mixed fits and sizes across the group.</div>
-            <div className="kp-uctags">
-              <span className="kp-uctag">From 12 pieces</span>
-              <span className="kp-uctag">Club name</span>
-              <span className="kp-uctag">Mixed sizes</span>
-              <span className="kp-uctag">Group identity</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="kp-cta">
-        <span>Start your order — one shirt or five hundred</span>
-        <button onClick={() => navigate("/products/1/customize")}>Open the Custom Studio</button>
-      </div>
-
-      {/* FOOTER */}
-      <footer className="kp-footer">
-        <div className="kp-fcols">
-          <div>
-            <div className="kp-fbrand">
-              Ka<em>.</em>Sha
-            </div>
-            <div className="kp-ftag">
-              Elite craft,<br />worn on the course.<br />Made in India.
-            </div>
-          </div>
-          <div className="kp-fcol">
-            <h4>Shop</h4>
-            <Link href="/products?gender=men">Men's Range</Link>
-            <Link href="/products?gender=women">Women's Range</Link>
-            <Link href="/products?gender=kids">Kids' Range</Link>
-            <Link href="/products">Trousers</Link>
-            <Link href="/products">Women's Skort</Link>
-          </div>
-          <div className="kp-fcol">
-            <h4>Bespoke</h4>
-            <Link href="/products/1/customize">Custom Studio</Link>
-            <Link href="/products/1/customize">Tournaments</Link>
-            <Link href="/products/1/customize">Academies</Link>
-            <Link href="/products/1/customize">Bulk Orders</Link>
-          </div>
-          <div className="kp-fcol">
-            <h4>Ka.Sha</h4>
-            <Link href="/heritage">Our Story</Link>
-            <a href="#">Size Guide</a>
-            <a href="#">Shipping &amp; Returns</a>
-            <a href="#">Contact</a>
-          </div>
-        </div>
-        <div className="kp-fbot">
-          <div className="kp-fcopy">© 2025 Ka.Sha Golfwear</div>
-          <div className="kp-fmade">Crafted with precision · India</div>
-        </div>
-      </footer>
-    </div>
+      </section>
+    </Layout>
   );
 }
 
-export default function Home() {
+function CategoryCard({ card }: { card: CardDef }) {
+  const dark = card.tone === "dark";
   return (
-    <CartProvider>
-      <HomeInner />
-    </CartProvider>
+    <Link
+      href={card.href}
+      className={`group block overflow-hidden border transition-all hover:-translate-y-0.5 hover:shadow-lg ${
+        dark
+          ? "bg-[#0f1622] border-[#B8925A]/40 text-white"
+          : "bg-white border-gray-200 text-black"
+      }`}
+    >
+      <div className="relative aspect-[5/4] overflow-hidden">
+        <img
+          src={card.image}
+          alt={card.title}
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+        />
+        {dark && <div className="absolute inset-0 bg-[#0f1622]/55" />}
+        {card.badge && (
+          <div
+            className="absolute top-3 left-3 text-[9px] tracking-[0.18em] uppercase text-white px-2.5 py-1"
+            style={{ background: "#B8925A" }}
+          >
+            {card.badge}
+          </div>
+        )}
+      </div>
+      <div className="p-5">
+        <div className="text-[10px] tracking-[0.26em] uppercase mb-2" style={{ color: "#B8925A" }}>
+          {card.eye}
+        </div>
+        <div
+          className={`text-[18px] mb-1.5 font-medium ${dark ? "text-white" : "text-black"}`}
+          style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+        >
+          {card.title}
+        </div>
+        <div className={`text-[12px] mb-3 ${dark ? "text-white/55" : "text-gray-500"}`}>{card.sub}</div>
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {card.tags.map((t) => (
+            <span
+              key={t}
+              className={`text-[9px] tracking-[0.12em] uppercase px-2 py-0.5 ${
+                dark ? "bg-white/10 text-white/75" : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+        <div
+          className={`inline-block text-[10px] tracking-[0.22em] uppercase border-b pb-0.5 transition-colors ${
+            dark
+              ? "text-[#B8925A] border-[#B8925A]/40 group-hover:border-[#B8925A]"
+              : "text-black border-gray-300 group-hover:border-black"
+          }`}
+        >
+          {card.cta || "Shop →"}
+        </div>
+      </div>
+    </Link>
   );
 }

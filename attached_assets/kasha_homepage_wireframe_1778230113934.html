@@ -1,0 +1,349 @@
+
+<h2 class="sr-only">Ka.Sha homepage wireframe showing hero carousel, Men/Women/Kids tabbed category grid, custom studio bar, and bulk order event tiles.</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+.wf{font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary);}
+.ph{background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);display:flex;align-items:center;justify-content:center;color:var(--color-text-tertiary);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;text-align:center;line-height:1.6;}
+.lbl{font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:var(--color-text-tertiary);}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:9px;letter-spacing:0.1em;padding:2px 8px;border-radius:10px;background:#FAEEDA;color:#633806;}
+@media(prefers-color-scheme:dark){.pill{background:#633806;color:#FAC775;}}
+</style>
+
+<div class="wf">
+
+<!-- ── HERO ── -->
+<div style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);overflow:hidden;margin-bottom:8px;">
+  <div style="background:var(--color-background-secondary);padding:10px 14px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;">
+    <span class="lbl">Nav — Ka·Sha &nbsp;|&nbsp; Men &nbsp; Women &nbsp; Kids &nbsp; Custom Studio</span>
+    <span class="pill">fixed · 56px</span>
+  </div>
+
+  <!-- Slide -->
+  <div style="height:200px;background:linear-gradient(150deg,#1a2535 0%,#2d3f52 50%,#8aaab8 100%);position:relative;display:flex;align-items:flex-end;padding:20px 24px;">
+    <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 30%,rgba(8,10,18,.7) 100%);border-radius:0;"></div>
+    <div style="position:relative;z-index:1;">
+      <div style="font-size:9px;letter-spacing:.3em;color:#B8925A;text-transform:uppercase;margin-bottom:6px;">New Season · Golf Collection</div>
+      <div style="font-size:22px;font-weight:500;color:#fff;line-height:1.15;margin-bottom:8px;">Dressed for the clubhouse.<br>Built for every birdie.</div>
+      <div style="font-size:9px;letter-spacing:.18em;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:12px;">Men · Women · Kids · Custom</div>
+      <div style="display:flex;gap:6px;">
+        <div style="background:#B8925A;color:#fff;font-size:9px;letter-spacing:.2em;text-transform:uppercase;padding:8px 16px;">Shop the Collection</div>
+        <div style="border:0.5px solid rgba(255,255,255,.35);color:rgba(255,255,255,.7);font-size:9px;letter-spacing:.2em;text-transform:uppercase;padding:8px 16px;">Custom Studio</div>
+      </div>
+    </div>
+    <!-- Slide indicators -->
+    <div style="position:absolute;bottom:12px;right:16px;display:flex;gap:5px;align-items:center;">
+      <div style="width:18px;height:4px;background:#B8925A;border-radius:2px;"></div>
+      <div style="width:5px;height:5px;background:rgba(255,255,255,.3);border-radius:50%;"></div>
+      <div style="width:5px;height:5px;background:rgba(255,255,255,.3);border-radius:50%;"></div>
+      <div style="width:5px;height:5px;background:rgba(255,255,255,.3);border-radius:50%;"></div>
+    </div>
+    <!-- Progress bar -->
+    <div style="position:absolute;bottom:0;left:0;width:28%;height:1.5px;background:#B8925A;"></div>
+  </div>
+</div>
+
+<!-- ── TABS ── -->
+<div style="border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);overflow:hidden;margin-bottom:8px;">
+
+  <!-- Tab row -->
+  <div style="display:flex;border-bottom:0.5px solid var(--color-border-secondary);">
+    <div id="tab-men"    onclick="showTab('men')"    style="padding:10px 20px;font-size:10px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;border-right:0.5px solid var(--color-border-tertiary);background:var(--color-background-primary);color:var(--color-text-primary);">Men's</div>
+    <div id="tab-women"  onclick="showTab('women')"  style="padding:10px 20px;font-size:10px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;border-right:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-tertiary);">Women's</div>
+    <div id="tab-kids"   onclick="showTab('kids')"   style="padding:10px 20px;font-size:10px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;background:var(--color-background-secondary);color:var(--color-text-tertiary);">Kids'</div>
+  </div>
+
+  <!-- MEN -->
+  <div id="panel-men" style="padding:10px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+
+      <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);overflow:hidden;cursor:pointer;">
+        <div style="height:130px;background:linear-gradient(155deg,#1a2540 0%,#263050 100%);position:relative;display:flex;align-items:center;justify-content:center;">
+          <svg width="60" height="80" viewBox="0 0 120 160" fill="none" opacity=".2"><path d="M38 20 L8 54 L2 78 L22 86 L22 152 L98 152 L98 86 L118 78 L112 54 L82 20 L66 32 L60 26 L54 32 Z" stroke="white" stroke-width="2"/><circle cx="59" cy="54" r="3.5" fill="white"/><circle cx="59" cy="68" r="3.5" fill="white"/><circle cx="59" cy="82" r="3.5" fill="white"/></svg>
+          <div style="position:absolute;top:10px;left:10px;background:#B8925A;color:#fff;font-size:7.5px;letter-spacing:.16em;text-transform:uppercase;padding:2px 8px;">Core Range</div>
+        </div>
+        <div style="padding:12px 14px 14px;">
+          <div style="font-size:9px;letter-spacing:.22em;color:#B8925A;text-transform:uppercase;margin-bottom:4px;">T-Shirts</div>
+          <div style="font-size:14px;font-weight:500;margin-bottom:4px;">Ka·Sha Signature</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:10px;">Solids · 8 colours &nbsp;·&nbsp; 8 patterns &nbsp;·&nbsp; prints</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">
+            <span style="font-size:8px;letter-spacing:.1em;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-secondary);border-radius:3px;text-transform:uppercase;">Solid</span>
+            <span style="font-size:8px;letter-spacing:.1em;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-secondary);border-radius:3px;text-transform:uppercase;">8 Patterns</span>
+            <span style="font-size:8px;letter-spacing:.1em;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-secondary);border-radius:3px;text-transform:uppercase;">Prints</span>
+          </div>
+          <div style="font-size:9px;letter-spacing:.12em;color:var(--color-text-primary);border-bottom:0.5px solid var(--color-border-secondary);padding-bottom:1px;display:inline-block;text-transform:uppercase;">Shop →</div>
+        </div>
+      </div>
+
+      <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);overflow:hidden;cursor:pointer;">
+        <div style="height:130px;background:linear-gradient(155deg,#2c1f12 0%,#4a3522 100%);position:relative;display:flex;align-items:center;justify-content:center;">
+          <svg width="60" height="80" viewBox="0 0 120 160" fill="none" opacity=".22"><path d="M38 20 L8 54 L2 78 L22 86 L22 152 L98 152 L98 86 L118 78 L112 54 L82 20 L66 32 L60 26 L54 32 Z" stroke="white" stroke-width="2"/><line x1="22" y1="90" x2="98" y2="90" stroke="white" stroke-width="1" opacity=".4"/><line x1="22" y1="110" x2="98" y2="110" stroke="white" stroke-width="1" opacity=".4"/></svg>
+          <div style="position:absolute;top:10px;left:10px;background:#B8925A;color:#fff;font-size:7.5px;letter-spacing:.16em;text-transform:uppercase;padding:2px 8px;">Seasonal</div>
+        </div>
+        <div style="padding:12px 14px 14px;">
+          <div style="font-size:9px;letter-spacing:.22em;color:#B8925A;text-transform:uppercase;margin-bottom:4px;">T-Shirts</div>
+          <div style="font-size:14px;font-weight:500;margin-bottom:4px;">Flair</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:10px;">Statement prints &amp; limited-run designs</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">
+            <span style="font-size:8px;letter-spacing:.1em;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-secondary);border-radius:3px;text-transform:uppercase;">Limited prints</span>
+            <span style="font-size:8px;letter-spacing:.1em;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-secondary);border-radius:3px;text-transform:uppercase;">Seasonal</span>
+          </div>
+          <div style="font-size:9px;letter-spacing:.12em;color:var(--color-text-primary);border-bottom:0.5px solid var(--color-border-secondary);padding-bottom:1px;display:inline-block;text-transform:uppercase;">Shop →</div>
+        </div>
+      </div>
+
+      <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);overflow:hidden;cursor:pointer;">
+        <div style="height:110px;background:linear-gradient(160deg,#1a2540 0%,#263050 100%);position:relative;display:flex;align-items:center;justify-content:center;">
+          <svg width="50" height="78" viewBox="0 0 100 156" fill="none" opacity=".22"><path d="M22 12 L78 12 L84 72 L68 148 L50 148 L32 148 L16 72 Z" stroke="white" stroke-width="2"/><line x1="50" y1="72" x2="50" y2="148" stroke="white" stroke-width="1.5" opacity=".5"/><rect x="20" y="12" width="60" height="8" rx="4" stroke="white" stroke-width="1" fill="none" opacity=".4"/></svg>
+        </div>
+        <div style="padding:12px 14px 14px;">
+          <div style="font-size:9px;letter-spacing:.22em;color:#B8925A;text-transform:uppercase;margin-bottom:4px;">Bottoms</div>
+          <div style="font-size:14px;font-weight:500;margin-bottom:4px;">Pro Tour Trouser</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:10px;">Glove dock · Tee holder · 4-way stretch</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">
+            <span style="font-size:8px;letter-spacing:.1em;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-secondary);border-radius:3px;text-transform:uppercase;">4 colours</span>
+          </div>
+          <div style="font-size:9px;letter-spacing:.12em;color:var(--color-text-primary);border-bottom:0.5px solid var(--color-border-secondary);padding-bottom:1px;display:inline-block;text-transform:uppercase;">Shop →</div>
+        </div>
+      </div>
+
+      <div style="background:#0f1622;border:0.5px solid #B8925A;border-radius:var(--border-radius-md);overflow:hidden;cursor:pointer;">
+        <div style="height:110px;position:relative;display:flex;align-items:center;justify-content:center;">
+          <div style="text-align:center;opacity:.25;">
+            <div style="font-size:28px;font-weight:200;letter-spacing:.3em;color:#fff;">KS</div>
+            <div style="font-size:8px;letter-spacing:.3em;color:#B8925A;text-transform:uppercase;margin-top:4px;">Bespoke</div>
+          </div>
+        </div>
+        <div style="padding:12px 14px 14px;border-top:0.5px solid rgba(184,146,90,.25);">
+          <div style="font-size:9px;letter-spacing:.22em;color:#B8925A;text-transform:uppercase;margin-bottom:4px;">Bespoke</div>
+          <div style="font-size:14px;font-weight:500;color:#fff;margin-bottom:4px;">Custom Studio</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:10px;">Your colour, logo &amp; fit — 1 piece or 500</div>
+          <div style="font-size:9px;letter-spacing:.12em;color:#B8925A;border-bottom:0.5px solid rgba(184,146,90,.4);padding-bottom:1px;display:inline-block;text-transform:uppercase;">Design yours →</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- WOMEN (hidden by default) -->
+  <div id="panel-women" style="padding:10px;display:none;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+
+      <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);overflow:hidden;">
+        <div style="height:130px;background:linear-gradient(155deg,#2a1e2e 0%,#4a3258 100%);display:flex;align-items:center;justify-content:center;position:relative;">
+          <svg width="60" height="80" viewBox="0 0 120 160" fill="none" opacity=".2"><path d="M38 20 L8 54 L2 78 L22 86 L22 152 L98 152 L98 86 L118 78 L112 54 L82 20 L66 32 L60 26 L54 32 Z" stroke="white" stroke-width="2"/><circle cx="59" cy="58" r="3.5" fill="#B8925A"/><circle cx="59" cy="74" r="3.5" fill="#B8925A"/></svg>
+          <div style="position:absolute;top:10px;left:10px;background:#B8925A;color:#fff;font-size:7.5px;letter-spacing:.16em;text-transform:uppercase;padding:2px 8px;">Core Range</div>
+        </div>
+        <div style="padding:12px 14px 14px;">
+          <div style="font-size:9px;letter-spacing:.22em;color:#B8925A;text-transform:uppercase;margin-bottom:4px;">T-Shirts</div>
+          <div style="font-size:14px;font-weight:500;margin-bottom:4px;">Ka·Sha Signature</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:10px;">Solids · 8 colours &nbsp;·&nbsp; 8 patterns &nbsp;·&nbsp; prints</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">
+            <span style="font-size:8px;letter-spacing:.1em;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-secondary);border-radius:3px;text-transform:uppercase;">Solid</span>
+            <span style="font-size:8px;letter-spacing:.1em;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-secondary);border-radius:3px;text-transform:uppercase;">8 Patterns</span>
+            <span style="font-size:8px;letter-spacing:.1em;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-secondary);border-radius:3px;text-transform:uppercase;">Prints</span>
+          </div>
+          <div style="font-size:9px;letter-spacing:.12em;color:var(--color-text-primary);border-bottom:0.5px solid var(--color-border-secondary);padding-bottom:1px;display:inline-block;text-transform:uppercase;">Shop →</div>
+        </div>
+      </div>
+
+      <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);overflow:hidden;">
+        <div style="height:130px;background:linear-gradient(155deg,#1c2d20 0%,#304838 100%);display:flex;align-items:center;justify-content:center;position:relative;">
+          <svg width="60" height="80" viewBox="0 0 120 160" fill="none" opacity=".2"><path d="M38 20 L8 54 L2 78 L22 86 L22 152 L98 152 L98 86 L118 78 L112 54 L82 20 L66 32 L60 26 L54 32 Z" stroke="white" stroke-width="2"/></svg>
+          <div style="position:absolute;top:10px;left:10px;background:#B8925A;color:#fff;font-size:7.5px;letter-spacing:.16em;text-transform:uppercase;padding:2px 8px;">Seasonal</div>
+        </div>
+        <div style="padding:12px 14px 14px;">
+          <div style="font-size:9px;letter-spacing:.22em;color:#B8925A;text-transform:uppercase;margin-bottom:4px;">T-Shirts</div>
+          <div style="font-size:14px;font-weight:500;margin-bottom:4px;">Flair</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:10px;">Statement prints &amp; limited-run designs</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">
+            <span style="font-size:8px;letter-spacing:.1em;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-secondary);border-radius:3px;text-transform:uppercase;">Limited prints</span>
+            <span style="font-size:8px;letter-spacing:.1em;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-secondary);border-radius:3px;text-transform:uppercase;">Seasonal</span>
+          </div>
+          <div style="font-size:9px;letter-spacing:.12em;color:var(--color-text-primary);border-bottom:0.5px solid var(--color-border-secondary);padding-bottom:1px;display:inline-block;text-transform:uppercase;">Shop →</div>
+        </div>
+      </div>
+
+      <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);overflow:hidden;">
+        <div style="height:110px;background:linear-gradient(160deg,#2a1e2e 0%,#4a3258 100%);display:flex;align-items:center;justify-content:center;position:relative;">
+          <svg width="50" height="75" viewBox="0 0 100 150" fill="none" opacity=".22"><rect x="18" y="10" width="64" height="8" rx="4" stroke="white" stroke-width="1.5" fill="none" opacity=".4"/><path d="M18 18 L6 76 L0 148 L50 124 L50 148 L50 124 L100 148 L94 76 L82 18 Z" stroke="white" stroke-width="2"/><line x1="50" y1="40" x2="50" y2="124" stroke="white" stroke-width="1" opacity=".3"/></svg>
+        </div>
+        <div style="padding:12px 14px 14px;">
+          <div style="font-size:9px;letter-spacing:.22em;color:#B8925A;text-transform:uppercase;margin-bottom:4px;">Bottoms</div>
+          <div style="font-size:14px;font-weight:500;margin-bottom:4px;">Pro Tour Skort</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:10px;">Technical stretch · Tailored fit</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">
+            <span style="font-size:8px;letter-spacing:.1em;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-secondary);border-radius:3px;text-transform:uppercase;">3 colours</span>
+          </div>
+          <div style="font-size:9px;letter-spacing:.12em;color:var(--color-text-primary);border-bottom:0.5px solid var(--color-border-secondary);padding-bottom:1px;display:inline-block;text-transform:uppercase;">Shop →</div>
+        </div>
+      </div>
+
+      <div style="background:#0f1622;border:0.5px solid #B8925A;border-radius:var(--border-radius-md);overflow:hidden;">
+        <div style="height:110px;display:flex;align-items:center;justify-content:center;">
+          <div style="text-align:center;opacity:.25;">
+            <div style="font-size:28px;font-weight:200;letter-spacing:.3em;color:#fff;">KS</div>
+            <div style="font-size:8px;letter-spacing:.3em;color:#B8925A;text-transform:uppercase;margin-top:4px;">Bespoke</div>
+          </div>
+        </div>
+        <div style="padding:12px 14px 14px;border-top:0.5px solid rgba(184,146,90,.25);">
+          <div style="font-size:9px;letter-spacing:.22em;color:#B8925A;text-transform:uppercase;margin-bottom:4px;">Bespoke</div>
+          <div style="font-size:14px;font-weight:500;color:#fff;margin-bottom:4px;">Custom Studio</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:10px;">Your colour, logo &amp; fit — 1 piece or 500</div>
+          <div style="font-size:9px;letter-spacing:.12em;color:#B8925A;border-bottom:0.5px solid rgba(184,146,90,.4);padding-bottom:1px;display:inline-block;text-transform:uppercase;">Design yours →</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- KIDS (hidden by default) -->
+  <div id="panel-kids" style="padding:10px;display:none;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+
+      <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);overflow:hidden;">
+        <div style="height:120px;background:linear-gradient(155deg,#1c2d20 0%,#304838 100%);display:flex;align-items:center;justify-content:center;position:relative;">
+          <svg width="52" height="70" viewBox="0 0 104 140" fill="none" opacity=".22"><path d="M34 18 L7 48 L2 70 L20 77 L20 134 L84 134 L84 77 L102 70 L97 48 L70 18 L58 28 L52 22 L46 28 Z" stroke="white" stroke-width="2"/><circle cx="51" cy="50" r="3" fill="white"/><circle cx="51" cy="62" r="3" fill="white"/></svg>
+          <div style="position:absolute;top:10px;left:10px;background:#B8925A;color:#fff;font-size:7.5px;letter-spacing:.16em;text-transform:uppercase;padding:2px 8px;">Boys</div>
+        </div>
+        <div style="padding:12px 14px 14px;">
+          <div style="font-size:9px;letter-spacing:.22em;color:#B8925A;text-transform:uppercase;margin-bottom:4px;">T-Shirts</div>
+          <div style="font-size:14px;font-weight:500;margin-bottom:4px;">Boys' T-Shirts</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:10px;">Solids · Patterns · XS–XL Junior</div>
+          <div style="font-size:9px;letter-spacing:.12em;color:var(--color-text-primary);border-bottom:0.5px solid var(--color-border-secondary);padding-bottom:1px;display:inline-block;text-transform:uppercase;">Shop →</div>
+        </div>
+      </div>
+
+      <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);overflow:hidden;">
+        <div style="height:120px;background:linear-gradient(155deg,#2a1e2e 0%,#4a3258 100%);display:flex;align-items:center;justify-content:center;position:relative;">
+          <svg width="52" height="70" viewBox="0 0 104 140" fill="none" opacity=".22"><path d="M34 18 L7 48 L2 70 L20 77 L20 134 L84 134 L84 77 L102 70 L97 48 L70 18 L58 28 L52 22 L46 28 Z" stroke="white" stroke-width="2"/><circle cx="51" cy="50" r="3" fill="#B8925A"/><circle cx="51" cy="62" r="3" fill="#B8925A"/></svg>
+          <div style="position:absolute;top:10px;left:10px;background:#B8925A;color:#fff;font-size:7.5px;letter-spacing:.16em;text-transform:uppercase;padding:2px 8px;">Girls</div>
+        </div>
+        <div style="padding:12px 14px 14px;">
+          <div style="font-size:9px;letter-spacing:.22em;color:#B8925A;text-transform:uppercase;margin-bottom:4px;">T-Shirts</div>
+          <div style="font-size:14px;font-weight:500;margin-bottom:4px;">Girls' T-Shirts</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:10px;">Solids · Patterns · XS–XL Junior</div>
+          <div style="font-size:9px;letter-spacing:.12em;color:var(--color-text-primary);border-bottom:0.5px solid var(--color-border-secondary);padding-bottom:1px;display:inline-block;text-transform:uppercase;">Shop →</div>
+        </div>
+      </div>
+
+      <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);overflow:hidden;">
+        <div style="height:100px;background:linear-gradient(160deg,#1a2540 0%,#263050 100%);display:flex;align-items:center;justify-content:center;">
+          <svg width="45" height="68" viewBox="0 0 90 136" fill="none" opacity=".22"><path d="M18 10 L72 10 L78 66 L62 130 L45 130 L28 130 L12 66 Z" stroke="white" stroke-width="2"/><line x1="45" y1="66" x2="45" y2="130" stroke="white" stroke-width="1.5" opacity=".5"/></svg>
+        </div>
+        <div style="padding:12px 14px 14px;">
+          <div style="font-size:9px;letter-spacing:.22em;color:#B8925A;text-transform:uppercase;margin-bottom:4px;">Bottoms</div>
+          <div style="font-size:14px;font-weight:500;margin-bottom:4px;">All Bottoms</div>
+          <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:10px;">Trousers &amp; skorts · All sizes</div>
+          <div style="font-size:9px;letter-spacing:.12em;color:var(--color-text-primary);border-bottom:0.5px solid var(--color-border-secondary);padding-bottom:1px;display:inline-block;text-transform:uppercase;">Shop →</div>
+        </div>
+      </div>
+
+      <div style="background:#0f1622;border:0.5px solid #B8925A;border-radius:var(--border-radius-md);overflow:hidden;">
+        <div style="height:100px;display:flex;align-items:center;justify-content:center;">
+          <div style="text-align:center;opacity:.25;">
+            <div style="font-size:24px;font-weight:200;letter-spacing:.3em;color:#fff;">KS</div>
+            <div style="font-size:7.5px;letter-spacing:.28em;color:#B8925A;text-transform:uppercase;margin-top:3px;">Academy</div>
+          </div>
+        </div>
+        <div style="padding:12px 14px 14px;border-top:0.5px solid rgba(184,146,90,.25);">
+          <div style="font-size:9px;letter-spacing:.22em;color:#B8925A;text-transform:uppercase;margin-bottom:4px;">Bespoke</div>
+          <div style="font-size:14px;font-weight:500;color:#fff;margin-bottom:4px;">Custom Studio</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:10px;">Academy crest · Names · All sizes</div>
+          <div style="font-size:9px;letter-spacing:.12em;color:#B8925A;border-bottom:0.5px solid rgba(184,146,90,.4);padding-bottom:1px;display:inline-block;text-transform:uppercase;">Design yours →</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ── CUSTOM STUDIO BAR ── -->
+<div style="background:#0f1622;border-left:3px solid #B8925A;border-radius:var(--border-radius-lg);padding:16px 20px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+  <div>
+    <div style="font-size:9px;letter-spacing:.28em;color:#B8925A;text-transform:uppercase;margin-bottom:8px;">Custom Studio</div>
+    <div style="font-size:15px;font-weight:500;color:#fff;line-height:1.35;margin-bottom:4px;">Choose your colour, print, pattern, size<br>or upload your logo.</div>
+    <div style="font-size:11px;letter-spacing:.1em;color:rgba(255,255,255,.45);text-transform:uppercase;margin-bottom:12px;">Your game, your t-shirt.</div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;">
+      <span style="font-size:8px;letter-spacing:.1em;padding:3px 9px;border:0.5px solid rgba(184,146,90,.4);color:rgba(255,255,255,.55);border-radius:3px;text-transform:uppercase;">Colour</span>
+      <span style="font-size:8px;letter-spacing:.1em;padding:3px 9px;border:0.5px solid rgba(184,146,90,.4);color:rgba(255,255,255,.55);border-radius:3px;text-transform:uppercase;">Print</span>
+      <span style="font-size:8px;letter-spacing:.1em;padding:3px 9px;border:0.5px solid rgba(184,146,90,.4);color:rgba(255,255,255,.55);border-radius:3px;text-transform:uppercase;">Pattern</span>
+      <span style="font-size:8px;letter-spacing:.1em;padding:3px 9px;border:0.5px solid rgba(184,146,90,.4);color:rgba(255,255,255,.55);border-radius:3px;text-transform:uppercase;">Size</span>
+      <span style="font-size:8px;letter-spacing:.1em;padding:3px 9px;border:0.5px solid rgba(184,146,90,.4);color:rgba(255,255,255,.55);border-radius:3px;text-transform:uppercase;">Upload logo</span>
+      <span style="font-size:8px;letter-spacing:.1em;padding:3px 9px;border:0.5px solid rgba(184,146,90,.4);color:rgba(255,255,255,.55);border-radius:3px;text-transform:uppercase;">Add text</span>
+      <span style="font-size:8px;letter-spacing:.1em;padding:3px 9px;border:0.5px solid rgba(184,146,90,.4);color:rgba(255,255,255,.55);border-radius:3px;text-transform:uppercase;">Trim &amp; collar</span>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;flex-shrink:0;">
+    <div style="background:#B8925A;color:#fff;font-size:9px;letter-spacing:.2em;text-transform:uppercase;padding:10px 20px;cursor:pointer;white-space:nowrap;">Start designing →</div>
+    <div style="font-size:9px;letter-spacing:.14em;color:rgba(255,255,255,.32);text-transform:uppercase;border-bottom:0.5px solid rgba(255,255,255,.15);padding-bottom:1px;cursor:pointer;">Bulk &amp; corporate pricing →</div>
+  </div>
+</div>
+
+<!-- ── BULK EVENT TILES ── -->
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+
+  <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);overflow:hidden;">
+    <div style="height:90px;background:linear-gradient(150deg,#1a2035 0%,#2a3a52 100%);display:flex;align-items:center;justify-content:center;position:relative;">
+      <svg width="52" height="42" viewBox="0 0 104 84" fill="none" opacity=".25"><path d="M30 14 L52 4 L74 14 L80 52 L52 64 L24 52 Z" stroke="white" stroke-width="2" fill="none"/><path d="M52 64 L52 80 M36 80 L68 80" stroke="white" stroke-width="2"/></svg>
+      <div style="position:absolute;top:8px;left:10px;font-size:7.5px;letter-spacing:.18em;color:#B8925A;text-transform:uppercase;">From 12 pieces</div>
+    </div>
+    <div style="padding:12px 14px 14px;">
+      <div style="font-size:9px;letter-spacing:.2em;color:#B8925A;text-transform:uppercase;margin-bottom:4px;">01</div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:5px;">Tournaments</div>
+      <div style="font-size:10.5px;color:var(--color-text-tertiary);line-height:1.6;margin-bottom:10px;">Full field kit — player names, sponsor logo, Pantone-matched to brief.</div>
+      <div style="display:flex;gap:3px;flex-wrap:wrap;">
+        <span style="font-size:8px;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-tertiary);border-radius:3px;letter-spacing:.08em;text-transform:uppercase;">Player names</span>
+        <span style="font-size:8px;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-tertiary);border-radius:3px;letter-spacing:.08em;text-transform:uppercase;">Sponsor logo</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);overflow:hidden;">
+    <div style="height:90px;background:linear-gradient(150deg,#1c3028 0%,#2e5040 100%);display:flex;align-items:center;justify-content:center;position:relative;">
+      <svg width="56" height="44" viewBox="0 0 112 88" fill="none" opacity=".25"><circle cx="32" cy="22" r="12" stroke="white" stroke-width="1.5"/><circle cx="80" cy="26" r="10" stroke="white" stroke-width="1.5"/><path d="M20 34 L20 80" stroke="white" stroke-width="1.5"/><path d="M68 36 L68 80" stroke="white" stroke-width="1.5"/></svg>
+      <div style="position:absolute;top:8px;left:10px;font-size:7.5px;letter-spacing:.18em;color:#B8925A;text-transform:uppercase;">All ages &amp; sizes</div>
+    </div>
+    <div style="padding:12px 14px 14px;">
+      <div style="font-size:9px;letter-spacing:.2em;color:#B8925A;text-transform:uppercase;margin-bottom:4px;">02</div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:5px;">Golf Academies</div>
+      <div style="font-size:10.5px;color:var(--color-text-tertiary);line-height:1.6;margin-bottom:10px;">Academy crest, student names, cohort year. On the range and at the club.</div>
+      <div style="display:flex;gap:3px;flex-wrap:wrap;">
+        <span style="font-size:8px;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-tertiary);border-radius:3px;letter-spacing:.08em;text-transform:uppercase;">Academy crest</span>
+        <span style="font-size:8px;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-tertiary);border-radius:3px;letter-spacing:.08em;text-transform:uppercase;">All sizes</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);overflow:hidden;">
+    <div style="height:90px;background:linear-gradient(150deg,#1e1a2c 0%,#2e2848 100%);display:flex;align-items:center;justify-content:center;position:relative;">
+      <svg width="56" height="40" viewBox="0 0 112 80" fill="none" opacity=".25"><circle cx="22" cy="20" r="10" stroke="white" stroke-width="1.5"/><circle cx="56" cy="16" r="12" stroke="white" stroke-width="1.5"/><circle cx="90" cy="20" r="10" stroke="white" stroke-width="1.5"/><path d="M12 30 L12 70 M46 28 L46 70 M80 30 L80 70" stroke="white" stroke-width="1.5"/></svg>
+      <div style="position:absolute;top:8px;left:10px;font-size:7.5px;letter-spacing:.18em;color:#B8925A;text-transform:uppercase;">Social clubs</div>
+    </div>
+    <div style="padding:12px 14px 14px;">
+      <div style="font-size:9px;letter-spacing:.2em;color:#B8925A;text-transform:uppercase;margin-bottom:4px;">03</div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:5px;">Clubs &amp; Corporate</div>
+      <div style="font-size:10.5px;color:var(--color-text-tertiary);line-height:1.6;margin-bottom:10px;">Shared identity for your group. Mixed sizes, one print. From 12 pieces.</div>
+      <div style="display:flex;gap:3px;flex-wrap:wrap;">
+        <span style="font-size:8px;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-tertiary);border-radius:3px;letter-spacing:.08em;text-transform:uppercase;">Mixed sizes</span>
+        <span style="font-size:8px;padding:2px 7px;background:var(--color-background-secondary);color:var(--color-text-tertiary);border-radius:3px;letter-spacing:.08em;text-transform:uppercase;">From 12</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</div>
+
+<script>
+function showTab(t) {
+  ['men','women','kids'].forEach(function(id) {
+    var tab = document.getElementById('tab-'+id);
+    var panel = document.getElementById('panel-'+id);
+    var active = id === t;
+    tab.style.background = active ? 'var(--color-background-primary)' : 'var(--color-background-secondary)';
+    tab.style.color = active ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)';
+    panel.style.display = active ? 'block' : 'none';
+  });
+}
+</script>
