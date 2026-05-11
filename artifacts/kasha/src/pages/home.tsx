@@ -635,114 +635,337 @@ export default function Home() {
         style={{ height: 1, background: "linear-gradient(to right, transparent, rgba(184,146,90,0.3), transparent)" }}
       />
 
-      {/* CUSTOM STUDIO BAR */}
+      {/* CUSTOM STUDIO — REDESIGNED */}
       <section
         className="relative overflow-hidden"
         style={{
-          background: "#FFFFFF",
-          borderTop: "1px solid rgba(184,146,90,0.3)",
-          borderBottom: "1px solid rgba(184,146,90,0.3)",
+          background:
+            "linear-gradient(135deg, #F7F2E8 0%, #FAF6EE 45%, #F2EADB 100%)",
+          borderTop: "1px solid rgba(184,146,90,0.25)",
+          borderBottom: "1px solid rgba(184,146,90,0.25)",
         }}
       >
-        <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: GOLD }} />
+        {/* Decorative gold rules */}
         <div
-          className="absolute inset-0 opacity-[0.06]"
+          className="hidden md:block absolute top-10 left-1/2 -translate-x-1/2 h-px w-24"
+          style={{ background: GOLD, opacity: 0.5 }}
+        />
+        {/* Soft radial glow accent */}
+        <div
+          className="absolute -top-40 -right-40 w-[480px] h-[480px] rounded-full pointer-events-none"
           style={{
             background:
-              "url('https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=1200&q=60') center/cover",
+              "radial-gradient(circle, rgba(184,146,90,0.18) 0%, rgba(184,146,90,0) 70%)",
           }}
         />
-        <div className="relative z-[1] max-w-[1400px] mx-auto px-6 md:px-20 py-12 md:py-16 flex flex-col md:flex-row items-start md:items-center justify-between gap-8 md:gap-16">
-          <div>
+        <div
+          className="absolute -bottom-40 -left-40 w-[420px] h-[420px] rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(184,146,90,0.12) 0%, rgba(184,146,90,0) 70%)",
+          }}
+        />
+
+        <div className="relative z-[1] max-w-[1400px] mx-auto px-6 md:px-20 py-20 md:py-28 grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-16 items-center">
+          {/* LEFT: editorial copy + steps */}
+          <div className="md:col-span-7">
             <div
+              className="inline-flex items-center gap-2.5 mb-7"
               style={{
                 fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: 8,
-                letterSpacing: "0.4em",
+                fontSize: 9,
+                letterSpacing: "0.42em",
                 color: GOLD,
                 textTransform: "uppercase",
-                marginBottom: 16,
               }}
             >
-              Custom Studio
+              <span style={{ width: 28, height: 1, background: GOLD }} />
+              The Bespoke Studio
             </div>
+
             <h2
               className="text-neutral-900"
               style={{
                 fontFamily: "'Cormorant Garamond', serif",
-                fontSize: "clamp(28px, 2.5vw, 40px)",
+                fontSize: "clamp(36px, 4.4vw, 64px)",
                 fontWeight: 400,
-                lineHeight: 1.2,
-                marginBottom: 8,
+                lineHeight: 1.05,
+                letterSpacing: "-0.005em",
+                marginBottom: 18,
               }}
             >
-              Choose your colour, print, pattern,<br />size or upload your logo.
+              Designed by you.<br />
+              <span style={{ fontStyle: "italic", color: GOLD }}>Tailored</span>{" "}
+              by us.
             </h2>
+
             <p
+              className="max-w-[520px]"
               style={{
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: 10,
-                letterSpacing: "0.2em",
-                color: MUTED,
-                textTransform: "uppercase",
-                marginBottom: 24,
+                fontFamily: "'EB Garamond', serif",
+                fontSize: 17,
+                lineHeight: 1.65,
+                color: "rgba(0,0,0,0.62)",
+                marginBottom: 36,
               }}
             >
-              Your game, your t-shirt.
+              Pick your silhouette, choose your colour story, drop in a print or
+              monogram — then watch it come to life on a real-time 3D preview.
+              Every piece is cut, sewn and finished by our atelier.
             </p>
-            <div className="flex flex-wrap gap-1.5">
-              {CHIPS.map((c) => (
-                <span
-                  key={c}
-                  className="transition-colors"
+
+            {/* 3-step process */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-4 mb-9">
+              {[
+                { n: "01", t: "Choose", d: "Silhouette, fit & fabric" },
+                { n: "02", t: "Personalise", d: "Colour, print, monogram" },
+                { n: "03", t: "Receive", d: "Crafted in 10–14 days" },
+              ].map((s) => (
+                <div
+                  key={s.n}
+                  className="group"
                   style={{
-                    fontFamily: "'Josefin Sans', sans-serif",
-                    fontSize: 7.5,
-                    letterSpacing: "0.18em",
-                    textTransform: "uppercase",
-                    color: "rgba(0,0,0,0.45)",
-                    border: "1px solid rgba(184,146,90,0.3)",
-                    padding: "5px 12px",
-                    borderRadius: 2,
+                    paddingTop: 14,
+                    borderTop: "1px solid rgba(184,146,90,0.4)",
                   }}
                 >
-                  {c}
-                </span>
+                  <div
+                    style={{
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontSize: 22,
+                      fontWeight: 400,
+                      color: GOLD,
+                      lineHeight: 1,
+                      marginBottom: 8,
+                    }}
+                  >
+                    {s.n}
+                  </div>
+                  <div
+                    className="text-neutral-900"
+                    style={{
+                      fontFamily: "'Josefin Sans', sans-serif",
+                      fontSize: 11,
+                      letterSpacing: "0.22em",
+                      textTransform: "uppercase",
+                      marginBottom: 4,
+                    }}
+                  >
+                    {s.t}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "'EB Garamond', serif",
+                      fontSize: 14,
+                      color: "rgba(0,0,0,0.55)",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {s.d}
+                  </div>
+                </div>
               ))}
             </div>
+
+            {/* CTAs */}
+            <div className="flex flex-wrap items-center gap-5">
+              <Link
+                href="/products/1/customize"
+                className="text-white transition-all hover:-translate-y-0.5 inline-flex items-center gap-3"
+                style={{
+                  background: GOLD,
+                  fontFamily: "'Josefin Sans', sans-serif",
+                  fontSize: 10,
+                  letterSpacing: "0.3em",
+                  textTransform: "uppercase",
+                  padding: "16px 32px",
+                  boxShadow: "0 12px 32px -12px rgba(184,146,90,0.55)",
+                }}
+                onMouseEnter={(e) =>
+                  ((e.currentTarget as HTMLElement).style.background = GOLD_LIGHT)
+                }
+                onMouseLeave={(e) =>
+                  ((e.currentTarget as HTMLElement).style.background = GOLD)
+                }
+              >
+                Open the Studio
+                <span style={{ fontSize: 14, lineHeight: 1 }}>→</span>
+              </Link>
+              <Link
+                href="/products/1/customize"
+                className="hover:!text-[#B8925A] transition-colors"
+                style={{
+                  fontFamily: "'Josefin Sans', sans-serif",
+                  fontSize: 10,
+                  letterSpacing: "0.28em",
+                  color: "rgba(0,0,0,0.6)",
+                  textTransform: "uppercase",
+                  borderBottom: "1px solid rgba(0,0,0,0.18)",
+                  paddingBottom: 4,
+                }}
+              >
+                Bulk & Corporate
+              </Link>
+            </div>
           </div>
-          <div className="flex flex-col gap-3 shrink-0 items-start min-w-[200px]">
-            <Link
-              href="/products/1/customize"
-              className="text-white transition-all hover:-translate-y-0.5 whitespace-nowrap"
-              style={{
-                background: GOLD,
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: 9,
-                letterSpacing: "0.28em",
-                textTransform: "uppercase",
-                padding: "14px 28px",
-              }}
-              onMouseEnter={(e) => ((e.target as HTMLElement).style.background = GOLD_LIGHT)}
-              onMouseLeave={(e) => ((e.target as HTMLElement).style.background = GOLD)}
-            >
-              Start Designing →
-            </Link>
-            <Link
-              href="/products/1/customize"
-              className="hover:!text-[#B8925A] transition-colors"
-              style={{
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: 8,
-                letterSpacing: "0.2em",
-                color: MUTED,
-                textTransform: "uppercase",
-                borderBottom: "1px solid rgba(0,0,0,0.12)",
-                paddingBottom: 2,
-              }}
-            >
-              Bulk & Corporate Pricing →
-            </Link>
+
+          {/* RIGHT: visual showcase */}
+          <div className="md:col-span-5 relative">
+            <div className="relative mx-auto max-w-[440px]">
+              {/* Soft gold frame */}
+              <div
+                className="absolute -inset-3 md:-inset-5 pointer-events-none"
+                style={{
+                  border: "1px solid rgba(184,146,90,0.35)",
+                  borderRadius: 4,
+                  transform: "translate(14px, 14px)",
+                }}
+              />
+
+              {/* Main product image */}
+              <div
+                className="relative overflow-hidden"
+                style={{
+                  aspectRatio: "4 / 5",
+                  background: "#EFE7D6",
+                  borderRadius: 4,
+                  boxShadow:
+                    "0 30px 60px -25px rgba(60,40,15,0.35), 0 12px 24px -12px rgba(60,40,15,0.18)",
+                }}
+              >
+                <img
+                  src="https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=900&q=80"
+                  alt="Custom designed polo"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                {/* Top-right badge */}
+                <div
+                  className="absolute top-4 right-4 inline-flex items-center gap-2 px-3 py-1.5"
+                  style={{
+                    background: "rgba(255,255,255,0.92)",
+                    backdropFilter: "blur(8px)",
+                    border: "1px solid rgba(184,146,90,0.35)",
+                    fontFamily: "'Josefin Sans', sans-serif",
+                    fontSize: 8,
+                    letterSpacing: "0.28em",
+                    color: "#0A0A0A",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  <span
+                    className="inline-block w-1.5 h-1.5 rounded-full"
+                    style={{ background: GOLD }}
+                  />
+                  Live Preview
+                </div>
+              </div>
+
+              {/* Floating swatch card */}
+              <div
+                className="absolute -bottom-6 -left-6 md:-left-10 p-4 hidden sm:block"
+                style={{
+                  background: "#FFFFFF",
+                  border: "1px solid rgba(184,146,90,0.35)",
+                  borderRadius: 4,
+                  boxShadow: "0 18px 40px -18px rgba(60,40,15,0.35)",
+                  width: 200,
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: "'Josefin Sans', sans-serif",
+                    fontSize: 8,
+                    letterSpacing: "0.32em",
+                    color: GOLD,
+                    textTransform: "uppercase",
+                    marginBottom: 10,
+                  }}
+                >
+                  Your Palette
+                </div>
+                <div className="grid grid-cols-6 gap-1.5 mb-3">
+                  {[
+                    "#0A0A0A",
+                    "#FFFFFF",
+                    "#B8925A",
+                    "#1F3A2E",
+                    "#7A1F2B",
+                    "#4A6FA5",
+                    "#E8DCC4",
+                    "#2C2C2C",
+                    "#A05A2C",
+                    "#E8B4B8",
+                    "#3D5A3D",
+                    "#D4A96A",
+                  ].map((c, i) => (
+                    <span
+                      key={i}
+                      className="block w-full aspect-square"
+                      style={{
+                        background: c,
+                        border:
+                          c === "#FFFFFF"
+                            ? "1px solid rgba(0,0,0,0.12)"
+                            : "1px solid rgba(0,0,0,0.06)",
+                        borderRadius: 2,
+                      }}
+                    />
+                  ))}
+                </div>
+                <div
+                  className="text-neutral-900"
+                  style={{
+                    fontFamily: "'EB Garamond', serif",
+                    fontSize: 13,
+                    fontStyle: "italic",
+                    lineHeight: 1.3,
+                  }}
+                >
+                  12 signature shades, infinite combinations.
+                </div>
+              </div>
+
+              {/* Floating monogram tag */}
+              <div
+                className="absolute -top-5 -right-3 md:-right-8 hidden sm:flex items-center gap-3 px-4 py-3"
+                style={{
+                  background: "#0A0A0A",
+                  borderRadius: 4,
+                  boxShadow: "0 14px 28px -12px rgba(0,0,0,0.4)",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "'Cormorant Garamond', serif",
+                    fontSize: 26,
+                    color: GOLD,
+                    fontStyle: "italic",
+                    lineHeight: 1,
+                  }}
+                >
+                  KS
+                </span>
+                <div
+                  style={{
+                    width: 1,
+                    height: 24,
+                    background: "rgba(255,255,255,0.2)",
+                  }}
+                />
+                <span
+                  style={{
+                    fontFamily: "'Josefin Sans', sans-serif",
+                    fontSize: 8,
+                    letterSpacing: "0.3em",
+                    color: "rgba(255,255,255,0.8)",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Monogram<br />Ready
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -799,7 +1022,7 @@ export default function Home() {
                   src={b.img}
                   alt={b.title}
                   className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105"
-                  style={{ opacity: 0.55 }}
+                
                 />
                 <span
                   className="absolute top-3 left-3.5 z-[1]"
