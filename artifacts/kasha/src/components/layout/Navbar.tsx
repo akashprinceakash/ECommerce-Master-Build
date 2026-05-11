@@ -75,7 +75,7 @@ export function Navbar() {
       <header
         className="fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-6 md:px-10 transition-colors duration-300"
         style={{
-          background: scrolled ? "rgba(8,10,18,0.98)" : "rgba(8,10,18,0.92)",
+          background: scrolled ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.92)",
           borderBottom: "1px solid rgba(184,146,90,0.3)",
           backdropFilter: "blur(20px)",
         }}
@@ -86,7 +86,7 @@ export function Navbar() {
             src="/images/kasha-logo-new.jpeg"
             alt="Ka·Sha"
             className="h-12 w-auto object-contain"
-            style={{ filter: "invert(1) brightness(1.1)", mixBlendMode: "screen" }}
+            style={{ mixBlendMode: "multiply" }}
           />
         </Link>
 
@@ -98,11 +98,11 @@ export function Navbar() {
               <Link
                 key={l.label}
                 href={l.href}
-                className="relative text-[10px] uppercase transition-colors hover:text-white"
+                className="relative text-[10px] uppercase transition-colors hover:text-neutral-900"
                 style={{
                   fontFamily: "'Josefin Sans', sans-serif",
                   letterSpacing: "0.28em",
-                  color: active ? GOLD : "rgba(255,255,255,0.6)",
+                  color: active ? GOLD : "rgba(0,0,0,0.6)",
                 }}
               >
                 {l.label}
@@ -148,8 +148,8 @@ export function Navbar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="w-8 h-8 flex items-center justify-center hover:text-white transition-colors"
-                  style={{ color: "rgba(255,255,255,0.6)" }}
+                  className="w-8 h-8 flex items-center justify-center hover:text-neutral-900 transition-colors"
+                  style={{ color: "rgba(0,0,0,0.6)" }}
                 >
                   <UserIcon className="w-4 h-4" />
                 </button>
@@ -157,33 +157,33 @@ export function Navbar() {
               <DropdownMenuContent
                 align="end"
                 className="w-52 rounded-none border-0"
-                style={{ background: "#0F1622", border: "1px solid rgba(184,146,90,0.3)", color: "white" }}
+                style={{ background: "#FFFFFF", border: "1px solid rgba(184,146,90,0.3)", color: "#0A0A0A" }}
               >
-                <div className="px-3 py-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-                  <p className="text-sm font-medium text-white">{user?.fullName || "Account"}</p>
-                  <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.45)" }}>
+                <div className="px-3 py-2" style={{ borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
+                  <p className="text-sm font-medium text-neutral-900">{user?.fullName || "Account"}</p>
+                  <p className="text-xs truncate" style={{ color: "rgba(0,0,0,0.5)" }}>
                     {user?.primaryEmailAddress?.emailAddress}
                   </p>
                 </div>
-                <DropdownMenuItem asChild className="focus:bg-white/5 focus:text-white">
+                <DropdownMenuItem asChild className="focus:bg-black/5 focus:text-neutral-900">
                   <Link href="/profile" className="w-full cursor-pointer text-sm">Profile</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild className="focus:bg-white/5 focus:text-white">
+                <DropdownMenuItem asChild className="focus:bg-black/5 focus:text-neutral-900">
                   <Link href="/orders" className="w-full cursor-pointer text-sm">Orders</Link>
                 </DropdownMenuItem>
                 {isAdmin && (
                   <>
-                    <DropdownMenuSeparator className="bg-white/10" />
-                    <DropdownMenuItem asChild className="focus:bg-white/5">
+                    <DropdownMenuSeparator className="bg-black/10" />
+                    <DropdownMenuItem asChild className="focus:bg-black/5">
                       <Link href="/admin" className="w-full cursor-pointer text-sm flex items-center gap-2" style={{ color: GOLD }}>
                         <ShieldCheck className="w-3.5 h-3.5" /> Admin Panel
                       </Link>
                     </DropdownMenuItem>
                   </>
                 )}
-                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuSeparator className="bg-black/10" />
                 <DropdownMenuItem
-                  className="cursor-pointer text-sm text-red-400 focus:text-red-300 focus:bg-white/5"
+                  className="cursor-pointer text-sm text-red-600 focus:text-red-700 focus:bg-black/5"
                   onClick={() => signOut()}
                 >
                   Sign out
@@ -194,19 +194,19 @@ export function Navbar() {
           <Show when="signed-out">
             <Link
               href="/sign-in"
-              className="hidden sm:block text-[10px] uppercase hover:text-white transition-colors"
+              className="hidden sm:block text-[10px] uppercase hover:text-neutral-900 transition-colors"
               style={{
                 fontFamily: "'Josefin Sans', sans-serif",
                 letterSpacing: "0.28em",
-                color: "rgba(255,255,255,0.6)",
+                color: "rgba(0,0,0,0.6)",
               }}
             >
               Sign In
             </Link>
           </Show>
           <button
-            className="w-8 h-8 flex items-center justify-center relative hover:text-white transition-colors"
-            style={{ color: "rgba(255,255,255,0.6)" }}
+            className="w-8 h-8 flex items-center justify-center relative hover:text-neutral-900 transition-colors"
+            style={{ color: "rgba(0,0,0,0.6)" }}
             onClick={openCart}
           >
             <ShoppingBag className="w-4 h-4" />
@@ -221,7 +221,7 @@ export function Navbar() {
           </button>
           <button
             className="lg:hidden w-8 h-8 flex items-center justify-center"
-            style={{ color: "rgba(255,255,255,0.6)" }}
+            style={{ color: "rgba(0,0,0,0.6)" }}
             onClick={() => setMobileOpen(true)}
           >
             <Menu className="w-5 h-5" />
@@ -231,18 +231,18 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: "#080A12" }}>
+        <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: "#FAFAF7" }}>
           <div
             className="flex items-center justify-between px-6 h-16"
             style={{ borderBottom: "1px solid rgba(184,146,90,0.3)" }}
           >
             <span
-              className="text-[20px] font-medium text-white"
+              className="text-[20px] font-medium text-neutral-900"
               style={{ fontFamily: "'Cormorant Garamond', serif", letterSpacing: "0.15em" }}
             >
               Ka·Sha
             </span>
-            <button onClick={() => setMobileOpen(false)} className="text-white/60">
+            <button onClick={() => setMobileOpen(false)} className="text-black/60">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -252,7 +252,7 @@ export function Navbar() {
                 key={l.label}
                 href={l.href}
                 onClick={() => setMobileOpen(false)}
-                className="text-[14px] uppercase text-white/80"
+                className="text-[14px] uppercase text-neutral-900/80"
                 style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.28em" }}
               >
                 {l.label}
@@ -278,8 +278,8 @@ export function Navbar() {
                 style={{
                   fontFamily: "'Josefin Sans', sans-serif",
                   letterSpacing: "0.2em",
-                  color: "rgba(255,255,255,0.7)",
-                  borderColor: "rgba(255,255,255,0.15)",
+                  color: "rgba(0,0,0,0.7)",
+                  borderColor: "rgba(0,0,0,0.12)",
                 }}
               >
                 Sign In

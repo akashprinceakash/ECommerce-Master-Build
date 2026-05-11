@@ -1,0 +1,413 @@
+
+<h2 class="sr-only">T-shirt customiser — 4-step flow: choose type, colours, logo, size</h2>
+<style>
+*{box-sizing:border-box}
+.wrap{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;background:var(--color-background-primary)}
+.stepbar{display:flex;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)}
+.sb{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 6px;cursor:pointer;border:none;background:none;font-size:12px;color:var(--color-text-secondary);border-bottom:2px solid transparent;transition:color .15s,border-color .15s;white-space:nowrap}
+.sb.act{color:var(--color-text-primary);border-bottom-color:var(--color-text-primary);font-weight:500}
+.sb.done{color:var(--color-text-info);border-bottom-color:transparent}
+.sb .num{width:20px;height:20px;border-radius:50%;border:1.5px solid currentColor;font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb.done .num{background:var(--color-background-info);border-color:var(--color-border-info);color:var(--color-text-info)}
+.body{display:flex;min-height:540px}
+.panel{width:290px;flex-shrink:0;border-right:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column}
+.pcnt{flex:1;padding:16px;overflow-y:auto}
+.foot{padding:10px 14px;border-top:0.5px solid var(--color-border-tertiary);display:flex;gap:8px}
+.bbk{flex:1;padding:8px;border:0.5px solid var(--color-border-tertiary);background:none;border-radius:var(--border-radius-md);cursor:pointer;font-size:13px;color:var(--color-text-secondary)}
+.bnx{flex:2;padding:8px;border:none;background:var(--color-text-primary);color:var(--color-background-primary);border-radius:var(--border-radius-md);cursor:pointer;font-size:13px;font-weight:500}
+.lbl{font-size:10.5px;color:var(--color-text-secondary);letter-spacing:.05em;font-weight:500;display:block;margin:0 0 9px}
+.lbl2{font-size:10.5px;color:var(--color-text-secondary);letter-spacing:.05em;font-weight:500;display:block;margin:14px 0 9px}
+.tcard{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);cursor:pointer;display:flex;align-items:center;gap:12px;padding:10px 12px;margin-bottom:8px;transition:border-color .12s,background .12s;background:var(--color-background-primary)}
+.tcard:hover{background:var(--color-background-secondary)}
+.tcard.sel{border:2px solid var(--color-text-primary)}
+.tcard .thumb{width:48px;height:48px;border-radius:6px;flex-shrink:0;overflow:hidden;border:0.5px solid var(--color-border-tertiary)}
+.tcard .info .name{font-size:13px;font-weight:500;color:var(--color-text-primary);margin:0 0 2px}
+.tcard .info .desc{font-size:11px;color:var(--color-text-secondary);margin:0}
+.ptile{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);cursor:pointer;overflow:hidden;transition:border-color .12s;aspect-ratio:1}
+.ptile.sel{border:2px solid var(--color-text-primary)}
+.ptile svg{display:block;width:100%;height:100%}
+.ptile .plbl{font-size:10px;text-align:center;padding:3px 0;color:var(--color-text-secondary);background:var(--color-background-secondary);border-top:0.5px solid var(--color-border-tertiary)}
+.tg{display:flex;margin-bottom:14px}
+.tgb{flex:1;padding:7px 4px;font-size:12px;border:0.5px solid var(--color-border-tertiary);background:none;cursor:pointer;color:var(--color-text-secondary);text-align:center;transition:all .12s}
+.tgb:first-child{border-radius:var(--border-radius-md) 0 0 var(--border-radius-md);border-right:none}
+.tgb:last-child{border-radius:0 var(--border-radius-md) var(--border-radius-md) 0}
+.tgb.on{background:var(--color-text-primary);color:var(--color-background-primary);border-color:var(--color-text-primary)}
+.sw{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .1s;flex-shrink:0}
+.sw:hover{transform:scale(1.18)}
+.sw.sel{outline:2px solid var(--color-text-primary);outline-offset:1px}
+.posb{flex:1;padding:6px 2px;font-size:11px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:none;cursor:pointer;color:var(--color-text-secondary);text-align:center;transition:all .12s;margin:0 2px}
+.posb.sel{background:var(--color-text-primary);color:var(--color-background-primary);border-color:var(--color-text-primary)}
+.szb{padding:7px 10px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:none;cursor:pointer;font-size:12.5px;color:var(--color-text-secondary);transition:all .12s;text-align:center}
+.szb.sel{background:var(--color-text-primary);color:var(--color-background-primary);border-color:var(--color-text-primary)}
+.pv{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:16px;background:var(--color-background-secondary);gap:10px}
+</style>
+
+<div class="wrap">
+
+  <div class="stepbar" id="stepbar"></div>
+
+  <div class="body">
+    <div class="panel">
+      <div class="pcnt" id="pcnt"></div>
+      <div class="foot">
+        <button class="bbk" id="bbk" onclick="pS()">Back</button>
+        <button class="bnx" id="bnx" onclick="nS()">Continue →</button>
+      </div>
+    </div>
+
+    <div class="pv">
+      <div style="font-size:10px;letter-spacing:.09em;color:var(--color-text-secondary);align-self:flex-start;font-weight:500">LIVE PREVIEW</div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center">
+        <svg id="shrt" viewBox="0 0 260 290" style="width:200px;height:auto" role="img" aria-label="T-shirt preview"></svg>
+      </div>
+      <div style="width:100%">
+        <div id="smry" style="font-size:11.5px;color:var(--color-text-secondary);line-height:1.75;padding:9px 11px;background:var(--color-background-primary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);margin-bottom:9px"></div>
+        <button style="width:100%;padding:10px;background:var(--color-text-primary);color:var(--color-background-primary);border:none;border-radius:var(--border-radius-md);cursor:pointer;font-size:13px;font-weight:500" onclick="addCart()">Add to cart ↗</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var S={
+  step:1,
+  type:'solid',
+  printId:-1,
+  patternId:-1,
+  sleeve:'short',
+  part:'body',
+  clrs:{body:'#185FA5',sleeve:'#185FA5',collar:'#0C447C',panel:'#E53935'},
+  logo:null,logoPos:'left-chest',logoSz:60,
+  szMode:'standard',sz:'M',unit:'cm',
+  meas:{chest:'',shoulder:'',hip:'',sleeve:''}
+};
+
+var STEPS=[
+  [1,'Choose type'],
+  [2,'Colours'],
+  [3,'Logo'],
+  [4,'Size']
+];
+
+var CL=[
+  ['#FFFFFF','White'],['#F5F5F5','Off-white'],['#BDBDBD','Silver'],
+  ['#757575','Grey'],['#424242','Charcoal'],['#212121','Black'],
+  ['#185FA5','Royal blue'],['#0C447C','Navy'],['#1B5E20','Forest'],
+  ['#006064','Teal'],['#880E4F','Burgundy'],['#C62828','Red'],
+  ['#E65100','Orange'],['#F9A825','Amber'],['#4A148C','Purple'],
+  ['#37474F','Slate'],['#00796B','Jade'],['#F48FB1','Rose'],
+  ['#1565C0','Cobalt'],['#6D4C41','Brown']
+];
+
+var SZS=['XS','S','M','L','XL','XXL'];
+var SCH=['82–86','87–91','92–96','97–102','103–108','109–114'];
+
+function gS(n){S.step=n;rdr();}
+function pS(){if(S.step>1){S.step--;rdr();}}
+function nS(){if(S.step<4){S.step++;rdr();}else addCart();}
+function addCart(){
+  var t='My order: '+S.type+(S.type==='print'&&S.printId>=0?' ('+PRINTS[S.printId][0]+')':'')+
+    (S.type==='pattern'&&S.patternId>=0?' ('+PATTERNS[S.patternId][0]+')':'')+
+    ', '+(S.sleeve)+' sleeve, body '+S.clrs.body+
+    (S.logo?', logo at '+S.logoPos+' '+S.logoSz+'mm':'')+
+    ', '+(S.szMode==='standard'?'size '+S.sz:'custom measurements');
+  sendPrompt(t);
+}
+
+var PRINTS=[
+  ['Camouflage','camo'],
+  ['Geometric art','geo'],
+  ['Tie-dye swirl','tiedye'],
+  ['Floral bloom','floral'],
+  ['Abstract brush','abstract'],
+  ['Upload my own','upload']
+];
+
+var PATTERNS=[
+  ['Solid','solid'],
+  ['V-panel','vpanel'],
+  ['Side bars','sidebars'],
+  ['Raglan','raglan'],
+  ['Chest band','chestband'],
+  ['Color block','colorblock']
+];
+
+function drawPrintThumb(id){
+  var t=PRINTS[id][1];
+  if(t==='camo') return '<svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#6B8E5A"/><ellipse cx="12" cy="10" rx="8" ry="5" fill="#4A6640"/><ellipse cx="30" cy="8" rx="6" ry="4" fill="#3B5230"/><ellipse cx="40" cy="20" rx="7" ry="4" fill="#4A6640"/><ellipse cx="8" cy="28" rx="6" ry="5" fill="#3B5230"/><ellipse cx="24" cy="32" rx="9" ry="5" fill="#566E44"/><ellipse cx="42" cy="38" rx="7" ry="5" fill="#3B5230"/><ellipse cx="16" cy="44" rx="8" ry="5" fill="#4A6640"/></svg>';
+  if(t==='geo') return '<svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#E8EAF6"/><polygon points="0,0 24,24 48,0" fill="#9FA8DA"/><polygon points="0,48 24,24 48,48" fill="#7986CB"/><polygon points="0,0 24,24 0,48" fill="#5C6BC0"/><polygon points="48,0 24,24 48,48" fill="#3F51B5"/></svg>';
+  if(t==='tiedye') return '<svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#CE93D8"/><circle cx="24" cy="24" r="20" fill="none" stroke="#F48FB1" stroke-width="4"/><circle cx="24" cy="24" r="14" fill="none" stroke="#80DEEA" stroke-width="4"/><circle cx="24" cy="24" r="8" fill="none" stroke="#FFCC80" stroke-width="4"/><circle cx="24" cy="24" r="3" fill="#F06292"/></svg>';
+  if(t==='floral') return '<svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#FCE4EC"/><circle cx="12" cy="12" r="4" fill="#F48FB1"/><circle cx="14" cy="8" r="3" fill="#F06292"/><circle cx="10" cy="8" r="3" fill="#EC407A"/><circle cx="8" cy="12" r="3" fill="#F06292"/><circle cx="16" cy="12" r="3" fill="#F48FB1"/><circle cx="12" cy="12" r="2" fill="#FFCC80"/><circle cx="36" cy="30" r="4" fill="#CE93D8"/><circle cx="38" cy="26" r="3" fill="#BA68C8"/><circle cx="34" cy="26" r="3" fill="#AB47BC"/><circle cx="32" cy="30" r="3" fill="#BA68C8"/><circle cx="40" cy="30" r="3" fill="#CE93D8"/><circle cx="36" cy="30" r="2" fill="#FFCC80"/><circle cx="22" cy="38" r="3" fill="#A5D6A7"/><circle cx="24" cy="35" r="2.5" fill="#81C784"/><circle cx="20" cy="35" r="2.5" fill="#66BB6A"/><circle cx="18" cy="38" r="2.5" fill="#81C784"/><circle cx="26" cy="38" r="2.5" fill="#A5D6A7"/><circle cx="22" cy="38" r="1.5" fill="#FFCC80"/></svg>';
+  if(t==='abstract') return '<svg viewBox="0 0 48 48"><rect width="48" height="48" fill="#FFF8E1"/><path d="M0 30 Q12 10 24 24 Q36 38 48 18" stroke="#FFB300" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M0 40 Q16 20 32 34 Q40 40 48 28" stroke="#F44336" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M6 0 Q18 16 10 32" stroke="#1565C0" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="38" cy="10" r="6" fill="#4CAF50" opacity=".7"/></svg>';
+  return '<svg viewBox="0 0 48 48"><rect width="48" height="48" fill="var(--color-background-secondary)"/><text x="24" y="22" text-anchor="middle" font-size="20" fill="var(--color-text-secondary)">+</text><text x="24" y="34" text-anchor="middle" font-size="8" fill="var(--color-text-secondary)">Upload</text></svg>';
+}
+
+function drawPatternThumb(id,bc,sc,cc,pc){
+  var p=PATTERNS[id][1];
+  var B=bc||'#185FA5',SL=sc||'#185FA5',CO=cc||'#0C447C',PA=pc||'#E53935';
+  if(p==='solid') return '<svg viewBox="0 0 48 48"><rect width="48" height="48" fill="'+B+'"/></svg>';
+  if(p==='vpanel') return '<svg viewBox="0 0 48 48"><rect width="48" height="48" fill="'+B+'"/><polygon points="14,0 34,0 24,22" fill="'+PA+'"/></svg>';
+  if(p==='sidebars') return '<svg viewBox="0 0 48 48"><rect width="48" height="48" fill="'+B+'"/><rect x="0" y="0" width="9" height="48" fill="'+PA+'"/><rect x="39" y="0" width="9" height="48" fill="'+PA+'"/></svg>';
+  if(p==='raglan') return '<svg viewBox="0 0 48 48"><rect width="48" height="48" fill="'+B+'"/><polygon points="0,0 20,0 0,28" fill="'+PA+'"/><polygon points="48,0 28,0 48,28" fill="'+PA+'"/></svg>';
+  if(p==='chestband') return '<svg viewBox="0 0 48 48"><rect width="48" height="48" fill="'+B+'"/><rect x="0" y="14" width="48" height="14" fill="'+PA+'"/></svg>';
+  if(p==='colorblock') return '<svg viewBox="0 0 48 48"><rect width="48" height="48" fill="'+B+'"/><rect x="0" y="0" width="48" height="24" fill="'+PA+'"/></svg>';
+  return '<svg viewBox="0 0 48 48"><rect width="48" height="48" fill="'+B+'"/></svg>';
+}
+
+function step1(){
+  return '<span class="lbl">T-shirt design type</span>'+
+
+  '<div class="tcard'+(S.type==='solid'?' sel':'')+'" onclick="sType(\'solid\')">'+
+    '<div class="thumb"><svg viewBox="0 0 48 48"><rect width="48" height="48" fill="'+S.clrs.body+'"/></svg></div>'+
+    '<div class="info"><div class="name">Solid colour</div><div class="desc">One or multi-part flat colours</div></div>'+
+  '</div>'+
+
+  '<div class="tcard'+(S.type==='print'?' sel':'')+'" onclick="sType(\'print\')">'+
+    '<div class="thumb">'+drawPrintThumb(S.printId>=0?S.printId:0)+'</div>'+
+    '<div class="info"><div class="name">Print</div><div class="desc">Library designs or upload artwork</div></div>'+
+  '</div>'+
+
+  '<div class="tcard'+(S.type==='pattern'?' sel':'')+'" onclick="sType(\'pattern\')">'+
+    '<div class="thumb">'+drawPatternThumb(S.patternId>=0?S.patternId:1,S.clrs.body,S.clrs.sleeve,S.clrs.collar,S.clrs.panel)+'</div>'+
+    '<div class="info"><div class="name">Pattern</div><div class="desc">V-panel, side bars, raglan &amp; more</div></div>'+
+  '</div>'+
+
+  (S.type==='print'?
+    '<span class="lbl2">Choose from library</span>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px">'+
+      PRINTS.map(function(p,i){
+        return '<div class="ptile'+(S.printId===i?' sel':'')+'" onclick="sPrint('+i+')">'+
+          drawPrintThumb(i)+
+          '<div class="plbl">'+p[0]+'</div></div>';
+      }).join('')+
+    '</div>':'')+
+
+  (S.type==='pattern'?
+    '<span class="lbl2">Pattern layout</span>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px">'+
+      PATTERNS.map(function(p,i){
+        return '<div class="ptile'+(S.patternId===i?' sel':'')+'" onclick="sPat('+i+')">'+
+          drawPatternThumb(i,S.clrs.body,S.clrs.sleeve,S.clrs.collar,S.clrs.panel)+
+          '<div class="plbl">'+p[0]+'</div></div>';
+      }).join('')+
+    '</div>':'')+
+
+  '<span class="lbl2">Sleeve length</span>'+
+  '<div class="tg">'+
+    '<button class="tgb'+(S.sleeve==='short'?' on':'')+'" onclick="sSlv(\'short\')">Half sleeve</button>'+
+    '<button class="tgb'+(S.sleeve==='full'?' on':'')+'" onclick="sSlv(\'full\')">Full sleeve</button>'+
+  '</div>';
+}
+
+function step2(){
+  var cur=S.clrs[S.part];
+  var parts=[['body','Body'],['sleeve','Sleeves'],['collar','Collar']];
+  if(S.type==='pattern'&&S.patternId>0)parts.push(['panel','Panel']);
+  return '<span class="lbl">Part to colour</span>'+
+    '<div class="tg">'+parts.map(function(p){
+      return '<button class="tgb'+(S.part===p[0]?' on':'')+'" onclick="sPrt(\''+p[0]+'\')">'+p[1]+'</button>';
+    }).join('')+'</div>'+
+    '<span class="lbl">Swatches</span>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px">'+
+      CL.map(function(cl){
+        var isW=cl[0]==='#FFFFFF';
+        return '<div class="sw'+(S.clrs[S.part]===cl[0]?' sel':'')+'" style="background:'+cl[0]+(isW?';border-color:#ccc':'')+'" title="'+cl[1]+'" onclick="sClr(\''+cl[0]+'\')"></div>';
+      }).join('')+
+    '</div>'+
+    '<span class="lbl">Custom hex</span>'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'+
+      '<input type="color" value="'+cur+'" style="width:38px;height:34px;cursor:pointer;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);padding:2px" oninput="sClrI(this.value)">'+
+      '<code id="hxd" style="font-size:12px;color:var(--color-text-secondary)">'+cur.toUpperCase()+'</code>'+
+    '</div>'+
+    '<button onclick="apAll()" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--color-text-info);padding:0"><i class="ti ti-palette" aria-hidden="true"></i> Apply to all parts</button>';
+}
+
+function step3(){
+  return '<span class="lbl">Logo file</span>'+
+    (!S.logo?
+      '<div style="border:0.5px dashed var(--color-border-secondary);border-radius:var(--border-radius-md);padding:26px 16px;text-align:center;cursor:pointer" onclick="uplL()">'+
+        '<i class="ti ti-cloud-upload" style="font-size:28px;color:var(--color-text-secondary);display:block;margin-bottom:6px" aria-hidden="true"></i>'+
+        '<div style="font-size:13px;color:var(--color-text-secondary)">Click to upload</div>'+
+        '<div style="font-size:11px;color:var(--color-text-tertiary);margin-top:3px">PNG · SVG · JPG</div></div>'+
+        '<input type="file" id="lfin" accept="image/*" style="display:none" onchange="hdlL(event)">':
+      '<div style="border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:10px 12px;display:flex;align-items:center;gap:10px">'+
+        '<i class="ti ti-file-check" style="font-size:18px;color:var(--color-text-success)" aria-hidden="true"></i>'+
+        '<span style="flex:1;font-size:12px">Logo uploaded</span>'+
+        '<button onclick="rmL()" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);padding:4px"><i class="ti ti-x" aria-hidden="true"></i></button></div>')+
+    '<span class="lbl2">Placement</span>'+
+    '<div style="display:flex;gap:4px;margin-bottom:14px">'+
+      [['left-chest','Left chest'],['center','Front centre'],['back','Back']].map(function(p){
+        return '<button class="posb'+(S.logoPos===p[0]?' sel':'')+'" onclick="sLP(\''+p[0]+'\')">'+p[1]+'</button>';
+      }).join('')+
+    '</div>'+
+    '<span class="lbl">Size: <span id="lszv" style="font-weight:400;color:var(--color-text-primary)">'+S.logoSz+' mm</span></span>'+
+    '<input type="range" min="20" max="120" step="5" value="'+S.logoSz+'" style="width:100%;margin-bottom:6px" oninput="sLS(parseInt(this.value))">';
+}
+
+function step4(){
+  return '<span class="lbl">Fit type</span>'+
+    '<div class="tg">'+
+      '<button class="tgb'+(S.szMode==='standard'?' on':'')+'" onclick="sSzM(\'standard\')">Standard sizes</button>'+
+      '<button class="tgb'+(S.szMode==='custom'?' on':'')+'" onclick="sSzM(\'custom\')">Custom fit</button>'+
+    '</div>'+
+    (S.szMode==='standard'?
+      '<span class="lbl">Select your size</span>'+
+      '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px">'+
+        SZS.map(function(s){return '<button class="szb'+(S.sz===s?' sel':'')+'" onclick="sSz(\''+s+'\')">'+s+'</button>';}).join('')+
+      '</div>'+
+      '<span class="lbl" style="margin-top:4px">Size guide (chest in cm)</span>'+
+      '<div style="overflow-x:auto"><table style="width:100%;font-size:10.5px;border-collapse:collapse;table-layout:fixed">'+
+        '<tr>'+SZS.map(function(s){var hl=S.sz===s?';background:var(--color-text-primary);color:var(--color-background-primary)':';background:var(--color-background-secondary)';return '<th style="padding:4px 3px;border:0.5px solid var(--color-border-tertiary);font-weight:500;text-align:center'+hl+'">'+s+'</th>';}).join('')+'</tr>'+
+        '<tr>'+SCH.map(function(m){return '<td style="padding:4px 3px;border:0.5px solid var(--color-border-tertiary);text-align:center;color:var(--color-text-secondary)">'+m+'</td>';}).join('')+'</tr>'+
+      '</table></div>':
+      '<span class="lbl">Unit</span>'+
+      '<div class="tg">'+
+        '<button class="tgb'+(S.unit==='cm'?' on':'')+'" onclick="sUnt(\'cm\')">cm</button>'+
+        '<button class="tgb'+(S.unit==='in'?' on':'')+'" onclick="sUnt(\'in\')">inches</button>'+
+      '</div>'+
+      [['chest','Chest'],['shoulder','Shoulder'],['hip','Hip / waist'],['sleeve','Sleeve length']].map(function(f){
+        return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'+
+          '<label style="font-size:12px;color:var(--color-text-secondary);width:100px">'+f[1]+' ('+S.unit+')</label>'+
+          '<input type="number" placeholder="—" value="'+(S.meas[f[0]]||'')+'" style="flex:1;padding:5px 8px;font-size:13px" oninput="sMes(\''+f[0]+'\',this.value)">'+
+          '</div>';
+      }).join('')+
+      '<div style="padding:9px 11px;background:var(--color-background-info);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-info)">'+
+        '<span style="font-size:11px;color:var(--color-text-info)"><i class="ti ti-info-circle" aria-hidden="true"></i> Measure over a fitted shirt for best accuracy.</span>'+
+      '</div>');
+}
+
+function sType(t){S.type=t;rdr();}
+function sPrint(i){S.printId=i;rdr();}
+function sPat(i){S.patternId=i;rdr();}
+function sSlv(s){S.sleeve=s;rdr();}
+function sPrt(p){S.part=p;rdr();}
+function sClr(c){S.clrs[S.part]=c;rdr();}
+function sClrI(c){S.clrs[S.part]=c;var h=document.getElementById('hxd');if(h)h.textContent=c.toUpperCase();rdrShirt();}
+function apAll(){var c=S.clrs[S.part];S.clrs={body:c,sleeve:c,collar:c,panel:S.clrs.panel};rdr();}
+function uplL(){var f=document.getElementById('lfin');if(f)f.click();}
+function hdlL(e){var file=e.target.files[0];if(!file)return;var r=new FileReader();r.onload=function(ev){S.logo=ev.target.result;rdr();};r.readAsDataURL(file);}
+function rmL(){S.logo=null;rdr();}
+function sLP(p){S.logoPos=p;rdr();}
+function sLS(v){S.logoSz=v;var e=document.getElementById('lszv');if(e)e.textContent=v+' mm';rdrShirt();}
+function sSzM(m){S.szMode=m;rdr();}
+function sSz(s){S.sz=s;rdr();}
+function sUnt(u){S.unit=u;rdr();}
+function sMes(f,v){S.meas[f]=v;}
+
+function slvPath(side){
+  if(side==='L') return S.sleeve==='short'?'M60,70 L14,85 L17,128 L60,118 Z':'M60,70 L11,86 L8,228 L50,236 L60,118 Z';
+  return S.sleeve==='short'?'M200,70 L246,85 L243,128 L200,118 Z':'M200,70 L249,86 L252,228 L210,236 L200,118 Z';
+}
+
+function getPatternFill(part){
+  var pid=S.patternId;
+  if(pid<0)pid=0;
+  var p=PATTERNS[pid][1];
+  var B=S.clrs.body,SL=S.clrs.sleeve,CO=S.clrs.collar,PA=S.clrs.panel;
+  if(S.type!=='pattern'||p==='solid'){
+    if(part==='body')return B;
+    if(part==='sleeve')return SL;
+    if(part==='collar')return CO;
+  }
+  if(p==='raglan'){
+    if(part==='sleeve')return PA;
+    if(part==='body')return B;
+    if(part==='collar')return CO;
+  }
+  if(part==='body')return B;
+  if(part==='sleeve')return SL;
+  if(part==='collar')return CO;
+  return B;
+}
+
+function getBodyOverlay(){
+  if(S.type!=='pattern'||S.patternId<0)return '';
+  var p=PATTERNS[S.patternId][1];
+  var PA=S.clrs.panel,B=S.clrs.body;
+  var str='rgba(0,0,0,0.1)';
+  if(p==='vpanel') return '<polygon points="90,70 170,70 130,140" fill="'+PA+'" stroke="'+str+'" stroke-width="0.5"/>';
+  if(p==='sidebars') return '<rect x="45" y="70" width="20" height="190" fill="'+PA+'"/><rect x="195" y="70" width="20" height="190" fill="'+PA+'"/>';
+  if(p==='chestband') return '<rect x="45" y="108" width="170" height="42" fill="'+PA+'"/>';
+  if(p==='colorblock') return '<rect x="45" y="70" width="170" height="95" fill="'+PA+'"/>';
+  return '';
+}
+
+function getPrintOverlay(){
+  if(S.type!=='print'||S.printId<0)return '';
+  var pcl=['rgba(60,90,40,0.22)','rgba(60,70,170,0.22)','rgba(160,60,160,0.22)','rgba(200,60,100,0.22)','rgba(200,140,20,0.22)',''][S.printId];
+  if(!pcl)return '';
+  return '<rect x="45" y="70" width="170" height="190" fill="'+pcl+'" rx="2"/>'+
+    '<rect x="60" y="118" width="140" height="142" fill="'+pcl+'" rx="2" opacity=".5"/>';
+}
+
+function logoEl(){
+  if(!S.logo&&!true)return '';
+  if(S.logoPos==='back')return '<text x="130" y="200" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.55)" font-family="sans-serif">logo on back</text>';
+  var sz=S.logoSz*0.43;
+  var x=S.logoPos==='left-chest'?95:130;
+  var y=S.logoPos==='left-chest'?118:162;
+  var hw=Math.round(sz*0.55),hh=Math.round(sz*0.32);
+  if(S.logo){
+    return '<image href="'+S.logo+'" x="'+(x-hw)+'" y="'+(y-hh)+'" width="'+(hw*2)+'" height="'+(hh*2)+'" preserveAspectRatio="xMidYMid meet"/>';
+  }
+  return '<rect x="'+(x-hw)+'" y="'+(y-hh)+'" width="'+(hw*2)+'" height="'+(hh*2)+'" rx="3" fill="rgba(255,255,255,0.6)" stroke="rgba(255,255,255,0.35)" stroke-width="1"/>'+
+    '<text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" font-size="8" fill="rgba(0,0,0,0.4)" font-family="sans-serif">LOGO</text>';
+}
+
+function rdrShirt(){
+  var svg=document.getElementById('shrt');if(!svg)return;
+  var lD=slvPath('L'),rD=slvPath('R');
+  var str='rgba(0,0,0,0.14)';
+  var bf=getPatternFill('body'),sf=getPatternFill('sleeve'),cf=getPatternFill('collar');
+  svg.innerHTML=
+    '<path d="'+lD+'" fill="'+sf+'" stroke="'+str+'" stroke-width="1.5"/>'+
+    '<path d="'+rD+'" fill="'+sf+'" stroke="'+str+'" stroke-width="1.5"/>'+
+    '<path d="M60,70 L200,70 L215,260 L45,260 Z" fill="'+bf+'" stroke="'+str+'" stroke-width="1.5"/>'+
+    getBodyOverlay()+
+    getPrintOverlay()+
+    '<path d="M90,70 Q130,106 170,70 L163,70 Q130,90 97,70 Z" fill="'+cf+'" stroke="'+str+'" stroke-width="1"/>'+
+    '<path d="M60,70 L60,118" stroke="'+str+'" stroke-width="0.5" stroke-dasharray="3,3"/>'+
+    '<path d="M200,70 L200,118" stroke="'+str+'" stroke-width="0.5" stroke-dasharray="3,3"/>'+
+    logoEl();
+}
+
+function rdrSmry(){
+  var e=document.getElementById('smry');if(!e)return;
+  var lines=[];
+  var t=S.type==='solid'?'Solid':S.type==='print'?'Print'+(S.printId>=0?' — '+PRINTS[S.printId][0]:''):'Pattern'+(S.patternId>=0?' — '+PATTERNS[S.patternId][0]:'');
+  lines.push('<span style="font-weight:500;color:var(--color-text-primary)">'+t+'</span> · '+(S.sleeve)+' sleeve');
+  if(S.szMode==='standard') lines.push('Size: <span style="font-weight:500;color:var(--color-text-primary)">'+S.sz+'</span>');
+  else{var n=Object.values(S.meas).filter(Boolean).length;lines.push('Custom fit ('+n+'/4 measurements)');}
+  if(S.logo)lines.push('Logo: '+S.logoPos+' · '+S.logoSz+'mm');
+  e.innerHTML=lines.join('<br>');
+}
+
+function rdrStepBar(){
+  var sb=document.getElementById('stepbar');if(!sb)return;
+  sb.innerHTML=STEPS.map(function(st){
+    var n=st[0],lbl=st[1];
+    var cls='sb'+(S.step===n?' act':n<S.step?' done':'');
+    return '<button class="'+cls+'" onclick="gS('+n+')" '+(n>S.step?'disabled':'')+'>'+
+      '<span class="num">'+(n<S.step?'<i class="ti ti-check" style="font-size:10px" aria-hidden="true"></i>':n)+'</span>'+
+      '<span>'+lbl+'</span></button>';
+  }).join('');
+}
+
+function rdr(){
+  rdrStepBar();
+  var pc=document.getElementById('pcnt');
+  if(pc){
+    if(S.step===1)pc.innerHTML=step1();
+    else if(S.step===2)pc.innerHTML=step2();
+    else if(S.step===3)pc.innerHTML=step3();
+    else pc.innerHTML=step4();
+  }
+  rdrShirt();
+  rdrSmry();
+  var bk=document.getElementById('bbk'),nx=document.getElementById('bnx');
+  if(bk)bk.style.display=S.step===1?'none':'';
+  if(nx)nx.textContent=S.step===4?'Add to cart ↗':'Continue →';
+}
+
+rdr();
+</script>

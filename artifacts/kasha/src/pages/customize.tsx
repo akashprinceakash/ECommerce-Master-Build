@@ -9,14 +9,14 @@ import { formatPrice } from "@/lib/format";
 
 const GOLD = "#B8925A";
 const GOLD_LIGHT = "#D4A96A";
-const BG = "#080A12";
-const CARD = "#0F1622";
-const CARD_2 = "#0D1220";
-const BD = "rgba(255,255,255,0.08)";
-const BD_GOLD = "rgba(184,146,90,0.3)";
-const TX = "#ffffff";
-const MUTED = "rgba(255,255,255,0.5)";
-const MUTED_2 = "rgba(255,255,255,0.35)";
+const BG = "#FAFAF7";
+const CARD = "#FFFFFF";
+const CARD_2 = "#F5F2EC";
+const BD = "rgba(0,0,0,0.08)";
+const BD_GOLD = "rgba(184,146,90,0.35)";
+const TX = "#0A0A0A";
+const MUTED = "rgba(0,0,0,0.55)";
+const MUTED_2 = "rgba(0,0,0,0.4)";
 
 const FONT_DISPLAY = "'Cormorant Garamond', serif";
 const FONT_UI = "'Josefin Sans', sans-serif";
@@ -273,7 +273,7 @@ export default function CustomizePage() {
   if (!product) {
     return (
       <Layout>
-        <div className="min-h-[70vh] flex items-center justify-center text-white/60">Product not found.</div>
+        <div className="min-h-[70vh] flex items-center justify-center text-neutral-900/60">Product not found.</div>
       </Layout>
     );
   }
@@ -304,7 +304,7 @@ export default function CustomizePage() {
                 Custom Studio
               </div>
               <h1
-                className="text-white"
+                className="text-neutral-900"
                 style={{
                   fontFamily: FONT_DISPLAY,
                   fontSize: "clamp(28px, 3.5vw, 42px)",
@@ -336,7 +336,7 @@ export default function CustomizePage() {
                 textTransform: "uppercase",
                 textDecoration: "none",
               }}
-              className="hover:!text-white transition-colors"
+              className="hover:!text-neutral-900 transition-colors"
             >
               ← Back to product
             </Link>
@@ -435,7 +435,7 @@ function Stepper({ step, setStep }: { step: number; setStep: (n: number) => void
                 fontSize: 10,
                 letterSpacing: "0.28em",
                 textTransform: "uppercase",
-                color: active ? GOLD : done ? "rgba(255,255,255,0.7)" : MUTED_2,
+                color: active ? GOLD : done ? "rgba(0,0,0,0.7)" : MUTED_2,
                 background: "none",
                 border: "none",
                 cursor: "pointer",
@@ -494,7 +494,7 @@ function Panel({ children }: { children: React.ReactNode }) {
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="text-white"
+      className="text-neutral-900"
       style={{
         fontFamily: FONT_DISPLAY,
         fontSize: 18,
@@ -528,7 +528,7 @@ function NavRow({ onBack, onNext, nextLabel, loading }: { onBack?: () => void; o
             padding: "10px 18px",
             cursor: "pointer",
           }}
-          className="hover:!text-white"
+          className="hover:!text-neutral-900"
         >
           ← Back
         </button>
@@ -568,7 +568,7 @@ function Swatch({ color, selected, onClick, size = 32 }: { color: string; select
       style={{
         width: size, height: size, borderRadius: "50%",
         background: color,
-        border: selected ? `2px solid ${GOLD}` : isLight ? "1px solid rgba(255,255,255,0.2)" : "2px solid transparent",
+        border: selected ? `2px solid ${GOLD}` : isLight ? "1px solid rgba(0,0,0,0.15)" : "2px solid transparent",
         outline: selected ? `2px solid ${BG}` : "none",
         outlineOffset: -4,
         cursor: "pointer",
@@ -805,12 +805,12 @@ function Step2Parts(p: {
                 style={{
                   width: 22, height: 22, borderRadius: "50%",
                   background: col,
-                  border: "1px solid rgba(255,255,255,0.15)",
+                  border: "1px solid rgba(0,0,0,0.12)",
                   flexShrink: 0,
                 }}
               />
               <span
-                className="text-white flex-1"
+                className="text-neutral-900 flex-1"
                 style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 500 }}
               >
                 {part.label}
@@ -1307,7 +1307,7 @@ function PreviewPanel(p: {
               ? "M55 40 L25 60 L35 80 L62 68 Z"
               : "M55 40 L20 65 L30 100 L62 86 Z"}
             fill={p.partColors.sleeves}
-            stroke="rgba(255,255,255,0.15)"
+            stroke="rgba(0,0,0,0.12)"
             strokeWidth="0.6"
           />
           {/* Left sleeve */}
@@ -1316,18 +1316,18 @@ function PreviewPanel(p: {
               ? "M145 40 L175 60 L165 80 L138 68 Z"
               : "M145 40 L180 65 L170 100 L138 86 Z"}
             fill={p.partColors.sleeves}
-            stroke="rgba(255,255,255,0.15)"
+            stroke="rgba(0,0,0,0.12)"
             strokeWidth="0.6"
           />
           {/* Back */}
-          <rect x="55" y="55" width="90" height="140" rx="3" fill={p.partColors.back} stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
+          <rect x="55" y="55" width="90" height="140" rx="3" fill={p.partColors.back} stroke="rgba(0,0,0,0.12)" strokeWidth="0.6" />
           {/* Front */}
-          <rect x="58" y="58" width="84" height="134" rx="3" fill={p.partColors.front} stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
+          <rect x="58" y="58" width="84" height="134" rx="3" fill={p.partColors.front} stroke="rgba(0,0,0,0.12)" strokeWidth="0.6" />
           {/* Collar */}
           <path
             d="M88 38 Q100 50 112 38 L115 55 Q100 70 85 55 Z"
             fill={p.partColors.collar}
-            stroke="rgba(255,255,255,0.15)"
+            stroke="rgba(0,0,0,0.12)"
             strokeWidth="0.6"
           />
           {/* Logo placement box */}

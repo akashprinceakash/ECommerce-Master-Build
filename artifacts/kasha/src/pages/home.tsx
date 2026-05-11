@@ -4,7 +4,7 @@ import { Layout } from "@/components/layout/Layout";
 
 const GOLD = "#B8925A";
 const GOLD_LIGHT = "#D4A96A";
-const MUTED = "rgba(255,255,255,0.45)";
+const MUTED = "rgba(0,0,0,0.5)";
 
 type Slide = {
   bg: string;
@@ -209,7 +209,7 @@ function ProductCard({ c }: { c: Card }) {
         href={c.href}
         className="block group transition-all duration-500"
         style={{
-          background: "#0D1220",
+          background: "#F5F2EC",
           border: "1px solid rgba(184,146,90,0.3)",
           borderRadius: 8,
           overflow: "hidden",
@@ -221,7 +221,7 @@ function ProductCard({ c }: { c: Card }) {
         >
           <div className="text-center" style={{ opacity: 0.3 }}>
             <div
-              className="text-white"
+              className="text-neutral-900"
               style={{
                 fontFamily: "'Cormorant Garamond', serif",
                 fontSize: 52,
@@ -255,8 +255,8 @@ function ProductCard({ c }: { c: Card }) {
       href={c.href}
       className="block group transition-all duration-500 hover:-translate-y-1.5"
       style={{
-        background: "#0F1622",
-        border: "1px solid rgba(255,255,255,0.08)",
+        background: "#FFFFFF",
+        border: "1px solid rgba(0,0,0,0.08)",
         borderRadius: 8,
         overflow: "hidden",
       }}
@@ -265,7 +265,7 @@ function ProductCard({ c }: { c: Card }) {
         (e.currentTarget as HTMLElement).style.boxShadow = "0 20px 60px rgba(0,0,0,0.5)";
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)";
+        (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.08)";
         (e.currentTarget as HTMLElement).style.boxShadow = "none";
       }}
     >
@@ -316,7 +316,7 @@ function CardBody({ c, bespoke }: { c: Card; bespoke?: boolean }) {
         {c.cat}
       </div>
       <div
-        className="text-white"
+        className="text-neutral-900"
         style={{
           fontFamily: "'Cormorant Garamond', serif",
           fontSize: 18,
@@ -331,7 +331,7 @@ function CardBody({ c, bespoke }: { c: Card; bespoke?: boolean }) {
         style={{
           fontFamily: "'Josefin Sans', sans-serif",
           fontSize: 9.5,
-          color: bespoke ? "rgba(255,255,255,0.3)" : MUTED,
+          color: bespoke ? "rgba(0,0,0,0.5)" : MUTED,
           letterSpacing: "0.08em",
           marginBottom: 14,
           lineHeight: 1.6,
@@ -349,7 +349,7 @@ function CardBody({ c, bespoke }: { c: Card; bespoke?: boolean }) {
                 fontSize: 7,
                 letterSpacing: "0.15em",
                 textTransform: "uppercase",
-                color: "rgba(255,255,255,0.4)",
+                color: "rgba(0,0,0,0.45)",
                 background: "rgba(255,255,255,0.06)",
                 padding: "3px 8px",
                 borderRadius: 2,
@@ -367,9 +367,9 @@ function CardBody({ c, bespoke }: { c: Card; bespoke?: boolean }) {
           fontSize: 8,
           letterSpacing: "0.2em",
           textTransform: "uppercase",
-          color: bespoke ? GOLD : "rgba(255,255,255,0.6)",
+          color: bespoke ? GOLD : "rgba(0,0,0,0.6)",
           paddingBottom: 2,
-          borderBottom: bespoke ? "1px solid rgba(184,146,90,0.3)" : "1px solid rgba(255,255,255,0.08)",
+          borderBottom: bespoke ? "1px solid rgba(184,146,90,0.3)" : "1px solid rgba(0,0,0,0.08)",
         }}
       >
         {bespoke ? "Design Yours →" : "Shop →"}
@@ -421,7 +421,7 @@ export default function Home() {
                 className="absolute inset-0"
                 style={{
                   background:
-                    "linear-gradient(to bottom, rgba(8,10,18,0.2) 0%, rgba(8,10,18,0.1) 30%, rgba(8,10,18,0.5) 70%, rgba(8,10,18,0.92) 100%)",
+                    "linear-gradient(to bottom, rgba(8,10,18,0.2) 0%, rgba(8,10,18,0.1) 30%, rgba(8,10,18,0.5) 70%, rgba(255,255,255,0.92) 100%)",
                 }}
               />
               <div className="absolute bottom-0 left-0 right-0 z-[2] px-6 md:px-20 pb-20 max-w-[700px]">
@@ -465,7 +465,7 @@ export default function Home() {
                     fontFamily: "'Josefin Sans', sans-serif",
                     fontSize: 9,
                     letterSpacing: "0.25em",
-                    color: "rgba(255,255,255,0.4)",
+                    color: "rgba(0,0,0,0.45)",
                     textTransform: "uppercase",
                     marginBottom: 32,
                   }}
@@ -501,21 +501,21 @@ export default function Home() {
                     className="transition-all"
                     style={{
                       background: "transparent",
-                      color: "rgba(255,255,255,0.6)",
+                      color: "rgba(0,0,0,0.6)",
                       fontFamily: "'Josefin Sans', sans-serif",
                       fontSize: 9,
                       letterSpacing: "0.28em",
                       textTransform: "uppercase",
                       padding: "13px 28px",
-                      border: "1px solid rgba(255,255,255,0.25)",
+                      border: "1px solid rgba(0,0,0,0.2)",
                     }}
                     onMouseEnter={(e) => {
                       (e.target as HTMLElement).style.borderColor = "rgba(184,146,90,0.4)";
                       (e.target as HTMLElement).style.color = GOLD;
                     }}
                     onMouseLeave={(e) => {
-                      (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.25)";
-                      (e.target as HTMLElement).style.color = "rgba(255,255,255,0.6)";
+                      (e.target as HTMLElement).style.borderColor = "rgba(0,0,0,0.2)";
+                      (e.target as HTMLElement).style.color = "rgba(0,0,0,0.6)";
                     }}
                   >
                     {s.outline.label}
@@ -537,7 +537,7 @@ export default function Home() {
                 width: i === active ? 24 : 6,
                 height: i === active ? 4 : 6,
                 borderRadius: i === active ? 2 : 9999,
-                background: i === active ? GOLD : "rgba(255,255,255,0.2)",
+                background: i === active ? GOLD : "rgba(0,0,0,0.15)",
               }}
             />
           ))}
@@ -551,7 +551,7 @@ export default function Home() {
             fontFamily: "'Josefin Sans', sans-serif",
             fontSize: 9,
             letterSpacing: "0.3em",
-            color: "rgba(255,255,255,0.2)",
+            color: "rgba(0,0,0,0.15)",
           }}
         >
           {String(active + 1).padStart(2, "0")} / 0{SLIDES.length}
@@ -568,7 +568,7 @@ export default function Home() {
       <section className="px-6 md:px-20 py-16 md:py-20 max-w-[1400px] mx-auto">
         <div
           className="mb-10"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+          style={{ borderBottom: "1px solid rgba(0,0,0,0.08)" }}
         >
           <div className="pb-6">
             <div
@@ -584,7 +584,7 @@ export default function Home() {
               Collections
             </div>
             <h2
-              className="text-white"
+              className="text-neutral-900"
               style={{
                 fontFamily: "'Cormorant Garamond', serif",
                 fontSize: "clamp(28px, 3vw, 42px)",
@@ -608,7 +608,7 @@ export default function Home() {
                     fontSize: 10,
                     letterSpacing: "0.3em",
                     textTransform: "uppercase",
-                    color: on ? GOLD : "rgba(255,255,255,0.4)",
+                    color: on ? GOLD : "rgba(0,0,0,0.45)",
                     border: "none",
                     background: "none",
                     borderBottom: on ? `2px solid ${GOLD}` : "2px solid transparent",
@@ -639,7 +639,7 @@ export default function Home() {
       <section
         className="relative overflow-hidden"
         style={{
-          background: "#0F1622",
+          background: "#FFFFFF",
           borderTop: "1px solid rgba(184,146,90,0.3)",
           borderBottom: "1px solid rgba(184,146,90,0.3)",
         }}
@@ -667,7 +667,7 @@ export default function Home() {
               Custom Studio
             </div>
             <h2
-              className="text-white"
+              className="text-neutral-900"
               style={{
                 fontFamily: "'Cormorant Garamond', serif",
                 fontSize: "clamp(28px, 2.5vw, 40px)",
@@ -700,7 +700,7 @@ export default function Home() {
                     fontSize: 7.5,
                     letterSpacing: "0.18em",
                     textTransform: "uppercase",
-                    color: "rgba(255,255,255,0.4)",
+                    color: "rgba(0,0,0,0.45)",
                     border: "1px solid rgba(184,146,90,0.3)",
                     padding: "5px 12px",
                     borderRadius: 2,
@@ -737,7 +737,7 @@ export default function Home() {
                 letterSpacing: "0.2em",
                 color: MUTED,
                 textTransform: "uppercase",
-                borderBottom: "1px solid rgba(255,255,255,0.15)",
+                borderBottom: "1px solid rgba(0,0,0,0.12)",
                 paddingBottom: 2,
               }}
             >
@@ -768,7 +768,7 @@ export default function Home() {
             Bulk & Corporate
           </div>
           <h2
-            className="text-white"
+            className="text-neutral-900"
             style={{
               fontFamily: "'Cormorant Garamond', serif",
               fontSize: "clamp(28px, 3vw, 42px)",
@@ -785,14 +785,14 @@ export default function Home() {
               key={b.title}
               className="group transition-all hover:-translate-y-1"
               style={{
-                background: "#0F1622",
-                border: "1px solid rgba(255,255,255,0.08)",
+                background: "#FFFFFF",
+                border: "1px solid rgba(0,0,0,0.08)",
                 borderRadius: 12,
                 overflow: "hidden",
                 cursor: "pointer",
               }}
               onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.3)")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.08)")}
             >
               <div className="h-[140px] relative overflow-hidden flex items-center justify-center">
                 <img
@@ -828,7 +828,7 @@ export default function Home() {
                   {b.num}
                 </div>
                 <div
-                  className="text-white"
+                  className="text-neutral-900"
                   style={{
                     fontFamily: "'Cormorant Garamond', serif",
                     fontSize: 20,
@@ -859,7 +859,7 @@ export default function Home() {
                         fontSize: 7,
                         letterSpacing: "0.15em",
                         textTransform: "uppercase",
-                        color: "rgba(255,255,255,0.4)",
+                        color: "rgba(0,0,0,0.45)",
                         background: "rgba(255,255,255,0.06)",
                         padding: "3px 8px",
                         borderRadius: 2,
