@@ -209,7 +209,7 @@ export default function TShirtViewer3D({
     }
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0d1220);
+    scene.background = new THREE.Color(0xfafaf7);
     sceneRef.current = scene;
 
     const w = containerRef.current.clientWidth;
@@ -373,7 +373,7 @@ export default function TShirtViewer3D({
         height,
         borderRadius: 8,
         overflow: "hidden",
-        background: "#0d1220",
+        background: "#FAFAF7",
         border: "1px solid rgba(184,146,90,0.2)",
       }}
     >
@@ -388,11 +388,11 @@ export default function TShirtViewer3D({
             alignItems: "center",
             justifyContent: "center",
             gap: 12,
-            background: "rgba(13,18,32,0.92)",
+            background: "rgba(250,250,247,0.92)",
             fontSize: 11,
             letterSpacing: "0.28em",
             textTransform: "uppercase",
-            color: "rgba(255,255,255,0.7)",
+            color: "rgba(0,0,0,0.72)",
             fontFamily: "'Josefin Sans', sans-serif",
           }}
         >
@@ -400,7 +400,7 @@ export default function TShirtViewer3D({
             style={{
               width: 30,
               height: 30,
-              border: "2px solid rgba(255,255,255,0.1)",
+              border: "2px solid rgba(0,0,0,0.12)",
               borderTopColor: "#B8925A",
               borderRadius: "50%",
               animation: "tsv-spin 0.9s linear infinite",
@@ -418,8 +418,8 @@ export default function TShirtViewer3D({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "rgba(13,18,32,0.92)",
-            color: "#E24B4A",
+            background: "rgba(250,250,247,0.92)",
+            color: "#C03A39",
             fontSize: 12,
             fontFamily: "'Josefin Sans', sans-serif",
           }}

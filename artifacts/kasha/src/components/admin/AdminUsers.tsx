@@ -170,7 +170,7 @@ export function AdminUsers() {
 
       {/* Delete confirmation */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setConfirmDelete(null)}>
+        <div className="fixed inset-0 bg-white/60 z-50 flex items-center justify-center p-4" onClick={() => setConfirmDelete(null)}>
           <div className="bg-background border border-border max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-2">Delete user?</h3>
             <p className="text-sm text-muted-foreground mb-4">
@@ -181,7 +181,7 @@ export function AdminUsers() {
               <button
                 onClick={() => deleteUser.mutate(confirmDelete.userId)}
                 disabled={deleteUser.isPending}
-                className="px-4 py-2 text-sm bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-60"
+                className="px-4 py-2 text-sm bg-rose-600 text-neutral-900 hover:bg-rose-700 disabled:opacity-60"
               >
                 {deleteUser.isPending ? "Deleting…" : "Delete"}
               </button>

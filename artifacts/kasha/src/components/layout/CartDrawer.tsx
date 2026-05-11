@@ -67,7 +67,7 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
                 <p className="text-sm text-gray-500">Add some items to get started</p>
               </div>
               <Link href="/products" onClick={onClose}>
-                <button className="bg-black text-white text-[11px] font-bold tracking-[0.12em] px-8 py-3 hover:bg-gray-900 transition-colors">
+                <button className="bg-neutral-900 text-white text-[11px] font-bold tracking-[0.12em] px-8 py-3 hover:bg-neutral-700 transition-colors">
                   SHOP NOW
                 </button>
               </Link>
@@ -85,7 +85,7 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
                           alt={item.product.name}
                           className="w-full h-full object-cover object-center"
                         />
-                        <span className="absolute bottom-0 right-0 bg-black/70 text-white text-[9px] px-1 py-0.5 leading-tight">CUSTOM</span>
+                        <span className="absolute bottom-0 right-0 bg-white/70 text-neutral-900 text-[9px] px-1 py-0.5 leading-tight">CUSTOM</span>
                       </>
                     ) : item.product.thumbnailUrl ? (
                       <img
