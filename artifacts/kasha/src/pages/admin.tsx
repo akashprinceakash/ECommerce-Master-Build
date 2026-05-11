@@ -175,20 +175,20 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
   }, [design, mvReady, parsedDesign]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div
         className="relative w-full max-w-5xl rounded-2xl overflow-hidden flex flex-col md:flex-row"
-        style={{ background: "#100d0b", border: "1px solid rgba(255,255,255,0.1)", maxHeight: "90vh" }}
+        style={{ background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.12)", maxHeight: "90vh" }}
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+          className="absolute top-4 right-4 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20 text-neutral-900 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* 3D Viewer */}
-        <div className="flex-1 min-h-[300px] md:min-h-[500px] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
+        <div className="flex-1 min-h-[300px] md:min-h-[500px] flex items-center justify-center" style={{ background: "#FAFAF7" }}>
           {design.productModelUrl && mvReady ? (
             <model-viewer
               ref={viewerRef}
@@ -202,7 +202,7 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
               style={{ width: "100%", height: "100%", minHeight: "300px", "--poster-color": "transparent" } as any}
             />
           ) : (
-            <div className="flex flex-col items-center gap-3 text-white/40 p-8">
+            <div className="flex flex-col items-center gap-3 text-neutral-900/40 p-8">
               <Package className="w-12 h-12" />
               <p className="text-sm">No 3D model available</p>
             </div>
@@ -210,48 +210,48 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
         </div>
 
         {/* Info Panel */}
-        <div className="w-full md:w-72 p-6 overflow-y-auto" style={{ borderLeft: "1px solid rgba(255,255,255,0.1)" }}>
-          <h2 className="text-lg font-bold text-white mb-1">{design.name}</h2>
-          <p className="text-xs text-white/40 mb-4">Customer Design</p>
+        <div className="w-full md:w-72 p-6 overflow-y-auto" style={{ borderLeft: "1px solid rgba(0,0,0,0.12)" }}>
+          <h2 className="text-lg font-bold text-neutral-900 mb-1">{design.name}</h2>
+          <p className="text-xs text-neutral-900/40 mb-4">Customer Design</p>
 
           <div className="space-y-3 text-sm">
             <div>
-              <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Customer</p>
-              <p className="text-white font-medium">{design.userName}</p>
-              <p className="text-white/60 text-xs">{design.userEmail}</p>
+              <p className="text-neutral-900/40 text-xs uppercase tracking-wider mb-1">Customer</p>
+              <p className="text-neutral-900 font-medium">{design.userName}</p>
+              <p className="text-neutral-900/60 text-xs">{design.userEmail}</p>
             </div>
             <div>
-              <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Product</p>
-              <p className="text-white">{design.productName ?? "—"}</p>
+              <p className="text-neutral-900/40 text-xs uppercase tracking-wider mb-1">Product</p>
+              <p className="text-neutral-900">{design.productName ?? "—"}</p>
             </div>
             <div className="flex gap-4">
               <div>
-                <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Size</p>
-                <p className="text-white">{design.size}</p>
+                <p className="text-neutral-900/40 text-xs uppercase tracking-wider mb-1">Size</p>
+                <p className="text-neutral-900">{design.size}</p>
               </div>
               <div>
-                <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Color</p>
+                <p className="text-neutral-900/40 text-xs uppercase tracking-wider mb-1">Color</p>
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded-full border border-white/20" style={{ background: design.color }} />
-                  <span className="text-white text-xs">{design.color}</span>
+                  <span className="text-neutral-900 text-xs">{design.color}</span>
                 </div>
               </div>
             </div>
             <div>
-              <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Last Updated</p>
-              <p className="text-white text-xs">{new Date(design.updatedAt).toLocaleString()}</p>
+              <p className="text-neutral-900/40 text-xs uppercase tracking-wider mb-1">Last Updated</p>
+              <p className="text-neutral-900 text-xs">{new Date(design.updatedAt).toLocaleString()}</p>
             </div>
           </div>
 
           {/* Material Colors */}
           {parsedDesign.matColors?.length > 0 && (
             <div className="mt-5">
-              <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Material Colors</p>
+              <p className="text-neutral-900/40 text-xs uppercase tracking-wider mb-2">Material Colors</p>
               <div className="flex flex-wrap gap-2">
                 {parsedDesign.matColors.map((c: string, i: number) => (
                   <div key={i} className="flex items-center gap-1.5 bg-white/5 rounded px-2 py-1">
                     <div className="w-4 h-4 rounded-full border border-white/20" style={{ background: c }} />
-                    <span className="text-white/70 text-[10px] font-mono">{c}</span>
+                    <span className="text-neutral-900/70 text-[10px] font-mono">{c}</span>
                   </div>
                 ))}
               </div>
@@ -261,28 +261,28 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
           {/* Preset */}
           {parsedDesign.presetName && (
             <div className="mt-4">
-              <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Preset</p>
-              <p className="text-white text-sm">{parsedDesign.presetName}</p>
+              <p className="text-neutral-900/40 text-xs uppercase tracking-wider mb-1">Preset</p>
+              <p className="text-neutral-900 text-sm">{parsedDesign.presetName}</p>
             </div>
           )}
 
           {/* Garment State */}
           {parsedDesign.garmentState && (
             <div className="mt-4">
-              <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Garment Parts</p>
+              <p className="text-neutral-900/40 text-xs uppercase tracking-wider mb-2">Garment Parts</p>
               <div className="grid grid-cols-2 gap-1.5 text-xs">
                 {(["sleeves","collar","placket","panel","stripe"] as const).map(k => (
                   <div key={k} className="flex items-center justify-between bg-white/5 rounded px-2 py-1">
-                    <span className="text-white/60 capitalize">{k}</span>
-                    <span className={parsedDesign.garmentState?.[k] ? "text-emerald-400" : "text-white/30"}>
+                    <span className="text-neutral-900/60 capitalize">{k}</span>
+                    <span className={parsedDesign.garmentState?.[k] ? "text-emerald-400" : "text-neutral-900/30"}>
                       {parsedDesign.garmentState?.[k] ? "ON" : "off"}
                     </span>
                   </div>
                 ))}
                 {parsedDesign.garmentState?.pattern && parsedDesign.garmentState.pattern !== "none" && (
                   <div className="col-span-2 flex items-center justify-between bg-white/5 rounded px-2 py-1">
-                    <span className="text-white/60">Pattern</span>
-                    <span className="text-white">{parsedDesign.garmentState.pattern}</span>
+                    <span className="text-neutral-900/60">Pattern</span>
+                    <span className="text-neutral-900">{parsedDesign.garmentState.pattern}</span>
                   </div>
                 )}
               </div>
@@ -292,24 +292,24 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
           {/* Design Elements summary */}
           {parsedDesign.objectCount > 0 && (
             <div className="mt-4">
-              <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Design Elements ({parsedDesign.objectCount})</p>
+              <p className="text-neutral-900/40 text-xs uppercase tracking-wider mb-2">Design Elements ({parsedDesign.objectCount})</p>
               <div className="space-y-1 text-xs">
                 {parsedDesign.texts?.length > 0 && (
                   <div className="bg-white/5 rounded px-2 py-1.5">
-                    <span className="text-white/40">Text: </span>
-                    <span className="text-white">{parsedDesign.texts.map((t: string) => `"${t}"`).join(", ")}</span>
+                    <span className="text-neutral-900/40">Text: </span>
+                    <span className="text-neutral-900">{parsedDesign.texts.map((t: string) => `"${t}"`).join(", ")}</span>
                   </div>
                 )}
                 {parsedDesign.logoCount > 0 && (
                   <div className="bg-white/5 rounded px-2 py-1">
-                    <span className="text-white/40">Logos / Images: </span>
-                    <span className="text-white">{parsedDesign.logoCount}</span>
+                    <span className="text-neutral-900/40">Logos / Images: </span>
+                    <span className="text-neutral-900">{parsedDesign.logoCount}</span>
                   </div>
                 )}
                 {parsedDesign.shapeCount > 0 && (
                   <div className="bg-white/5 rounded px-2 py-1">
-                    <span className="text-white/40">Shapes: </span>
-                    <span className="text-white">{parsedDesign.shapeCount}</span>
+                    <span className="text-neutral-900/40">Shapes: </span>
+                    <span className="text-neutral-900">{parsedDesign.shapeCount}</span>
                   </div>
                 )}
               </div>
@@ -321,15 +321,15 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
             <div className="mt-5 grid grid-cols-2 gap-2">
               {design.previewImageUrl && (
                 <div>
-                  <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">3D Preview</p>
-                  <div className="rounded-lg overflow-hidden border border-white/10 bg-black/40">
+                  <p className="text-neutral-900/40 text-[10px] uppercase tracking-wider mb-1">3D Preview</p>
+                  <div className="rounded-lg overflow-hidden border border-white/10 bg-white/40">
                     <img src={design.previewImageUrl} alt="3D Preview" className="w-full aspect-square object-contain" />
                   </div>
                 </div>
               )}
               {parsedDesign.textureUrl && (
                 <div>
-                  <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Flat Texture</p>
+                  <p className="text-neutral-900/40 text-[10px] uppercase tracking-wider mb-1">Flat Texture</p>
                   <div className="rounded-lg overflow-hidden border border-white/10" style={{ background: parsedDesign.canvasBg ?? "#222" }}>
                     <img src={parsedDesign.textureUrl} alt="Flat Texture" className="w-full aspect-square object-contain" />
                   </div>
@@ -340,7 +340,7 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
 
           {!design.previewImageUrl && !parsedDesign.textureUrl && (
             <div className="mt-5 p-4 rounded-lg border border-white/10 text-center">
-              <p className="text-white/40 text-xs">No canvas design saved yet</p>
+              <p className="text-neutral-900/40 text-xs">No canvas design saved yet</p>
             </div>
           )}
         </div>
@@ -746,7 +746,7 @@ export default function AdminPage() {
                         <div className="w-full h-full flex items-center justify-center text-muted-foreground/30 text-xs font-bold">NO PREVIEW</div>
                       )}
                       {d.previewImageUrl && (
-                        <span className="absolute top-2 left-2 bg-emerald-600 text-white text-[9px] px-2 py-0.5 tracking-wider font-semibold">CUSTOMIZED</span>
+                        <span className="absolute top-2 left-2 bg-emerald-600 text-neutral-900 text-[9px] px-2 py-0.5 tracking-wider font-semibold">CUSTOMIZED</span>
                       )}
                     </div>
 
