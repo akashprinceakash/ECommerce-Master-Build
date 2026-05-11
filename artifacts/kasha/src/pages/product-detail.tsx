@@ -135,7 +135,7 @@ export default function ProductDetailPage() {
                 className={`w-full h-full object-cover object-center transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
               />
               {!product.available && (
-                <div className="absolute top-4 left-4 bg-white text-neutral-900 text-[10px] font-bold tracking-[0.15em] px-3 py-1">
+                <div className="absolute top-4 left-4 bg-black text-white text-[10px] font-bold tracking-[0.15em] px-3 py-1">
                   SOLD OUT
                 </div>
               )}
@@ -188,7 +188,7 @@ export default function ProductDetailPage() {
                     onClick={() => setSelectedSize(size)}
                     className={`w-12 h-12 text-[12px] font-bold border transition-all ${
                       selectedSize === size
-                        ? "bg-white text-neutral-900 border-black"
+                        ? "bg-black text-white border-black"
                         : "bg-white text-black border-gray-300 hover:border-black"
                     }`}
                   >
@@ -234,7 +234,7 @@ export default function ProductDetailPage() {
               </button>
 
               <button
-                className="w-full bg-white text-neutral-900 text-[12px] font-bold tracking-[0.15em] py-4 hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-black text-white text-[12px] font-bold tracking-[0.15em] py-4 hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleBuyNow}
                 disabled={addToCartMutation.isPending || !product.available}
               >

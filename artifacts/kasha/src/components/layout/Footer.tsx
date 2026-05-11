@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 
 const GOLD = "#B8925A";
-const MUTED = "rgba(0,0,0,0.55)";
+const MUTED = "rgba(255,255,255,0.45)";
 
 const COL_TITLE: React.CSSProperties = {
   fontFamily: "'Josefin Sans', sans-serif",
@@ -32,7 +32,7 @@ export function Footer() {
   return (
     <footer
       style={{
-        background: "#FAFAF7",
+        background: "#0D1220",
         borderTop: "1px solid rgba(184,146,90,0.3)",
         padding: "60px 24px 40px",
       }}
@@ -42,7 +42,7 @@ export function Footer() {
           {/* Brand */}
           <div>
             <div
-              className="text-neutral-900"
+              className="text-white"
               style={{
                 fontFamily: "'Cormorant Garamond', serif",
                 fontSize: 28,
@@ -117,7 +117,7 @@ export function Footer() {
 
         <div
           className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6"
-          style={{ borderTop: "1px solid rgba(0,0,0,0.10)" }}
+          style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
         >
           <span
             style={{

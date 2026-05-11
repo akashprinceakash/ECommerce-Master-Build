@@ -447,7 +447,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
         style={{
           borderRadius: "24px",
           background: "linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.5) 100%)",
-          border: "1px solid rgba(0,0,0,0.12)",
+          border: "1px solid rgba(255,255,255,0.1)",
           boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
           minHeight: "400px",
         }}
@@ -465,7 +465,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
           >
             <div
               className="w-12 h-12 rounded-full border-[3px] animate-spin"
-              style={{ borderColor: "rgba(0,0,0,0.12)", borderTopColor: "#6ee7b7" }}
+              style={{ borderColor: "rgba(255,255,255,0.1)", borderTopColor: "#6ee7b7" }}
             />
             <p className="mt-4 text-sm" style={{ color: "#8b949e" }}>Loading High Fidelity Resource...</p>
           </div>
@@ -477,7 +477,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
               <img src={thumbnailUrl} alt="Product" className="max-h-[480px] max-w-full object-contain" style={{ borderRadius: "12px" }} />
             ) : (
               <div className="text-center" style={{ color: "#8b949e" }}>
-                <div className="w-24 h-32 mx-auto mb-4 rounded-xl" style={{ background: "rgba(0,0,0,0.06)" }} />
+                <div className="w-24 h-32 mx-auto mb-4 rounded-xl" style={{ background: "rgba(255,255,255,0.05)" }} />
                 <p className="text-xs tracking-widest uppercase">
                   {!effectiveModelUrl ? "Upload a .glb model to see 3D preview" : "WebGL required for 3D preview"}
                 </p>
@@ -507,8 +507,8 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
         style={{
           width: "450px",
           minWidth: "320px",
-          background: "rgba(0,0,0,0.06)",
-          border: "1px solid rgba(0,0,0,0.12)",
+          background: "rgba(255,255,255,0.05)",
+          border: "1px solid rgba(255,255,255,0.1)",
           borderRadius: "24px",
           backdropFilter: "blur(16px)",
           boxShadow: "20px 20px 60px rgba(0,0,0,0.3)",
@@ -534,7 +534,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: "1rem", borderBottom: "1px solid rgba(0,0,0,0.12)", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>
+        <div style={{ display: "flex", gap: "1rem", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "0.5rem", marginBottom: "1.5rem" }}>
           {(["parts", "design"] as const).map(tab => (
             <button
               key={tab}
@@ -624,7 +624,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
                       background: "rgba(0,0,0,0.2)",
                       padding: "1rem",
                       borderRadius: "12px",
-                      border: "1px solid rgba(0,0,0,0.12)",
+                      border: "1px solid rgba(255,255,255,0.1)",
                     }}
                   >
                     <span style={{ fontWeight: 600, color: "#f8f9fa" }}>
@@ -672,7 +672,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
                     flex: 1,
                     padding: "1rem 0",
                     background: selectedSize === label ? "#6ee7b7" : "rgba(0,0,0,0.3)",
-                    border: selectedSize === label ? "1px solid #6ee7b7" : "1px solid rgba(0,0,0,0.12)",
+                    border: selectedSize === label ? "1px solid #6ee7b7" : "1px solid rgba(255,255,255,0.1)",
                     borderRadius: "12px",
                     color: selectedSize === label ? "#0b0c10" : "#f8f9fa",
                     fontFamily: "inherit",
@@ -708,7 +708,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
                 width: "100%",
                 padding: "0.8rem 1rem",
                 background: "rgba(0,0,0,0.3)",
-                border: "1px solid rgba(0,0,0,0.12)",
+                border: "1px solid rgba(255,255,255,0.1)",
                 borderRadius: "8px",
                 color: "#f8f9fa",
                 fontFamily: "inherit",
@@ -717,7 +717,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
                 outline: "none",
               }}
               onFocus={(e) => (e.target.style.borderColor = "#6ee7b7")}
-              onBlur={(e) => (e.target.style.borderColor = "rgba(0,0,0,0.12)")}
+              onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
             />
             <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
               <input
@@ -742,7 +742,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
                 width: "100%",
                 padding: "0.5rem 1rem",
                 background: "rgba(0,0,0,0.3)",
-                border: "1px solid rgba(0,0,0,0.12)",
+                border: "1px solid rgba(255,255,255,0.1)",
                 borderRadius: "8px",
                 color: "#f8f9fa",
                 fontFamily: "inherit",
@@ -781,7 +781,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
               display: "flex", alignItems: "center", gap: "0.5rem",
               padding: "0.75rem 1rem",
               background: "rgba(0,0,0,0.2)",
-              border: "1px solid rgba(0,0,0,0.12)",
+              border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: "8px",
               cursor: "pointer", color: "#8b949e", fontSize: "0.9rem",
             }}>
@@ -817,7 +817,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
                       overflow: "hidden",
                       cursor: "pointer",
                       background: `url(${patternUrl(p.file)}) center/cover`,
-                      border: selected ? "2px solid #6ee7b7" : "1px solid rgba(0,0,0,0.14)",
+                      border: selected ? "2px solid #6ee7b7" : "1px solid rgba(255,255,255,0.12)",
                       boxShadow: selected ? "0 0 0 2px rgba(110,231,183,0.25)" : "none",
                       transition: "all 0.15s",
                     }}
@@ -843,7 +843,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
                   background: "rgba(0,0,0,0.25)",
                   padding: "0.85rem",
                   borderRadius: "10px",
-                  border: "1px solid rgba(0,0,0,0.12)",
+                  border: "1px solid rgba(255,255,255,0.1)",
                   display: "flex", flexDirection: "column", gap: "0.65rem",
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
@@ -852,7 +852,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
                       <div style={{ color: "#f8f9fa", fontWeight: 600, fontSize: "0.9rem" }}>{p.label}</div>
                       <div style={{ display: "flex", gap: 3, marginTop: 4 }}>
                         {p.swatchColors.map((c) => (
-                          <span key={c} style={{ width: 12, height: 12, borderRadius: "50%", background: c, border: "1px solid rgba(0,0,0,0.25)" }} />
+                          <span key={c} style={{ width: 12, height: 12, borderRadius: "50%", background: c, border: "1px solid rgba(255,255,255,0.2)" }} />
                         ))}
                       </div>
                     </div>
@@ -879,8 +879,8 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
                         key={zone}
                         onClick={() => handlePlacePatternOnZone(p, zone)}
                         style={{
-                          padding: "0.55rem", background: "rgba(0,0,0,0.10)",
-                          color: "#f8f9fa", border: "1px solid rgba(0,0,0,0.14)",
+                          padding: "0.55rem", background: "rgba(255,255,255,0.08)",
+                          color: "#f8f9fa", border: "1px solid rgba(255,255,255,0.12)",
                           borderRadius: "6px", fontFamily: "inherit",
                           fontWeight: 600, fontSize: "0.78rem", cursor: "pointer",
                         }}
@@ -962,7 +962,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
                 style={{
                   width: "100%", padding: "0.5rem",
                   background: "rgba(0,0,0,0.5)",
-                  border: "1px solid rgba(0,0,0,0.12)",
+                  border: "1px solid rgba(255,255,255,0.1)",
                   borderRadius: "8px",
                   color: "#f8f9fa", fontFamily: "inherit", cursor: "pointer",
                 }}
@@ -1011,7 +1011,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
                 background: "#fff",
                 borderRadius: "8px",
                 overflow: "hidden",
-                border: "1px solid rgba(0,0,0,0.12)",
+                border: "1px solid rgba(255,255,255,0.1)",
                 aspectRatio: "1/1",
                 width: "100%",
                 position: "relative",

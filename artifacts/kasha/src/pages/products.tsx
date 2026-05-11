@@ -212,7 +212,7 @@ export default function ProductsPage() {
       <div
         className="py-12 px-6"
         style={{
-          background: "#FAFAF7",
+          background: "#0D1220",
           borderBottom: "1px solid rgba(184,146,90,0.3)",
         }}
       >
@@ -222,7 +222,7 @@ export default function ProductsPage() {
             style={{
               fontFamily: "'Josefin Sans', sans-serif",
               letterSpacing: "0.28em",
-              color: "rgba(0,0,0,0.55)",
+              color: "rgba(255,255,255,0.45)",
             }}
           >
             <Link href="/" className="hover:!text-[#B8925A] transition-colors">HOME</Link>
@@ -236,7 +236,7 @@ export default function ProductsPage() {
             )}
           </div>
           <h1
-            className="text-neutral-900"
+            className="text-white"
             style={{
               fontFamily: "'Cormorant Garamond', serif",
               fontSize: "clamp(32px, 4vw, 48px)",
@@ -258,21 +258,21 @@ export default function ProductsPage() {
                 href="/products"
                 aria-current={!gender && !type ? "page" : undefined}
                 className={`block py-3 text-[11px] tracking-[0.28em] uppercase font-medium ${
-                  !gender && !type ? "text-[#B8925A]" : "text-neutral-900/60 hover:text-neutral-900"
+                  !gender && !type ? "text-[#B8925A]" : "text-white/60 hover:text-white"
                 }`}
-                style={{ fontFamily: "'Josefin Sans', sans-serif", borderBottom: "1px solid rgba(0,0,0,0.10)" }}
+                style={{ fontFamily: "'Josefin Sans', sans-serif", borderBottom: "1px solid rgba(255,255,255,0.08)" }}
               >
                 All Products
               </Link>
               {sidebar.map((section) => {
                 const sectionActive = gender === section.gender;
                 return (
-                  <div key={section.gender} style={{ borderBottom: "1px solid rgba(0,0,0,0.10)" }}>
+                  <div key={section.gender} style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
                     <Link
                       href={buildHref(section.gender, undefined)}
                       aria-current={sectionActive && !type ? "page" : undefined}
                       className={`block py-3 text-[11px] tracking-[0.28em] uppercase font-medium ${
-                        sectionActive ? "text-[#B8925A]" : "text-neutral-900/80 hover:text-neutral-900"
+                        sectionActive ? "text-[#B8925A]" : "text-white/80 hover:text-white"
                       }`}
                       style={{ fontFamily: "'Josefin Sans', sans-serif" }}
                     >
@@ -293,7 +293,7 @@ export default function ProductsPage() {
                               } ${
                                 itemActive
                                   ? "border-[#B8925A] text-[#B8925A] font-medium"
-                                  : "border-transparent text-neutral-900/45 hover:text-neutral-900 hover:border-white/20"
+                                  : "border-transparent text-white/45 hover:text-white hover:border-white/20"
                               }`}
                               style={{ fontFamily: "'Josefin Sans', sans-serif" }}
                             >
@@ -318,7 +318,7 @@ export default function ProductsPage() {
                 <Link
                   href={buildHref(gender, "tshirts")}
                   className={`block py-1.5 text-[10px] tracking-[0.22em] uppercase ${
-                    type === "tshirts" && !styleFilter ? "text-[#B8925A] font-medium" : "text-neutral-900/45 hover:text-neutral-900"
+                    type === "tshirts" && !styleFilter ? "text-[#B8925A] font-medium" : "text-white/45 hover:text-white"
                   }`}
                 >
                   All T-shirts
@@ -327,7 +327,7 @@ export default function ProductsPage() {
                   <Link
                     href={buildHref(gender, "skirts")}
                     className={`block py-1.5 text-[10px] tracking-[0.22em] uppercase ${
-                      type === "skirts" ? "text-[#B8925A] font-medium" : "text-neutral-900/45 hover:text-neutral-900"
+                      type === "skirts" ? "text-[#B8925A] font-medium" : "text-white/45 hover:text-white"
                     }`}
                   >
                     All Skirts / Skorts
@@ -336,7 +336,7 @@ export default function ProductsPage() {
                   <Link
                     href={buildHref(gender, "bottoms")}
                     className={`block py-1.5 text-[10px] tracking-[0.22em] uppercase ${
-                      type === "bottoms" ? "text-[#B8925A] font-medium" : "text-neutral-900/45 hover:text-neutral-900"
+                      type === "bottoms" ? "text-[#B8925A] font-medium" : "text-white/45 hover:text-white"
                     }`}
                   >
                     All Bottoms
@@ -345,7 +345,7 @@ export default function ProductsPage() {
                   <Link
                     href={buildHref(gender, "trousers")}
                     className={`block py-1.5 text-[10px] tracking-[0.22em] uppercase ${
-                      type === "trousers" ? "text-[#B8925A] font-medium" : "text-neutral-900/45 hover:text-neutral-900"
+                      type === "trousers" ? "text-[#B8925A] font-medium" : "text-white/45 hover:text-white"
                     }`}
                   >
                     All Trousers
@@ -364,14 +364,14 @@ export default function ProductsPage() {
                 ))}
               </div>
             ) : error ? (
-              <div className="py-20 text-center text-neutral-900/45">
+              <div className="py-20 text-center text-white/45">
                 <p>Failed to load products. Please try again later.</p>
               </div>
             ) : products?.length === 0 && type === "skirts" ? (
               <div
                 className="p-12 md:p-16 text-center"
                 style={{
-                  background: "#F5F2EC",
+                  background: "#0F1622",
                   border: "1px solid rgba(184,146,90,0.3)",
                   borderRadius: 8,
                 }}
@@ -387,7 +387,7 @@ export default function ProductsPage() {
                   Coming Soon
                 </div>
                 <h2
-                  className="text-neutral-900 mb-4"
+                  className="text-white mb-4"
                   style={{
                     fontFamily: "'Cormorant Garamond', serif",
                     fontSize: "clamp(28px, 3vw, 36px)",
@@ -401,7 +401,7 @@ export default function ProductsPage() {
                   style={{
                     fontFamily: "'Josefin Sans', sans-serif",
                     fontSize: 11,
-                    color: "rgba(0,0,0,0.55)",
+                    color: "rgba(255,255,255,0.45)",
                     lineHeight: 1.8,
                     letterSpacing: "0.06em",
                   }}
@@ -412,7 +412,7 @@ export default function ProductsPage() {
                 <div className="flex flex-wrap justify-center gap-3">
                   <Link
                     href="/products/1/customize"
-                    className="text-[10px] uppercase text-neutral-900 px-7 py-3.5 transition-all"
+                    className="text-[10px] uppercase text-white px-7 py-3.5 transition-all"
                     style={{
                       fontFamily: "'Josefin Sans', sans-serif",
                       letterSpacing: "0.28em",
@@ -423,12 +423,12 @@ export default function ProductsPage() {
                   </Link>
                   <Link
                     href={buildHref(gender, "tshirts")}
-                    className="text-[10px] uppercase px-7 py-3.5 transition-all hover:!text-neutral-900"
+                    className="text-[10px] uppercase px-7 py-3.5 transition-all hover:!text-white"
                     style={{
                       fontFamily: "'Josefin Sans', sans-serif",
                       letterSpacing: "0.28em",
-                      color: "rgba(0,0,0,0.65)",
-                      border: "1px solid rgba(0,0,0,0.30)",
+                      color: "rgba(255,255,255,0.6)",
+                      border: "1px solid rgba(255,255,255,0.25)",
                     }}
                   >
                     Browse T-shirts
@@ -436,7 +436,7 @@ export default function ProductsPage() {
                 </div>
               </div>
             ) : products?.length === 0 ? (
-              <div className="py-20 text-center text-neutral-900/45">
+              <div className="py-20 text-center text-white/45">
                 <p className="mb-4">No products found in this category yet.</p>
                 <button
                   onClick={() => navigate("/products")}
@@ -468,11 +468,11 @@ export default function ProductsPage() {
                         <div
                           className="relative aspect-[3/4] overflow-hidden mb-3 transition-all"
                           style={{
-                            background: "#F5F2EC",
-                            border: "1px solid rgba(0,0,0,0.10)",
+                            background: "#0F1622",
+                            border: "1px solid rgba(255,255,255,0.08)",
                           }}
                           onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.3)")}
-                          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.10)")}
+                          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)")}
                         >
                           {imgSrc ? (
                             <img
@@ -497,7 +497,7 @@ export default function ProductsPage() {
                           )}
                           {!product.available && (
                             <div
-                              className="absolute top-2 right-2 text-neutral-900 text-[8px] uppercase px-2 py-0.5"
+                              className="absolute top-2 right-2 text-white text-[8px] uppercase px-2 py-0.5"
                               style={{
                                 background: "#B8925A",
                                 fontFamily: "'Josefin Sans', sans-serif",
@@ -509,7 +509,7 @@ export default function ProductsPage() {
                           )}
                         </div>
                         <h3
-                          className="text-neutral-900 mb-1 group-hover:!text-[#B8925A] transition-colors"
+                          className="text-white mb-1 group-hover:!text-[#B8925A] transition-colors"
                           style={{
                             fontFamily: "'Cormorant Garamond', serif",
                             fontSize: 16,
