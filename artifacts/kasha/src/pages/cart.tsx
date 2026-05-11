@@ -76,7 +76,7 @@ export default function CartPage() {
             <p className="text-xl font-bold text-black mb-2">Your cart is empty</p>
             <p className="text-gray-500 mb-8 text-sm">Add some items from the collection to get started</p>
             <Link href="/products">
-              <button className="bg-white text-neutral-900 text-[12px] font-bold tracking-[0.15em] px-10 py-4 hover:bg-gray-900 transition-colors">
+              <button className="bg-black text-white text-[12px] font-bold tracking-[0.15em] px-10 py-4 hover:bg-gray-900 transition-colors">
                 DISCOVER THE COLLECTION
               </button>
             </Link>
@@ -95,7 +95,7 @@ export default function CartPage() {
                           alt={item.product.name}
                           className="w-full h-full object-cover object-center"
                         />
-                        <span className="absolute top-1 left-1 bg-white/70 text-neutral-900 text-[9px] px-1.5 py-0.5 tracking-wider rounded-sm">CUSTOM</span>
+                        <span className="absolute top-1 left-1 bg-black/70 text-white text-[9px] px-1.5 py-0.5 tracking-wider rounded-sm">CUSTOM</span>
                       </>
                     ) : item.product.thumbnailUrl ? (
                       <img
@@ -192,7 +192,7 @@ export default function CartPage() {
                 </div>
 
                 <Link href="/checkout">
-                  <button className="w-full bg-red-600 hover:bg-red-700 text-neutral-900 text-[12px] font-bold tracking-[0.15em] py-4 transition-colors flex items-center justify-center gap-2 mb-3">
+                  <button className="w-full bg-red-600 hover:bg-red-700 text-white text-[12px] font-bold tracking-[0.15em] py-4 transition-colors flex items-center justify-center gap-2 mb-3">
                     CHECKOUT <ArrowRight className="w-4 h-4" />
                   </button>
                 </Link>

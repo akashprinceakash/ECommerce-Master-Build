@@ -10,14 +10,14 @@ import { formatPrice } from "@/lib/format";
 
 const GOLD = "#B8925A";
 const GOLD_LIGHT = "#D4A96A";
-const BG = "#FFFFFF";
-const CARD = "#F5F2EC";
-const CARD_2 = "#FAFAF7";
-const BD = "rgba(0,0,0,0.10)";
+const BG = "#080A12";
+const CARD = "#0F1622";
+const CARD_2 = "#0D1220";
+const BD = "rgba(255,255,255,0.08)";
 const BD_GOLD = "rgba(184,146,90,0.3)";
-const TX = "#1A1A1A";
-const MUTED = "rgba(0,0,0,0.55)";
-const MUTED_2 = "rgba(0,0,0,0.40)";
+const TX = "#ffffff";
+const MUTED = "rgba(255,255,255,0.5)";
+const MUTED_2 = "rgba(255,255,255,0.35)";
 
 const FONT_DISPLAY = "'Cormorant Garamond', serif";
 const FONT_UI = "'Josefin Sans', sans-serif";
@@ -274,7 +274,7 @@ export default function CustomizePage() {
   if (!product) {
     return (
       <Layout>
-        <div className="min-h-[70vh] flex items-center justify-center text-neutral-900/60">Product not found.</div>
+        <div className="min-h-[70vh] flex items-center justify-center text-white/60">Product not found.</div>
       </Layout>
     );
   }
@@ -305,7 +305,7 @@ export default function CustomizePage() {
                 Custom Studio
               </div>
               <h1
-                className="text-neutral-900"
+                className="text-white"
                 style={{
                   fontFamily: FONT_DISPLAY,
                   fontSize: "clamp(28px, 3.5vw, 42px)",
@@ -337,7 +337,7 @@ export default function CustomizePage() {
                 textTransform: "uppercase",
                 textDecoration: "none",
               }}
-              className="hover:!text-neutral-900 transition-colors"
+              className="hover:!text-white transition-colors"
             >
               ← Back to product
             </Link>
@@ -431,7 +431,7 @@ function Stepper({ step, setStep }: { step: number; setStep: (n: number) => void
                 fontSize: 10,
                 letterSpacing: "0.28em",
                 textTransform: "uppercase",
-                color: active ? GOLD : done ? "rgba(0,0,0,0.72)" : MUTED_2,
+                color: active ? GOLD : done ? "rgba(255,255,255,0.7)" : MUTED_2,
                 background: "none",
                 border: "none",
                 cursor: "pointer",
@@ -490,7 +490,7 @@ function Panel({ children }: { children: React.ReactNode }) {
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="text-neutral-900"
+      className="text-white"
       style={{
         fontFamily: FONT_DISPLAY,
         fontSize: 18,
@@ -524,7 +524,7 @@ function NavRow({ onBack, onNext, nextLabel, loading }: { onBack?: () => void; o
             padding: "10px 18px",
             cursor: "pointer",
           }}
-          className="hover:!text-neutral-900"
+          className="hover:!text-white"
         >
           ← Back
         </button>
@@ -564,7 +564,7 @@ function Swatch({ color, selected, onClick, size = 32 }: { color: string; select
       style={{
         width: size, height: size, borderRadius: "50%",
         background: color,
-        border: selected ? `2px solid ${GOLD}` : isLight ? "1px solid rgba(0,0,0,0.25)" : "2px solid transparent",
+        border: selected ? `2px solid ${GOLD}` : isLight ? "1px solid rgba(255,255,255,0.2)" : "2px solid transparent",
         outline: selected ? `2px solid ${BG}` : "none",
         outlineOffset: -4,
         cursor: "pointer",
@@ -801,12 +801,12 @@ function Step2Parts(p: {
                 style={{
                   width: 22, height: 22, borderRadius: "50%",
                   background: col,
-                  border: "1px solid rgba(0,0,0,0.16)",
+                  border: "1px solid rgba(255,255,255,0.15)",
                   flexShrink: 0,
                 }}
               />
               <span
-                className="text-neutral-900 flex-1"
+                className="text-white flex-1"
                 style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 500 }}
               >
                 {part.label}
