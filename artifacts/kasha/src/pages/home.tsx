@@ -2,521 +2,474 @@ import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 
-const GOLD = "#B8925A";
+// ─── Design tokens ────────────────────────────────────────────────────────────
+const GOLD       = "#B8925A";
 const GOLD_LIGHT = "#D4A96A";
-const MUTED = "rgba(0,0,0,0.5)";
 
-type Slide = {
-  bg: string;
-  eyebrow: string;
-  title: React.ReactNode;
-  subtitle: string;
-  primary: { label: string; href: string };
-  outline: { label: string; href: string };
-};
+// Cool-toned premium palette — replaces flat bright whites with depth + hierarchy
+const BG_PAGE    = "#F2F3F7";   // cool slate-white page base
+const BG_SECTION = "#ECEEF4";   // slightly deeper for alternating sections
+const BG_CARD    = "#F7F8FB";   // card surface
+const BG_DARK    = "#0F1622";   // dark navy — bespoke card + studio bar
 
-const SLIDES: Slide[] = [
+// ─── Image paths ──────────────────────────────────────────────────────────────
+// Copy the supplied image files into your project at /public/images/
+//
+// /public/images/slides/hero1_mens.png            ← "KaSha Hero banner 1 Mens"
+// /public/images/slides/hero2_mens_tshirts.png    ← "KaSha Hero banner 2 Mens t shirts"
+// /public/images/slides/hero3_womens.png          ← "KaSha Hero banner 3 Womens"
+// /public/images/slides/hero4_all_products.png    ← "KaSha Hero banner 4 All products"
+//
+// /public/images/shop/men_kasha.png               ← "Home_men_Ka SHa Signature"
+// /public/images/shop/men_flair.png               ← "Home_Men_Flair"
+// /public/images/shop/men_bottoms.png             ← "Home_Men_Bottoms"
+// /public/images/shop/women_kasha.png             ← "Home Women_s Ka SHa Signature"
+// /public/images/shop/women_flair.png             ← "Home women Flair"
+// /public/images/shop/women_skorts.png            ← "HoME WOMEn Bottom Skorts"
+//
+// /public/images/bulk/tournament.png              ← "Home_Tournament"
+// /public/images/bulk/academy.png                 ← "Home Academy"
+// /public/images/bulk/clubs.png                   ← "Home_Clubs and Coporate"
+
+// ─── Hero slides ─────────────────────────────────────────────────────────────
+// Primary button routes derived from banner filenames:
+//   banner 1 "Mens"          → /products?gender=men
+//   banner 2 "Mens t shirts" → /products?gender=men&type=tshirts
+//   banner 3 "Womens"        → /products?gender=women
+//   banner 4 "All products"  → /products
+const SLIDES = [
   {
-    bg: "linear-gradient(160deg, rgba(10,18,40,0.5) 0%, rgba(20,35,60,0.3) 50%, rgba(8,12,20,0.6) 100%), url('https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=1800&q=80') center/cover",
+    img:     "/images/slides/hero1_mens.png",
     eyebrow: "New Season · Golf Collection 2026",
-    title: (<>Dressed for the<br />clubhouse. Built<br />for every birdie.</>),
-    subtitle: "Men · Women · Kids · Custom",
-    primary: { label: "Shop the Collection", href: "/products" },
+    title:   (<>Dressed for the<br />clubhouse. Built<br />for every birdie.</>),
+    sub:     "Men · Women · Kids · Custom",
+    primary: { label: "Shop Men's",    href: "/products?gender=men" },
     outline: { label: "Custom Studio", href: "/products/1/customize" },
   },
   {
-    bg: "linear-gradient(160deg, rgba(20,12,8,0.5) 0%, rgba(40,25,10,0.3) 50%, rgba(10,8,5,0.6) 100%), url('https://images.unsplash.com/photo-1593111774240-d529f12cf4bb?w=1800&q=80') center/cover",
-    eyebrow: "Ka·Sha Signature · Patterns & Prints",
-    title: (<>Where elegance<br />meets the<br />fairway.</>),
-    subtitle: "GT001–GT0032 · Signature Collection",
-    primary: { label: "Explore Patterns", href: "/products?type=tshirts&style=patterns" },
-    outline: { label: "View Lookbook", href: "/products" },
+    img:     "/images/slides/hero2_mens_tshirts.png",
+    eyebrow: "Ka·Sha Signature · Men's T-Shirts",
+    title:   (<>Where elegance<br />meets the<br />fairway.</>),
+    sub:     "GT001–GT0032 · Signature Collection",
+    primary: { label: "Shop Men's T-Shirts", href: "/products?gender=men&type=tshirts" },
+    outline: { label: "View Lookbook",        href: "/products?gender=men" },
   },
   {
-    bg: "linear-gradient(160deg, rgba(8,18,12,0.5) 0%, rgba(15,35,20,0.3) 50%, rgba(5,10,8,0.6) 100%), url('https://images.unsplash.com/photo-1622396481328-9b1b78cdd9fd?w=1800&q=80') center/cover",
-    eyebrow: "Flair · Limited Run Prints",
-    title: (<>Statement pieces<br />for the course<br />and beyond.</>),
-    subtitle: "Seasonal · Limited Edition · Exclusive",
-    primary: { label: "Shop Flair", href: "/products?type=tshirts&style=prints" },
-    outline: { label: "Custom Studio", href: "/products/1/customize" },
+    img:     "/images/slides/hero3_womens.png",
+    eyebrow: "Women's Collection · 2026",
+    title:   (<>Feminine power<br />on and off<br />the course.</>),
+    sub:     "Women · Signature · Flair · Bottoms",
+    primary: { label: "Shop Women's",  href: "/products?gender=women" },
+    outline: { label: "Explore Looks", href: "/products?gender=women&type=tshirts" },
   },
-];
+  {
+    img:     "/images/slides/hero4_all_products.png",
+    eyebrow: "Full Collection · 2026",
+    title:   (<>Everything you<br />need, all in<br />one place.</>),
+    sub:     "Men · Women · Kids · Bespoke",
+    primary: { label: "Shop All Products", href: "/products" },
+    outline: { label: "Custom Studio",     href: "/products/1/customize" },
+  },
+] as const;
 
 const SLIDE_DURATION = 6000;
 
+// ─── Category card type ───────────────────────────────────────────────────────
 type Card = {
   href: string;
-  img: string;
+  img?: string;
   badge?: string;
   cat: string;
   title: string;
   desc: string;
   tags: string[];
-  bespoke?: boolean;
+  bespoke?: true;
   bespokeSub?: string;
 };
 
+// ─── Category panels ──────────────────────────────────────────────────────────
+// Wireframe shows: 2-col grid, 4 cards → 2 rows × 2 cols.
+// Bespoke card = dark navy (#0F1622), gold border, same cell size as others.
 const PANELS: Record<"men" | "women" | "kids", Card[]> = {
   men: [
     {
-      href: "/products?gender=men&type=tshirts&style=patterns",
-      img: "https://images.unsplash.com/photo-1593111774240-d529f12cf4bb?w=600&q=80",
+      href:  "/products?gender=men&type=tshirts&style=patterns",
+      img:   "/images/shop/men_kasha.png",
       badge: "Core Range",
-      cat: "T-Shirts",
+      cat:   "T-Shirts",
       title: "Ka·Sha Signature",
-      desc: "Solids · 8 colours · 8 patterns · prints",
-      tags: ["Solid", "8 Patterns", "Prints"],
+      desc:  "Solids · 8 colours · 8 patterns · prints",
+      tags:  ["Solid", "8 Patterns", "Prints"],
     },
     {
-      href: "/products?gender=men&type=tshirts&style=prints",
-      img: "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=600&q=80",
+      href:  "/products?gender=men&type=tshirts&style=prints",
+      img:   "/images/shop/men_flair.png",
       badge: "Seasonal",
-      cat: "T-Shirts",
+      cat:   "T-Shirts",
       title: "Flair",
-      desc: "Statement prints & limited-run designs",
-      tags: ["Limited Prints", "Seasonal"],
+      desc:  "Statement prints & limited-run designs",
+      tags:  ["Limited Prints", "Seasonal"],
     },
     {
-      href: "/products?gender=men&type=trousers",
-      img: "https://images.unsplash.com/photo-1622396481328-9b1b78cdd9fd?w=600&q=80",
-      cat: "Bottoms",
+      href:  "/products?gender=men&type=trousers",
+      img:   "/images/shop/men_bottoms.png",
+      cat:   "Bottoms",
       title: "Pro Tour Trouser",
-      desc: "Glove dock · Tee holder · 4-way stretch",
-      tags: ["4 Colours", "Technical"],
+      desc:  "Glove dock · Tee holder · 4-way stretch",
+      tags:  ["4 Colours", "Technical"],
     },
     {
-      href: "/products/1/customize",
-      img: "",
-      cat: "Bespoke",
-      title: "Custom Studio",
-      desc: "Your colour, logo & fit — 1 piece or 500",
-      tags: [],
-      bespoke: true,
+      href:       "/products/1/customize",
+      cat:        "Bespoke",
+      title:      "Custom Studio",
+      desc:       "Your colour, logo & fit — 1 piece or 500",
+      tags:       [],
+      bespoke:    true,
       bespokeSub: "Bespoke",
     },
   ],
   women: [
     {
-      href: "/products?gender=women&type=tshirts&style=patterns",
-      img: "https://images.unsplash.com/photo-1551232864-3f0890e580d9?w=600&q=80",
+      href:  "/products?gender=women&type=tshirts&style=patterns",
+      img:   "/images/shop/women_kasha.png",
       badge: "Core Range",
-      cat: "T-Shirts",
+      cat:   "T-Shirts",
       title: "Ka·Sha Signature",
-      desc: "Solids · 8 colours · 8 patterns · prints",
-      tags: ["Solid", "8 Patterns", "Prints"],
+      desc:  "Solids · 8 colours · 8 patterns · prints",
+      tags:  ["Solid", "8 Patterns", "Prints"],
     },
     {
-      href: "/products?gender=women&type=tshirts&style=prints",
-      img: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&q=80",
+      href:  "/products?gender=women&type=tshirts&style=prints",
+      img:   "/images/shop/women_flair.png",
       badge: "Seasonal",
-      cat: "T-Shirts",
+      cat:   "T-Shirts",
       title: "Flair",
-      desc: "Statement prints & limited-run designs",
-      tags: ["Limited Prints", "Seasonal"],
+      desc:  "Statement prints & limited-run designs",
+      tags:  ["Limited Prints", "Seasonal"],
     },
     {
-      href: "/products?gender=women&type=skirts",
-      img: "https://images.unsplash.com/photo-1612336307429-8a898d10e223?w=600&q=80",
-      cat: "Bottoms",
+      href:  "/products?gender=women&type=skirts",
+      img:   "/images/shop/women_skorts.png",
+      cat:   "Bottoms",
       title: "Pro Tour Skort",
-      desc: "Technical stretch · Tailored fit · Active skirt",
-      tags: ["3 Colours", "Skirt", "Skort"],
+      desc:  "Technical stretch · Tailored fit · Active skirt",
+      tags:  ["3 Colours", "Skirt", "Skort"],
     },
     {
-      href: "/products/1/customize",
-      img: "",
-      cat: "Bespoke",
-      title: "Custom Studio",
-      desc: "Your colour, logo & fit — 1 piece or 500",
-      tags: [],
-      bespoke: true,
+      href:       "/products/1/customize",
+      cat:        "Bespoke",
+      title:      "Custom Studio",
+      desc:       "Your colour, logo & fit — 1 piece or 500",
+      tags:       [],
+      bespoke:    true,
       bespokeSub: "Bespoke",
     },
   ],
   kids: [
     {
-      href: "/products?gender=kids&type=tshirts&style=patterns",
-      img: "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80",
+      href:  "/products?gender=kids&type=tshirts&style=patterns",
+      img:   "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80",
       badge: "Boys",
-      cat: "T-Shirts",
+      cat:   "T-Shirts",
       title: "Boys' T-Shirts",
-      desc: "Solids · Patterns · XS–XL Junior",
-      tags: ["Solid", "Patterns"],
+      desc:  "Solids · Patterns · XS–XL Junior",
+      tags:  ["Solid", "Patterns"],
     },
     {
-      href: "/products?gender=kids&type=tshirts&style=prints",
-      img: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=600&q=80",
+      href:  "/products?gender=kids&type=tshirts&style=prints",
+      img:   "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=600&q=80",
       badge: "Girls",
-      cat: "T-Shirts",
+      cat:   "T-Shirts",
       title: "Girls' T-Shirts",
-      desc: "Solids · Patterns · XS–XL Junior",
-      tags: ["Solid", "Patterns"],
+      desc:  "Solids · Patterns · XS–XL Junior",
+      tags:  ["Solid", "Patterns"],
     },
     {
-      href: "/products?gender=kids&type=bottoms",
-      img: "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80",
-      cat: "Bottoms",
+      href:  "/products?gender=kids&type=bottoms",
+      img:   "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80",
+      cat:   "Bottoms",
       title: "All Bottoms",
-      desc: "Trousers & skorts · All sizes",
-      tags: ["Trousers", "Skorts"],
+      desc:  "Trousers & skorts · All sizes",
+      tags:  ["Trousers", "Skorts"],
     },
     {
-      href: "/products/1/customize",
-      img: "",
-      cat: "Bespoke",
-      title: "Custom Studio",
-      desc: "Academy crest · Names · All sizes",
-      tags: [],
-      bespoke: true,
+      href:       "/products/1/customize",
+      cat:        "Bespoke",
+      title:      "Custom Studio",
+      desc:       "Academy crest · Names · All sizes",
+      tags:       [],
+      bespoke:    true,
       bespokeSub: "Academy",
     },
   ],
 };
 
-const CHIPS = ["Colour", "Print", "Pattern", "Size", "Upload Logo", "Add Text", "Trim & Collar"];
+// Studio customisation chips (interactive toggles)
+const CHIPS = ["Colour", "Print", "Pattern", "Size", "Upload logo", "Add text", "Trim & collar"];
 
+// ─── Bulk tiles ───────────────────────────────────────────────────────────────
 const BULK = [
   {
-    img: "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=600&q=80",
-    from: "From 12 Pieces",
-    num: "01",
+    img:   "/images/bulk/tournament.png",
+    from:  "From 12 pieces",
+    num:   "01",
     title: "Tournaments",
-    desc: "Full field kit — player names, sponsor logo, Pantone-matched to brief.",
-    tags: ["Player Names", "Sponsor Logo"],
+    desc:  "Full field kit — player names, sponsor logo, Pantone-matched to brief.",
+    tags:  ["Player Names", "Sponsor Logo"],
   },
   {
-    img: "https://images.unsplash.com/photo-1593111774240-d529f12cf4bb?w=600&q=80",
-    from: "All Ages & Sizes",
-    num: "02",
+    img:   "/images/bulk/academy.png",
+    from:  "All ages & sizes",
+    num:   "02",
     title: "Golf Academies",
-    desc: "Academy crest, student names, cohort year. On the range and at the club.",
-    tags: ["Academy Crest", "All Sizes"],
+    desc:  "Academy crest, student names, cohort year. On the range and at the club.",
+    tags:  ["Academy Crest", "All Sizes"],
   },
   {
-    img: "https://images.unsplash.com/photo-1622396481328-9b1b78cdd9fd?w=600&q=80",
-    from: "Social Clubs",
-    num: "03",
+    img:   "/images/bulk/clubs.png",
+    from:  "Social clubs",
+    num:   "03",
     title: "Clubs & Corporate",
-    desc: "Shared identity for your group. Mixed sizes, one print. From 12 pieces.",
-    tags: ["Mixed Sizes", "From 12"],
+    desc:  "Shared identity for your group. Mixed sizes, one print. From 12 pieces.",
+    tags:  ["Mixed Sizes", "From 12"],
   },
 ];
 
-function ProductCard({ c }: { c: Card }) {
+// ─── CategoryCard ─────────────────────────────────────────────────────────────
+function CategoryCard({ c }: { c: Card }) {
   if (c.bespoke) {
+    // Dark navy card — exactly as wireframe: #0F1622, gold border
     return (
       <Link
         href={c.href}
-        className="block group transition-all duration-500"
-        style={{
-          background: "#F5F2EC",
-          border: "1px solid rgba(184,146,90,0.3)",
-          borderRadius: 8,
-          overflow: "hidden",
+        className="block"
+        style={{ background: BG_DARK, border: `0.5px solid ${GOLD}`, borderRadius: 8, overflow: "hidden", transition: "transform 0.3s, box-shadow 0.3s" }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLElement).style.transform  = "translateY(-2px)";
+          (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 28px rgba(184,146,90,0.22)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLElement).style.transform  = "translateY(0)";
+          (e.currentTarget as HTMLElement).style.boxShadow = "none";
         }}
       >
-        <div
-          className="h-[220px] flex items-center justify-center"
-          style={{ background: "radial-gradient(ellipse at center, rgba(184,146,90,0.08) 0%, transparent 70%)" }}
-        >
-          <div className="text-center" style={{ opacity: 0.3 }}>
-            <div
-              className="text-neutral-900"
-              style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                fontSize: 52,
-                fontWeight: 200,
-                letterSpacing: "0.3em",
-                lineHeight: 1,
-              }}
-            >
-              KS
-            </div>
-            <div
-              style={{
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: 8,
-                letterSpacing: "0.5em",
-                color: GOLD,
-                textTransform: "uppercase",
-                marginTop: 6,
-              }}
-            >
-              {c.bespokeSub}
-            </div>
+        {/* Icon area */}
+        <div style={{ height: 130, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ textAlign: "center", opacity: 0.25 }}>
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 40, fontWeight: 200, letterSpacing: "0.3em", color: "#fff", lineHeight: 1 }}>KS</div>
+            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.3em", color: GOLD, textTransform: "uppercase", marginTop: 5 }}>{c.bespokeSub}</div>
           </div>
         </div>
-        <CardBody c={c} bespoke />
+        {/* Body */}
+        <div style={{ padding: "13px 16px 16px", borderTop: "0.5px solid rgba(184,146,90,0.25)" }}>
+          <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.22em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{c.cat}</div>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontWeight: 500, color: "#fff", marginBottom: 4 }}>{c.title}</div>
+          <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.04em", lineHeight: 1.6, marginBottom: 10 }}>{c.desc}</div>
+          <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: GOLD, borderBottom: "0.5px solid rgba(184,146,90,0.4)", paddingBottom: 1 }}>Design yours →</span>
+        </div>
       </Link>
     );
   }
+
   return (
     <Link
       href={c.href}
-      className="block group transition-all duration-500 hover:-translate-y-1.5"
-      style={{
-        background: "#FFFFFF",
-        border: "1px solid rgba(0,0,0,0.08)",
-        borderRadius: 8,
-        overflow: "hidden",
-      }}
+      className="block"
+      style={{ background: BG_CARD, border: "0.5px solid rgba(30,40,80,0.1)", borderRadius: 8, overflow: "hidden", transition: "transform 0.3s, border-color 0.3s, box-shadow 0.3s" }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.3)";
-        (e.currentTarget as HTMLElement).style.boxShadow = "0 20px 60px rgba(0,0,0,0.5)";
+        (e.currentTarget as HTMLElement).style.transform   = "translateY(-2px)";
+        (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.35)";
+        (e.currentTarget as HTMLElement).style.boxShadow  = "0 12px 28px rgba(30,40,80,0.1)";
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.08)";
-        (e.currentTarget as HTMLElement).style.boxShadow = "none";
+        (e.currentTarget as HTMLElement).style.transform   = "translateY(0)";
+        (e.currentTarget as HTMLElement).style.borderColor = "rgba(30,40,80,0.1)";
+        (e.currentTarget as HTMLElement).style.boxShadow  = "none";
       }}
     >
-      <div className="h-[220px] relative overflow-hidden">
-        <img
-          src={c.img}
-          alt={c.title}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-        />
+      {/* Image */}
+      <div style={{ height: 130, position: "relative", overflow: "hidden" }}>
+        <img src={c.img} alt={c.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" style={{ display: "block" }} />
         {c.badge && (
-          <span
-            className="absolute top-3 left-3 z-[1] text-white"
-            style={{
-              background: GOLD,
-              fontFamily: "'Josefin Sans', sans-serif",
-              fontSize: 7,
-              letterSpacing: "0.2em",
-              padding: "3px 10px",
-              textTransform: "uppercase",
-            }}
-          >
-            {c.badge}
-          </span>
+          <span style={{ position: "absolute", top: 10, left: 10, background: GOLD, color: "#fff", fontFamily: "'Josefin Sans', sans-serif", fontSize: 7.5, letterSpacing: "0.16em", textTransform: "uppercase", padding: "2px 8px" }}>{c.badge}</span>
         )}
-        <div
-          className="absolute inset-0"
-          style={{ background: "linear-gradient(to top, rgba(8,10,18,0.6) 0%, transparent 60%)" }}
-        />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(15,18,35,0.45) 0%, transparent 55%)" }} />
       </div>
-      <CardBody c={c} />
+      {/* Body */}
+      <div style={{ padding: "13px 16px 16px" }}>
+        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.22em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{c.cat}</div>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontWeight: 500, color: "#1a1f2e", marginBottom: 4, lineHeight: 1.2 }}>{c.title}</div>
+        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, color: "rgba(30,40,80,0.5)", letterSpacing: "0.04em", lineHeight: 1.6, marginBottom: 10 }}>{c.desc}</div>
+        {c.tags.length > 0 && (
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
+            {c.tags.map((t) => (
+              <span key={t} style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 7.5, letterSpacing: "0.1em", padding: "2px 7px", background: BG_SECTION, color: "rgba(30,40,80,0.55)", borderRadius: 3, textTransform: "uppercase", border: "0.5px solid rgba(30,40,80,0.08)" }}>{t}</span>
+            ))}
+          </div>
+        )}
+        <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: "#1a1f2e", borderBottom: "0.5px solid rgba(30,40,80,0.15)", paddingBottom: 1 }}>Shop →</span>
+      </div>
     </Link>
   );
 }
 
-function CardBody({ c, bespoke }: { c: Card; bespoke?: boolean }) {
-  return (
-    <div className="p-5">
-      <div
-        style={{
-          fontFamily: "'Josefin Sans', sans-serif",
-          fontSize: 7.5,
-          letterSpacing: "0.35em",
-          color: GOLD,
-          textTransform: "uppercase",
-          marginBottom: 6,
-        }}
-      >
-        {c.cat}
-      </div>
-      <div
-        className="text-neutral-900"
-        style={{
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: 18,
-          fontWeight: 500,
-          marginBottom: 6,
-          lineHeight: 1.2,
-        }}
-      >
-        {c.title}
-      </div>
-      <div
-        style={{
-          fontFamily: "'Josefin Sans', sans-serif",
-          fontSize: 9.5,
-          color: bespoke ? "rgba(0,0,0,0.5)" : MUTED,
-          letterSpacing: "0.08em",
-          marginBottom: 14,
-          lineHeight: 1.6,
-        }}
-      >
-        {c.desc}
-      </div>
-      {c.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3.5">
-          {c.tags.map((t) => (
-            <span
-              key={t}
-              style={{
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: 7,
-                letterSpacing: "0.15em",
-                textTransform: "uppercase",
-                color: "rgba(0,0,0,0.45)",
-                background: "rgba(255,255,255,0.06)",
-                padding: "3px 8px",
-                borderRadius: 2,
-              }}
-            >
-              {t}
-            </span>
-          ))}
-        </div>
-      )}
-      <span
-        className="inline-flex items-center gap-1.5 transition-colors"
-        style={{
-          fontFamily: "'Josefin Sans', sans-serif",
-          fontSize: 8,
-          letterSpacing: "0.2em",
-          textTransform: "uppercase",
-          color: bespoke ? GOLD : "rgba(0,0,0,0.6)",
-          paddingBottom: 2,
-          borderBottom: bespoke ? "1px solid rgba(184,146,90,0.3)" : "1px solid rgba(0,0,0,0.08)",
-        }}
-      >
-        {bespoke ? "Design Yours →" : "Shop →"}
-      </span>
-    </div>
-  );
-}
-
+// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function Home() {
-  const [active, setActive] = useState(0);
+  const [active,   setActive]   = useState(0);
   const [progress, setProgress] = useState(0);
-  const [tab, setTab] = useState<"men" | "women" | "kids">("men");
+  const [tab,      setTab]      = useState<"men" | "women" | "kids">("men");
+  const [chips,    setChips]    = useState<string[]>(["Colour"]);
 
+  // Hero auto-advance
   useEffect(() => {
     setProgress(0);
     const start = Date.now();
     const id = setInterval(() => {
       const p = ((Date.now() - start) / SLIDE_DURATION) * 100;
-      if (p >= 100) {
-        setActive((cur) => (cur + 1) % SLIDES.length);
-      } else {
-        setProgress(p);
-      }
+      if (p >= 100) setActive((c) => (c + 1) % SLIDES.length);
+      else          setProgress(p);
     }, 100);
     return () => clearInterval(id);
   }, [active]);
 
+  const toggleChip = (chip: string) =>
+    setChips((prev) => prev.includes(chip) ? prev.filter((c) => c !== chip) : [...prev, chip]);
+
+  const PAD = "clamp(24px, 5vw, 80px)";
+
   return (
     <Layout>
-      {/* HERO */}
-      <section className="relative h-[100vh] min-h-[600px] overflow-hidden -mt-16">
-        <div
-          className="absolute inset-0 flex transition-transform duration-[900ms]"
-          style={{
-            transform: `translateX(-${active * 100}%)`,
-            transitionTimingFunction: "cubic-bezier(0.77,0,0.175,1)",
-          }}
-        >
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          HERO CAROUSEL
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section style={{ position: "relative", height: "100vh", minHeight: 600, overflow: "hidden", marginTop: -64 }}>
+
+        {/* Slides strip */}
+        <div style={{
+          position:   "absolute",
+          inset:      0,
+          display:    "flex",
+          transform:  `translateX(-${active * 100}%)`,
+          transition: "transform 900ms cubic-bezier(0.77,0,0.175,1)",
+        }}>
           {SLIDES.map((s, i) => (
-            <div key={i} className="min-w-full h-full relative overflow-hidden">
-              <div
-                className="absolute inset-0 transition-transform duration-[8000ms] ease-out"
+            <div key={i} style={{ minWidth: "100%", height: "100%", position: "relative", overflow: "hidden" }}>
+              {/* Background photo */}
+              <img
+                src={s.img}
+                alt={s.eyebrow}
                 style={{
-                  background: s.bg,
-                  transform: i === active ? "scale(1)" : "scale(1.08)",
+                  position:   "absolute",
+                  inset:      0,
+                  width:      "100%",
+                  height:     "100%",
+                  objectFit:  "cover",
+                  transform:  i === active ? "scale(1)" : "scale(1.06)",
+                  transition: "transform 8s ease-out",
                 }}
               />
-              <div
-                className="absolute inset-0"
-                style={{
-                  background:
-                    "linear-gradient(to bottom, rgba(8,10,18,0.2) 0%, rgba(8,10,18,0.1) 30%, rgba(8,10,18,0.5) 70%, rgba(255,255,255,0.92) 100%)",
-                }}
-              />
-              <div className="absolute bottom-0 left-0 right-0 z-[2] px-6 md:px-20 pb-20 max-w-[700px]">
-                <div
-                  className="transition-all duration-700"
-                  style={{
-                    opacity: i === active ? 1 : 0,
-                    transform: i === active ? "translateY(0)" : "translateY(20px)",
-                    transitionDelay: i === active ? "200ms" : "0ms",
-                    fontFamily: "'Josefin Sans', sans-serif",
-                    fontSize: 9,
-                    letterSpacing: "0.4em",
-                    color: GOLD,
-                    textTransform: "uppercase",
-                    marginBottom: 16,
-                  }}
-                >
+              {/* Overlay — blends to BG_PAGE at bottom so next section is seamless */}
+              <div style={{
+                position:   "absolute",
+                inset:      0,
+                background: `linear-gradient(to bottom, rgba(8,10,20,0.22) 0%, rgba(8,10,20,0.08) 25%, rgba(8,10,20,0.52) 68%, ${BG_PAGE}f0 100%)`,
+              }} />
+              {/* CTA content */}
+              <div style={{
+                position: "absolute",
+                bottom:   0,
+                left:     0,
+                right:    0,
+                zIndex:   2,
+                padding:  `0 ${PAD} 76px`,
+                maxWidth: 720,
+              }}>
+                <div style={{
+                  fontFamily:    "'Josefin Sans', sans-serif",
+                  fontSize:      9,
+                  letterSpacing: "0.4em",
+                  color:         GOLD,
+                  textTransform: "uppercase",
+                  marginBottom:  12,
+                  opacity:       i === active ? 1 : 0,
+                  transform:     i === active ? "translateY(0)" : "translateY(14px)",
+                  transition:    "opacity 0.7s 0.2s ease, transform 0.7s 0.2s ease",
+                }}>
                   {s.eyebrow}
                 </div>
-                <h1
-                  className="text-white transition-all duration-[800ms]"
-                  style={{
-                    opacity: i === active ? 1 : 0,
-                    transform: i === active ? "translateY(0)" : "translateY(30px)",
-                    transitionDelay: i === active ? "350ms" : "0ms",
-                    fontFamily: "'Cormorant Garamond', serif",
-                    fontSize: "clamp(42px, 5.5vw, 72px)",
-                    fontWeight: 400,
-                    lineHeight: 1.05,
-                    letterSpacing: "0.02em",
-                    marginBottom: 16,
-                  }}
-                >
+                <h1 style={{
+                  fontFamily:    "'Cormorant Garamond', serif",
+                  fontSize:      "clamp(40px, 5.5vw, 70px)",
+                  fontWeight:    400,
+                  lineHeight:    1.05,
+                  letterSpacing: "0.02em",
+                  color:         "#fff",
+                  marginBottom:  12,
+                  opacity:       i === active ? 1 : 0,
+                  transform:     i === active ? "translateY(0)" : "translateY(22px)",
+                  transition:    "opacity 0.8s 0.35s ease, transform 0.8s 0.35s ease",
+                }}>
                   {s.title}
                 </h1>
-                <p
-                  className="transition-opacity duration-700"
-                  style={{
-                    opacity: i === active ? 1 : 0,
-                    transitionDelay: i === active ? "500ms" : "0ms",
-                    fontFamily: "'Josefin Sans', sans-serif",
-                    fontSize: 9,
-                    letterSpacing: "0.25em",
-                    color: "rgba(0,0,0,0.45)",
-                    textTransform: "uppercase",
-                    marginBottom: 32,
-                  }}
-                >
-                  {s.subtitle}
+                <p style={{
+                  fontFamily:    "'Josefin Sans', sans-serif",
+                  fontSize:      9,
+                  letterSpacing: "0.25em",
+                  color:         "rgba(255,255,255,0.45)",
+                  textTransform: "uppercase",
+                  marginBottom:  26,
+                  opacity:       i === active ? 1 : 0,
+                  transition:    "opacity 0.7s 0.5s ease",
+                }}>
+                  {s.sub}
                 </p>
-                <div
-                  className="flex gap-3 transition-all duration-700"
-                  style={{
-                    opacity: i === active ? 1 : 0,
-                    transform: i === active ? "translateY(0)" : "translateY(20px)",
-                    transitionDelay: i === active ? "600ms" : "0ms",
-                  }}
-                >
+                <div style={{
+                  display:   "flex",
+                  gap:       8,
+                  flexWrap:  "wrap",
+                  opacity:   i === active ? 1 : 0,
+                  transform: i === active ? "translateY(0)" : "translateY(14px)",
+                  transition:"opacity 0.7s 0.6s ease, transform 0.7s 0.6s ease",
+                }}>
+                  {/* Primary CTA — navigates to the product section matching the banner name */}
                   <Link
                     href={s.primary.href}
-                    className="text-white transition-all hover:-translate-y-0.5"
                     style={{
-                      background: GOLD,
-                      fontFamily: "'Josefin Sans', sans-serif",
-                      fontSize: 9,
+                      background:    GOLD,
+                      color:         "#fff",
+                      fontFamily:    "'Josefin Sans', sans-serif",
+                      fontSize:      9,
                       letterSpacing: "0.28em",
                       textTransform: "uppercase",
-                      padding: "14px 28px",
+                      padding:       "12px 24px",
+                      display:       "inline-block",
+                      transition:    "background 0.2s, transform 0.2s",
+                      boxShadow:     "0 6px 18px rgba(184,146,90,0.4)",
                     }}
-                    onMouseEnter={(e) => ((e.target as HTMLElement).style.background = GOLD_LIGHT)}
-                    onMouseLeave={(e) => ((e.target as HTMLElement).style.background = GOLD)}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = GOLD_LIGHT; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = GOLD;       (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
                   >
                     {s.primary.label}
                   </Link>
+                  {/* Secondary outline CTA */}
                   <Link
                     href={s.outline.href}
-                    className="transition-all"
                     style={{
-                      background: "transparent",
-                      color: "rgba(0,0,0,0.6)",
-                      fontFamily: "'Josefin Sans', sans-serif",
-                      fontSize: 9,
+                      background:    "rgba(255,255,255,0.08)",
+                      backdropFilter:"blur(8px)",
+                      color:         "rgba(255,255,255,0.72)",
+                      fontFamily:    "'Josefin Sans', sans-serif",
+                      fontSize:      9,
                       letterSpacing: "0.28em",
                       textTransform: "uppercase",
-                      padding: "13px 28px",
-                      border: "1px solid rgba(0,0,0,0.2)",
+                      padding:       "11px 24px",
+                      border:        "0.5px solid rgba(255,255,255,0.32)",
+                      display:       "inline-block",
+                      transition:    "border-color 0.2s, color 0.2s",
                     }}
-                    onMouseEnter={(e) => {
-                      (e.target as HTMLElement).style.borderColor = "rgba(184,146,90,0.4)";
-                      (e.target as HTMLElement).style.color = GOLD;
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.target as HTMLElement).style.borderColor = "rgba(0,0,0,0.2)";
-                      (e.target as HTMLElement).style.color = "rgba(0,0,0,0.6)";
-                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.55)"; (e.currentTarget as HTMLElement).style.color = GOLD; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.32)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.72)"; }}
                   >
                     {s.outline.label}
                   </Link>
@@ -526,577 +479,287 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Indicators */}
-        <div className="absolute bottom-[84px] right-6 md:right-20 z-[3] flex gap-2 items-center">
+        {/* Dot indicators */}
+        <div style={{ position: "absolute", bottom: 80, right: PAD, zIndex: 3, display: "flex", gap: 6, alignItems: "center" }}>
           {SLIDES.map((_, i) => (
             <button
               key={i}
               onClick={() => setActive(i)}
-              className="transition-all duration-300"
               style={{
-                width: i === active ? 24 : 6,
-                height: i === active ? 4 : 6,
-                borderRadius: i === active ? 2 : 9999,
-                background: i === active ? GOLD : "rgba(0,0,0,0.15)",
+                width:        i === active ? 22 : 6,
+                height:       i === active ? 4  : 6,
+                borderRadius: i === active ? 2  : 9999,
+                background:   i === active ? GOLD : "rgba(255,255,255,0.3)",
+                border:       "none",
+                cursor:       "pointer",
+                transition:   "all 0.3s ease",
+                padding:      0,
               }}
             />
           ))}
         </div>
 
-        {/* Vertical counter */}
-        <div
-          className="hidden md:block absolute top-1/2 right-20 -translate-y-1/2 z-[3]"
-          style={{
-            writingMode: "vertical-rl",
-            fontFamily: "'Josefin Sans', sans-serif",
-            fontSize: 9,
-            letterSpacing: "0.3em",
-            color: "rgba(0,0,0,0.15)",
-          }}
-        >
+        {/* Vertical slide counter */}
+        <div className="hidden md:block" style={{
+          position:      "absolute",
+          top:           "50%",
+          right:         80,
+          transform:     "translateY(-50%)",
+          zIndex:        3,
+          writingMode:   "vertical-rl" as const,
+          fontFamily:    "'Josefin Sans', sans-serif",
+          fontSize:      9,
+          letterSpacing: "0.3em",
+          color:         "rgba(255,255,255,0.18)",
+        }}>
           {String(active + 1).padStart(2, "0")} / 0{SLIDES.length}
         </div>
 
         {/* Progress bar */}
-        <div
-          className="absolute bottom-0 left-0 h-0.5 z-[3]"
-          style={{ background: GOLD, width: `${progress}%`, transition: "width 0.1s linear" }}
-        />
+        <div style={{ position: "absolute", bottom: 0, left: 0, height: 1.5, zIndex: 3, background: GOLD, width: `${progress}%`, transition: "width 0.1s linear" }} />
       </section>
 
-      {/* PRODUCT TABS */}
-      <section className="px-6 md:px-20 py-16 md:py-20 max-w-[1400px] mx-auto">
-        <div
-          className="mb-10"
-          style={{ borderBottom: "1px solid rgba(0,0,0,0.08)" }}
-        >
-          <div className="pb-6">
-            <div
-              style={{
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: 8,
-                letterSpacing: "0.4em",
-                color: GOLD,
-                textTransform: "uppercase",
-                marginBottom: 12,
-              }}
-            >
-              Collections
-            </div>
-            <h2
-              className="text-neutral-900"
-              style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                fontSize: "clamp(28px, 3vw, 42px)",
-                fontWeight: 400,
-                letterSpacing: "0.02em",
-              }}
-            >
-              Shop by Category
-            </h2>
-          </div>
-          <div className="flex">
-            {(["men", "women", "kids"] as const).map((t) => {
-              const on = tab === t;
-              return (
-                <button
-                  key={t}
-                  onClick={() => setTab(t)}
-                  className="transition-all relative -mb-px"
-                  style={{
-                    fontFamily: "'Josefin Sans', sans-serif",
-                    fontSize: 10,
-                    letterSpacing: "0.3em",
-                    textTransform: "uppercase",
-                    color: on ? GOLD : "rgba(0,0,0,0.45)",
-                    border: "none",
-                    background: "none",
-                    borderBottom: on ? `2px solid ${GOLD}` : "2px solid transparent",
-                    padding: "14px 24px 14px 0",
-                    marginRight: 32,
-                  }}
-                >
-                  {t === "men" ? "Men's" : t === "women" ? "Women's" : "Kids'"}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {PANELS[tab].map((c) => (
-            <ProductCard key={c.title + c.href} c={c} />
-          ))}
-        </div>
-      </section>
+      {/* ══════════════════════════════════════════════════════════════════════
+          SHOP BY CATEGORY
+          Wireframe layout: tabs header + 2-col grid (1fr 1fr) always,
+          4 cards → 2 rows of 2. Bespoke = dark navy card, same cell as others.
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section style={{ background: BG_SECTION }}>
+        <div style={{ maxWidth: 1400, margin: "0 auto", padding: `52px ${PAD} 56px` }}>
 
-      {/* Divider */}
-      <div
-        className="mx-6 md:mx-20"
-        style={{ height: 1, background: "linear-gradient(to right, transparent, rgba(184,146,90,0.3), transparent)" }}
-      />
-
-      {/* CUSTOM STUDIO — REDESIGNED */}
-      <section
-        className="relative overflow-hidden"
-        style={{
-          background:
-            "linear-gradient(135deg, #F7F2E8 0%, #FAF6EE 45%, #F2EADB 100%)",
-          borderTop: "1px solid rgba(184,146,90,0.25)",
-          borderBottom: "1px solid rgba(184,146,90,0.25)",
-        }}
-      >
-        {/* Decorative gold rules */}
-        <div
-          className="hidden md:block absolute top-10 left-1/2 -translate-x-1/2 h-px w-24"
-          style={{ background: GOLD, opacity: 0.5 }}
-        />
-        {/* Soft radial glow accent */}
-        <div
-          className="absolute -top-40 -right-40 w-[480px] h-[480px] rounded-full pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(184,146,90,0.18) 0%, rgba(184,146,90,0) 70%)",
-          }}
-        />
-        <div
-          className="absolute -bottom-40 -left-40 w-[420px] h-[420px] rounded-full pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(184,146,90,0.12) 0%, rgba(184,146,90,0) 70%)",
-          }}
-        />
-
-        <div className="relative z-[1] max-w-[1400px] mx-auto px-6 md:px-20 py-20 md:py-28 grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-16 items-center">
-          {/* LEFT: editorial copy + steps */}
-          <div className="md:col-span-7">
-            <div
-              className="inline-flex items-center gap-2.5 mb-7"
-              style={{
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: 9,
-                letterSpacing: "0.42em",
-                color: GOLD,
-                textTransform: "uppercase",
-              }}
-            >
-              <span style={{ width: 28, height: 1, background: GOLD }} />
-              The Bespoke Studio
+          {/* Header */}
+          <div style={{ borderBottom: "0.5px solid rgba(30,40,80,0.1)", marginBottom: 0 }}>
+            <div style={{ paddingBottom: 18 }}>
+              <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.4em", color: GOLD, textTransform: "uppercase", marginBottom: 8 }}>
+                Collections
+              </div>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(26px,3vw,40px)", fontWeight: 400, letterSpacing: "0.02em", color: "#1a1f2e" }}>
+                Shop by Category
+              </h2>
             </div>
 
-            <h2
-              className="text-neutral-900"
-              style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                fontSize: "clamp(36px, 4.4vw, 64px)",
-                fontWeight: 400,
-                lineHeight: 1.05,
-                letterSpacing: "-0.005em",
-                marginBottom: 18,
-              }}
-            >
-              Designed by you.<br />
-              <span style={{ fontStyle: "italic", color: GOLD }}>Tailored</span>{" "}
-              by us.
-            </h2>
-
-            <p
-              className="max-w-[520px]"
-              style={{
-                fontFamily: "'EB Garamond', serif",
-                fontSize: 17,
-                lineHeight: 1.65,
-                color: "rgba(0,0,0,0.62)",
-                marginBottom: 36,
-              }}
-            >
-              Pick your silhouette, choose your colour story, drop in a print or
-              monogram — then watch it come to life on a real-time 3D preview.
-              Every piece is cut, sewn and finished by our atelier.
-            </p>
-
-            {/* 3-step process */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-4 mb-9">
-              {[
-                { n: "01", t: "Choose", d: "Silhouette, fit & fabric" },
-                { n: "02", t: "Personalise", d: "Colour, print, monogram" },
-                { n: "03", t: "Receive", d: "Crafted in 10–14 days" },
-              ].map((s) => (
-                <div
-                  key={s.n}
-                  className="group"
-                  style={{
-                    paddingTop: 14,
-                    borderTop: "1px solid rgba(184,146,90,0.4)",
-                  }}
-                >
-                  <div
+            {/* Tabs */}
+            <div style={{ display: "flex" }}>
+              {(["men", "women", "kids"] as const).map((t) => {
+                const on = tab === t;
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
                     style={{
-                      fontFamily: "'Cormorant Garamond', serif",
-                      fontSize: 22,
-                      fontWeight: 400,
-                      color: GOLD,
-                      lineHeight: 1,
-                      marginBottom: 8,
-                    }}
-                  >
-                    {s.n}
-                  </div>
-                  <div
-                    className="text-neutral-900"
-                    style={{
-                      fontFamily: "'Josefin Sans', sans-serif",
-                      fontSize: 11,
-                      letterSpacing: "0.22em",
+                      fontFamily:    "'Josefin Sans', sans-serif",
+                      fontSize:      10,
+                      fontWeight:    500,
+                      letterSpacing: "0.18em",
                       textTransform: "uppercase",
-                      marginBottom: 4,
+                      color:         on ? GOLD : "rgba(30,40,80,0.4)",
+                      background:    "none",
+                      border:        "none",
+                      borderBottom:  on ? `2px solid ${GOLD}` : "2px solid transparent",
+                      padding:       "12px 18px 12px 0",
+                      marginRight:   24,
+                      cursor:        "pointer",
+                      position:      "relative",
+                      bottom:        -0.5,
+                      transition:    "color 0.2s",
                     }}
                   >
-                    {s.t}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "'EB Garamond', serif",
-                      fontSize: 14,
-                      color: "rgba(0,0,0,0.55)",
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {s.d}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* CTAs */}
-            <div className="flex flex-wrap items-center gap-5">
-              <Link
-                href="/products/1/customize"
-                className="text-white transition-all hover:-translate-y-0.5 inline-flex items-center gap-3"
-                style={{
-                  background: GOLD,
-                  fontFamily: "'Josefin Sans', sans-serif",
-                  fontSize: 10,
-                  letterSpacing: "0.3em",
-                  textTransform: "uppercase",
-                  padding: "16px 32px",
-                  boxShadow: "0 12px 32px -12px rgba(184,146,90,0.55)",
-                }}
-                onMouseEnter={(e) =>
-                  ((e.currentTarget as HTMLElement).style.background = GOLD_LIGHT)
-                }
-                onMouseLeave={(e) =>
-                  ((e.currentTarget as HTMLElement).style.background = GOLD)
-                }
-              >
-                Open the Studio
-                <span style={{ fontSize: 14, lineHeight: 1 }}>→</span>
-              </Link>
-              <Link
-                href="/products/1/customize"
-                className="hover:!text-[#B8925A] transition-colors"
-                style={{
-                  fontFamily: "'Josefin Sans', sans-serif",
-                  fontSize: 10,
-                  letterSpacing: "0.28em",
-                  color: "rgba(0,0,0,0.6)",
-                  textTransform: "uppercase",
-                  borderBottom: "1px solid rgba(0,0,0,0.18)",
-                  paddingBottom: 4,
-                }}
-              >
-                Bulk & Corporate
-              </Link>
+                    {t === "men" ? "Men's" : t === "women" ? "Women's" : "Kids'"}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* RIGHT: visual showcase */}
-          <div className="md:col-span-5 relative">
-            <div className="relative mx-auto max-w-[440px]">
-              {/* Soft gold frame */}
-              <div
-                className="absolute -inset-3 md:-inset-5 pointer-events-none"
-                style={{
-                  border: "1px solid rgba(184,146,90,0.35)",
-                  borderRadius: 4,
-                  transform: "translate(14px, 14px)",
-                }}
-              />
-
-              {/* Main product image */}
-              <div
-                className="relative overflow-hidden"
-                style={{
-                  aspectRatio: "4 / 5",
-                  background: "#EFE7D6",
-                  borderRadius: 4,
-                  boxShadow:
-                    "0 30px 60px -25px rgba(60,40,15,0.35), 0 12px 24px -12px rgba(60,40,15,0.18)",
-                }}
-              >
-                <img
-                  src="https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=900&q=80"
-                  alt="Custom designed polo"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-                {/* Top-right badge */}
-                <div
-                  className="absolute top-4 right-4 inline-flex items-center gap-2 px-3 py-1.5"
-                  style={{
-                    background: "rgba(255,255,255,0.92)",
-                    backdropFilter: "blur(8px)",
-                    border: "1px solid rgba(184,146,90,0.35)",
-                    fontFamily: "'Josefin Sans', sans-serif",
-                    fontSize: 8,
-                    letterSpacing: "0.28em",
-                    color: "#0A0A0A",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  <span
-                    className="inline-block w-1.5 h-1.5 rounded-full"
-                    style={{ background: GOLD }}
-                  />
-                  Live Preview
-                </div>
-              </div>
-
-              {/* Floating swatch card */}
-              <div
-                className="absolute -bottom-6 -left-6 md:-left-10 p-4 hidden sm:block"
-                style={{
-                  background: "#FFFFFF",
-                  border: "1px solid rgba(184,146,90,0.35)",
-                  borderRadius: 4,
-                  boxShadow: "0 18px 40px -18px rgba(60,40,15,0.35)",
-                  width: 200,
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: "'Josefin Sans', sans-serif",
-                    fontSize: 8,
-                    letterSpacing: "0.32em",
-                    color: GOLD,
-                    textTransform: "uppercase",
-                    marginBottom: 10,
-                  }}
-                >
-                  Your Palette
-                </div>
-                <div className="grid grid-cols-6 gap-1.5 mb-3">
-                  {[
-                    "#0A0A0A",
-                    "#FFFFFF",
-                    "#B8925A",
-                    "#1F3A2E",
-                    "#7A1F2B",
-                    "#4A6FA5",
-                    "#E8DCC4",
-                    "#2C2C2C",
-                    "#A05A2C",
-                    "#E8B4B8",
-                    "#3D5A3D",
-                    "#D4A96A",
-                  ].map((c, i) => (
-                    <span
-                      key={i}
-                      className="block w-full aspect-square"
-                      style={{
-                        background: c,
-                        border:
-                          c === "#FFFFFF"
-                            ? "1px solid rgba(0,0,0,0.12)"
-                            : "1px solid rgba(0,0,0,0.06)",
-                        borderRadius: 2,
-                      }}
-                    />
-                  ))}
-                </div>
-                <div
-                  className="text-neutral-900"
-                  style={{
-                    fontFamily: "'EB Garamond', serif",
-                    fontSize: 13,
-                    fontStyle: "italic",
-                    lineHeight: 1.3,
-                  }}
-                >
-                  12 signature shades, infinite combinations.
-                </div>
-              </div>
-
-              {/* Floating monogram tag */}
-              <div
-                className="absolute -top-5 -right-3 md:-right-8 hidden sm:flex items-center gap-3 px-4 py-3"
-                style={{
-                  background: "#0A0A0A",
-                  borderRadius: 4,
-                  boxShadow: "0 14px 28px -12px rgba(0,0,0,0.4)",
-                }}
-              >
-                <span
-                  style={{
-                    fontFamily: "'Cormorant Garamond', serif",
-                    fontSize: 26,
-                    color: GOLD,
-                    fontStyle: "italic",
-                    lineHeight: 1,
-                  }}
-                >
-                  KS
-                </span>
-                <div
-                  style={{
-                    width: 1,
-                    height: 24,
-                    background: "rgba(255,255,255,0.2)",
-                  }}
-                />
-                <span
-                  style={{
-                    fontFamily: "'Josefin Sans', sans-serif",
-                    fontSize: 8,
-                    letterSpacing: "0.3em",
-                    color: "rgba(255,255,255,0.8)",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Monogram<br />Ready
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div
-        className="mx-6 md:mx-20"
-        style={{ height: 1, background: "linear-gradient(to right, transparent, rgba(184,146,90,0.3), transparent)" }}
-      />
-
-      {/* BULK SECTION */}
-      <section className="px-6 md:px-20 py-16 md:py-20 max-w-[1400px] mx-auto">
-        <div className="mb-10">
+          {/* ── 2-column card grid ─────────────────────────────────────────
+              gridTemplateColumns: "1fr 1fr" = exactly 2 cols on all screen sizes ≥ small.
+              On mobile (< 640px) falls to 1 col via Tailwind breakpoint class below.
+          ──────────────────────────────────────────────────────────────── */}
           <div
-            style={{
-              fontFamily: "'Josefin Sans', sans-serif",
-              fontSize: 8,
-              letterSpacing: "0.4em",
-              color: GOLD,
-              textTransform: "uppercase",
-              marginBottom: 12,
-            }}
+            className="grid grid-cols-1 sm:grid-cols-2"
+            style={{ gap: 10, marginTop: 14 }}
           >
-            Bulk & Corporate
+            {PANELS[tab].map((c) => (
+              <CategoryCard key={c.title + c.href} c={c} />
+            ))}
           </div>
-          <h2
-            className="text-neutral-900"
-            style={{
-              fontFamily: "'Cormorant Garamond', serif",
-              fontSize: "clamp(28px, 3vw, 42px)",
-              fontWeight: 400,
-              lineHeight: 1.2,
-            }}
-          >
-            Outfit Your Event,<br />Academy or Club
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {BULK.map((b) => (
-            <div
-              key={b.title}
-              className="group transition-all hover:-translate-y-1"
-              style={{
-                background: "#FFFFFF",
-                border: "1px solid rgba(0,0,0,0.08)",
-                borderRadius: 12,
-                overflow: "hidden",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.3)")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.08)")}
-            >
-              <div className="h-[140px] relative overflow-hidden flex items-center justify-center">
-                <img
-                  src={b.img}
-                  alt={b.title}
-                  className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105"
-                
-                />
-                <span
-                  className="absolute top-3 left-3.5 z-[1]"
-                  style={{
-                    fontFamily: "'Josefin Sans', sans-serif",
-                    fontSize: 7,
-                    letterSpacing: "0.25em",
-                    color: GOLD,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {b.from}
-                </span>
-              </div>
-              <div className="px-5 pt-5 pb-5">
-                <div
-                  style={{
-                    fontFamily: "'Josefin Sans', sans-serif",
-                    fontSize: 8,
-                    letterSpacing: "0.3em",
-                    color: GOLD,
-                    textTransform: "uppercase",
-                    marginBottom: 6,
-                  }}
-                >
-                  {b.num}
-                </div>
-                <div
-                  className="text-neutral-900"
-                  style={{
-                    fontFamily: "'Cormorant Garamond', serif",
-                    fontSize: 20,
-                    fontWeight: 500,
-                    marginBottom: 8,
-                  }}
-                >
-                  {b.title}
-                </div>
-                <div
-                  style={{
-                    fontFamily: "'Josefin Sans', sans-serif",
-                    fontSize: 10,
-                    color: MUTED,
-                    letterSpacing: "0.06em",
-                    lineHeight: 1.7,
-                    marginBottom: 14,
-                  }}
-                >
-                  {b.desc}
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {b.tags.map((t) => (
-                    <span
-                      key={t}
-                      style={{
-                        fontFamily: "'Josefin Sans', sans-serif",
-                        fontSize: 7,
-                        letterSpacing: "0.15em",
-                        textTransform: "uppercase",
-                        color: "rgba(0,0,0,0.45)",
-                        background: "rgba(255,255,255,0.06)",
-                        padding: "3px 8px",
-                        borderRadius: 2,
-                      }}
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
+
         </div>
       </section>
+
+      {/* Gold rule divider */}
+      <div style={{ height: 1, background: "linear-gradient(to right, transparent, rgba(184,146,90,0.22), transparent)", margin: `0 ${PAD}` }} />
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          CUSTOM STUDIO — Dark compact bar (wireframe: navy + gold left border)
+          Interactive chips let users toggle customisation options.
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section style={{ background: BG_PAGE, padding: `20px ${PAD}` }}>
+        <div style={{
+          maxWidth:      1400,
+          margin:        "0 auto",
+          background:    BG_DARK,
+          borderLeft:    `3px solid ${GOLD}`,
+          borderRadius:  10,
+          padding:       "20px 26px",
+          display:       "flex",
+          alignItems:    "center",
+          justifyContent:"space-between",
+          gap:           20,
+          flexWrap:      "wrap",
+        }}>
+          {/* Left block */}
+          <div style={{ flex: 1, minWidth: 240 }}>
+            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.28em", color: GOLD, textTransform: "uppercase", marginBottom: 8 }}>
+              Custom Studio
+            </div>
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(15px,1.6vw,19px)", fontWeight: 500, color: "#fff", lineHeight: 1.35, marginBottom: 4 }}>
+              Choose your colour, print, pattern, size<br />or upload your logo.
+            </div>
+            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.38)", textTransform: "uppercase", marginBottom: 14 }}>
+              Your game, your t-shirt.
+            </div>
+            {/* Interactive toggle chips */}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {CHIPS.map((chip) => {
+                const on = chips.includes(chip);
+                return (
+                  <button
+                    key={chip}
+                    onClick={() => toggleChip(chip)}
+                    style={{
+                      fontFamily:    "'Josefin Sans', sans-serif",
+                      fontSize:      8,
+                      letterSpacing: "0.1em",
+                      padding:       "4px 10px",
+                      borderRadius:  3,
+                      border:        `0.5px solid ${on ? GOLD : "rgba(184,146,90,0.35)"}`,
+                      background:    on ? GOLD : "transparent",
+                      color:         on ? "#fff" : "rgba(255,255,255,0.55)",
+                      textTransform: "uppercase",
+                      cursor:        "pointer",
+                      transition:    "all 0.2s ease",
+                    }}
+                  >
+                    {chip}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right CTAs */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start", flexShrink: 0 }}>
+            <Link
+              href="/products/1/customize"
+              style={{
+                background:    GOLD,
+                color:         "#fff",
+                fontFamily:    "'Josefin Sans', sans-serif",
+                fontSize:      9,
+                letterSpacing: "0.2em",
+                textTransform: "uppercase",
+                padding:       "11px 20px",
+                whiteSpace:    "nowrap",
+                display:       "inline-block",
+                transition:    "background 0.2s",
+              }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = GOLD_LIGHT)}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = GOLD)}
+            >
+              Start designing →
+            </Link>
+            <Link
+              href="/products/1/customize"
+              style={{
+                fontFamily:    "'Josefin Sans', sans-serif",
+                fontSize:      9,
+                letterSpacing: "0.14em",
+                color:         "rgba(255,255,255,0.3)",
+                textTransform: "uppercase",
+                borderBottom:  "0.5px solid rgba(255,255,255,0.14)",
+                paddingBottom: 1,
+                whiteSpace:    "nowrap",
+                transition:    "color 0.2s",
+              }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.65)")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.3)")}
+            >
+              Bulk & corporate pricing →
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Gold rule divider */}
+      <div style={{ height: 1, background: "linear-gradient(to right, transparent, rgba(184,146,90,0.18), transparent)", margin: `0 ${PAD}` }} />
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          BULK & CORPORATE — 3-column grid (matching wireframe)
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section style={{ background: BG_PAGE }}>
+        <div style={{ maxWidth: 1400, margin: "0 auto", padding: `48px ${PAD} 56px` }}>
+
+          {/* Header */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.4em", color: GOLD, textTransform: "uppercase", marginBottom: 8 }}>
+              Bulk &amp; Corporate
+            </div>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(26px,3vw,40px)", fontWeight: 400, color: "#1a1f2e", lineHeight: 1.2 }}>
+              Outfit Your Event,<br />Academy or Club
+            </h2>
+          </div>
+
+          {/* 3-col tile grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: 10 }}>
+            {BULK.map((b) => (
+              <div
+                key={b.title}
+                style={{
+                  background:   BG_CARD,
+                  border:       "0.5px solid rgba(30,40,80,0.1)",
+                  borderRadius: 10,
+                  overflow:     "hidden",
+                  cursor:       "pointer",
+                  transition:   "transform 0.3s, border-color 0.3s, box-shadow 0.3s",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.transform   = "translateY(-3px)";
+                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.32)";
+                  (e.currentTarget as HTMLElement).style.boxShadow   = "0 12px 28px rgba(30,40,80,0.09)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.transform   = "translateY(0)";
+                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(30,40,80,0.1)";
+                  (e.currentTarget as HTMLElement).style.boxShadow   = "none";
+                }}
+              >
+                {/* Image */}
+                <div style={{ height: 100, position: "relative", overflow: "hidden" }}>
+                  <img src={b.img} alt={b.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(15,18,35,0.4) 0%, transparent 55%)" }} />
+                  <span style={{ position: "absolute", top: 8, left: 10, fontFamily: "'Josefin Sans', sans-serif", fontSize: 7.5, letterSpacing: "0.18em", color: GOLD, textTransform: "uppercase" }}>
+                    {b.from}
+                  </span>
+                </div>
+                {/* Body */}
+                <div style={{ padding: "13px 16px 16px" }}>
+                  <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.2em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{b.num}</div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontWeight: 500, color: "#1a1f2e", marginBottom: 6 }}>{b.title}</div>
+                  <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, color: "rgba(30,40,80,0.5)", letterSpacing: "0.04em", lineHeight: 1.65, marginBottom: 10 }}>{b.desc}</div>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                    {b.tags.map((t) => (
+                      <span key={t} style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 7.5, padding: "2px 7px", background: BG_SECTION, color: "rgba(30,40,80,0.5)", borderRadius: 3, letterSpacing: "0.08em", textTransform: "uppercase", border: "0.5px solid rgba(30,40,80,0.08)" }}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
     </Layout>
   );
 }
