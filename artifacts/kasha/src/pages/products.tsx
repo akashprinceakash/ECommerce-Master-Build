@@ -187,24 +187,23 @@ export default function ProductsPage() {
       list = list.filter((p) => TSHIRT_CATEGORIES.includes((p.category || "").toLowerCase()));
       if (styleFilter === "patterns") {
         list = list.filter((p) => {
+          const sub = (p.subType || "").toLowerCase();
           const cat = (p.category || "").toLowerCase();
           const name = (p.name || "").toLowerCase();
-          return PATTERN_CATEGORIES.includes(cat) || name.includes("pattern");
+          return sub === "pattern" || PATTERN_CATEGORIES.includes(cat) || name.includes("pattern");
         });
       } else if (styleFilter === "prints") {
         list = list.filter((p) => {
+          const sub = (p.subType || "").toLowerCase();
           const cat = (p.category || "").toLowerCase();
           const name = (p.name || "").toLowerCase();
-          if (PATTERN_CATEGORIES.includes(cat) || name.includes("pattern")) return false;
-          return PRINT_CATEGORIES.includes(cat) || PRINT_NAME_HINTS.some((h) => name.includes(h));
+          if (sub === "pattern" || PATTERN_CATEGORIES.includes(cat) || name.includes("pattern")) return false;
+          return sub === "printed" || PRINT_CATEGORIES.includes(cat) || PRINT_NAME_HINTS.some((h) => name.includes(h));
         });
       } else if (styleFilter === "solids") {
         list = list.filter((p) => {
-          const cat = (p.category || "").toLowerCase();
-          const name = (p.name || "").toLowerCase();
-          if (PATTERN_CATEGORIES.includes(cat) || name.includes("pattern")) return false;
-          if (PRINT_NAME_HINTS.some((h) => name.includes(h))) return false;
-          return true;
+          const sub = (p.subType || "").toLowerCase();
+          return sub === "solid";
         });
       }
     } else if (type === "bottoms") {
