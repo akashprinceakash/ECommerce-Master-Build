@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Show, useClerk, useUser } from "@clerk/react";
-import { ShoppingBag, X, Menu, User as UserIcon, ShieldCheck, Search } from "lucide-react";
+import {
+  ShoppingBag,
+  X,
+  Menu,
+  User as UserIcon,
+  ShieldCheck,
+  Search,
+} from "lucide-react";
 import { getApiUrl } from "@/lib/api";
 import { useGetCart, getGetCartQueryKey } from "@workspace/api-client-react";
 import {
@@ -33,7 +40,10 @@ export function Navbar() {
   }, []);
 
   useEffect(() => {
-    if (!user) { setIsAdmin(false); return; }
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
     (async () => {
       try {
         const clerk = (window as any).Clerk;
@@ -42,7 +52,9 @@ export function Navbar() {
         if (token) headers["Authorization"] = `Bearer ${token}`;
         const res = await fetch(`${getApiUrl()}/api/admin/check`, { headers });
         setIsAdmin(res.ok);
-      } catch { setIsAdmin(false); }
+      } catch {
+        setIsAdmin(false);
+      }
     })();
   }, [user]);
 
@@ -61,10 +73,13 @@ export function Navbar() {
   const isActive = (href: string) => {
     if (href === "/") return location === "/";
     if (href.startsWith("/products")) {
-      const target = new URLSearchParams(href.split("?")[1] || "").get("gender");
-      const current = typeof window !== "undefined"
-        ? new URLSearchParams(window.location.search).get("gender")
-        : null;
+      const target = new URLSearchParams(href.split("?")[1] || "").get(
+        "gender",
+      );
+      const current =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("gender")
+          : null;
       return location.startsWith("/products") && target === current;
     }
     return location.startsWith(href);
@@ -75,15 +90,21 @@ export function Navbar() {
       <header
         className="fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-6 md:px-10 transition-colors duration-300"
         style={{
-          background: scrolled ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.92)",
+          background: scrolled
+            ? "rgba(255,255,255,0.98)"
+            : "rgba(255,255,255,0.92)",
           borderBottom: "1px solid rgba(184,146,90,0.3)",
           backdropFilter: "blur(20px)",
         }}
       >
         {/* Logo */}
-        <Link href="/" className="flex items-center shrink-0" aria-label="Ka·Sha home">
+        <Link
+          href="/"
+          className="flex items-center shrink-0"
+          aria-label="Ka·Sha home"
+        >
           <img
-            src="/images/kasha-logo-new.jpeg"
+            src="/images/kasha-logo-new.jpg"
             alt="Ka·Sha"
             className="h-12 w-auto object-contain"
             style={{ mixBlendMode: "multiply" }}
@@ -121,8 +142,12 @@ export function Navbar() {
               letterSpacing: "0.2em",
               background: GOLD,
             }}
-            onMouseEnter={(e) => ((e.target as HTMLElement).style.background = GOLD_LIGHT)}
-            onMouseLeave={(e) => ((e.target as HTMLElement).style.background = GOLD)}
+            onMouseEnter={(e) =>
+              ((e.target as HTMLElement).style.background = GOLD_LIGHT)
+            }
+            onMouseLeave={(e) =>
+              ((e.target as HTMLElement).style.background = GOLD)
+            }
           >
             Custom Studio
           </Link>
@@ -157,25 +182,57 @@ export function Navbar() {
               <DropdownMenuContent
                 align="end"
                 className="w-52 rounded-none border-0"
-                style={{ background: "#FFFFFF", border: "1px solid rgba(184,146,90,0.3)", color: "#0A0A0A" }}
+                style={{
+                  background: "#FFFFFF",
+                  border: "1px solid rgba(184,146,90,0.3)",
+                  color: "#0A0A0A",
+                }}
               >
-                <div className="px-3 py-2" style={{ borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
-                  <p className="text-sm font-medium text-neutral-900">{user?.fullName || "Account"}</p>
-                  <p className="text-xs truncate" style={{ color: "rgba(0,0,0,0.5)" }}>
+                <div
+                  className="px-3 py-2"
+                  style={{ borderBottom: "1px solid rgba(0,0,0,0.08)" }}
+                >
+                  <p className="text-sm font-medium text-neutral-900">
+                    {user?.fullName || "Account"}
+                  </p>
+                  <p
+                    className="text-xs truncate"
+                    style={{ color: "rgba(0,0,0,0.5)" }}
+                  >
                     {user?.primaryEmailAddress?.emailAddress}
                   </p>
                 </div>
-                <DropdownMenuItem asChild className="focus:bg-black/5 focus:text-neutral-900">
-                  <Link href="/profile" className="w-full cursor-pointer text-sm">Profile</Link>
+                <DropdownMenuItem
+                  asChild
+                  className="focus:bg-black/5 focus:text-neutral-900"
+                >
+                  <Link
+                    href="/profile"
+                    className="w-full cursor-pointer text-sm"
+                  >
+                    Profile
+                  </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild className="focus:bg-black/5 focus:text-neutral-900">
-                  <Link href="/orders" className="w-full cursor-pointer text-sm">Orders</Link>
+                <DropdownMenuItem
+                  asChild
+                  className="focus:bg-black/5 focus:text-neutral-900"
+                >
+                  <Link
+                    href="/orders"
+                    className="w-full cursor-pointer text-sm"
+                  >
+                    Orders
+                  </Link>
                 </DropdownMenuItem>
                 {isAdmin && (
                   <>
                     <DropdownMenuSeparator className="bg-black/10" />
                     <DropdownMenuItem asChild className="focus:bg-black/5">
-                      <Link href="/admin" className="w-full cursor-pointer text-sm flex items-center gap-2" style={{ color: GOLD }}>
+                      <Link
+                        href="/admin"
+                        className="w-full cursor-pointer text-sm flex items-center gap-2"
+                        style={{ color: GOLD }}
+                      >
                         <ShieldCheck className="w-3.5 h-3.5" /> Admin Panel
                       </Link>
                     </DropdownMenuItem>
@@ -239,18 +296,27 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: "#FAFAF7" }}>
+        <div
+          className="fixed inset-0 z-[60] flex flex-col"
+          style={{ background: "#FAFAF7" }}
+        >
           <div
             className="flex items-center justify-between px-6 h-16"
             style={{ borderBottom: "1px solid rgba(184,146,90,0.3)" }}
           >
             <span
               className="text-[20px] font-medium text-neutral-900"
-              style={{ fontFamily: "'Cormorant Garamond', serif", letterSpacing: "0.15em" }}
+              style={{
+                fontFamily: "'Cormorant Garamond', serif",
+                letterSpacing: "0.15em",
+              }}
             >
               Ka·Sha
             </span>
-            <button onClick={() => setMobileOpen(false)} className="text-black/60">
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="text-black/60"
+            >
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -261,7 +327,10 @@ export function Navbar() {
                 href={l.href}
                 onClick={() => setMobileOpen(false)}
                 className="text-[14px] uppercase text-neutral-900/80"
-                style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.28em" }}
+                style={{
+                  fontFamily: "'Josefin Sans', sans-serif",
+                  letterSpacing: "0.28em",
+                }}
               >
                 {l.label}
               </Link>
