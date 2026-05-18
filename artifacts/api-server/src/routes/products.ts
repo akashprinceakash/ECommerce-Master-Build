@@ -1,17 +1,41 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and, or, ilike } from "drizzle-orm";
 import { db, productsTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
 router.get("/products", async (req, res): Promise<void> => {
-  const { category } = req.query;
-  let products;
+  const { category, gender, productType, subType, q } = req.query;
+
+  const conditions: any[] = [eq(productsTable.available, true)];
+
   if (category && typeof category === "string") {
-    products = await db.select().from(productsTable).where(eq(productsTable.category, category));
-  } else {
-    products = await db.select().from(productsTable).where(eq(productsTable.available, true));
+    conditions.push(eq(productsTable.category, category));
   }
+  if (gender && typeof gender === "string") {
+    conditions.push(eq(productsTable.gender, gender));
+  }
+  if (productType && typeof productType === "string") {
+    conditions.push(eq(productsTable.productType, productType));
+  }
+  if (subType && typeof subType === "string") {
+    conditions.push(eq(productsTable.subType, subType));
+  }
+  if (q && typeof q === "string" && q.trim()) {
+    const term = q.trim();
+    conditions.push(
+      or(
+        ilike(productsTable.name, `%${term}%`),
+        ilike(productsTable.description, `%${term}%`),
+        ilike(productsTable.category, `%${term}%`),
+      )
+    );
+  }
+
+  const products = conditions.length === 1
+    ? await db.select().from(productsTable).where(conditions[0])
+    : await db.select().from(productsTable).where(and(...conditions));
+
   res.json(products.map(formatProduct));
 });
 

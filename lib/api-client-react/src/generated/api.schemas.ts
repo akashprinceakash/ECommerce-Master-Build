@@ -18,10 +18,19 @@ export interface Product {
   name: string;
   description: string;
   category: string;
+  /** @nullable */
+  gender?: string | null;
+  /** @nullable */
+  subType?: string | null;
+  /** @nullable */
+  sku?: string | null;
+  stock?: number;
   priceInPaise: number;
   modelUrl: string;
   /** @nullable */
   thumbnailUrl?: string | null;
+  /** @nullable */
+  additionalImages?: string | null;
   available: boolean;
   sizes: string[];
   defaultColor: string;

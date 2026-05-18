@@ -1,0 +1,22 @@
+
+admin uploads product if for example while creating product he will choose men's or women's kids and product type t-shirt, pants,skirts,kids, t-shirts / pants accoridng to the gender and for example if he selects t-shirts in t-shirts there are now 5(gt001-gt005, gt006-gt0014, gt0015-gt0018, gt0019-gt0023, gt0021-gt0032... admin can add some more in the future) texture patterns and 34 printed t-shirts(and he can also upload his own prints) as same as the current functionality admin will upload the .glb file which is according to the t-shirt which he selected for example while creating if he selects  Male/female/kids and he selects t-shirts next he will upload the first pattern 3d model and add the thumbnail image  and fixes the price and etc things then he publishes that product.. then coming to customer side customer select that product clicks on customization inside customization he should only able to change edit t-shirt part by part of whole body coming to edits for patterns customer should only and select color combination for that product and add text, logo that’s it.. and he can save the design and add to cart button should be there then he can proceed with further steps as same as ecommerce applications then coming to admin side admin can track that product details and he can view user customization as same earlier functionality and he can export the design as the png image of all of parts of the t-shirts... same procedure for every product for example next admin want to create printed t-shirt then he has enter all the details of the product and he has to upload that printed t-shirt 3d model which is .glb or any 3d model extensions adds thumnail image fixes price etc.. then publishes that product next if any customer selects that product and enters the customization page in customization he should only able to change edit t-shirt part by part of whole body coming to edits for prints  customer can update the prints for that product and add text, logo etc..
+
+same procedure for every product for example next admin want to create solid t-shirt then he has enter all the details of the product and he has to upload that solid t-shirt 3d model which is .glb or any 3d model extensions adds thumnail image fixes price etc.. then publishes that product next if any customer selects that product and enters the customization page in customization he should only able to change edit t-shirt part by part of whole body coming to edits for solid t-shirts  customer can will have option to change color,text,logo..etc.. then he can the design or directly add to cart then admin will able to see the design and procedure continues according the advanced ecommerce site till that product reaching the customer... make a note that admin can upload bulk products at a time, if customer customizes any he can see the changes on that 3d model as soon he mades hould atomatically(auto reflect the changes on the 3d model).. and admin can export the users design with product details not only the front all parts..(front,back,collar,left sleeve,right sleeve) for now i have attached a .glb file you can refer that later admin will upload others but i don't want 2d preview as  i want 3d preview.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

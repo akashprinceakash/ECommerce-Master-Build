@@ -92,7 +92,7 @@ router.post("/admin/products", requireAuth, async (req, res): Promise<void> => {
   const adminId = await requireAdmin(req, res);
   if (!adminId) return;
 
-  const { name, description, category, priceInPaise, modelUrl, thumbnailUrl, available, sizes, defaultColor } = req.body;
+  const { name, description, category, gender, productType, subType, sku, stock, priceInPaise, modelUrl, thumbnailUrl, additionalImages, available, sizes, defaultColor } = req.body;
   if (!name || !description || !category || !priceInPaise || !modelUrl) {
     res.status(400).json({ error: "Missing required fields" });
     return;
@@ -102,9 +102,15 @@ router.post("/admin/products", requireAuth, async (req, res): Promise<void> => {
     name,
     description,
     category,
+    gender: gender ?? null,
+    productType: productType ?? null,
+    subType: subType ?? null,
+    sku: sku ?? null,
+    stock: stock !== undefined ? Number(stock) : 100,
     priceInPaise: Number(priceInPaise),
     modelUrl,
     thumbnailUrl: thumbnailUrl ?? null,
+    additionalImages: additionalImages ?? null,
     available: available ?? true,
     sizes: sizes ?? ["S", "M", "L", "XL"],
     defaultColor: defaultColor ?? "#FFFFFF",
@@ -120,14 +126,20 @@ router.put("/admin/products/:id", requireAuth, async (req, res): Promise<void> =
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
 
-  const { name, description, category, priceInPaise, modelUrl, thumbnailUrl, available, sizes, defaultColor } = req.body;
+  const { name, description, category, gender, productType, subType, sku, stock, priceInPaise, modelUrl, thumbnailUrl, additionalImages, available, sizes, defaultColor } = req.body;
   const updateData: Record<string, unknown> = {};
   if (name !== undefined) updateData.name = name;
   if (description !== undefined) updateData.description = description;
   if (category !== undefined) updateData.category = category;
+  if (gender !== undefined) updateData.gender = gender || null;
+  if (productType !== undefined) updateData.productType = productType || null;
+  if (subType !== undefined) updateData.subType = subType || null;
+  if (sku !== undefined) updateData.sku = sku || null;
+  if (stock !== undefined) updateData.stock = Number(stock);
   if (priceInPaise !== undefined) updateData.priceInPaise = Number(priceInPaise);
   if (modelUrl !== undefined) updateData.modelUrl = modelUrl;
   if (thumbnailUrl !== undefined) updateData.thumbnailUrl = thumbnailUrl;
+  if (additionalImages !== undefined) updateData.additionalImages = additionalImages || null;
   if (available !== undefined) updateData.available = available;
   if (sizes !== undefined) updateData.sizes = sizes;
   if (defaultColor !== undefined) updateData.defaultColor = defaultColor;

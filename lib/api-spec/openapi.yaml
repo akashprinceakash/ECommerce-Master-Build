@@ -511,11 +511,21 @@ components:
           type: string
         category:
           type: string
+        gender:
+          type: ["string", "null"]
+        subType:
+          type: ["string", "null"]
+        sku:
+          type: ["string", "null"]
+        stock:
+          type: integer
         priceInPaise:
           type: integer
         modelUrl:
           type: string
         thumbnailUrl:
+          type: ["string", "null"]
+        additionalImages:
           type: ["string", "null"]
         available:
           type: boolean

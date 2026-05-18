@@ -108,9 +108,12 @@ export function Footer() {
             <ul className="flex flex-col gap-2.5">
               <li><FooterLink href="/heritage">About Ka·Sha</FooterLink></li>
               <li><FooterLink href="/products">Lookbook</FooterLink></li>
-              <li><FooterLink href="/contact">Contact</FooterLink></li>
-              <li><FooterLink href="/shipping">Size Guide</FooterLink></li>
-              <li><FooterLink href="/shipping">Returns</FooterLink></li>
+              <li><FooterLink href="/search">Search</FooterLink></li>
+              <li><FooterLink href="/shipping-policy">Shipping Policy</FooterLink></li>
+              <li><FooterLink href="/returns-policy">Returns & Exchanges</FooterLink></li>
+              <li><FooterLink href="/terms-of-service">Terms of Service</FooterLink></li>
+              <li><FooterLink href="/privacy-policy">Privacy Policy</FooterLink></li>
+              <li><FooterLink href="/ip-policy">IP &amp; Indemnification</FooterLink></li>
             </ul>
           </div>
         </div>

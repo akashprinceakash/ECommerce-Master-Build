@@ -288,7 +288,7 @@ function CategoryCard({ c }: { c: Card }) {
       }}
     >
       {/* Image */}
-      <div style={{ height: 300, position: "relative", overflow: "hidden" }}>
+      <div style={{ height: 130, position: "relative", overflow: "hidden" }}>
         <img src={c.img} alt={c.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" style={{ display: "block" }} />
         {c.badge && (
           <span style={{ position: "absolute", top: 10, left: 10, background: GOLD, color: "#fff", fontFamily: "'Josefin Sans', sans-serif", fontSize: 7.5, letterSpacing: "0.16em", textTransform: "uppercase", padding: "2px 8px" }}>{c.badge}</span>
@@ -364,7 +364,7 @@ export default function Home() {
                   inset:      0,
                   width:      "100%",
                   height:     "100%",
-                  objectFit:  "contain",
+                  objectFit:  "cover",
                   transform:  i === active ? "scale(1)" : "scale(1.06)",
                   transition: "transform 8s ease-out",
                 }}
@@ -525,7 +525,7 @@ export default function Home() {
           4 cards → 2 rows of 2. Bespoke = dark navy card, same cell as others.
       ══════════════════════════════════════════════════════════════════════ */}
       <section style={{ background: BG_SECTION }}>
-        <div style={{ maxWidth: '100%', margin: "0 auto", padding: `52px ${PAD} 56px` }}>
+        <div style={{ maxWidth: 1400, margin: "0 auto", padding: `52px ${PAD} 56px` }}>
 
           {/* Header */}
           <div style={{ borderBottom: "0.5px solid rgba(30,40,80,0.1)", marginBottom: 0 }}>
@@ -596,7 +596,7 @@ export default function Home() {
       ══════════════════════════════════════════════════════════════════════ */}
       <section style={{ background: BG_PAGE, padding: `20px ${PAD}` }}>
         <div style={{
-          maxWidth:      "100%",
+          maxWidth:      1400,
           margin:        "0 auto",
           background:    BG_DARK,
           borderLeft:    `3px solid ${GOLD}`,
@@ -698,7 +698,7 @@ export default function Home() {
           BULK & CORPORATE — 3-column grid (matching wireframe)
       ══════════════════════════════════════════════════════════════════════ */}
       <section style={{ background: BG_PAGE }}>
-        <div style={{ maxWidth: "100%", margin: "0 auto", padding: `48px ${PAD} 56px` }}>
+        <div style={{ maxWidth: 1400, margin: "0 auto", padding: `48px ${PAD} 56px` }}>
 
           {/* Header */}
           <div style={{ marginBottom: 24 }}>
@@ -735,8 +735,8 @@ export default function Home() {
                 }}
               >
                 {/* Image */}
-                <div style={{ height: 300, position: "relative", overflow: "hidden" }}>
-                  <img src={b.img} alt={b.title} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }} />
+                <div style={{ height: 100, position: "relative", overflow: "hidden" }}>
+                  <img src={b.img} alt={b.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(15,18,35,0.4) 0%, transparent 55%)" }} />
                   <span style={{ position: "absolute", top: 8, left: 10, fontFamily: "'Josefin Sans', sans-serif", fontSize: 7.5, letterSpacing: "0.18em", color: GOLD, textTransform: "uppercase" }}>
                     {b.from}

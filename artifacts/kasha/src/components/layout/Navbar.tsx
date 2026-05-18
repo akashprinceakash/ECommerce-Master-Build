@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Show, useClerk, useUser } from "@clerk/react";
-import { ShoppingBag, X, Menu, User as UserIcon, ShieldCheck } from "lucide-react";
+import { ShoppingBag, X, Menu, User as UserIcon, ShieldCheck, Search } from "lucide-react";
 import { getApiUrl } from "@/lib/api";
 import { useGetCart, getGetCartQueryKey } from "@workspace/api-client-react";
 import {
@@ -204,6 +204,14 @@ export function Navbar() {
               Sign In
             </Link>
           </Show>
+          <Link
+            href="/search"
+            className="w-8 h-8 hidden sm:flex items-center justify-center hover:text-neutral-900 transition-colors"
+            style={{ color: "rgba(0,0,0,0.6)" }}
+            title="Search"
+          >
+            <Search className="w-4 h-4" />
+          </Link>
           <button
             className="w-8 h-8 flex items-center justify-center relative hover:text-neutral-900 transition-colors"
             style={{ color: "rgba(0,0,0,0.6)" }}

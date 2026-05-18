@@ -4,7 +4,7 @@ import { useGetProduct, getGetProductQueryKey, useAddToCart, getGetCartQueryKey 
 import { useParams, Link, useLocation } from "wouter";
 import { formatPrice } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Minus, Plus, ShoppingBag, Wand2, ChevronRight, ShieldCheck, RotateCcw, Truck, ChevronDown } from "lucide-react";
+import { Minus, Plus, ShoppingBag, Wand2, ChevronRight, ShieldCheck, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
@@ -22,6 +22,7 @@ export default function ProductDetailPage() {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [activeImg, setActiveImg] = useState<string | null>(null);
 
   const { data: product, isLoading, error } = useGetProduct(id, {
     query: {
@@ -104,7 +105,17 @@ export default function ProductDetailPage() {
     );
   }
 
-  const productImage = product.thumbnailUrl || "/images/product-tshirt.png";
+  const mainThumbnail = product.thumbnailUrl || "/images/product-tshirt.png";
+
+  // Parse additional images from JSON string stored in DB
+  let extraImages: string[] = [];
+  if (product.additionalImages) {
+    try { extraImages = JSON.parse(product.additionalImages); } catch { extraImages = []; }
+  }
+
+  // All gallery images: main first, then extras
+  const galleryImages = [mainThumbnail, ...extraImages];
+  const displayImage = activeImg ?? mainThumbnail;
 
   return (
     <Layout>
@@ -129,7 +140,7 @@ export default function ProductDetailPage() {
                 <div className="absolute inset-0 bg-gray-100 animate-pulse" />
               )}
               <img
-                src={productImage}
+                src={displayImage}
                 alt={product.name}
                 onLoad={() => setImgLoaded(true)}
                 className={`w-full h-full object-cover object-center transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
@@ -140,14 +151,22 @@ export default function ProductDetailPage() {
                 </div>
               )}
             </div>
-            {/* Thumbnail strip - if product had multiple images this is where they'd go */}
-            <div className="mt-3 flex gap-2">
-              {["/images/product-tshirt.png", "/images/product-jacket.png", "/images/product-trousers.png"].map((img, i) => (
-                <button key={i} className="w-16 h-16 bg-gray-100 overflow-hidden border-2 border-transparent hover:border-black transition-colors">
-                  <img src={img} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
+            {/* Thumbnail strip */}
+            {galleryImages.length > 1 && (
+              <div className="mt-3 flex gap-2 flex-wrap">
+                {galleryImages.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setActiveImg(img); setImgLoaded(false); }}
+                    className={`w-16 h-16 bg-gray-100 overflow-hidden border-2 transition-colors ${
+                      displayImage === img ? "border-black" : "border-transparent hover:border-gray-400"
+                    }`}
+                  >
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Details */}
@@ -249,20 +268,10 @@ export default function ProductDetailPage() {
               </Link>
             </div>
 
-            {/* Trust Badges */}
-            <div className="flex flex-wrap gap-6 py-4 border-y border-gray-100">
-              <div className="flex items-center gap-2 text-gray-500">
-                <ShieldCheck className="w-4 h-4 text-black" />
-                <span className="text-[11px] font-semibold">Authentic</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-500">
-                <RotateCcw className="w-4 h-4 text-black" />
-                <span className="text-[11px] font-semibold">14-day Returns</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-500">
-                <Truck className="w-4 h-4 text-black" />
-                <span className="text-[11px] font-semibold">Free Shipping</span>
-              </div>
+            {/* Trust Badge */}
+            <div className="flex items-center gap-2 text-gray-500 py-3 border-y border-gray-100">
+              <ShieldCheck className="w-4 h-4 text-black" />
+              <span className="text-[11px] font-semibold">100% Authentic — Luxury Craftsmanship</span>
             </div>
 
             {/* Accordion */}
@@ -276,7 +285,7 @@ export default function ProductDetailPage() {
                 {
                   key: "shipping",
                   title: "Shipping & Returns",
-                  content: "Complimentary standard shipping on all orders. Express options available at checkout. Returns accepted within 14 days of delivery for unworn items with original tags. Customized pieces are final sale."
+                  content: "Orders are processed within 1–3 business days. Metro deliveries: 3–5 business days. Other cities: 5–7 business days. Returns accepted within 7 days of delivery for unused, unwashed items in original condition with tags attached. Customised pieces are non-returnable."
                 },
                 {
                   key: "sizing",

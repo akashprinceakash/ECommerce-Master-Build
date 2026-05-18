@@ -17,6 +17,12 @@ import OrderDetailPage from "@/pages/order-detail";
 import ProfilePage from "@/pages/profile";
 import HeritagePage from "@/pages/heritage";
 import AdminPage from "@/pages/admin";
+import SearchPage from "@/pages/search";
+import TermsPage from "@/pages/legal/terms";
+import PrivacyPage from "@/pages/legal/privacy";
+import ShippingPage from "@/pages/legal/shipping";
+import ReturnsPage from "@/pages/legal/returns";
+import IpPolicyPage from "@/pages/legal/ip-policy";
 
 const queryClient = new QueryClient();
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -84,7 +90,13 @@ function ClerkProviderWithRoutes() {
           <Route path="/products/:id/customize" component={CustomizePage} />
           <Route path="/heritage" component={HeritagePage} />
           <Route path="/admin" component={AdminPage} />
-          
+          <Route path="/search" component={SearchPage} />
+          <Route path="/terms-of-service" component={TermsPage} />
+          <Route path="/privacy-policy" component={PrivacyPage} />
+          <Route path="/shipping-policy" component={ShippingPage} />
+          <Route path="/returns-policy" component={ReturnsPage} />
+          <Route path="/ip-policy" component={IpPolicyPage} />
+
           <ProtectedRoute path="/cart" component={CartPage} />
           <ProtectedRoute path="/checkout" component={CheckoutPage} />
           <ProtectedRoute path="/orders" component={OrdersPage} />

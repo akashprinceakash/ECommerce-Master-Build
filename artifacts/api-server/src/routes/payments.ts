@@ -49,6 +49,18 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
   );
   if (totalInPaise <= 0) { res.status(400).json({ error: "Invalid cart total" }); return; }
 
+  // Stock enforcement — check every item before creating the Razorpay order
+  for (const item of cartItemsWithProducts) {
+    if (!item.product) {
+      res.status(400).json({ error: "A product in your cart is no longer available" }); return;
+    }
+    if (item.product.stock < item.quantity) {
+      res.status(400).json({
+        error: `Only ${item.product.stock} unit${item.product.stock === 1 ? "" : "s"} left for "${item.product.name}"`,
+      }); return;
+    }
+  }
+
   // Cancel any prior pending orders for this user so we don't accumulate stale ones
   const stale = await db.select({ id: ordersTable.id })
     .from(ordersTable)

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useParams, Link, useLocation } from "wouter";
 import { useUser, Show } from "@clerk/react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -78,12 +78,13 @@ const PATTERNS: PatternDef[] = [
   { id: "houndstooth", label: "Houndstooth", bg: "repeating-linear-gradient(45deg,transparent,transparent 5px,#999 5px,#999 6px),repeating-linear-gradient(-45deg,transparent,transparent 5px,#999 5px,#999 6px)" },
 ];
 
-type Part = "collar" | "front" | "back" | "sleeves";
+type Part = "collar" | "front" | "back" | "leftSleeve" | "rightSleeve";
 const PARTS: { id: Part; label: string }[] = [
-  { id: "collar",  label: "Collar" },
-  { id: "front",   label: "Front" },
-  { id: "back",    label: "Back" },
-  { id: "sleeves", label: "Sleeves" },
+  { id: "collar",      label: "Collar" },
+  { id: "front",       label: "Front" },
+  { id: "back",        label: "Back" },
+  { id: "leftSleeve",  label: "Left Sleeve" },
+  { id: "rightSleeve", label: "Right Sleeve" },
 ];
 
 type Pos = "top-left"|"top-center"|"top-right"|"mid-left"|"center"|"mid-right"|"bot-left"|"bot-center"|"bot-right";
@@ -115,7 +116,8 @@ const SIZE_CHART: { size: string; chest: string; shoulder: string; sleeve: strin
 // ── Product type ────────────────────────────────────────────────────────────
 interface Product {
   id: number; name: string; description: string; category: string;
-  priceInPaise: number; modelUrl: string; thumbnailUrl?: string | null;
+  gender?: string | null; productType?: string | null; subType?: string | null;
+  stock?: number; priceInPaise: number; modelUrl: string; thumbnailUrl?: string | null;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -154,7 +156,7 @@ export default function CustomizePage() {
   // Step 2: Parts
   const [activePart, setActivePart] = useState<Part>("collar");
   const [partColors, setPartColors] = useState<Record<Part, string>>({
-    collar: "#1a1a1a", front: "#1a1a1a", back: "#1a1a1a", sleeves: "#1a1a1a",
+    collar: "#1a1a1a", front: "#1a1a1a", back: "#1a1a1a", leftSleeve: "#1a1a1a", rightSleeve: "#1a1a1a",
   });
 
   // Step 3: Logo
@@ -171,16 +173,24 @@ export default function CustomizePage() {
   // Quantity
   const [qty, setQty] = useState(1);
 
+  // ─── Sync styleType from product subType once loaded ──────────────────
+  useEffect(() => {
+    if (!product?.subType) return;
+    if (product.subType === "printed") setStyleType("print");
+    else if (product.subType === "pattern") setStyleType("pattern");
+    else setStyleType("solid");
+  }, [product?.subType]);
+
   // ─── Apply main color (Step 1 solid) auto-paints all parts on first set ──
   const setSolidMain = (hex: string) => {
     setMainColor(hex);
-    setPartColors({ collar: hex, front: hex, back: hex, sleeves: hex });
+    setPartColors({ collar: hex, front: hex, back: hex, leftSleeve: hex, rightSleeve: hex });
   };
 
   // ─── Apply current part color to all parts ─────────────────────────────
   const applyPartToAll = () => {
     const c = partColors[activePart];
-    setPartColors({ collar: c, front: c, back: c, sleeves: c });
+    setPartColors({ collar: c, front: c, back: c, leftSleeve: c, rightSleeve: c });
     toast({ title: "Applied", description: `${colorName(c)} applied to all parts` });
   };
 
@@ -361,6 +371,7 @@ export default function CustomizePage() {
                   patternA={patternA} setPatternA={setPatternA}
                   patternB={patternB} setPatternB={setPatternB}
                   sleeveLen={sleeveLen} setSleeveLen={setSleeveLen}
+                  subType={product?.subType ?? null}
                   onNext={() => setStep(2)}
                 />
               )}
@@ -589,20 +600,46 @@ function Step1Style(p: {
   patternA: string; setPatternA: (c: string) => void;
   patternB: string; setPatternB: (c: string) => void;
   sleeveLen: "half" | "full"; setSleeveLen: (s: "half" | "full") => void;
+  subType: string | null | undefined;
   onNext: () => void;
 }) {
+  const locked = !!p.subType;
+  const tabs = locked
+    ? []
+    : [
+        { id: "solid", label: "Solids" },
+        { id: "print", label: "Prints" },
+        { id: "pattern", label: "Patterns" },
+      ];
+
+  const subTypeLabel: Record<string, string> = {
+    solid: "Solid Colours",
+    printed: "Signature Prints",
+    pattern: "Geometric Patterns",
+  };
+
   return (
     <Panel>
       <SectionTitle>Choose base style</SectionTitle>
-      <TabRow
-        options={[
-          { id: "solid", label: "Solids" },
-          { id: "print", label: "Prints" },
-          { id: "pattern", label: "Patterns" },
-        ]}
-        active={p.styleType}
-        onChange={(v) => p.setStyleType(v as StyleType)}
-      />
+      {locked ? (
+        <div
+          className="mb-5 px-4 py-2.5 flex items-center gap-2"
+          style={{ background: "rgba(184,146,90,0.07)", border: `1px solid rgba(184,146,90,0.3)` }}
+        >
+          <span style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.3em", textTransform: "uppercase", color: GOLD }}>
+            {subTypeLabel[p.subType!] ?? p.subType}
+          </span>
+          <span style={{ fontFamily: FONT_UI, fontSize: 9, color: MUTED, letterSpacing: "0.05em" }}>
+            · preset for this product
+          </span>
+        </div>
+      ) : (
+        <TabRow
+          options={tabs}
+          active={p.styleType}
+          onChange={(v) => p.setStyleType(v as StyleType)}
+        />
+      )}
 
       {p.styleType === "solid" && (
         <>
@@ -1223,7 +1260,7 @@ function Divider() {
 
 // ── Preview Panel (right side) ─────────────────────────────────────────────
 function PreviewPanel(p: {
-  partColors: Record<Part, string>;
+  partColors: Record<Part, string>;  // leftSleeve + rightSleeve split
   styleType: StyleType;
   styleSummary: string;
   sleeveLen: "half" | "full";
@@ -1301,21 +1338,21 @@ function PreviewPanel(p: {
               </pattern>
             )}
           </defs>
-          {/* Right sleeve */}
+          {/* Right sleeve (viewer's left) */}
           <path
             d={p.sleeveLen === "half"
               ? "M55 40 L25 60 L35 80 L62 68 Z"
               : "M55 40 L20 65 L30 100 L62 86 Z"}
-            fill={p.partColors.sleeves}
+            fill={p.partColors.rightSleeve}
             stroke="rgba(0,0,0,0.12)"
             strokeWidth="0.6"
           />
-          {/* Left sleeve */}
+          {/* Left sleeve (viewer's right) */}
           <path
             d={p.sleeveLen === "half"
               ? "M145 40 L175 60 L165 80 L138 68 Z"
               : "M145 40 L180 65 L170 100 L138 86 Z"}
-            fill={p.partColors.sleeves}
+            fill={p.partColors.leftSleeve}
             stroke="rgba(0,0,0,0.12)"
             strokeWidth="0.6"
           />

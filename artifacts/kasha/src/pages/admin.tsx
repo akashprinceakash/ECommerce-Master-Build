@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Plus, Pencil, Trash2, Upload, X, Check,
-  ShieldCheck, Package, Users, Eye, ArrowLeft, BarChart3, ShoppingBag, UserCog,
+  ShieldCheck, Package, Users, Eye, ArrowLeft, BarChart3, ShoppingBag, UserCog, Download,
 } from "lucide-react";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { AdminOrders } from "@/components/admin/AdminOrders";
@@ -20,9 +20,14 @@ interface Product {
   name: string;
   description: string;
   category: string;
+  gender?: string | null;
+  subType?: string | null;
+  sku?: string | null;
+  stock: number;
   priceInPaise: number;
   modelUrl: string;
   thumbnailUrl?: string | null;
+  additionalImages?: string | null;
   available: boolean;
   sizes: string[];
   defaultColor: string;
@@ -50,13 +55,62 @@ const EMPTY_FORM = {
   name: "",
   description: "",
   category: "polo",
+  gender: "",
+  subType: "",
+  sku: "",
+  stock: 100,
   priceText: "",
   modelUrl: "",
   thumbnailUrl: "",
+  additionalImages: "",
   available: true,
   sizes: ["S", "M", "L", "XL"],
   defaultColor: "#ffffff",
 };
+
+function isLightHex(hex: string): boolean {
+  try {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return (r * 299 + g * 587 + b * 114) / 1000 > 140;
+  } catch { return false; }
+}
+
+async function exportPartPNGs(design: UserDesign) {
+  const canvasData = design.canvasData ? JSON.parse(design.canvasData) : {};
+  const partColors: Record<string, string> = canvasData.partColors ?? {};
+  const parts = ["collar", "front", "back", "leftSleeve", "rightSleeve"] as const;
+
+  for (const part of parts) {
+    const color = partColors[part] ?? "#CCCCCC";
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext("2d")!;
+
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 512, 512);
+
+    const textColor = isLightHex(color) ? "rgba(0,0,0,0.75)" : "rgba(255,255,255,0.85)";
+    ctx.fillStyle = textColor;
+    ctx.font = "bold 36px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(part.replace(/([A-Z])/g, " $1").trim().toUpperCase(), 256, 230);
+
+    ctx.font = "18px sans-serif";
+    ctx.fillStyle = isLightHex(color) ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.4)";
+    ctx.fillText("KA·SHA", 256, 290);
+    ctx.fillText(color.toUpperCase(), 256, 320);
+
+    const link = document.createElement("a");
+    link.download = `${(design.name ?? "design").replace(/\s+/g, "-")}-${part}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+    await new Promise(r => setTimeout(r, 150));
+  }
+}
 
 async function getToken(): Promise<string | null> {
   try {
@@ -363,6 +417,7 @@ export default function AdminPage() {
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [uploadingModel, setUploadingModel] = useState(false);
   const [uploadingThumb, setUploadingThumb] = useState(false);
+  const [uploadingExtra, setUploadingExtra] = useState(false);
   const [viewingDesign, setViewingDesign] = useState<UserDesign | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
@@ -421,7 +476,16 @@ export default function AdminPage() {
   const resetForm = () => { setForm({ ...EMPTY_FORM }); setEditingId(null); setShowForm(false); };
 
   const startEdit = (p: Product) => {
-    setForm({ ...p, priceText: (p.priceInPaise / 100).toFixed(2), thumbnailUrl: p.thumbnailUrl ?? "" });
+    setForm({
+      ...p,
+      priceText: (p.priceInPaise / 100).toFixed(2),
+      thumbnailUrl: p.thumbnailUrl ?? "",
+      additionalImages: p.additionalImages ?? "",
+      gender: p.gender ?? "",
+      subType: p.subType ?? "",
+      sku: p.sku ?? "",
+      stock: p.stock ?? 100,
+    });
     setEditingId(p.id);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -468,6 +532,39 @@ export default function AdminPage() {
       toast({ title: "Thumbnail uploaded" });
     } catch (err: any) { toast({ title: "Upload failed", description: err.message, variant: "destructive" }); }
     finally { setUploadingThumb(false); if (e.target) e.target.value = ""; }
+  };
+
+  const handleExtraImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploadingExtra(true);
+    try {
+      const token = await getToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const urls: string[] = [];
+      for (const file of files) {
+        const fd = new FormData(); fd.append("thumbnail", file);
+        const res = await fetch(`${getApiUrl()}/api/admin/upload/thumbnail`, { method: "POST", body: fd, headers });
+        if (!res.ok) throw new Error(await res.text());
+        const { url } = await res.json();
+        urls.push(url);
+      }
+      setForm(f => {
+        const existing: string[] = f.additionalImages ? JSON.parse(f.additionalImages) : [];
+        return { ...f, additionalImages: JSON.stringify([...existing, ...urls]) };
+      });
+      toast({ title: `${urls.length} image${urls.length > 1 ? "s" : ""} uploaded` });
+    } catch (err: any) { toast({ title: "Upload failed", description: err.message, variant: "destructive" }); }
+    finally { setUploadingExtra(false); if (e.target) e.target.value = ""; }
+  };
+
+  const removeExtraImage = (idx: number) => {
+    setForm(f => {
+      const imgs: string[] = f.additionalImages ? JSON.parse(f.additionalImages) : [];
+      imgs.splice(idx, 1);
+      return { ...f, additionalImages: imgs.length ? JSON.stringify(imgs) : "" };
+    });
   };
 
   // ── Loading / Access Guards ──
@@ -574,10 +671,36 @@ export default function AdminPage() {
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs tracking-widest text-muted-foreground uppercase">Category</label>
                     <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="h-10 border border-input bg-background px-3 text-sm rounded-none">
-                      {["polo", "shorts", "trousers", "jacket", "t-shirt", "accessories"].map(c => (
+                      {["polo", "shorts", "trousers", "jacket", "t-shirt", "hoodie", "accessories"].map(c => (
                         <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
                       ))}
                     </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs tracking-widest text-muted-foreground uppercase">Gender</label>
+                    <select value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))} className="h-10 border border-input bg-background px-3 text-sm rounded-none">
+                      <option value="">— Any —</option>
+                      <option value="men">Men</option>
+                      <option value="women">Women</option>
+                      <option value="kids">Kids</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs tracking-widest text-muted-foreground uppercase">Sub Type (Customiser)</label>
+                    <select value={form.subType} onChange={e => setForm(f => ({ ...f, subType: e.target.value }))} className="h-10 border border-input bg-background px-3 text-sm rounded-none">
+                      <option value="">— Not Set —</option>
+                      <option value="solid">Solid (colours only)</option>
+                      <option value="printed">Printed (print library)</option>
+                      <option value="pattern">Pattern (GT geometric)</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs tracking-widest text-muted-foreground uppercase">SKU</label>
+                    <Input value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} placeholder="e.g. KS-POLO-001" className="rounded-none" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs tracking-widest text-muted-foreground uppercase">Stock Units</label>
+                    <Input type="number" min={0} value={form.stock} onChange={e => setForm(f => ({ ...f, stock: parseInt(e.target.value) || 0 }))} placeholder="100" className="rounded-none" />
                   </div>
                   <div className="flex flex-col gap-1.5 md:col-span-2">
                     <label className="text-xs tracking-widest text-muted-foreground uppercase">Description *</label>
@@ -629,6 +752,40 @@ export default function AdminPage() {
                     {form.thumbnailUrl && (
                       <img src={form.thumbnailUrl} alt="Thumbnail" className="h-24 w-24 object-cover border border-input mt-1" />
                     )}
+                  </div>
+
+                  {/* Additional Images Upload */}
+                  <div className="flex flex-col gap-1.5 md:col-span-2">
+                    <label className="text-xs tracking-widest text-muted-foreground uppercase">Additional Gallery Images</label>
+                    <p className="text-xs text-muted-foreground">These appear as clickable thumbnails below the main product image on the product page.</p>
+                    <label className="cursor-pointer w-fit">
+                      <div className={`h-10 px-4 flex items-center gap-2 border border-input text-sm font-medium transition-colors ${uploadingExtra ? "opacity-50" : "hover:bg-accent cursor-pointer"}`}>
+                        {uploadingExtra ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                        <span>Upload Additional Images</span>
+                      </div>
+                      <input type="file" accept="image/*" multiple onChange={handleExtraImageUpload} className="hidden" disabled={uploadingExtra} />
+                    </label>
+                    {(() => {
+                      let imgs: string[] = [];
+                      try { imgs = form.additionalImages ? JSON.parse(form.additionalImages) : []; } catch { imgs = []; }
+                      return imgs.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {imgs.map((url, idx) => (
+                            <div key={idx} className="relative group">
+                              <img src={url} alt={`Extra ${idx + 1}`} className="h-20 w-20 object-cover border border-input" />
+                              <button
+                                type="button"
+                                onClick={() => removeExtraImage(idx)}
+                                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Remove"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
 
                   <div className="flex flex-col gap-1.5">
@@ -771,6 +928,15 @@ export default function AdminPage() {
                           onClick={() => setViewingDesign(d)}
                         >
                           <Eye className="w-3 h-3" /> VIEW
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-none text-[10px] tracking-widest flex items-center justify-center gap-1 text-amber-700 hover:text-amber-800 hover:bg-amber-50 hover:border-amber-300"
+                          title="Export part colour PNGs"
+                          onClick={() => exportPartPNGs(d)}
+                        >
+                          <Download className="w-3 h-3" />
                         </Button>
                         <Button
                           size="sm"
