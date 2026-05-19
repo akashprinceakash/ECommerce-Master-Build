@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { type Gender, getLastGender as _getLastGender, setLastGender } from "@/lib/genderPreference";
+import { getAssetUrl } from "@/lib/api";
 
 type ItemType = "tshirts" | "bottoms";
 type StyleFilter = "solids" | "patterns" | "prints" | "trousers" | "shorts" | "skorts";
@@ -453,7 +454,7 @@ export default function ProductsPage() {
                     gender === "kids";
                   const imgSrc = showFallback
                     ? fallbackImageFor(product.id)
-                    : product.thumbnailUrl || product.modelUrl || undefined;
+                    : getAssetUrl(product.thumbnailUrl || product.modelUrl) || undefined;
 
                   return (
                     <motion.div

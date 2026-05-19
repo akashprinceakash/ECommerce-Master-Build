@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Loader2, ArrowLeft } from "lucide-react";
-import { getApiUrl } from "@/lib/api";
+import { getApiUrl, getAssetUrl } from "@/lib/api";
 
 declare global { interface Window { Razorpay?: any; Clerk?: any } }
 
@@ -294,7 +294,7 @@ export default function CheckoutPage() {
                   <div className="w-16 aspect-[3/4] bg-secondary flex-shrink-0 relative">
                     {(item.product.thumbnailUrl || item.product.modelUrl) && (
                       <img 
-                        src={item.product.thumbnailUrl || item.product.modelUrl} 
+                        src={getAssetUrl(item.product.thumbnailUrl || item.product.modelUrl)} 
                         alt={item.product.name}
                         className="w-full h-full object-cover"
                       />

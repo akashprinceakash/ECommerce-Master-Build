@@ -4,6 +4,7 @@ import { formatPrice } from "@/lib/format";
 import { useRemoveCartItem, useUpdateCartItem, getGetCartQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Cart } from "@workspace/api-client-react";
+import { getAssetUrl } from "@/lib/api";
 
 interface CartDrawerProps {
   open: boolean;
@@ -89,7 +90,7 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
                       </>
                     ) : item.product.thumbnailUrl ? (
                       <img
-                        src={item.product.thumbnailUrl}
+                        src={getAssetUrl(item.product.thumbnailUrl)}
                         alt={item.product.name}
                         className="w-full h-full object-cover object-center"
                       />

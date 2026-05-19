@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { useCart } from "@/contexts/CartContext";
+import { getAssetUrl } from "@/lib/api";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -105,12 +106,12 @@ export default function ProductDetailPage() {
     );
   }
 
-  const mainThumbnail = product.thumbnailUrl || "/images/product-tshirt.png";
+  const mainThumbnail = getAssetUrl(product.thumbnailUrl) || "/images/product-tshirt.png";
 
   // Parse additional images from JSON string stored in DB
   let extraImages: string[] = [];
   if (product.additionalImages) {
-    try { extraImages = JSON.parse(product.additionalImages); } catch { extraImages = []; }
+    try { extraImages = (JSON.parse(product.additionalImages) as string[]).map(u => getAssetUrl(u) || u); } catch { extraImages = []; }
   }
 
   // All gallery images: main first, then extras

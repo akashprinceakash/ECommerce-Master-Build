@@ -5,6 +5,7 @@ import { formatPrice, formatDate } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getAssetUrl } from "@/lib/api";
 
 export default function OrdersPage() {
   const { data: orders, isLoading } = useListOrders({
@@ -70,7 +71,7 @@ export default function OrdersPage() {
                       <div key={item.id} className="w-16 h-20 bg-secondary flex-shrink-0 relative" title={item.product.name}>
                         {(item.product.thumbnailUrl || item.product.modelUrl) && (
                           <img 
-                            src={item.product.thumbnailUrl || item.product.modelUrl} 
+                            src={getAssetUrl(item.product.thumbnailUrl || item.product.modelUrl)} 
                             alt={item.product.name}
                             className="w-full h-full object-cover"
                           />

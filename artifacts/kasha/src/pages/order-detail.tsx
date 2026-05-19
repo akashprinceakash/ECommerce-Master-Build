@@ -5,6 +5,7 @@ import { formatPrice, formatDate } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getAssetUrl } from "@/lib/api";
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -73,7 +74,7 @@ export default function OrderDetailPage() {
                   <div className="w-24 aspect-[3/4] bg-secondary flex-shrink-0 relative">
                     {(item.product.thumbnailUrl || item.product.modelUrl) && (
                       <img 
-                        src={item.product.thumbnailUrl || item.product.modelUrl} 
+                        src={getAssetUrl(item.product.thumbnailUrl || item.product.modelUrl)} 
                         alt={item.product.name}
                         className="w-full h-full object-cover"
                       />

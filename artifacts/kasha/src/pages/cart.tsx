@@ -8,6 +8,7 @@ import {
 import { formatPrice } from "@/lib/format";
 import { Link } from "wouter";
 import { Minus, Plus, Trash2, ArrowRight, ChevronRight, Lock, ShoppingBag } from "lucide-react";
+import { getAssetUrl } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -99,7 +100,7 @@ export default function CartPage() {
                       </>
                     ) : item.product.thumbnailUrl ? (
                       <img
-                        src={item.product.thumbnailUrl}
+                        src={getAssetUrl(item.product.thumbnailUrl)}
                         alt={item.product.name}
                         className="w-full h-full object-cover object-center"
                       />

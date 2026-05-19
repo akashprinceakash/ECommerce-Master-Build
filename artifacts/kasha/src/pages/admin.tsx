@@ -13,7 +13,7 @@ import { AdminUsers } from "@/components/admin/AdminUsers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/format";
-import { getApiUrl } from "@/lib/api";
+import { getApiUrl, getAssetUrl } from "@/lib/api";
 
 interface Product {
   id: number;
@@ -750,7 +750,7 @@ export default function AdminPage() {
                       </label>
                     </div>
                     {form.thumbnailUrl && (
-                      <img src={form.thumbnailUrl} alt="Thumbnail" className="h-24 w-24 object-cover border border-input mt-1" />
+                      <img src={getAssetUrl(form.thumbnailUrl)} alt="Thumbnail" className="h-24 w-24 object-cover border border-input mt-1" />
                     )}
                   </div>
 
@@ -833,7 +833,7 @@ export default function AdminPage() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             {p.thumbnailUrl
-                              ? <img src={p.thumbnailUrl} alt="" className="w-10 h-10 object-cover border border-border shrink-0" />
+                              ? <img src={getAssetUrl(p.thumbnailUrl)} alt="" className="w-10 h-10 object-cover border border-border shrink-0" />
                               : <div className="w-10 h-10 bg-muted flex items-center justify-center shrink-0 text-[9px] font-bold text-muted-foreground">IMG</div>
                             }
                             <div>

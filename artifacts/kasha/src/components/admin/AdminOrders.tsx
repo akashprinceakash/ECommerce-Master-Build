@@ -3,6 +3,7 @@ import { apiFetch } from "@/lib/adminApi";
 import { formatPrice } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { getAssetUrl } from "@/lib/api";
 import { Loader2, ChevronDown, ChevronRight, MapPin, CreditCard, Package, Eye, Download, X } from "lucide-react";
 import * as fabric from "fabric";
 
@@ -206,7 +207,7 @@ export function AdminOrders() {
                       {o.items.map(it => (
                         <div key={it.id} className="flex items-center gap-3 text-sm border border-border/50 p-2 bg-background">
                           {it.product?.thumbnailUrl && (
-                            <img src={it.product.thumbnailUrl} alt="" className="w-12 h-12 object-cover" />
+                            <img src={getAssetUrl(it.product.thumbnailUrl)} alt="" className="w-12 h-12 object-cover" />
                           )}
                           <div className="flex-1">
                             <div className="font-medium">{it.product?.name ?? "Unknown product"}</div>
@@ -333,7 +334,7 @@ export function AdminOrders() {
                             {c?.previewImageUrl ? (
                               <img src={c.previewImageUrl} alt="" className="w-full h-full object-cover" />
                             ) : it.product?.thumbnailUrl ? (
-                              <img src={it.product.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                              <img src={getAssetUrl(it.product.thumbnailUrl)} alt="" className="w-full h-full object-cover" />
                             ) : (
                               <span className="text-xs text-muted-foreground">No preview</span>
                             )}

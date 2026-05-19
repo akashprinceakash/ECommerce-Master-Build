@@ -32,7 +32,28 @@ app.use(
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
-app.use(cors({ credentials: true, origin: true }));
+const ALLOWED_ORIGINS = [
+  "https://www.kashaonline.in",
+  "https://kashaonline.in",
+  "https://e-commerce-master-build-api-server.vercel.app",
+  /\.vercel\.app$/,
+  /\.replit\.dev$/,
+  /\.replit\.app$/,
+  /localhost/,
+];
+
+app.use(
+  cors({
+    credentials: true,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const allowed = ALLOWED_ORIGINS.some((pattern) =>
+        typeof pattern === "string" ? pattern === origin : pattern.test(origin),
+      );
+      callback(null, allowed ? origin : false);
+    },
+  }),
+);
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
