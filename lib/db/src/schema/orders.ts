@@ -18,6 +18,7 @@ export const ordersTable = pgTable("orders", {
   paymentId: text("payment_id"),
   razorpayOrderId: text("razorpay_order_id"),
   razorpaySignature: text("razorpay_signature"),
+  shippingChargeInPaise: integer("shipping_charge_in_paise").notNull().default(0),
   shiprocketOrderId: text("shiprocket_order_id"),
   shiprocketAwb: text("shiprocket_awb"),
   trackingUrl: text("tracking_url"),

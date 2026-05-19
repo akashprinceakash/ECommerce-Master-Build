@@ -13,18 +13,37 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Loader2, ArrowLeft, Truck } from "lucide-react";
 import { getApiUrl, getAssetUrl } from "@/lib/api";
 import { useAuth } from "@clerk/react";
 
 declare global { interface Window { Razorpay?: any } }
 
 const INDIAN_STATES = [
-  "Maharashtra", "Delhi", "Karnataka", "Gujarat", "Tamil Nadu", 
-  "West Bengal", "Telangana", "Kerala", "Rajasthan", "Uttar Pradesh",
-  "Punjab", "Haryana", "Andhra Pradesh", "Madhya Pradesh", "Bihar"
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa",
+  "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala",
+  "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland",
+  "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura",
+  "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi", "Jammu and Kashmir", "Ladakh",
 ];
+
+/** GST rate for apparel (inclusive pricing): 5% ≤ ₹1000, 12% > ₹1000 */
+function gstRate(priceInPaise: number) {
+  return priceInPaise <= 100000 ? 0.05 : 0.12;
+}
+
+function calcGst(priceInPaise: number, qty: number) {
+  const total = priceInPaise * qty;
+  const rate = gstRate(priceInPaise);
+  const base = Math.round(total / (1 + rate));
+  return total - base;
+}
+
+interface ShippingRate {
+  chargeInPaise: number;
+  courierName: string;
+}
 
 export default function CheckoutPage() {
   const [, setLocation] = useLocation();
@@ -64,6 +83,48 @@ export default function CheckoutPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // ── Shipping rate fetch ───────────────────────────────────────────────
+  const [shippingRate, setShippingRate] = useState<ShippingRate | null>(null);
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const rateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const pincode = formData.shippingPostalCode;
+    if (!/^\d{6}$/.test(pincode) || !cart) {
+      setShippingRate(null);
+      return;
+    }
+
+    if (rateTimerRef.current) clearTimeout(rateTimerRef.current);
+    rateTimerRef.current = setTimeout(async () => {
+      setShippingLoading(true);
+      try {
+        const token = await getToken();
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        const res = await fetch(`${getApiUrl()}/api/shipping/rates`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            pincode,
+            itemCount: cart.items.reduce((s, i) => s + i.quantity, 0),
+            orderValueRupees: Math.round(cart.totalInPaise / 100),
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setShippingRate(data);
+        }
+      } catch (_) {
+        setShippingRate({ chargeInPaise: 9900, courierName: "Standard Delivery" });
+      } finally {
+        setShippingLoading(false);
+      }
+    }, 600);
+
+    return () => { if (rateTimerRef.current) clearTimeout(rateTimerRef.current); };
+  }, [formData.shippingPostalCode, cart]);
+
   const [isProcessing, setIsProcessing] = useState(false);
 
   async function authFetch(path: string, opts?: RequestInit) {
@@ -84,6 +145,11 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!shippingRate) {
+      toast({ title: "Shipping Not Calculated", description: "Please enter a valid 6-digit PIN code to calculate shipping.", variant: "destructive" });
+      return;
+    }
+
     if (!window.Razorpay) {
       toast({ title: "Payment unavailable", description: "Razorpay failed to load. Please refresh and try again.", variant: "destructive" });
       return;
@@ -91,13 +157,11 @@ export default function CheckoutPage() {
 
     setIsProcessing(true);
     try {
-      // 1) Create Razorpay order on server (with shipping snapshot)
       const { orderId, amount, currency, keyId } = await authFetch("/api/payment/order", {
         method: "POST",
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, shippingChargeInPaise: shippingRate.chargeInPaise }),
       });
 
-      // 2) Open Razorpay Checkout
       await new Promise<void>((resolve, reject) => {
         const rzp = new window.Razorpay({
           key: keyId,
@@ -115,7 +179,6 @@ export default function CheckoutPage() {
           theme: { color: "#000000" },
           handler: async (resp: any) => {
             try {
-              // 3) Verify on server (confirms the pending order)
               const order = await authFetch("/api/payment/verify", {
                 method: "POST",
                 body: JSON.stringify({
@@ -177,6 +240,11 @@ export default function CheckoutPage() {
       </Layout>
     );
   }
+
+  // ── GST breakdown ────────────────────────────────────────────────────
+  const totalGst = cart.items.reduce((s, item) => s + calcGst(item.product.priceInPaise, item.quantity), 0);
+  const subtotalExclGst = cart.totalInPaise - totalGst;
+  const grandTotal = cart.totalInPaise + (shippingRate?.chargeInPaise ?? 0);
 
   return (
     <Layout>
@@ -245,6 +313,7 @@ export default function CheckoutPage() {
                     value={formData.shippingPostalCode} 
                     onChange={(e) => handleChange("shippingPostalCode", e.target.value)} 
                     className="rounded-none border-border/50 bg-secondary/10"
+                    placeholder="6-digit PIN"
                     maxLength={6}
                     required
                   />
@@ -274,10 +343,16 @@ export default function CheckoutPage() {
                   type="submit" 
                   size="lg" 
                   className="w-full h-14 text-sm tracking-widest rounded-none"
-                  disabled={isProcessing}
+                  disabled={isProcessing || !shippingRate}
                 >
-                  {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : "PAY & PLACE ORDER"}
+                  {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : `PAY ${shippingRate ? formatPrice(grandTotal) : ""}`}
                 </Button>
+                {!shippingRate && formData.shippingPostalCode.length === 6 && (
+                  <p className="text-xs text-muted-foreground text-center mt-2">Calculating shipping...</p>
+                )}
+                {!formData.shippingPostalCode && (
+                  <p className="text-xs text-muted-foreground text-center mt-2">Enter PIN code to see shipping rates</p>
+                )}
               </div>
             </form>
           </div>
@@ -310,21 +385,38 @@ export default function CheckoutPage() {
               ))}
             </div>
 
-            <div className="space-y-4 text-sm border-t border-b border-border/50 py-6 mb-6">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatPrice(cart.totalInPaise)}</span>
+            {/* Price breakdown */}
+            <div className="space-y-2.5 text-sm border-t border-b border-border/50 py-5 mb-5">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Subtotal (excl. GST)</span>
+                <span>{formatPrice(subtotalExclGst)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Express Shipping</span>
-                <span>Complimentary</span>
+              <div className="flex justify-between text-muted-foreground text-xs">
+                <span>GST (5% / 12% incl.)</span>
+                <span>{formatPrice(totalGst)}</span>
               </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Truck className="w-3.5 h-3.5" /> Shipping
+                </span>
+                {shippingLoading ? (
+                  <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Calculating...</span>
+                ) : shippingRate ? (
+                  <span>{shippingRate.chargeInPaise === 0 ? "Free" : formatPrice(shippingRate.chargeInPaise)}</span>
+                ) : (
+                  <span className="text-xs italic">Enter PIN code</span>
+                )}
+              </div>
+              {shippingRate && (
+                <p className="text-xs text-muted-foreground/70 italic">{shippingRate.courierName}</p>
+              )}
             </div>
             
             <div className="flex justify-between items-center">
               <span className="font-serif text-xl font-medium">Total</span>
-              <span className="text-xl font-medium text-primary">{formatPrice(cart.totalInPaise)}</span>
+              <span className="text-xl font-medium text-primary">{formatPrice(grandTotal)}</span>
             </div>
+            <p className="text-xs text-muted-foreground mt-2">All prices inclusive of GST · HSN 61099010</p>
           </div>
         </div>
       </div>

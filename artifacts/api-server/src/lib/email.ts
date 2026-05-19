@@ -4,6 +4,7 @@ import { logger } from "./logger";
 const SENDGRID_API_KEY = process.env["SENDGRID_API_KEY"] ?? "";
 const FROM_EMAIL = process.env["SENDGRID_FROM_EMAIL"] ?? "orders@kashaonline.in";
 const FROM_NAME = "KA.SHA Golf & Sportswear";
+const ADMIN_CC_EMAIL = "pranaysomaia715@gmail.com";
 
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
@@ -22,6 +23,7 @@ export interface OrderConfirmationData {
   customerEmail: string;
   items: OrderEmailItem[];
   totalInPaise: number;
+  shippingChargeInPaise?: number;
   shippingAddress: string;
   shippingCity: string;
   shippingState: string;
@@ -36,6 +38,8 @@ function formatPrice(paise: number): string {
 }
 
 function buildHtml(d: OrderConfirmationData): string {
+  const shippingCharge = d.shippingChargeInPaise ?? 0;
+
   const itemRows = d.items
     .map(
       (it) => `
@@ -50,6 +54,13 @@ function buildHtml(d: OrderConfirmationData): string {
       </tr>`,
     )
     .join("");
+
+  const shippingRow = shippingCharge > 0
+    ? `<tr>
+        <td style="padding:8px 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#888;">Shipping</td>
+        <td style="padding:8px 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#888;text-align:right;">${formatPrice(shippingCharge)}</td>
+      </tr>`
+    : "";
 
   const trackingSection = d.trackingUrl
     ? `<p style="margin:16px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#555;">
@@ -93,9 +104,10 @@ function buildHtml(d: OrderConfirmationData): string {
             <p style="margin:0 0 16px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#888;">Order Summary</p>
             <table width="100%" cellpadding="0" cellspacing="0">
               ${itemRows}
+              ${shippingRow}
               <tr>
-                <td style="padding:16px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;font-weight:600;color:#111;">Total</td>
-                <td style="padding:16px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;font-weight:600;color:#111;text-align:right;">${formatPrice(d.totalInPaise)}</td>
+                <td style="padding:16px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;font-weight:600;color:#111;border-top:1px solid #F0EDE8;">Total (incl. GST)</td>
+                <td style="padding:16px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;font-weight:600;color:#111;text-align:right;border-top:1px solid #F0EDE8;">${formatPrice(d.totalInPaise)}</td>
               </tr>
             </table>
           </td>
@@ -152,6 +164,7 @@ export async function sendOrderConfirmation(data: OrderConfirmationData): Promis
   try {
     await sgMail.send({
       to: data.customerEmail,
+      cc: ADMIN_CC_EMAIL,
       from: { email: FROM_EMAIL, name: FROM_NAME },
       subject: `KA.SHA — Order #${data.orderNumber} Confirmed`,
       text,

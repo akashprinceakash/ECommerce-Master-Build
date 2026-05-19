@@ -8,8 +8,9 @@ import {
   ordersTable, orderItemsTable, customizationsTable,
 } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
-import { createShiprocketOrder } from "../lib/shiprocket";
+import { createShiprocketOrder, getShippingRates } from "../lib/shiprocket";
 import { sendOrderConfirmation } from "../lib/email";
+import { generateInvoicePdf } from "../lib/invoice";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -31,6 +32,23 @@ router.get("/payment/config", (_req, res): void => {
 });
 
 /* ──────────────────────────────────────────────────────
+   Shipping rates — called before checkout to show cost
+────────────────────────────────────────────────────── */
+router.post("/shipping/rates", requireAuth, async (req, res): Promise<void> => {
+  const { pincode, itemCount = 1, orderValueRupees = 0 } = req.body ?? {};
+  if (!pincode || !/^\d{6}$/.test(String(pincode))) {
+    res.status(400).json({ error: "Invalid pincode" }); return;
+  }
+  const weightKg = Math.max(0.1, Number(itemCount) * 0.4);
+  const result = await getShippingRates(String(pincode), weightKg, Number(orderValueRupees));
+  if (!result) {
+    // Fallback: flat ₹99 if Shiprocket unreachable
+    res.json({ chargeInPaise: 9900, courierName: "Standard Delivery" }); return;
+  }
+  res.json(result);
+});
+
+/* ──────────────────────────────────────────────────────
    Step 1: Create Razorpay order + DB pending order
 ────────────────────────────────────────────────────── */
 router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
@@ -39,7 +57,9 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
 
   const {
     shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
+    shippingChargeInPaise: rawShippingCharge,
   } = req.body ?? {};
+  const shippingChargeInPaise = Math.max(0, parseInt(String(rawShippingCharge ?? "0"), 10) || 0);
   if (!shippingName || !shippingAddress || !shippingCity || !shippingState || !shippingPostalCode || !shippingPhone) {
     res.status(400).json({ error: "Missing shipping fields" }); return;
   }
@@ -57,10 +77,11 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
     }),
   );
 
-  const totalInPaise = cartItemsWithProducts.reduce(
+  const itemsTotalInPaise = cartItemsWithProducts.reduce(
     (sum, item) => sum + (item.product?.priceInPaise ?? 0) * item.quantity, 0,
   );
-  if (totalInPaise <= 0) { res.status(400).json({ error: "Invalid cart total" }); return; }
+  if (itemsTotalInPaise <= 0) { res.status(400).json({ error: "Invalid cart total" }); return; }
+  const totalInPaise = itemsTotalInPaise + shippingChargeInPaise;
 
   for (const item of cartItemsWithProducts) {
     if (!item.product) {
@@ -103,6 +124,7 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
     userId,
     status: "pending",
     totalInPaise,
+    shippingChargeInPaise,
     shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
     razorpayOrderId: rzpOrder.id,
   }).returning();
@@ -357,6 +379,7 @@ async function confirmOrder(
             priceInPaise: it.priceInPaise,
           })),
           totalInPaise: updated.totalInPaise,
+          shippingChargeInPaise: updated.shippingChargeInPaise ?? 0,
           shippingAddress: updated.shippingAddress,
           shippingCity: updated.shippingCity,
           shippingState: updated.shippingState,
@@ -373,6 +396,59 @@ async function confirmOrder(
 
   return updated;
 }
+
+/* ──────────────────────────────────────────────────────
+   Invoice PDF download
+────────────────────────────────────────────────────── */
+router.get("/orders/:orderId/invoice", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const orderId = parseInt(String(req.params["orderId"] ?? "0"), 10);
+  if (!orderId) { res.status(400).json({ error: "Invalid order ID" }); return; }
+
+  const [order] = await db.select().from(ordersTable).where(
+    and(eq(ordersTable.id, orderId), eq(ordersTable.userId, userId)),
+  );
+  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+  if (order.status === "pending") { res.status(400).json({ error: "Payment not completed for this order" }); return; }
+
+  const items = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, orderId));
+  const itemsWithProducts = await Promise.all(
+    items.map(async (it) => {
+      const [product] = await db.select().from(productsTable).where(eq(productsTable.id, it.productId));
+      return { ...it, product };
+    }),
+  );
+
+  let customerEmail = "";
+  try {
+    const clerkUser = await clerkClient.users.getUser(userId);
+    customerEmail = clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ?? "";
+  } catch (_) { /* ignore */ }
+
+  const pdf = generateInvoicePdf({
+    orderNumber: order.id,
+    orderDate: order.createdAt,
+    customerName: order.shippingName,
+    customerEmail,
+    shippingAddress: order.shippingAddress,
+    shippingCity: order.shippingCity,
+    shippingState: order.shippingState,
+    shippingPostalCode: order.shippingPostalCode,
+    shippingPhone: order.shippingPhone,
+    items: itemsWithProducts.map((it) => ({
+      name: it.product?.name ?? "KA.SHA Product",
+      size: it.size,
+      quantity: it.quantity,
+      priceInPaise: it.priceInPaise,
+    })),
+    shippingChargeInPaise: order.shippingChargeInPaise ?? 0,
+    totalInPaise: order.totalInPaise,
+  });
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="KASHA-Invoice-${String(orderId).padStart(6, "0")}.pdf"`);
+  res.send(pdf);
+});
 
 /* ──────────────────────────────────────────────────────
    Helpers

@@ -4,6 +4,7 @@ const BASE = "https://apiv2.shiprocket.in/v1/external";
 const EMAIL = process.env["SHIPROCKET_EMAIL"] ?? "";
 const PASSWORD = process.env["SHIPROCKET_PASSWORD"] ?? "";
 export const PICKUP_LOCATION = process.env["SHIPROCKET_PICKUP_LOCATION"] ?? "Primary";
+export const PICKUP_PINCODE = "110049"; // Shahpur Jat, New Delhi
 
 let _cachedToken: { value: string; expiresAt: number } | null = null;
 
@@ -27,6 +28,68 @@ async function getToken(): Promise<string> {
 
   _cachedToken = { value: data.token, expiresAt: now + 23 * 60 * 60 * 1000 };
   return data.token;
+}
+
+export interface ShiprocketRateResult {
+  chargeInPaise: number;
+  courierName: string;
+}
+
+export async function getShippingRates(
+  deliveryPincode: string,
+  weightKg: number,
+  orderValueRupees: number,
+): Promise<ShiprocketRateResult | null> {
+  if (!EMAIL || !PASSWORD) return null;
+
+  try {
+    const token = await getToken();
+    const params = new URLSearchParams({
+      pickup_postcode: PICKUP_PINCODE,
+      delivery_postcode: deliveryPincode,
+      weight: String(Math.max(0.1, weightKg)),
+      cod: "0",
+      declared_value: String(Math.ceil(orderValueRupees)),
+      order_id: `RATE-${Date.now()}`,
+    });
+
+    const res = await fetch(`${BASE}/courier/serviceability/?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      logger.warn({ status: res.status }, "Shiprocket rate fetch failed");
+      return null;
+    }
+
+    const data = (await res.json()) as {
+      data?: {
+        available_courier_companies?: Array<{
+          courier_name?: string;
+          freight_charge?: number;
+          rate?: number;
+        }>;
+      };
+    };
+
+    const couriers = data?.data?.available_courier_companies ?? [];
+    if (couriers.length === 0) return null;
+
+    // Pick the cheapest available courier
+    const sorted = [...couriers].sort(
+      (a, b) => (a.freight_charge ?? a.rate ?? 999) - (b.freight_charge ?? b.rate ?? 999),
+    );
+    const best = sorted[0];
+    const rateRupees = best.freight_charge ?? best.rate ?? 0;
+
+    return {
+      chargeInPaise: Math.round(rateRupees * 100),
+      courierName: best.courier_name ?? "Standard Delivery",
+    };
+  } catch (e) {
+    logger.error({ e }, "Error fetching Shiprocket rates");
+    return null;
+  }
 }
 
 export interface ShiprocketItem {
@@ -96,7 +159,7 @@ export async function createShiprocketOrder(
       selling_price: it.sellingPrice,
       discount: 0,
       tax: 0,
-      hsn: 6109,
+      hsn: 61099010,
     })),
     payment_method: "Prepaid",
     sub_total: input.totalInRupees,
