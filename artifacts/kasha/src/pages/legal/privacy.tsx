@@ -79,7 +79,7 @@ export default function PrivacyPage() {
             <li>Delete their personal information</li>
             <li>Opt out of promotional communications</li>
           </ul>
-          <p>Requests can be made by contacting our support team at <strong>support@ka-sha.com</strong>.</p>
+          <p>Requests can be made by contacting our support team at <strong>support@kashaonline.in</strong>.</p>
         </Section>
 
         <Section title="9. Children's Privacy">
@@ -93,7 +93,7 @@ export default function PrivacyPage() {
         <Section title="11. Contact Us">
           <p>If you have any questions regarding this Privacy Policy, please contact us:</p>
           <ul style={{ paddingLeft: 20, marginTop: 4, listStyle: "disc" }}>
-            <li>Email: <strong>support@ka-sha.com</strong></li>
+            <li>Email: <strong>support@kashaonline.in</strong></li>
             <li>Phone: <strong>9560889594</strong></li>
             <li>Business Hours: Monday to Saturday, 10:00 AM – 6:00 PM</li>
           </ul>

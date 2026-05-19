@@ -41,7 +41,7 @@ export default function TermsPage() {
           <p>These Terms are governed by the laws of India. Any disputes shall be subject to the exclusive jurisdiction of the courts of Mumbai, Maharashtra.</p>
         </Section>
         <Section title="9. Contact">
-          <p>For any queries regarding these Terms, write to us at <strong>hello@ka-sha.com</strong>.</p>
+          <p>For any queries regarding these Terms, write to us at <strong>support@kashaonline.in</strong> or call <strong>+91 95608 89594</strong>.</p>
         </Section>
       </LegalPage>
     </Layout>

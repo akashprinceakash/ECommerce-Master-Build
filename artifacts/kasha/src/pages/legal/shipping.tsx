@@ -83,7 +83,7 @@ export default function ShippingPage() {
         <Section title="10. Contact Us">
           <p>For shipping-related queries, please contact us:</p>
           <ul style={{ paddingLeft: 20, marginTop: 4, listStyle: "disc" }}>
-            <li>Email: <strong>support@ka-sha.com</strong></li>
+            <li>Email: <strong>support@kashaonline.in</strong></li>
             <li>Phone: <strong>9560889594</strong></li>
             <li>Business Hours: Monday to Saturday, 10:00 AM – 6:00 PM</li>
           </ul>

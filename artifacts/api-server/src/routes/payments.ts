@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import crypto from "crypto";
 import Razorpay from "razorpay";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { clerkClient } from "@clerk/express";
 import {
   db, cartsTable, cartItemsTable, productsTable,
@@ -287,6 +287,16 @@ async function confirmOrder(
   if (cart) {
     await db.delete(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id));
   }
+
+  // Deduct stock for each ordered item (floor at 0 to prevent negative stock)
+  const rawItemsForStock = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, updated.id));
+  await Promise.all(
+    rawItemsForStock.map((it) =>
+      db.update(productsTable)
+        .set({ stock: sql`GREATEST(${productsTable.stock} - ${it.quantity}, 0)` })
+        .where(eq(productsTable.id, it.productId)),
+    ),
+  );
 
   // Load items + products for fulfillment
   const rawItems = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, updated.id));
