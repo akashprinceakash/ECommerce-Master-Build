@@ -16,8 +16,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { getApiUrl, getAssetUrl } from "@/lib/api";
+import { useAuth } from "@clerk/react";
 
-declare global { interface Window { Razorpay?: any; Clerk?: any } }
+declare global { interface Window { Razorpay?: any } }
 
 const INDIAN_STATES = [
   "Maharashtra", "Delhi", "Karnataka", "Gujarat", "Tamil Nadu", 
@@ -29,6 +30,7 @@ export default function CheckoutPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { getToken } = useAuth();
 
   const { data: cart, isLoading: isLoadingCart } = useGetCart({
     query: { queryKey: getGetCartQueryKey() }
@@ -63,10 +65,6 @@ export default function CheckoutPage() {
   };
 
   const [isProcessing, setIsProcessing] = useState(false);
-
-  async function getToken(): Promise<string | null> {
-    try { return (await window.Clerk?.session?.getToken?.()) ?? null; } catch { return null; }
-  }
 
   async function authFetch(path: string, opts?: RequestInit) {
     const token = await getToken();
