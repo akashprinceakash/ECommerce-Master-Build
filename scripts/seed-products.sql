@@ -1,0 +1,190 @@
+-- KA.SHA Production Seed — All 17 Products
+-- Run against your production PostgreSQL database:
+--   psql $DATABASE_URL -f seed-products.sql
+--
+-- Safe to re-run: uses INSERT … ON CONFLICT (id) DO NOTHING
+-- After inserting, the sequence is updated to avoid ID collisions.
+
+INSERT INTO products
+  (id, name, description, category, price_in_paise, model_url, thumbnail_url,
+   available, sizes, default_color, gender, product_type, sub_type, sku, stock, additional_images)
+VALUES
+
+-- ── Men's Printed Golf Tees (GP series) ───────────────────────────────────────
+(26,
+ 'Printed Golf Tee — GP001',
+ 'Performance golf tee crafted in technical stretch fabric. Style KS1000BGP001. Moisture-wicking, UV-protective, and designed for unrestricted swing movement.',
+ 't-shirt', 450000, '',
+ '/api/public/thumbnails/KS1000BGP001-01.png',
+ true,
+ ARRAY['XS','S','M','L','XL','XXL'],
+ '#FFFFFF', 'men', NULL, 'printed', 'KS1000BGP001', 100,
+ '["/api/public/thumbnails/KS1000BGP001-02.png","/api/public/thumbnails/KS1000BGP001-03.png"]'),
+
+(27,
+ 'Printed Golf Tee — GP004',
+ 'Performance golf tee crafted in technical stretch fabric. Style KS1000BGP004. Moisture-wicking, UV-protective, and designed for unrestricted swing movement.',
+ 't-shirt', 450000, '',
+ '/api/public/thumbnails/KS1000BGP004-01.png',
+ true,
+ ARRAY['XS','S','M','L','XL','XXL'],
+ '#FFFFFF', 'men', NULL, 'printed', 'KS1000BGP004', 100,
+ '["/api/public/thumbnails/KS1000BGP004-02.png","/api/public/thumbnails/KS1000BGP004-03.png"]'),
+
+(28,
+ 'Printed Golf Tee — GP015',
+ 'Performance golf tee crafted in technical stretch fabric. Style KS1000BGP015. Moisture-wicking, UV-protective, and designed for unrestricted swing movement.',
+ 't-shirt', 450000, '',
+ '/api/public/thumbnails/KS1000BGP015-01.png',
+ true,
+ ARRAY['XS','S','M','L','XL','XXL'],
+ '#FFFFFF', 'men', NULL, 'printed', 'KS1000BGP015', 100,
+ '["/api/public/thumbnails/KS1000BGP015-02.png","/api/public/thumbnails/KS1000BGP015-03.png"]'),
+
+(29,
+ 'Printed Golf Tee — GP022',
+ 'Performance golf tee crafted in technical stretch fabric. Style KS1000BGP022. Moisture-wicking, UV-protective, and designed for unrestricted swing movement.',
+ 't-shirt', 450000, '',
+ '/api/public/thumbnails/KS1000BGP022-01.png',
+ true,
+ ARRAY['XS','S','M','L','XL','XXL'],
+ '#FFFFFF', 'men', NULL, 'printed', 'KS1000BGP022', 100,
+ '["/api/public/thumbnails/KS1000BGP022-02.png","/api/public/thumbnails/KS1000BGP022-03.png"]'),
+
+(30,
+ 'Printed Golf Tee — GP028',
+ 'Performance golf tee crafted in technical stretch fabric. Style KS1000BGP028. Moisture-wicking, UV-protective, and designed for unrestricted swing movement.',
+ 't-shirt', 450000, '',
+ '/api/public/thumbnails/KS1000BGP028-01.png',
+ true,
+ ARRAY['XS','S','M','L','XL','XXL'],
+ '#FFFFFF', 'men', NULL, 'printed', 'KS1000BGP028', 100,
+ '["/api/public/thumbnails/KS1000BGP028-02.png","/api/public/thumbnails/KS1000BGP028-03.png"]'),
+
+-- ── Men's Combo / Pattern Polo Tees (KS1001B–KS1006B) ────────────────────────
+(31,
+ 'Polo Tee — Sky Blue & Brown',
+ 'Performance golf tee crafted in technical stretch fabric. Style KS1001B in Sky Blue & Brown. Moisture-wicking, UV-protective, and designed for unrestricted swing movement.',
+ 't-shirt', 495000, '',
+ '/api/public/thumbnails/KS1001BSKYBLUE-BROWN01.png',
+ true,
+ ARRAY['XS','S','M','L','XL','XXL'],
+ '#FFFFFF', 'men', NULL, 'pattern', 'KS1001B-SB', 100,
+ '["/api/public/thumbnails/KS1001BSKYBLUE-BROWN02.png","/api/public/thumbnails/KS1001BSKYBLUE-BROWN03.png"]'),
+
+(32,
+ 'Polo Tee — Beige & Brown',
+ 'Performance golf tee crafted in technical stretch fabric. Style KS1001B in Beige & Brown. Moisture-wicking, UV-protective, and designed for unrestricted swing movement.',
+ 't-shirt', 495000, '',
+ '/api/public/thumbnails/KS1001BBeige-Brown-1.png',
+ true,
+ ARRAY['XS','S','M','L','XL','XXL'],
+ '#FFFFFF', 'men', NULL, 'pattern', 'KS1001B-BB', 100,
+ '["/api/public/thumbnails/KS1001BBeige-Brown-2.png","/api/public/thumbnails/KS1001BBeige-Brown-3.png"]'),
+
+(33,
+ 'Polo Tee — Red & Black',
+ 'Performance golf tee crafted in technical stretch fabric. Style KS1002B in Red & Black. Moisture-wicking, UV-protective, and designed for unrestricted swing movement.',
+ 't-shirt', 495000, '',
+ '/api/public/thumbnails/KS1002BRed-Black-1.png',
+ true,
+ ARRAY['XS','S','M','L','XL','XXL'],
+ '#FFFFFF', 'men', NULL, 'pattern', 'KS1002B-RB', 100,
+ '["/api/public/thumbnails/KS1002BRed-Black-2.png","/api/public/thumbnails/KS1002BRed-Black-3.png"]'),
+
+(34,
+ 'Polo Tee — Olive Green & Black',
+ 'Performance golf tee crafted in technical stretch fabric. Style KS1002B in Olive Green & Black. Moisture-wicking, UV-protective, and designed for unrestricted swing movement.',
+ 't-shirt', 495000, '',
+ '/api/public/thumbnails/KS1002BOLIVEGREEN-BLACK01.png',
+ true,
+ ARRAY['XS','S','M','L','XL','XXL'],
+ '#FFFFFF', 'men', NULL, 'pattern', 'KS1002B-OB', 100,
+ '["/api/public/thumbnails/KS1002BOLIVEGREEN-BLACK02.png","/api/public/thumbnails/KS1002BOLIVEGREEN-BLACK03.png"]'),
+
+(35,
+ 'Polo Tee — Pink & Black',
+ 'Performance golf tee crafted in technical stretch fabric. Style KS1003B in Pink & Black. Moisture-wicking, UV-protective, and designed for unrestricted swing movement.',
+ 't-shirt', 495000, '',
+ '/api/public/thumbnails/KS1003BPINK-BLACK01.png',
+ true,
+ ARRAY['XS','S','M','L','XL','XXL'],
+ '#FFFFFF', 'men', NULL, 'pattern', 'KS1003B-PB', 100,
+ '["/api/public/thumbnails/KS1003BPINK-BLACK02.png","/api/public/thumbnails/KS1003BPINK-BLACK03.png"]'),
+
+(36,
+ 'Polo Tee — Black & Pink',
+ 'Performance golf tee crafted in technical stretch fabric. Style KS1006B in Black & Pink. Moisture-wicking, UV-protective, and designed for unrestricted swing movement.',
+ 't-shirt', 495000, '',
+ '/api/public/thumbnails/KS1006BBLACK-PINK01.png',
+ true,
+ ARRAY['XS','S','M','L','XL','XXL'],
+ '#FFFFFF', 'men', NULL, 'pattern', 'KS1006B-BP', 100,
+ '["/api/public/thumbnails/KS1006BBLACK-PINK02.png","/api/public/thumbnails/KS1006BBLACK-PINK03.png"]'),
+
+-- ── Men's Golf Trousers (KS1008N) ─────────────────────────────────────────────
+(37,
+ 'Golf Trousers — Black',
+ 'Tailored golf trousers in stretch performance fabric — Black colourway (KS1008N). Four-way stretch, quick-dry finish, and a clean silhouette for the modern golfer.',
+ 'trousers', 550000, '',
+ '/api/public/thumbnails/KS1008NBLACK01.png',
+ true,
+ ARRAY['28','30','32','34','36','38'],
+ '#FFFFFF', 'men', NULL, NULL, 'KS1008N-BLK', 100,
+ '["/api/public/thumbnails/KS1008NBLACK02.png","/api/public/thumbnails/KS1008NBLACK03.png","/api/public/thumbnails/KS1008NBLACK04.png"]'),
+
+(38,
+ 'Golf Trousers — Navy',
+ 'Tailored golf trousers in stretch performance fabric — Navy colourway (KS1008N). Four-way stretch, quick-dry finish, and a clean silhouette for the modern golfer.',
+ 'trousers', 550000, '',
+ '/api/public/thumbnails/KS1008NNAVY01.png',
+ true,
+ ARRAY['28','30','32','34','36','38'],
+ '#FFFFFF', 'men', NULL, NULL, 'KS1008N-NVY', 100,
+ '["/api/public/thumbnails/KS1008NNAVY02.png","/api/public/thumbnails/KS1008NNAVY03.png","/api/public/thumbnails/KS1008NNAVY04.png"]'),
+
+(39,
+ 'Golf Trousers — Grey',
+ 'Tailored golf trousers in stretch performance fabric — Grey colourway (KS1008N). Four-way stretch, quick-dry finish, and a clean silhouette for the modern golfer.',
+ 'trousers', 550000, '',
+ '/api/public/thumbnails/KS1008NGREY-01.png',
+ true,
+ ARRAY['28','30','32','34','36','38'],
+ '#FFFFFF', 'men', NULL, NULL, 'KS1008N-GRY', 100,
+ '["/api/public/thumbnails/KS1008NGREY-02.png","/api/public/thumbnails/KS1008NGREY-03.png","/api/public/thumbnails/KS1008NGREY-04.png"]'),
+
+-- ── Women's Printed Golf Tees (KL5000B series) ────────────────────────────────
+(40,
+ 'Women''s Printed Golf Tee — GP034',
+ 'Women''s performance golf tee — style KL5000BGP034. Lightweight technical fabric with moisture management and a refined fit engineered for active play.',
+ 't-shirt', 450000, '',
+ '/api/public/thumbnails/KL5000BGP034-01.png',
+ true,
+ ARRAY['XS','S','M','L','XL','XXL'],
+ '#FFFFFF', 'women', NULL, 'printed', 'KL5000BGP034', 100,
+ '["/api/public/thumbnails/KL5000BGP034-02.png","/api/public/thumbnails/KL5000BGP034-03.png"]'),
+
+(41,
+ 'Women''s Printed Golf Tee — GP040',
+ 'Women''s performance golf tee — style KL5000BGP040. Lightweight technical fabric with moisture management and a refined fit engineered for active play.',
+ 't-shirt', 450000, '',
+ '/api/public/thumbnails/KL5000BGP040-01.png',
+ true,
+ ARRAY['XS','S','M','L','XL','XXL'],
+ '#FFFFFF', 'women', NULL, 'printed', 'KL5000BGP040', 100,
+ '["/api/public/thumbnails/KL5000BGP040-02.png","/api/public/thumbnails/KL5000BGP040-03.png"]'),
+
+(42,
+ 'Women''s Printed Golf Tee — GP041',
+ 'Women''s performance golf tee — style KL5000BGP041. Lightweight technical fabric with moisture management and a refined fit engineered for active play.',
+ 't-shirt', 450000, '',
+ '/api/public/thumbnails/KL5000BGP041-01.png',
+ true,
+ ARRAY['XS','S','M','L','XL','XXL'],
+ '#FFFFFF', 'women', NULL, 'printed', 'KL5000BGP041', 100,
+ '["/api/public/thumbnails/KL5000BGP041-02.png","/api/public/thumbnails/KL5000BGP041-03.png"]')
+
+ON CONFLICT (id) DO NOTHING;
+
+-- Advance the sequence so future inserts don't collide with the above IDs
+SELECT setval('products_id_seq', (SELECT MAX(id) FROM products));

@@ -47,3 +47,9 @@ id = "9Cj728vAh9ws2aozIqgbE"
 uri = "file://attached_assets/stock_images/golf_team.jpg"
 type = "image"
 title = "golfers team on golf course"
+
+[[outputs]]
+id = "htOXOQgvs8U2uKAz6CJ-z"
+uri = "file://scripts/seed-products.txt"
+type = "text"
+title = "seed-products.sql — KA.SHA Production Seed"
