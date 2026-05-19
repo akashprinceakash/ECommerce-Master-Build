@@ -111,7 +111,7 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
       tags:  ["Limited Prints", "Seasonal"],
     },
     {
-      href:  "/products?gender=men&type=trousers",
+      href:  "/products?gender=men&type=bottoms",
       img:   "/images/shop/men_bottoms.png",
       cat:   "Bottoms",
       title: "Pro Tour Trouser",
