@@ -2,8 +2,12 @@ import { Router, type IRouter } from "express";
 import crypto from "crypto";
 import Razorpay from "razorpay";
 import { eq, and, inArray } from "drizzle-orm";
+import { clerkClient } from "@clerk/express";
 import { db, cartsTable, cartItemsTable, productsTable, ordersTable, orderItemsTable, customizationsTable } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
+import { createShiprocketOrder } from "../lib/shiprocket";
+import { sendOrderConfirmation } from "../lib/email";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -121,7 +125,8 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
  *  - HMAC signature check
  *  - Fetch payment from Razorpay API and confirm status + amount + order linkage
  *  - Idempotent: if the pending order is already confirmed with the same payment, return it
- *  - On success: mark order confirmed, persist payment IDs, clear the cart
+ *  - On success: mark order confirmed, persist payment IDs, clear the cart,
+ *    create Shiprocket shipment, send confirmation email
  */
 router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
@@ -165,8 +170,6 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
   if (Number(payment.amount) !== Number(dbOrder.totalInPaise)) {
     res.status(400).json({ error: "Payment amount does not match order total" }); return;
   }
-  // Require funds to actually be captured before fulfilling. "authorized" is not enough —
-  // the merchant must have settled the payment (Razorpay auto-captures by default).
   if (payment.status !== "captured") {
     res.status(400).json({ error: `Payment is not captured (status: ${payment.status})` }); return;
   }
@@ -185,6 +188,85 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
   if (cart) {
     await db.delete(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id));
   }
+
+  // 4) Load order items with product details for downstream steps
+  const rawItems = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, updated.id));
+  const itemsWithProducts = await Promise.all(
+    rawItems.map(async (it) => {
+      const [product] = await db.select().from(productsTable).where(eq(productsTable.id, it.productId));
+      return { ...it, product };
+    }),
+  );
+
+  // 5) Resolve customer email from Clerk (non-blocking on failure)
+  let customerEmail = "";
+  try {
+    const clerkUser = await clerkClient.users.getUser(userId);
+    customerEmail =
+      clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ?? "";
+  } catch (e) {
+    logger.warn({ userId, e }, "Could not fetch Clerk user email for order confirmation");
+  }
+
+  // 6) Create Shiprocket shipment + send email — run in background, never block the response
+  const shiprocketItems = itemsWithProducts.map((it) => ({
+    name: it.product?.name ?? "KA.SHA Product",
+    sku: it.product?.sku ?? "KASHA-SKU",
+    units: it.quantity,
+    sellingPrice: Math.round((it.product?.priceInPaise ?? it.priceInPaise) / 100),
+  }));
+
+  void (async () => {
+    try {
+      const sr = await createShiprocketOrder({
+        orderId: updated.id,
+        orderDate: updated.createdAt,
+        customerName: updated.shippingName,
+        customerEmail,
+        customerPhone: updated.shippingPhone,
+        shippingAddress: updated.shippingAddress,
+        shippingCity: updated.shippingCity,
+        shippingState: updated.shippingState,
+        shippingPostalCode: updated.shippingPostalCode,
+        items: shiprocketItems,
+        totalInRupees: Math.round(updated.totalInPaise / 100),
+      });
+
+      if (sr.shiprocketOrderId) {
+        await db.update(ordersTable)
+          .set({
+            shiprocketOrderId: sr.shiprocketOrderId,
+            shiprocketAwb: sr.awb,
+            trackingUrl: sr.trackingUrl,
+          })
+          .where(eq(ordersTable.id, updated.id));
+      }
+
+      if (customerEmail) {
+        await sendOrderConfirmation({
+          orderNumber: updated.id,
+          customerName: updated.shippingName,
+          customerEmail,
+          items: itemsWithProducts.map((it) => ({
+            name: it.product?.name ?? "KA.SHA Product",
+            size: it.size,
+            quantity: it.quantity,
+            priceInPaise: it.priceInPaise,
+          })),
+          totalInPaise: updated.totalInPaise,
+          shippingAddress: updated.shippingAddress,
+          shippingCity: updated.shippingCity,
+          shippingState: updated.shippingState,
+          shippingPostalCode: updated.shippingPostalCode,
+          shippingPhone: updated.shippingPhone,
+          awb: sr.awb,
+          trackingUrl: sr.trackingUrl,
+        });
+      }
+    } catch (e) {
+      logger.error({ orderId: updated.id, e }, "Post-payment background tasks failed");
+    }
+  })();
 
   const fullOrder = await buildFullOrder(updated.id);
   res.status(201).json(fullOrder);

@@ -54,3 +54,5 @@ channel = "stable-25_05"
 
 [userenv.shared]
 ADMIN_EMAILS = "akashprinceakash9986@gmail.com"
+SHIPROCKET_PICKUP_LOCATION = "Primary"
+SENDGRID_FROM_EMAIL = "pranaysomaia715@gmail.com"

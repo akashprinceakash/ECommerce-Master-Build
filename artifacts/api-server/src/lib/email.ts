@@ -1,0 +1,164 @@
+import sgMail from "@sendgrid/mail";
+import { logger } from "./logger";
+
+const SENDGRID_API_KEY = process.env["SENDGRID_API_KEY"] ?? "";
+const FROM_EMAIL = process.env["SENDGRID_FROM_EMAIL"] ?? "orders@kashaonline.in";
+const FROM_NAME = "KA.SHA Golf & Sportswear";
+
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
+}
+
+export interface OrderEmailItem {
+  name: string;
+  size: string;
+  quantity: number;
+  priceInPaise: number;
+}
+
+export interface OrderConfirmationData {
+  orderNumber: number;
+  customerName: string;
+  customerEmail: string;
+  items: OrderEmailItem[];
+  totalInPaise: number;
+  shippingAddress: string;
+  shippingCity: string;
+  shippingState: string;
+  shippingPostalCode: string;
+  shippingPhone: string;
+  awb?: string | null;
+  trackingUrl?: string | null;
+}
+
+function formatPrice(paise: number): string {
+  return `₹${(paise / 100).toLocaleString("en-IN")}`;
+}
+
+function buildHtml(d: OrderConfirmationData): string {
+  const itemRows = d.items
+    .map(
+      (it) => `
+      <tr>
+        <td style="padding:12px 0;border-bottom:1px solid #F0EDE8;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#333;">
+          ${it.name}<br/>
+          <span style="color:#888;font-size:12px;">Size: ${it.size} &nbsp;·&nbsp; Qty: ${it.quantity}</span>
+        </td>
+        <td style="padding:12px 0;border-bottom:1px solid #F0EDE8;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#333;text-align:right;">
+          ${formatPrice(it.priceInPaise * it.quantity)}
+        </td>
+      </tr>`,
+    )
+    .join("");
+
+  const trackingSection = d.trackingUrl
+    ? `<p style="margin:16px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#555;">
+        AWB: <strong>${d.awb}</strong> &nbsp;·&nbsp;
+        <a href="${d.trackingUrl}" style="color:#B8925A;">Track your order</a>
+       </p>`
+    : `<p style="margin:16px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#888;">
+        Tracking details will be shared once your order is dispatched.
+       </p>`;
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#FAFAF7;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FAFAF7;">
+    <tr><td align="center" style="padding:40px 20px;">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #EDE9E4;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:#111;padding:32px 40px;text-align:center;">
+            <p style="margin:0;font-family:Georgia,serif;font-size:22px;font-weight:500;letter-spacing:0.15em;color:#fff;">KA·SHA</p>
+            <p style="margin:6px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;letter-spacing:0.25em;color:#B8925A;text-transform:uppercase;">Golf &amp; Sportswear</p>
+          </td>
+        </tr>
+
+        <!-- Title -->
+        <tr>
+          <td style="padding:40px 40px 0;text-align:center;">
+            <p style="margin:0 0 8px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.2em;color:#B8925A;text-transform:uppercase;">Order Confirmed</p>
+            <h1 style="margin:0;font-family:Georgia,serif;font-size:28px;font-weight:400;color:#111;">Thank you, ${d.customerName.split(" ")[0]}.</h1>
+            <p style="margin:12px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#666;line-height:1.6;">
+              Your order #${d.orderNumber} has been confirmed and is being prepared for dispatch.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Order Items -->
+        <tr>
+          <td style="padding:32px 40px 0;">
+            <p style="margin:0 0 16px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#888;">Order Summary</p>
+            <table width="100%" cellpadding="0" cellspacing="0">
+              ${itemRows}
+              <tr>
+                <td style="padding:16px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;font-weight:600;color:#111;">Total</td>
+                <td style="padding:16px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;font-weight:600;color:#111;text-align:right;">${formatPrice(d.totalInPaise)}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Shipping -->
+        <tr>
+          <td style="padding:32px 40px 0;">
+            <p style="margin:0 0 12px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#888;">Delivering To</p>
+            <p style="margin:0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#333;line-height:1.8;">
+              ${d.shippingAddress}<br/>
+              ${d.shippingCity}, ${d.shippingState} — ${d.shippingPostalCode}<br/>
+              ${d.shippingPhone}
+            </p>
+            ${trackingSection}
+          </td>
+        </tr>
+
+        <!-- CTA -->
+        <tr>
+          <td style="padding:32px 40px;text-align:center;">
+            <a href="https://kashaonline.in/orders" style="display:inline-block;background:#111;color:#fff;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;text-decoration:none;padding:14px 32px;">
+              View My Orders
+            </a>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="border-top:1px solid #F0EDE8;padding:24px 40px;text-align:center;">
+            <p style="margin:0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:#999;line-height:1.8;">
+              Questions? Email us at <a href="mailto:support@kashaonline.in" style="color:#B8925A;text-decoration:none;">support@kashaonline.in</a><br/>
+              KA.SHA Golf &amp; Sportswear · Shahpur Jat, New Delhi 110049
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+export async function sendOrderConfirmation(data: OrderConfirmationData): Promise<void> {
+  if (!SENDGRID_API_KEY) {
+    logger.warn("SendGrid not configured — skipping order confirmation email");
+    return;
+  }
+
+  const html = buildHtml(data);
+  const text = `KA.SHA — Order #${data.orderNumber} Confirmed\n\nThank you ${data.customerName}!\n\nYour order has been confirmed. Total: ${formatPrice(data.totalInPaise)}\n\nView your orders at https://kashaonline.in/orders`;
+
+  try {
+    await sgMail.send({
+      to: data.customerEmail,
+      from: { email: FROM_EMAIL, name: FROM_NAME },
+      subject: `KA.SHA — Order #${data.orderNumber} Confirmed`,
+      text,
+      html,
+    });
+    logger.info({ to: data.customerEmail, orderNumber: data.orderNumber }, "Order confirmation email sent");
+  } catch (err: unknown) {
+    logger.error({ err, to: data.customerEmail }, "Failed to send order confirmation email");
+  }
+}
