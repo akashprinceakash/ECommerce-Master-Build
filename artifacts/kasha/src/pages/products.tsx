@@ -8,6 +8,7 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { type Gender, getLastGender as _getLastGender, setLastGender } from "@/lib/genderPreference";
 import { getAssetUrl } from "@/lib/api";
+import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
 
 type ItemType = "tshirts" | "bottoms";
 type StyleFilter = "solids" | "patterns" | "prints" | "trousers" | "shorts" | "skorts";
@@ -109,29 +110,29 @@ const sidebar: SidebarSection[] = [
       },
     ],
   },
-  {
+  ...(SHOW_KIDS ? [{
     label: "Kids",
-    gender: "kids",
+    gender: "kids" as const,
     parents: [
       {
         label: "T-shirts",
-        type: "tshirts",
+        type: "tshirts" as const,
         children: [
-          { label: "Solid", style: "solids" },
-          { label: "Pattern Design", style: "patterns" },
-          { label: "Printed", style: "prints" },
+          { label: "Solid", style: "solids" as const },
+          { label: "Pattern Design", style: "patterns" as const },
+          { label: "Printed", style: "prints" as const },
         ],
       },
       {
         label: "Bottoms",
-        type: "bottoms",
+        type: "bottoms" as const,
         children: [
-          { label: "Trousers", style: "trousers" },
-          { label: "Shorts", style: "shorts" },
+          { label: "Trousers", style: "trousers" as const },
+          { label: "Shorts", style: "shorts" as const },
         ],
       },
     ],
-  },
+  }] : []),
 ];
 
 export default function ProductsPage() {

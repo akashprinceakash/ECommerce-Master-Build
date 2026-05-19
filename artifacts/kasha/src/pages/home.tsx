@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout/Layout";
+import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const GOLD       = "#B8925A";
@@ -42,9 +43,9 @@ const SLIDES = [
     img:     "/images/slides/hero1_mens.png",
     eyebrow: "New Season · Golf Collection 2026",
     title:   (<>Dressed for the<br />clubhouse. Built<br />for every birdie.</>),
-    sub:     "Men · Women · Kids · Custom",
+    sub:     SHOW_KIDS ? "Men · Women · Kids · Custom" : "Men · Women",
     primary: { label: "Shop Men's",    href: "/products?gender=men" },
-    outline: { label: "Custom Studio", href: "/products/1/customize" },
+    outline: SHOW_CUSTOMIZATION ? { label: "Custom Studio", href: "/products/1/customize" } : undefined,
   },
   {
     img:     "/images/slides/hero2_mens_tshirts.png",
@@ -66,9 +67,9 @@ const SLIDES = [
     img:     "/images/slides/hero4_all_products.png",
     eyebrow: "Full Collection · 2026",
     title:   (<>Everything you<br />need, all in<br />one place.</>),
-    sub:     "Men · Women · Kids · Bespoke",
+    sub:     SHOW_KIDS ? "Men · Women · Kids · Bespoke" : "Men · Women",
     primary: { label: "Shop All Products", href: "/products" },
-    outline: { label: "Custom Studio",     href: "/products/1/customize" },
+    outline: SHOW_CUSTOMIZATION ? { label: "Custom Studio", href: "/products/1/customize" } : undefined,
   },
 ] as const;
 
@@ -118,15 +119,15 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
       desc:  "Glove dock · Tee holder · 4-way stretch",
       tags:  ["4 Colours", "Technical"],
     },
-    {
+    ...(SHOW_CUSTOMIZATION ? [{
       href:       "/products/1/customize",
       cat:        "Bespoke",
       title:      "Custom Studio",
       desc:       "Your colour, logo & fit — 1 piece or 500",
       tags:       [],
-      bespoke:    true,
+      bespoke:    true as const,
       bespokeSub: "Bespoke",
-    },
+    }] : []),
   ],
   women: [
     {
@@ -155,15 +156,15 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
       desc:  "Technical stretch · Tailored fit · Active skirt",
       tags:  ["3 Colours", "Skirt", "Skort"],
     },
-    {
+    ...(SHOW_CUSTOMIZATION ? [{
       href:       "/products/1/customize",
       cat:        "Bespoke",
       title:      "Custom Studio",
       desc:       "Your colour, logo & fit — 1 piece or 500",
       tags:       [],
-      bespoke:    true,
+      bespoke:    true as const,
       bespokeSub: "Bespoke",
-    },
+    }] : []),
   ],
   kids: [
     {
@@ -192,15 +193,15 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
       desc:  "Trousers & skorts · All sizes",
       tags:  ["Trousers", "Skorts"],
     },
-    {
+    ...(SHOW_CUSTOMIZATION ? [{
       href:       "/products/1/customize",
       cat:        "Bespoke",
       title:      "Custom Studio",
       desc:       "Academy crest · Names · All sizes",
       tags:       [],
-      bespoke:    true,
+      bespoke:    true as const,
       bespokeSub: "Academy",
-    },
+    }] : []),
   ],
 };
 
@@ -453,26 +454,28 @@ export default function Home() {
                     {s.primary.label}
                   </Link>
                   {/* Secondary outline CTA */}
-                  <Link
-                    href={s.outline.href}
-                    style={{
-                      background:    "rgba(255,255,255,0.08)",
-                      backdropFilter:"blur(8px)",
-                      color:         "rgba(255,255,255,0.72)",
-                      fontFamily:    "'Josefin Sans', sans-serif",
-                      fontSize:      9,
-                      letterSpacing: "0.28em",
-                      textTransform: "uppercase",
-                      padding:       "11px 24px",
-                      border:        "0.5px solid rgba(255,255,255,0.32)",
-                      display:       "inline-block",
-                      transition:    "border-color 0.2s, color 0.2s",
-                    }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.55)"; (e.currentTarget as HTMLElement).style.color = GOLD; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.32)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.72)"; }}
-                  >
-                    {s.outline.label}
-                  </Link>
+                  {s.outline && (
+                    <Link
+                      href={s.outline.href}
+                      style={{
+                        background:    "rgba(255,255,255,0.08)",
+                        backdropFilter:"blur(8px)",
+                        color:         "rgba(255,255,255,0.72)",
+                        fontFamily:    "'Josefin Sans', sans-serif",
+                        fontSize:      9,
+                        letterSpacing: "0.28em",
+                        textTransform: "uppercase",
+                        padding:       "11px 24px",
+                        border:        "0.5px solid rgba(255,255,255,0.32)",
+                        display:       "inline-block",
+                        transition:    "border-color 0.2s, color 0.2s",
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.55)"; (e.currentTarget as HTMLElement).style.color = GOLD; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.32)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.72)"; }}
+                    >
+                      {s.outline.label}
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
@@ -540,12 +543,12 @@ export default function Home() {
 
             {/* Tabs */}
             <div style={{ display: "flex" }}>
-              {(["men", "women", "kids"] as const).map((t) => {
+              {(["men", "women", ...(SHOW_KIDS ? ["kids"] : [])] as const).map((t) => {
                 const on = tab === t;
                 return (
                   <button
                     key={t}
-                    onClick={() => setTab(t)}
+                    onClick={() => setTab(t as "men" | "women" | "kids")}
                     style={{
                       fontFamily:    "'Josefin Sans', sans-serif",
                       fontSize:      10,
@@ -591,10 +594,9 @@ export default function Home() {
       <div style={{ height: 1, background: "linear-gradient(to right, transparent, rgba(184,146,90,0.22), transparent)", margin: `0 ${PAD}` }} />
 
       {/* ══════════════════════════════════════════════════════════════════════
-          CUSTOM STUDIO — Dark compact bar (wireframe: navy + gold left border)
-          Interactive chips let users toggle customisation options.
+          CUSTOM STUDIO — hidden when SHOW_CUSTOMIZATION is false
       ══════════════════════════════════════════════════════════════════════ */}
-      <section style={{ background: BG_PAGE, padding: `20px ${PAD}` }}>
+      {SHOW_CUSTOMIZATION && <section style={{ background: BG_PAGE, padding: `20px ${PAD}` }}>
         <div style={{
           maxWidth:      "100%",
           margin:        "0 auto",
@@ -689,7 +691,7 @@ export default function Home() {
             </Link>
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* Gold rule divider */}
       <div style={{ height: 1, background: "linear-gradient(to right, transparent, rgba(184,146,90,0.18), transparent)", margin: `0 ${PAD}` }} />

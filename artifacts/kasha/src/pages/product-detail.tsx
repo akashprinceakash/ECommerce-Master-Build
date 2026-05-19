@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { useCart } from "@/contexts/CartContext";
 import { getAssetUrl } from "@/lib/api";
+import { SHOW_CUSTOMIZATION } from "@/lib/features";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -261,12 +262,14 @@ export default function ProductDetailPage() {
                 BUY NOW
               </button>
 
-              <Link href={`/products/${product.id}/customize`}>
-                <button className="w-full border border-gray-300 text-black text-[12px] font-bold tracking-[0.12em] py-4 hover:border-black transition-all flex items-center justify-center gap-2 mt-1 hover:bg-gray-50">
-                  <Wand2 className="w-4 h-4" />
-                  CUSTOMISE THIS PIECE
-                </button>
-              </Link>
+              {SHOW_CUSTOMIZATION && (
+                <Link href={`/products/${product.id}/customize`}>
+                  <button className="w-full border border-gray-300 text-black text-[12px] font-bold tracking-[0.12em] py-4 hover:border-black transition-all flex items-center justify-center gap-2 mt-1 hover:bg-gray-50">
+                    <Wand2 className="w-4 h-4" />
+                    CUSTOMISE THIS PIECE
+                  </button>
+                </Link>
+              )}
             </div>
 
             {/* Trust Badge */}

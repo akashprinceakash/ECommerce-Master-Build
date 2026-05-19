@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CartDrawer } from "@/components/layout/CartDrawer";
 import { useCart } from "@/contexts/CartContext";
+import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
 
 const GOLD = "#B8925A";
 const GOLD_LIGHT = "#D4A96A";
@@ -67,7 +68,7 @@ export function Navbar() {
     { label: "Home", href: "/" },
     { label: "Men's", href: "/products?gender=men" },
     { label: "Women's", href: "/products?gender=women" },
-    { label: "Kids'", href: "/products?gender=kids" },
+    ...(SHOW_KIDS ? [{ label: "Kids'", href: "/products?gender=kids" }] : []),
   ];
 
   const isActive = (href: string) => {
@@ -134,23 +135,25 @@ export function Navbar() {
               </Link>
             );
           })}
-          <Link
-            href="/products/1/customize"
-            className="text-[10px] uppercase text-white px-5 py-2 transition-colors"
-            style={{
-              fontFamily: "'Josefin Sans', sans-serif",
-              letterSpacing: "0.2em",
-              background: GOLD,
-            }}
-            onMouseEnter={(e) =>
-              ((e.target as HTMLElement).style.background = GOLD_LIGHT)
-            }
-            onMouseLeave={(e) =>
-              ((e.target as HTMLElement).style.background = GOLD)
-            }
-          >
-            Custom Studio
-          </Link>
+          {SHOW_CUSTOMIZATION && (
+            <Link
+              href="/products/1/customize"
+              className="text-[10px] uppercase text-white px-5 py-2 transition-colors"
+              style={{
+                fontFamily: "'Josefin Sans', sans-serif",
+                letterSpacing: "0.2em",
+                background: GOLD,
+              }}
+              onMouseEnter={(e) =>
+                ((e.target as HTMLElement).style.background = GOLD_LIGHT)
+              }
+              onMouseLeave={(e) =>
+                ((e.target as HTMLElement).style.background = GOLD)
+              }
+            >
+              Custom Studio
+            </Link>
+          )}
         </nav>
 
         {/* Right actions */}
@@ -335,18 +338,20 @@ export function Navbar() {
                 {l.label}
               </Link>
             ))}
-            <Link
-              href="/products/1/customize"
-              onClick={() => setMobileOpen(false)}
-              className="mt-3 text-[12px] uppercase text-white text-center py-3"
-              style={{
-                fontFamily: "'Josefin Sans', sans-serif",
-                letterSpacing: "0.2em",
-                background: GOLD,
-              }}
-            >
-              Custom Studio
-            </Link>
+            {SHOW_CUSTOMIZATION && (
+              <Link
+                href="/products/1/customize"
+                onClick={() => setMobileOpen(false)}
+                className="mt-3 text-[12px] uppercase text-white text-center py-3"
+                style={{
+                  fontFamily: "'Josefin Sans', sans-serif",
+                  letterSpacing: "0.2em",
+                  background: GOLD,
+                }}
+              >
+                Custom Studio
+              </Link>
+            )}
             <Show when="signed-out">
               <Link
                 href="/sign-in"
