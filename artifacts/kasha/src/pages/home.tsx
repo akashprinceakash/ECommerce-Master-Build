@@ -214,7 +214,7 @@ const BULK = [
     from:  "From 12 pieces",
     num:   "01",
     title: "Tournaments",
-    desc:  "Full field kit — player names, sponsor logo, Pantone-matched to brief.",
+    desc:  "Consistent kit across the full field. Sponsored logo in five placement options, any colour. .",
     tags:  ["Player Names", "Sponsor Logo"],
   },
   {
@@ -222,15 +222,15 @@ const BULK = [
     from:  "All ages & sizes",
     num:   "02",
     title: "Golf Academies",
-    desc:  "Academy crest, student names, cohort year. On the range and at the club.",
+    desc:  "Your crest, your colours, your students — looking like they belong to something.",
     tags:  ["Academy Crest", "All Sizes"],
   },
   {
     img:   "/images/bulk/clubs.png",
     from:  "Social clubs",
     num:   "03",
-    title: "Clubs & Corporate",
-    desc:  "Shared identity for your group. Mixed sizes, one print. From 12 pieces.",
+    title: "SOCIAL GOLF CLUBS",
+    desc:  "Give the group a shared identity without anyone feeling like they settled.",
     tags:  ["Mixed Sizes", "From 12"],
   },
 ];
@@ -254,7 +254,7 @@ function CategoryCard({ c }: { c: Card }) {
         }}
       >
         {/* Icon area */}
-        <div style={{ height: 130, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ height: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ textAlign: "center", opacity: 0.25 }}>
             <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 40, fontWeight: 200, letterSpacing: "0.3em", color: "#fff", lineHeight: 1 }}>KS</div>
             <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.3em", color: GOLD, textTransform: "uppercase", marginTop: 5 }}>{c.bespokeSub}</div>
