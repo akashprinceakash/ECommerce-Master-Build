@@ -425,7 +425,7 @@ router.get("/orders/:orderId/invoice", requireAuth, async (req, res): Promise<vo
     customerEmail = clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ?? "";
   } catch (_) { /* ignore */ }
 
-  const pdf = generateInvoicePdf({
+  const pdf = await generateInvoicePdf({
     orderNumber: order.id,
     orderDate: order.createdAt,
     customerName: order.shippingName,
