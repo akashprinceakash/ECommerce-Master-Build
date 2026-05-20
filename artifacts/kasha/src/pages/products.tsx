@@ -185,28 +185,36 @@ export default function ProductsPage() {
     if (!rawProducts) return rawProducts;
     let list = rawProducts;
 
+    // ── Gender filter (use DB field first, fall back to text search for legacy) ──
+    if (gender === "men" || gender === "women") {
+      list = list.filter((p) => {
+        if (p.gender) return p.gender === gender || p.gender === "unisex";
+        const tokens = GENDER_TOKENS[gender];
+        const hay = `${p.name} ${p.description || ""}`.toLowerCase();
+        return tokens.some((t) => hay.includes(t));
+      });
+    } else if (gender === "kids") {
+      const tokens = GENDER_TOKENS.kids;
+      const matched = list.filter((p) => {
+        if (p.gender) return p.gender === "kids";
+        const hay = `${p.name} ${p.description || ""}`.toLowerCase();
+        return tokens.some((t) => hay.includes(t));
+      });
+      if (matched.length > 0) list = matched;
+    }
+
+    // ── Type + style filter ────────────────────────────────────────────────────
     if (type === "tshirts") {
       list = list.filter((p) => TSHIRT_CATEGORIES.includes((p.category || "").toLowerCase()));
       if (styleFilter === "patterns") {
-        list = list.filter((p) => {
-          const sub = (p.subType || "").toLowerCase();
-          const cat = (p.category || "").toLowerCase();
-          const name = (p.name || "").toLowerCase();
-          return sub === "pattern" || PATTERN_CATEGORIES.includes(cat) || name.includes("pattern");
-        });
+        list = list.filter((p) => (p.subType || "").toLowerCase() === "pattern");
       } else if (styleFilter === "prints") {
         list = list.filter((p) => {
           const sub = (p.subType || "").toLowerCase();
-          const cat = (p.category || "").toLowerCase();
-          const name = (p.name || "").toLowerCase();
-          if (sub === "pattern" || PATTERN_CATEGORIES.includes(cat) || name.includes("pattern")) return false;
-          return sub === "printed" || PRINT_CATEGORIES.includes(cat) || PRINT_NAME_HINTS.some((h) => name.includes(h));
+          return sub === "printed" || sub === "print";
         });
       } else if (styleFilter === "solids") {
-        list = list.filter((p) => {
-          const sub = (p.subType || "").toLowerCase();
-          return sub === "solid";
-        });
+        list = list.filter((p) => (p.subType || "").toLowerCase() === "solid");
       }
     } else if (type === "bottoms") {
       if (styleFilter === "trousers") {
@@ -226,23 +234,6 @@ export default function ProductsPage() {
           return TROUSER_CATEGORIES.includes(cat) || SHORTS_CATEGORIES.includes(cat) || SKORT_CATEGORIES.includes(cat);
         });
       }
-    }
-
-    if (gender === "men" || gender === "women") {
-      list = list.filter((p) => {
-        const mapped = PRODUCT_GENDER[p.id];
-        if (mapped) return mapped === gender || mapped === "unisex";
-        const tokens = GENDER_TOKENS[gender];
-        const hay = `${p.name} ${p.description || ""}`.toLowerCase();
-        return tokens.some((t) => hay.includes(t));
-      });
-    } else if (gender === "kids") {
-      const tokens = GENDER_TOKENS.kids;
-      const matched = list.filter((p) => {
-        const hay = `${p.name} ${p.description || ""}`.toLowerCase();
-        return tokens.some((t) => hay.includes(t));
-      });
-      if (matched.length > 0) list = matched;
     }
 
     return list;

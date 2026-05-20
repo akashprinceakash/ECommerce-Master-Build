@@ -69,6 +69,14 @@ function ProtectedRoute({ component: Component, ...rest }: any) {
   );
 }
 
+function ScrollToTop() {
+  const [location] = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
+  return null;
+}
+
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
 
@@ -80,6 +88,7 @@ function ClerkProviderWithRoutes() {
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
       <QueryClientProvider client={queryClient}>
+        <ScrollToTop />
         <ClerkQueryClientCacheInvalidator />
         <Switch>
           <Route path="/" component={Home} />
