@@ -59,29 +59,11 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-14 mb-12">
           {/* Brand */}
           <div>
-            <div
-              className="text-neutral-900"
-              style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                fontSize: 35,
-                letterSpacing: "0.15em",
-                marginBottom: 6,
-              }}
-            >
-              Ka·Sha
-            </div>
-            <div
-              style={{
-                fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: 12,
-                letterSpacing: "0.45em",
-                color: GOLD,
-                textTransform: "uppercase",
-                marginBottom: 16,
-              }}
-            >
-              Premium Golf Apparel
-            </div>
+            <img
+              src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Horizontal%20logo%20coloured%20(350%20by%2075)%20(1).svg"
+              alt="KA.SHA"
+              style={{ height: 40, width: "auto", objectFit: "contain", marginBottom: 16 }}
+            />
             <p
               style={{
                 fontFamily: "'Josefin Sans', sans-serif",
@@ -301,7 +283,7 @@ export function Footer() {
                 </a>
               ),
             )}
-          </div>x
+          </div>
         </div>
       </div>
     </footer>

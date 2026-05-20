@@ -65,10 +65,10 @@ export function Navbar() {
   const cartItemCount = cart?.itemCount || 0;
 
   const links = [
-    { label: "Home", href: "/" },
     { label: "Men's", href: "/products?gender=men" },
     { label: "Women's", href: "/products?gender=women" },
     ...(SHOW_KIDS ? [{ label: "Kids'", href: "/products?gender=kids" }] : []),
+    { label: "About Us", href: "/heritage" },
   ];
 
   const isActive = (href: string) => {
@@ -102,13 +102,13 @@ export function Navbar() {
         <Link
           href="/"
           className="flex items-center shrink-0"
-          aria-label="Ka·Sha home"
+          aria-label="KA.SHA home"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         >
           <img
-            src="/images/kasha-logo-new.jpg"
-            alt="Ka·Sha"
-            className="h-12 w-auto object-contain"
-            style={{ mixBlendMode: "multiply" }}
+            src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Horizontal%20logo%20coloured%20(350%20by%2075)%20(1).svg"
+            alt="KA.SHA"
+            className="h-10 w-auto object-contain"
           />
         </Link>
 
@@ -135,6 +135,18 @@ export function Navbar() {
               </Link>
             );
           })}
+          <a
+            href="mailto:support@kashaonline.in"
+            className="relative text-[10px] uppercase transition-colors hover:text-neutral-900"
+            style={{
+              fontFamily: "'Josefin Sans', sans-serif",
+              letterSpacing: "0.28em",
+              color: "rgba(0,0,0,0.6)",
+              textDecoration: "none",
+            }}
+          >
+            Connect with Us
+          </a>
           {SHOW_CUSTOMIZATION && (
             <Link
               href="/products/1/customize"
@@ -307,15 +319,11 @@ export function Navbar() {
             className="flex items-center justify-between px-6 h-16"
             style={{ borderBottom: "1px solid rgba(184,146,90,0.3)" }}
           >
-            <span
-              className="text-[20px] font-medium text-neutral-900"
-              style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                letterSpacing: "0.15em",
-              }}
-            >
-              Ka·Sha
-            </span>
+            <img
+              src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Horizontal%20logo%20coloured%20(350%20by%2075)%20(1).svg"
+              alt="KA.SHA"
+              className="h-8 w-auto object-contain"
+            />
             <button
               onClick={() => setMobileOpen(false)}
               className="text-black/60"
@@ -338,6 +346,18 @@ export function Navbar() {
                 {l.label}
               </Link>
             ))}
+            <a
+              href="mailto:support@kashaonline.in"
+              onClick={() => setMobileOpen(false)}
+              className="text-[14px] uppercase text-neutral-900/80"
+              style={{
+                fontFamily: "'Josefin Sans', sans-serif",
+                letterSpacing: "0.28em",
+                textDecoration: "none",
+              }}
+            >
+              Connect with Us
+            </a>
             {SHOW_CUSTOMIZATION && (
               <Link
                 href="/products/1/customize"

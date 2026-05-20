@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { useGetProduct, getGetProductQueryKey, useAddToCart, getGetCartQueryKey } from "@workspace/api-client-react";
 import { useParams, Link, useLocation } from "wouter";
@@ -46,9 +46,28 @@ export default function ProductDetailPage() {
     }
   });
 
+  // Auto-add to cart when user signs in with a pending cart item for this product
+  useEffect(() => {
+    if (!user || !product) return;
+    const raw = sessionStorage.getItem("pendingCartAdd");
+    if (!raw) return;
+    try {
+      const pending = JSON.parse(raw) as { productId: number; quantity: number; size: string | null };
+      if (pending.productId !== id || !pending.size) return;
+      sessionStorage.removeItem("pendingCartAdd");
+      setSelectedSize(pending.size);
+      setQuantity(pending.quantity);
+      addToCartMutation.mutate({ data: { productId: id, quantity: pending.quantity, size: pending.size } });
+    } catch {
+      sessionStorage.removeItem("pendingCartAdd");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, product?.id]);
+
   function handleAddToCart() {
     if (!user) {
-      toast({ title: "Sign in required", description: "Please sign in to add items to your cart.", variant: "destructive" });
+      sessionStorage.setItem("pendingCartAdd", JSON.stringify({ productId: id, quantity, size: selectedSize }));
+      toast({ title: "Sign in to continue", description: "Your selection has been saved. Please sign in to add to cart." });
       navigate("/sign-in");
       return;
     }
@@ -128,7 +147,7 @@ export default function ProductDetailPage() {
           <ChevronRight className="w-3 h-3" />
           <Link href="/products" className="hover:text-black transition-colors">PRODUCTS</Link>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-black">{product.name.toUpperCase()}</span>
+          <span className="text-black">{product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "").toUpperCase()}</span>
         </div>
       </div>
 
@@ -177,7 +196,7 @@ export default function ProductDetailPage() {
               <p className="text-[10px] font-bold tracking-[0.3em] text-gray-400 mb-2 uppercase">
                 {product.category || "Golf Collection"}
               </p>
-              <h1 className="text-3xl md:text-4xl font-black text-black mb-3 leading-tight">{product.name}</h1>
+              <h1 className="text-3xl md:text-4xl font-black text-black mb-3 leading-tight">{product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}</h1>
               <div className="flex items-center gap-4">
                 <p className="text-2xl font-bold text-black">{formatPrice(product.priceInPaise)}</p>
                 {product.available ? (

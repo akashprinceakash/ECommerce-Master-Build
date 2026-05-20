@@ -52,16 +52,16 @@ const SLIDES = [
     eyebrow: "Ka·Sha Signature · Men's T-Shirts",
     title:   (<>Gentlemen golfers.<br />When precision meets panache.</>),
     sub:     "GT001–GT0032 · Signature Collection",
-    primary: { label: "Shop Men's T-Shirts", href: "/products?gender=men&type=tshirts" },
-    outline: { label: "View Lookbook",        href: "/products?gender=men" },
+    primary: { label: "Men's Store", href: "/products?gender=men&type=tshirts" },
+    outline: { label: "View Collection", href: "/products?gender=men" },
   },
   {
     img:     "/images/slides/hero3_womens.png",
     eyebrow: "Women's Collection · 2026",
     title:   (<>Wear your game.<br />Style</>),
     sub:     "Women · Signature · Flair · Bottoms",
-    primary: { label: "Shop Women's",  href: "/products?gender=women&type=tshirts" },
-    outline: { label: "Explore Looks", href: "/products?gender=women&type=tshirts" },
+    primary: { label: "Women's Store", href: "/products?gender=women&type=tshirts" },
+    outline: { label: "View Collection", href: "/products?gender=women&type=tshirts" },
   },
   {
     img:     "/images/slides/hero4_all_products.png ",
@@ -96,7 +96,6 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
     {
       href:  "/products?gender=men&type=tshirts&style=patterns",
       img:   "/images/shop/men_kasha.png",
-      badge: "Core Range",
       cat:   "T-Shirts",
       title: "Ka·Sha Signature",
       desc:  "Solids · 8 colours · 8 patterns · prints",
@@ -105,7 +104,6 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
     {
       href:  "/products?gender=men&type=tshirts&style=prints",
       img:   "/images/shop/men_flair.png",
-      badge: "Seasonal",
       cat:   "T-Shirts",
       title: "Flair",
       desc:  "Statement prints & limited-run designs",
@@ -133,7 +131,6 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
     {
       href:  "/products?gender=women&type=tshirts&style=patterns",
       img:   "/images/shop/women_kasha.png",
-      badge: "Core Range",
       cat:   "T-Shirts",
       title: "Ka·Sha Signature",
       desc:  "Solids · 8 colours · 8 patterns · prints",
@@ -142,7 +139,6 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
     {
       href:  "/products?gender=women&type=tshirts&style=prints",
       img:   "/images/shop/women_flair.png",
-      badge: "Seasonal",
       cat:   "T-Shirts",
       title: "Flair",
       desc:  "Statement prints & limited-run designs",
@@ -722,18 +718,6 @@ export default function Home() {
                   border:       "0.5px solid rgba(30,40,80,0.1)",
                   borderRadius: 10,
                   overflow:     "hidden",
-                  cursor:       "pointer",
-                  transition:   "transform 0.3s, border-color 0.3s, box-shadow 0.3s",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.transform   = "translateY(-3px)";
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.32)";
-                  (e.currentTarget as HTMLElement).style.boxShadow   = "0 12px 28px rgba(30,40,80,0.09)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.transform   = "translateY(0)";
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(30,40,80,0.1)";
-                  (e.currentTarget as HTMLElement).style.boxShadow   = "none";
                 }}
               >
                 {/* Image */}
