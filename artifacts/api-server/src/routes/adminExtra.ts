@@ -143,7 +143,7 @@ router.get("/admin/orders", requireAuth, async (req, res): Promise<void> => {
 // ── FULFILLMENT HELPER ───────────────────────────────────────────────────────
 // Triggers Shiprocket order creation + confirmation email for a confirmed order.
 // Returns { shiprocketOrderId, awb } on success, throws on failure.
-async function triggerFulfillment(order: typeof ordersTable.$inferSelect): Promise<{ shiprocketOrderId: string | null; awb: string | null }> {
+async function triggerFulfillment(order: typeof ordersTable.$inferSelect, orderIdSuffix?: string): Promise<{ shiprocketOrderId: string | null; awb: string | null; errorMessage: string | null }> {
   // Load items with products
   const rawItems = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
   const itemsWithProducts = await Promise.all(
@@ -180,7 +180,7 @@ async function triggerFulfillment(order: typeof ordersTable.$inferSelect): Promi
       sellingPrice: Math.round((it.product?.priceInPaise ?? it.priceInPaise) / 100),
     })),
     totalInRupees: Math.round(order.totalInPaise / 100),
-  });
+  }, orderIdSuffix);
 
   if (sr.shiprocketOrderId) {
     await db.update(ordersTable)
@@ -215,7 +215,7 @@ async function triggerFulfillment(order: typeof ordersTable.$inferSelect): Promi
     }).catch((err) => logger.error({ orderId: order.id, err }, "Admin fulfillment: email send failed"));
   }
 
-  return { shiprocketOrderId: sr.shiprocketOrderId, awb: sr.awb };
+  return { shiprocketOrderId: sr.shiprocketOrderId, awb: sr.awb, errorMessage: sr.errorMessage };
 }
 
 router.patch("/admin/orders/:id/status", requireAuth, async (req, res): Promise<void> => {
@@ -255,11 +255,15 @@ router.post("/admin/orders/:id/sync-shiprocket", requireAuth, async (req, res): 
   }
 
   try {
-    const result = await triggerFulfillment(order);
+    // If the order already has a Shiprocket ID this is a re-sync attempt.
+    // Append a short timestamp suffix so Shiprocket doesn't reject it as a duplicate order_id.
+    const suffix = order.shiprocketOrderId ? `R${Date.now().toString().slice(-6)}` : undefined;
+    const result = await triggerFulfillment(order, suffix);
     if (result.shiprocketOrderId) {
       res.json({ success: true, shiprocketOrderId: result.shiprocketOrderId, awb: result.awb });
     } else {
-      res.status(502).json({ error: "Shiprocket accepted the request but returned no order ID. Check Shiprocket dashboard." });
+      const detail = result.errorMessage ?? "Shiprocket returned no order ID — check the Shiprocket dashboard for validation errors.";
+      res.status(502).json({ error: detail });
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

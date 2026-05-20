@@ -1,0 +1,84 @@
+Request URL
+https://api.kashaonline.in/api/admin/orders/5/sync-shiprocket
+Request Method
+POST
+Status Code
+502 Bad Gateway
+Remote Address
+216.24.57.251:443
+Referrer Policy
+strict-origin-when-cross-origin
+access-control-allow-credentials
+true
+access-control-allow-origin
+https://www.kashaonline.in
+alt-svc
+h3=":443"; ma=86400
+cf-cache-status
+DYNAMIC
+cf-ray
+9fec58f15e5a17b3-MAA
+content-encoding
+br
+content-length
+85
+content-type
+application/json; charset=utf-8
+date
+Wed, 20 May 2026 15:24:18 GMT
+etag
+W/"61-cBMvAQjlZo/dUGvr9rbRc5qcnLA"
+priority
+u=1,i
+rndr-id
+b897bcf9-121c-4a94
+server
+cloudflare
+server-timing
+cfExtPri
+vary
+Origin
+vary
+Accept-Encoding
+x-powered-by
+Express
+x-render-origin-server
+Render
+:authority
+api.kashaonline.in
+:method
+POST
+:path
+/api/admin/orders/5/sync-shiprocket
+:scheme
+https
+accept
+*/*
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-GB,en-US;q=0.9,en;q=0.8,kn;q=0.7,hi;q=0.6
+authorization
+Bearer eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18zRHZXeXVxbmZpZ3RlaUtmMkhzcXZRNzA4ZTQiLCJvaWF0IjoxNzc5MjkwNjEzLCJ0eXAiOiJKV1QifQ.eyJhenAiOiJodHRwczovL3d3dy5rYXNoYW9ubGluZS5pbiIsImV4cCI6MTc3OTI5MDY3MywiZnZhIjpbNTAsLTFdLCJpYXQiOjE3NzkyOTA2MTMsImlzcyI6Imh0dHBzOi8vY2xlcmsua2FzaGFvbmxpbmUuaW4iLCJuYmYiOjE3NzkyOTA2MDMsInNpZCI6InNlc3NfM0R6YXlNVDRBejV0MEMxQUlxUkhsWHJNOWNVIiwic3RzIjoiYWN0aXZlIiwic3ViIjoidXNlcl8zRHZsR28wbUxCcEtaWUdJRFZqalhwTGNGMkUiLCJ2IjoyfQ.ahtm6MtdZfRscP8D1Q4nyTuh3m9Md5AWG6eEyRxJKyYoKt7DSinmfYIDCjkRFRS68VfCX2UiBDEkkLkaScO9ExvXylI-FSFAL_ODQRCdoEN1wQQq8JPPmvWM6aVO04izvkfXbqHoxZrTLtkVbfJ6RmxHydsi-ZuG0Q5nnVC1CXtuywsPZwl7OwQJ_-c5vD9BmtA5lDYLSzyI10cCR9VSd09HNNITTtuoAjS-_YrCxqWHShqcHnoQs6KD0IqLPQ8CL2hYQM56hU2UEY0qAzO3sVdd5QY5ha8SxpNWs97gK-uJ8xIxQfjLgMRUxZEMKF0hOp3pa5aMT-8w8MPD-3gvWA
+content-length
+0
+content-type
+application/json
+origin
+https://www.kashaonline.in
+priority
+u=1, i
+referer
+https://www.kashaonline.in/
+sec-ch-ua
+"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"
+sec-ch-ua-mobile
+?1
+sec-ch-ua-platform
+"Android"
+sec-fetch-dest
+empty
+sec-fetch-mode
+cors
+sec-fetch-site
+same-site

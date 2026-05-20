@@ -117,6 +117,7 @@ export interface ShiprocketOrderResult {
   shiprocketOrderId: string | null;
   awb: string | null;
   trackingUrl: string | null;
+  errorMessage: string | null;
 }
 
 function splitName(full: string): { first: string; last: string } {
@@ -127,19 +128,21 @@ function splitName(full: string): { first: string; last: string } {
 
 export async function createShiprocketOrder(
   input: ShiprocketOrderInput,
+  orderIdSuffix?: string,
 ): Promise<ShiprocketOrderResult> {
   if (!EMAIL || !PASSWORD) {
     logger.warn("Shiprocket not configured — skipping shipment creation");
-    return { shiprocketOrderId: null, awb: null, trackingUrl: null };
+    return { shiprocketOrderId: null, awb: null, trackingUrl: null, errorMessage: "Shiprocket credentials not configured" };
   }
 
   const token = await getToken();
   const { first, last } = splitName(input.customerName);
 
   const totalWeight = Math.max(0.1, input.items.reduce((s, i) => s + i.units * 0.4, 0));
+  const orderId = orderIdSuffix ? `KASHA-${input.orderId}-${orderIdSuffix}` : `KASHA-${input.orderId}`;
 
   const body = {
-    order_id: `KASHA-${input.orderId}`,
+    order_id: orderId,
     order_date: input.orderDate.toISOString().replace("T", " ").slice(0, 19),
     pickup_location: PICKUP_LOCATION,
     billing_customer_name: first,
@@ -183,24 +186,47 @@ export async function createShiprocketOrder(
     shipment_id?: number | string;
     awb_code?: string;
     courier_name?: string;
-    errors?: unknown;
+    message?: string;
+    errors?: Record<string, string[]> | string[] | string;
   };
 
+  // Shiprocket sometimes returns HTTP 200 but with validation errors and no order_id.
+  // Extract a human-readable error message from the response regardless of HTTP status.
+  function extractError(): string | null {
+    if (!data.errors && !data.message) return null;
+    if (typeof data.errors === "object" && !Array.isArray(data.errors)) {
+      const msgs = Object.entries(data.errors as Record<string, string[]>)
+        .map(([field, errs]) => `${field}: ${Array.isArray(errs) ? errs.join(", ") : errs}`)
+        .join("; ");
+      return msgs || data.message || null;
+    }
+    if (Array.isArray(data.errors)) return (data.errors as string[]).join("; ");
+    if (typeof data.errors === "string") return data.errors;
+    return data.message ?? null;
+  }
+
   if (!res.ok) {
-    logger.error({ status: res.status, data }, "Shiprocket order creation failed");
-    return { shiprocketOrderId: null, awb: null, trackingUrl: null };
+    const errorMessage = extractError() ?? `HTTP ${res.status}`;
+    logger.error({ status: res.status, data, srOrderId: orderId }, "Shiprocket order creation failed");
+    return { shiprocketOrderId: null, awb: null, trackingUrl: null, errorMessage };
+  }
+
+  // HTTP 200 but Shiprocket may still include errors with no order_id
+  if (!data.order_id) {
+    const errorMessage = extractError() ?? "Shiprocket returned no order ID (possible duplicate or validation error)";
+    logger.error({ data, srOrderId: orderId }, "Shiprocket 200 but no order_id");
+    return { shiprocketOrderId: null, awb: null, trackingUrl: null, errorMessage };
   }
 
   logger.info({ orderId: input.orderId, srOrder: data.order_id }, "Shiprocket order created");
 
   const awb = data.awb_code ?? null;
-  const trackingUrl = awb
-    ? `https://shiprocket.co/tracking/${awb}`
-    : null;
+  const trackingUrl = awb ? `https://shiprocket.co/tracking/${awb}` : null;
 
   return {
-    shiprocketOrderId: data.order_id ? String(data.order_id) : null,
+    shiprocketOrderId: String(data.order_id),
     awb,
     trackingUrl,
+    errorMessage: null,
   };
 }
