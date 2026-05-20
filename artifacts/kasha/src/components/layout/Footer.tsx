@@ -2,15 +2,17 @@ import { Link } from "wouter";
 
 const GOLD = "#B8925A";
 const MUTED = "rgba(0,0,0,0.5)";
+
 const scrollToTop = () => {
   window.scrollTo({
     top: 0,
     behavior: "smooth",
   });
 };
+
 const COL_TITLE: React.CSSProperties = {
   fontFamily: "'Josefin Sans', sans-serif",
-  fontSize: 8,
+  fontSize: 15,
   letterSpacing: "0.35em",
   color: GOLD,
   textTransform: "uppercase",
@@ -19,7 +21,7 @@ const COL_TITLE: React.CSSProperties = {
 
 const LINK_STYLE: React.CSSProperties = {
   fontFamily: "'Josefin Sans', sans-serif",
-  fontSize: 10,
+  fontSize: 12,
   letterSpacing: "0.1em",
   color: MUTED,
   textDecoration: "none",
@@ -36,6 +38,7 @@ function FooterLink({
     <Link
       href={href}
       style={LINK_STYLE}
+      onClick={scrollToTop}
       className="hover:!text-[#B8925A] transition-colors"
     >
       {children}
@@ -60,7 +63,7 @@ export function Footer() {
               className="text-neutral-900"
               style={{
                 fontFamily: "'Cormorant Garamond', serif",
-                fontSize: 28,
+                fontSize: 35,
                 letterSpacing: "0.15em",
                 marginBottom: 6,
               }}
@@ -70,7 +73,7 @@ export function Footer() {
             <div
               style={{
                 fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: 7,
+                fontSize: 12,
                 letterSpacing: "0.45em",
                 color: GOLD,
                 textTransform: "uppercase",
@@ -82,7 +85,7 @@ export function Footer() {
             <p
               style={{
                 fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: 10,
+                fontSize: 12,
                 letterSpacing: "0.06em",
                 color: MUTED,
                 lineHeight: 1.8,
@@ -103,7 +106,7 @@ export function Footer() {
               <span
                 style={{
                   fontFamily: "'Josefin Sans', sans-serif",
-                  fontSize: 9,
+                  fontSize: 13,
                   letterSpacing: "0.08em",
                   color: MUTED,
                 }}
@@ -113,7 +116,7 @@ export function Footer() {
               <span
                 style={{
                   fontFamily: "'Josefin Sans', sans-serif",
-                  fontSize: 9,
+                  fontSize: 12,
                   letterSpacing: "0.08em",
                   color: MUTED,
                 }}
@@ -123,7 +126,7 @@ export function Footer() {
               <span
                 style={{
                   fontFamily: "'Josefin Sans', sans-serif",
-                  fontSize: 9,
+                  fontSize: 10,
                   letterSpacing: "0.06em",
                   color: MUTED,
                   lineHeight: 1.6,
@@ -216,9 +219,7 @@ export function Footer() {
                 </FooterLink>
               </li>
               <li>
-                <FooterLink href="/privacy-policy" >
-                  Privacy Policy
-                </FooterLink>
+                <FooterLink href="/privacy-policy">Privacy Policy</FooterLink>
               </li>
               <li>
                 <FooterLink href="/ip-policy">
@@ -232,6 +233,7 @@ export function Footer() {
                 <a
                   href="mailto:support@kashaonline.in"
                   style={{ ...LINK_STYLE, display: "block" }}
+                  onClick={scrollToTop}
                   className="hover:!text-[#B8925A] transition-colors"
                 >
                   support@kashaonline.in
@@ -239,11 +241,12 @@ export function Footer() {
                 <a
                   href="tel:+919560889594"
                   style={{ ...LINK_STYLE, display: "block" }}
+                  onClick={scrollToTop}
                   className="hover:!text-[#B8925A] transition-colors"
                 >
                   +91 95608 89594
                 </a>
-                <span style={{ ...LINK_STYLE, display: "block", fontSize: 9 }}>
+                <span style={{ ...LINK_STYLE, display: "block", fontSize: 10 }}>
                   Mon – Sat, 10 AM – 6 PM IST
                 </span>
               </div>
@@ -259,7 +262,7 @@ export function Footer() {
             <span
               style={{
                 fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: 9,
+                fontSize: 10,
                 letterSpacing: "0.15em",
                 color: MUTED,
               }}
@@ -283,6 +286,7 @@ export function Footer() {
                 <a
                   key={s}
                   href="#"
+                  onClick={scrollToTop}
                   style={{
                     fontFamily: "'Josefin Sans', sans-serif",
                     fontSize: 8,
@@ -297,7 +301,7 @@ export function Footer() {
                 </a>
               ),
             )}
-          </div>
+          </div>x
         </div>
       </div>
     </footer>
