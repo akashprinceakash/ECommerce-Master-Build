@@ -149,14 +149,19 @@ export function AdminOrders() {
   const syncShiprocket = async (orderId: number) => {
     setSyncing(orderId);
     try {
-      await apiFetch(`/api/admin/orders/${orderId}/sync-shiprocket`, { method: "POST" });
-      toast({ title: "Shiprocket sync queued", description: "Refresh in a few seconds to see the Shiprocket order ID." });
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-        setSyncing(null);
-      }, 4000);
+      const result = await apiFetch(`/api/admin/orders/${orderId}/sync-shiprocket`, { method: "POST" });
+      if (result?.shiprocketOrderId) {
+        toast({
+          title: "Synced to Shiprocket",
+          description: `Order #${result.shiprocketOrderId} created${result.awb ? ` · AWB ${result.awb}` : ""}.`,
+        });
+      } else {
+        toast({ title: "Sync complete", description: "No order ID returned — check Shiprocket dashboard." });
+      }
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
     } catch (e: any) {
-      toast({ title: "Sync failed", description: e.message, variant: "destructive" });
+      toast({ title: "Shiprocket sync failed", description: e.message, variant: "destructive" });
+    } finally {
       setSyncing(null);
     }
   };

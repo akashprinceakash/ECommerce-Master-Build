@@ -141,80 +141,81 @@ router.get("/admin/orders", requireAuth, async (req, res): Promise<void> => {
 });
 
 // ── FULFILLMENT HELPER ───────────────────────────────────────────────────────
-// Triggers Shiprocket order creation + confirmation email for a confirmed order
-// that hasn't been synced yet. Runs fire-and-forget (background).
-async function triggerFulfillment(order: typeof ordersTable.$inferSelect): Promise<void> {
+// Triggers Shiprocket order creation + confirmation email for a confirmed order.
+// Returns { shiprocketOrderId, awb } on success, throws on failure.
+async function triggerFulfillment(order: typeof ordersTable.$inferSelect): Promise<{ shiprocketOrderId: string | null; awb: string | null }> {
+  // Load items with products
+  const rawItems = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
+  const itemsWithProducts = await Promise.all(
+    rawItems.map(async (it) => {
+      const [product] = await db.select().from(productsTable).where(eq(productsTable.id, it.productId));
+      return { ...it, product };
+    }),
+  );
+
+  // Resolve customer email from Clerk
+  let customerEmail = "";
   try {
-    // Load items with products
-    const rawItems = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
-    const itemsWithProducts = await Promise.all(
-      rawItems.map(async (it) => {
-        const [product] = await db.select().from(productsTable).where(eq(productsTable.id, it.productId));
-        return { ...it, product };
-      }),
-    );
+    const clerkUser = await clerkClient.users.getUser(order.userId);
+    customerEmail =
+      clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ?? "";
+  } catch (err) {
+    logger.warn({ userId: order.userId, err }, "Admin fulfillment: could not fetch Clerk user email");
+  }
 
-    // Resolve customer email from Clerk
-    let customerEmail = "";
-    try {
-      const clerkUser = await clerkClient.users.getUser(order.userId);
-      customerEmail =
-        clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ?? "";
-    } catch (e) {
-      logger.warn({ userId: order.userId, e }, "Admin fulfillment: could not fetch Clerk user email");
-    }
+  const sr = await createShiprocketOrder({
+    orderId: order.id,
+    orderDate: order.createdAt,
+    customerName: order.shippingName,
+    customerEmail,
+    customerPhone: order.shippingPhone,
+    shippingAddress: order.shippingAddress,
+    shippingCity: order.shippingCity,
+    shippingState: order.shippingState,
+    shippingPostalCode: order.shippingPostalCode,
+    items: itemsWithProducts.map((it) => ({
+      name: it.product?.name ?? "KA.SHA Product",
+      sku: it.product?.sku ?? "KASHA-SKU",
+      units: it.quantity,
+      sellingPrice: Math.round((it.product?.priceInPaise ?? it.priceInPaise) / 100),
+    })),
+    totalInRupees: Math.round(order.totalInPaise / 100),
+  });
 
-    const sr = await createShiprocketOrder({
-      orderId: order.id,
-      orderDate: order.createdAt,
+  if (sr.shiprocketOrderId) {
+    await db.update(ordersTable)
+      .set({ shiprocketOrderId: sr.shiprocketOrderId, shiprocketAwb: sr.awb, trackingUrl: sr.trackingUrl })
+      .where(eq(ordersTable.id, order.id));
+    logger.info({ orderId: order.id, srOrderId: sr.shiprocketOrderId }, "Admin fulfillment: Shiprocket order created");
+  } else {
+    logger.warn({ orderId: order.id }, "Admin fulfillment: Shiprocket returned no order ID");
+  }
+
+  // Send confirmation email in background — don't let email failure block the response
+  if (customerEmail) {
+    void sendOrderConfirmation({
+      orderNumber: order.id,
       customerName: order.shippingName,
       customerEmail,
-      customerPhone: order.shippingPhone,
+      items: itemsWithProducts.map((it) => ({
+        name: it.product?.name ?? "KA.SHA Product",
+        size: it.size,
+        quantity: it.quantity,
+        priceInPaise: it.priceInPaise,
+      })),
+      totalInPaise: order.totalInPaise,
+      shippingChargeInPaise: order.shippingChargeInPaise ?? 0,
       shippingAddress: order.shippingAddress,
       shippingCity: order.shippingCity,
       shippingState: order.shippingState,
       shippingPostalCode: order.shippingPostalCode,
-      items: itemsWithProducts.map((it) => ({
-        name: it.product?.name ?? "KA.SHA Product",
-        sku: it.product?.sku ?? "KASHA-SKU",
-        units: it.quantity,
-        sellingPrice: Math.round((it.product?.priceInPaise ?? it.priceInPaise) / 100),
-      })),
-      totalInRupees: Math.round(order.totalInPaise / 100),
-    });
-
-    if (sr.shiprocketOrderId) {
-      await db.update(ordersTable)
-        .set({ shiprocketOrderId: sr.shiprocketOrderId, shiprocketAwb: sr.awb, trackingUrl: sr.trackingUrl })
-        .where(eq(ordersTable.id, order.id));
-      logger.info({ orderId: order.id, srOrderId: sr.shiprocketOrderId }, "Admin fulfillment: Shiprocket order created");
-    }
-
-    if (customerEmail) {
-      await sendOrderConfirmation({
-        orderNumber: order.id,
-        customerName: order.shippingName,
-        customerEmail,
-        items: itemsWithProducts.map((it) => ({
-          name: it.product?.name ?? "KA.SHA Product",
-          size: it.size,
-          quantity: it.quantity,
-          priceInPaise: it.priceInPaise,
-        })),
-        totalInPaise: order.totalInPaise,
-        shippingChargeInPaise: order.shippingChargeInPaise ?? 0,
-        shippingAddress: order.shippingAddress,
-        shippingCity: order.shippingCity,
-        shippingState: order.shippingState,
-        shippingPostalCode: order.shippingPostalCode,
-        shippingPhone: order.shippingPhone,
-        awb: sr.awb,
-        trackingUrl: sr.trackingUrl,
-      });
-    }
-  } catch (e) {
-    logger.error({ orderId: order.id, e }, "Admin fulfillment background task failed");
+      shippingPhone: order.shippingPhone,
+      awb: sr.awb,
+      trackingUrl: sr.trackingUrl,
+    }).catch((err) => logger.error({ orderId: order.id, err }, "Admin fulfillment: email send failed"));
   }
+
+  return { shiprocketOrderId: sr.shiprocketOrderId, awb: sr.awb };
 }
 
 router.patch("/admin/orders/:id/status", requireAuth, async (req, res): Promise<void> => {
@@ -231,15 +232,17 @@ router.patch("/admin/orders/:id/status", requireAuth, async (req, res): Promise<
   // When admin confirms an order that hasn't been synced to Shiprocket yet,
   // fire-and-forget the fulfillment (Shiprocket order creation + email)
   if (status === "confirmed" && !updated.shiprocketOrderId) {
-    void triggerFulfillment(updated);
+    void triggerFulfillment(updated).catch((err) =>
+      logger.error({ orderId: updated.id, err, errMsg: err instanceof Error ? err.message : String(err) }, "Auto-fulfillment on confirm failed"),
+    );
   }
 
   res.json(updated);
 });
 
 // ── MANUAL SHIPROCKET SYNC ───────────────────────────────────────────────────
-// Lets admin manually push any confirmed order to Shiprocket (e.g. if it
-// slipped through during a payment verification failure)
+// Lets admin manually push any confirmed order to Shiprocket — runs synchronously
+// so the admin gets immediate success/failure feedback rather than "queued".
 router.post("/admin/orders/:id/sync-shiprocket", requireAuth, async (req, res): Promise<void> => {
   if (!(await requireAdmin(req, res))) return;
   const id = parseInt(String(req.params.id), 10);
@@ -251,9 +254,18 @@ router.post("/admin/orders/:id/sync-shiprocket", requireAuth, async (req, res): 
     res.status(400).json({ error: `Cannot sync a ${order.status} order to Shiprocket` }); return;
   }
 
-  // Respond immediately — fulfillment runs in background
-  res.json({ queued: true, message: "Shiprocket sync queued. Refresh in a few seconds." });
-  void triggerFulfillment(order);
+  try {
+    const result = await triggerFulfillment(order);
+    if (result.shiprocketOrderId) {
+      res.json({ success: true, shiprocketOrderId: result.shiprocketOrderId, awb: result.awb });
+    } else {
+      res.status(502).json({ error: "Shiprocket accepted the request but returned no order ID. Check Shiprocket dashboard." });
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error({ orderId: id, err, errMsg: msg }, "Manual Shiprocket sync failed");
+    res.status(502).json({ error: `Shiprocket sync failed: ${msg}` });
+  }
 });
 
 // ── USERS ────────────────────────────────────────────────────────────────────

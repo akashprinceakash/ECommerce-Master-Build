@@ -17,7 +17,12 @@ export async function apiFetch(path: string, opts?: RequestInit): Promise<any> {
   const res = await fetch(`${getApiUrl()}${path}`, { ...opts, headers });
   if (!res.ok) {
     const txt = await res.text();
-    throw new Error(txt || `HTTP ${res.status}`);
+    let msg = txt || `HTTP ${res.status}`;
+    try {
+      const parsed = JSON.parse(txt);
+      if (parsed?.error) msg = parsed.error;
+    } catch { /* keep raw text */ }
+    throw new Error(msg);
   }
   return res.status === 204 ? null : res.json();
 }
