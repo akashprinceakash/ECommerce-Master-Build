@@ -254,15 +254,15 @@ function CategoryCard({ c }: { c: Card }) {
         <div style={{ height: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ textAlign: "center", opacity: 0.25 }}>
             <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 40, fontWeight: 200, letterSpacing: "0.3em", color: "#fff", lineHeight: 1 }}>KS</div>
-            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.3em", color: GOLD, textTransform: "uppercase", marginTop: 5 }}>{c.bespokeSub}</div>
+            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.3em", color: GOLD, textTransform: "uppercase", marginTop: 5 }}>{c.bespokeSub}</div>
           </div>
         </div>
         {/* Body */}
         <div style={{ padding: "13px 16px 16px", borderTop: "0.5px solid rgba(184,146,90,0.25)" }}>
-          <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.22em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{c.cat}</div>
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontWeight: 500, color: "#fff", marginBottom: 4 }}>{c.title}</div>
-          <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.04em", lineHeight: 1.6, marginBottom: 10 }}>{c.desc}</div>
-          <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: GOLD, borderBottom: "0.5px solid rgba(184,146,90,0.4)", paddingBottom: 1 }}>Design yours →</span>
+          <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.22em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{c.cat}</div>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 500, color: "#fff", marginBottom: 4 }}>{c.title}</div>
+          <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 13, color: "rgba(255,255,255,0.4)", letterSpacing: "0.04em", lineHeight: 1.6, marginBottom: 10 }}>{c.desc}</div>
+          <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: GOLD, borderBottom: "0.5px solid rgba(184,146,90,0.4)", paddingBottom: 1 }}>Design yours →</span>
         </div>
       </Link>
     );
@@ -288,23 +288,23 @@ function CategoryCard({ c }: { c: Card }) {
       <div style={{ height: 300, position: "relative", overflow: "hidden" }}>
         <img src={c.img} alt={c.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" style={{ display: "block" }} />
         {c.badge && (
-          <span style={{ position: "absolute", top: 10, left: 10, background: GOLD, color: "#fff", fontFamily: "'Josefin Sans', sans-serif", fontSize: 7.5, letterSpacing: "0.16em", textTransform: "uppercase", padding: "2px 8px" }}>{c.badge}</span>
+          <span style={{ position: "absolute", top: 10, left: 10, background: GOLD, color: "#fff", fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", padding: "3px 9px" }}>{c.badge}</span>
         )}
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(15,18,35,0.45) 0%, transparent 55%)" }} />
       </div>
       {/* Body */}
       <div style={{ padding: "13px 16px 16px" }}>
-        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.22em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{c.cat}</div>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontWeight: 500, color: "#1a1f2e", marginBottom: 4, lineHeight: 1.2 }}>{c.title}</div>
-        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, color: "rgba(30,40,80,0.5)", letterSpacing: "0.04em", lineHeight: 1.6, marginBottom: 10 }}>{c.desc}</div>
+        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.22em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{c.cat}</div>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 500, color: "#1a1f2e", marginBottom: 4, lineHeight: 1.2 }}>{c.title}</div>
+        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 13, color: "rgba(30,40,80,0.5)", letterSpacing: "0.04em", lineHeight: 1.6, marginBottom: 10 }}>{c.desc}</div>
         {c.tags.length > 0 && (
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
             {c.tags.map((t) => (
-              <span key={t} style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 7.5, letterSpacing: "0.1em", padding: "2px 7px", background: BG_SECTION, color: "rgba(30,40,80,0.55)", borderRadius: 3, textTransform: "uppercase", border: "0.5px solid rgba(30,40,80,0.08)" }}>{t}</span>
+              <span key={t} style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.1em", padding: "3px 8px", background: BG_SECTION, color: "rgba(30,40,80,0.55)", borderRadius: 3, textTransform: "uppercase", border: "0.5px solid rgba(30,40,80,0.08)" }}>{t}</span>
             ))}
           </div>
         )}
-        <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: "#1a1f2e", borderBottom: "0.5px solid rgba(30,40,80,0.15)", paddingBottom: 1 }}>Shop →</span>
+        <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "#1a1f2e", borderBottom: "0.5px solid rgba(30,40,80,0.15)", paddingBottom: 1 }}>Shop →</span>
       </div>
     </Link>
   );
@@ -361,7 +361,7 @@ export default function Home() {
                   inset:      0,
                   width:      "100%",
                   height:     "100%",
-                  objectFit:  "contain",
+                  objectFit:  "cover",
                   transform:  i === active ? "scale(1)" : "scale(1.06)",
                   transition: "transform 8s ease-out",
                 }}
@@ -370,7 +370,7 @@ export default function Home() {
               <div style={{
                 position:   "absolute",
                 inset:      0,
-                background: `linear-gradient(to bottom, rgba(8,10,20,0.22) 0%, rgba(8,10,20,0.08) 25%, rgba(8,10,20,0.52) 68%, ${BG_PAGE}f0 100%)`,
+                background: `linear-gradient(to bottom, rgba(8,10,20,0.18) 0%, rgba(8,10,20,0.06) 22%, rgba(8,10,20,0.58) 68%, rgba(10,15,35,0.94) 100%)`,
               }} />
               {/* CTA content */}
               <div style={{
@@ -384,7 +384,7 @@ export default function Home() {
               }}>
                 <div style={{
                   fontFamily:    "'Josefin Sans', sans-serif",
-                  fontSize:      9,
+                  fontSize:      12,
                   letterSpacing: "0.4em",
                   color:         GOLD,
                   textTransform: "uppercase",
@@ -411,9 +411,9 @@ export default function Home() {
                 </h1>
                 <p style={{
                   fontFamily:    "'Josefin Sans', sans-serif",
-                  fontSize:      9,
+                  fontSize:      13,
                   letterSpacing: "0.25em",
-                  color:         "rgba(255,255,255,0.45)",
+                  color:         "rgba(255,255,255,0.65)",
                   textTransform: "uppercase",
                   marginBottom:  26,
                   opacity:       i === active ? 1 : 0,
@@ -436,10 +436,10 @@ export default function Home() {
                       background:    GOLD,
                       color:         "#fff",
                       fontFamily:    "'Josefin Sans', sans-serif",
-                      fontSize:      9,
+                      fontSize:      12,
                       letterSpacing: "0.28em",
                       textTransform: "uppercase",
-                      padding:       "12px 24px",
+                      padding:       "13px 28px",
                       display:       "inline-block",
                       transition:    "background 0.2s, transform 0.2s",
                       boxShadow:     "0 6px 18px rgba(184,146,90,0.4)",
@@ -458,10 +458,10 @@ export default function Home() {
                         backdropFilter:"blur(8px)",
                         color:         "rgba(255,255,255,0.72)",
                         fontFamily:    "'Josefin Sans', sans-serif",
-                        fontSize:      9,
+                        fontSize:      12,
                         letterSpacing: "0.28em",
                         textTransform: "uppercase",
-                        padding:       "11px 24px",
+                        padding:       "12px 28px",
                         border:        "0.5px solid rgba(255,255,255,0.32)",
                         display:       "inline-block",
                         transition:    "border-color 0.2s, color 0.2s",
@@ -507,7 +507,7 @@ export default function Home() {
           zIndex:        3,
           writingMode:   "vertical-rl" as const,
           fontFamily:    "'Josefin Sans', sans-serif",
-          fontSize:      9,
+          fontSize:      11,
           letterSpacing: "0.3em",
           color:         "rgba(255,255,255,0.18)",
         }}>
@@ -529,7 +529,7 @@ export default function Home() {
           {/* Header */}
           <div style={{ borderBottom: "0.5px solid rgba(30,40,80,0.1)", marginBottom: 0 }}>
             <div style={{ paddingBottom: 18 }}>
-              <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.4em", color: GOLD, textTransform: "uppercase", marginBottom: 8 }}>
+              <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.4em", color: GOLD, textTransform: "uppercase", marginBottom: 8 }}>
                 Collections
               </div>
               <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(26px,3vw,40px)", fontWeight: 400, letterSpacing: "0.02em", color: "#1a1f2e" }}>
@@ -547,7 +547,7 @@ export default function Home() {
                     onClick={() => setTab(t as "men" | "women" | "kids")}
                     style={{
                       fontFamily:    "'Josefin Sans', sans-serif",
-                      fontSize:      10,
+                      fontSize:      13,
                       fontWeight:    500,
                       letterSpacing: "0.18em",
                       textTransform: "uppercase",
@@ -608,13 +608,13 @@ export default function Home() {
         }}>
           {/* Left block */}
           <div style={{ flex: 1, minWidth: 240 }}>
-            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.28em", color: GOLD, textTransform: "uppercase", marginBottom: 8 }}>
+            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.28em", color: GOLD, textTransform: "uppercase", marginBottom: 8 }}>
               Custom Studio
             </div>
             <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(15px,1.6vw,19px)", fontWeight: 500, color: "#fff", lineHeight: 1.35, marginBottom: 4 }}>
               Choose your colour, print, pattern, size<br />or upload your logo.
             </div>
-            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.38)", textTransform: "uppercase", marginBottom: 14 }}>
+            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 13, letterSpacing: "0.1em", color: "rgba(255,255,255,0.38)", textTransform: "uppercase", marginBottom: 14 }}>
               Your game, your t-shirt.
             </div>
             {/* Interactive toggle chips */}
@@ -627,9 +627,9 @@ export default function Home() {
                     onClick={() => toggleChip(chip)}
                     style={{
                       fontFamily:    "'Josefin Sans', sans-serif",
-                      fontSize:      8,
+                      fontSize:      11,
                       letterSpacing: "0.1em",
-                      padding:       "4px 10px",
+                      padding:       "5px 12px",
                       borderRadius:  3,
                       border:        `0.5px solid ${on ? GOLD : "rgba(184,146,90,0.35)"}`,
                       background:    on ? GOLD : "transparent",
@@ -654,10 +654,10 @@ export default function Home() {
                 background:    GOLD,
                 color:         "#fff",
                 fontFamily:    "'Josefin Sans', sans-serif",
-                fontSize:      9,
+                fontSize:      12,
                 letterSpacing: "0.2em",
                 textTransform: "uppercase",
-                padding:       "11px 20px",
+                padding:       "13px 24px",
                 whiteSpace:    "nowrap",
                 display:       "inline-block",
                 transition:    "background 0.2s",
@@ -671,7 +671,7 @@ export default function Home() {
               href="/products/1/customize"
               style={{
                 fontFamily:    "'Josefin Sans', sans-serif",
-                fontSize:      9,
+                fontSize:      12,
                 letterSpacing: "0.14em",
                 color:         "rgba(255,255,255,0.3)",
                 textTransform: "uppercase",
@@ -700,7 +700,7 @@ export default function Home() {
 
           {/* Header */}
           <div style={{ marginBottom: 24 }}>
-            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.4em", color: GOLD, textTransform: "uppercase", marginBottom: 8 }}>
+            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.4em", color: GOLD, textTransform: "uppercase", marginBottom: 8 }}>
               Bulk &amp; Corporate
             </div>
             <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(26px,3vw,40px)", fontWeight: 400, color: "#1a1f2e", lineHeight: 1.2 }}>
@@ -724,18 +724,18 @@ export default function Home() {
                 <div style={{ height: 300, position: "relative", overflow: "hidden" }}>
                   <img src={b.img} alt={b.title} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }} />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(15,18,35,0.4) 0%, transparent 55%)" }} />
-                  <span style={{ position: "absolute", top: 8, left: 10, fontFamily: "'Josefin Sans', sans-serif", fontSize: 7.5, letterSpacing: "0.18em", color: GOLD, textTransform: "uppercase" }}>
+                  <span style={{ position: "absolute", top: 8, left: 10, fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", color: GOLD, textTransform: "uppercase" }}>
                     {b.from}
                   </span>
                 </div>
                 {/* Body */}
                 <div style={{ padding: "13px 16px 16px" }}>
-                  <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.2em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{b.num}</div>
-                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontWeight: 500, color: "#1a1f2e", marginBottom: 6 }}>{b.title}</div>
-                  <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, color: "rgba(30,40,80,0.5)", letterSpacing: "0.04em", lineHeight: 1.65, marginBottom: 10 }}>{b.desc}</div>
+                  <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.2em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{b.num}</div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 500, color: "#1a1f2e", marginBottom: 6 }}>{b.title}</div>
+                  <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 13, color: "rgba(30,40,80,0.5)", letterSpacing: "0.04em", lineHeight: 1.65, marginBottom: 10 }}>{b.desc}</div>
                   <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                     {b.tags.map((t) => (
-                      <span key={t} style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 7.5, padding: "2px 7px", background: BG_SECTION, color: "rgba(30,40,80,0.5)", borderRadius: 3, letterSpacing: "0.08em", textTransform: "uppercase", border: "0.5px solid rgba(30,40,80,0.08)" }}>{t}</span>
+                      <span key={t} style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, padding: "3px 8px", background: BG_SECTION, color: "rgba(30,40,80,0.5)", borderRadius: 3, letterSpacing: "0.08em", textTransform: "uppercase", border: "0.5px solid rgba(30,40,80,0.08)" }}>{t}</span>
                     ))}
                   </div>
                 </div>

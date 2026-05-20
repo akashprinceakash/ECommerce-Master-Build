@@ -467,7 +467,7 @@ export default function ProductsPage() {
                               src={imgSrc}
                               alt={product.name}
                               loading="lazy"
-                              className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
+                              className="w-full h-full object-contain object-center transition-transform duration-700 group-hover:scale-105"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
