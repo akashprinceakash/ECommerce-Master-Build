@@ -2,7 +2,12 @@ import { Link } from "wouter";
 
 const GOLD = "#B8925A";
 const MUTED = "rgba(0,0,0,0.5)";
-
+const scrollToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+};
 const COL_TITLE: React.CSSProperties = {
   fontFamily: "'Josefin Sans', sans-serif",
   fontSize: 8,
@@ -20,9 +25,19 @@ const LINK_STYLE: React.CSSProperties = {
   textDecoration: "none",
 };
 
-function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+function FooterLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
   return (
-    <Link href={href} style={LINK_STYLE} className="hover:!text-[#B8925A] transition-colors">
+    <Link
+      href={href}
+      style={LINK_STYLE}
+      className="hover:!text-[#B8925A] transition-colors"
+    >
       {children}
     </Link>
   );
@@ -74,17 +89,49 @@ export function Footer() {
                 maxWidth: 280,
               }}
             >
-              Crafted for the discerning golfer. Where technical performance meets luxury design — on the fairway and beyond.
+              Crafted for the discerning golfer. Where technical performance
+              meets luxury design — on the fairway and beyond.
             </p>
-            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 9, letterSpacing: "0.08em", color: MUTED }}>
+            <div
+              style={{
+                marginTop: 16,
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "'Josefin Sans', sans-serif",
+                  fontSize: 9,
+                  letterSpacing: "0.08em",
+                  color: MUTED,
+                }}
+              >
                 PS Fashion (Sole Proprietorship)
               </span>
-              <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 9, letterSpacing: "0.08em", color: MUTED }}>
+              <span
+                style={{
+                  fontFamily: "'Josefin Sans', sans-serif",
+                  fontSize: 9,
+                  letterSpacing: "0.08em",
+                  color: MUTED,
+                }}
+              >
                 GSTIN: 07AJWPS2501D1Z6
               </span>
-              <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 9, letterSpacing: "0.06em", color: MUTED, lineHeight: 1.6 }}>
-                213-B, 3rd Floor, Shahpur Jat,<br />New Delhi — 110049
+              <span
+                style={{
+                  fontFamily: "'Josefin Sans', sans-serif",
+                  fontSize: 9,
+                  letterSpacing: "0.06em",
+                  color: MUTED,
+                  lineHeight: 1.6,
+                }}
+              >
+                213-B, 3rd Floor, Shahpur Jat,
+                <br />
+                New Delhi — 110049
               </span>
             </div>
           </div>
@@ -93,11 +140,25 @@ export function Footer() {
           <div>
             <div style={COL_TITLE}>Collections</div>
             <ul className="flex flex-col gap-2.5">
-              <li><FooterLink href="/products?gender=men">Men's</FooterLink></li>
-              <li><FooterLink href="/products?gender=women">Women's</FooterLink></li>
-              <li><FooterLink href="/products?gender=kids">Kids'</FooterLink></li>
-              <li><FooterLink href="/products?type=tshirts&style=patterns">Ka·Sha Signature</FooterLink></li>
-              <li><FooterLink href="/products?type=tshirts&style=prints">Flair</FooterLink></li>
+              <li>
+                <FooterLink href="/products?gender=men">Men's</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/products?gender=women">Women's</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/products?gender=kids">Kids'</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/products?type=tshirts&style=patterns">
+                  Ka·Sha Signature
+                </FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/products?type=tshirts&style=prints">
+                  Flair
+                </FooterLink>
+              </li>
             </ul>
           </div>
 
@@ -105,11 +166,29 @@ export function Footer() {
           <div>
             <div style={COL_TITLE}>Services</div>
             <ul className="flex flex-col gap-2.5">
-              <li><FooterLink href="/products/1/customize">Custom Studio</FooterLink></li>
-              <li><FooterLink href="/products/1/customize">Bulk Orders</FooterLink></li>
-              <li><FooterLink href="/products/1/customize">Corporate</FooterLink></li>
-              <li><FooterLink href="/products/1/customize">Tournaments</FooterLink></li>
-              <li><FooterLink href="/products/1/customize">Golf Academies</FooterLink></li>
+              <li>
+                <FooterLink href="/products/1/customize">
+                  Custom Studio
+                </FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/products/1/customize">
+                  Bulk Orders
+                </FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/products/1/customize">Corporate</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/products/1/customize">
+                  Tournaments
+                </FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/products/1/customize">
+                  Golf Academies
+                </FooterLink>
+              </li>
             </ul>
           </div>
 
@@ -117,13 +196,35 @@ export function Footer() {
           <div>
             <div style={COL_TITLE}>Company</div>
             <ul className="flex flex-col gap-2.5">
-              <li><FooterLink href="/heritage">About Ka·Sha</FooterLink></li>
-              <li><FooterLink href="/products">Lookbook</FooterLink></li>
-              <li><FooterLink href="/shipping-policy">Shipping Policy</FooterLink></li>
-              <li><FooterLink href="/returns-policy">Returns & Exchanges</FooterLink></li>
-              <li><FooterLink href="/terms-of-service">Terms of Service</FooterLink></li>
-              <li><FooterLink href="/privacy-policy">Privacy Policy</FooterLink></li>
-              <li><FooterLink href="/ip-policy">IP &amp; Indemnification</FooterLink></li>
+              <li>
+                <FooterLink href="/heritage">About Ka·Sha</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/products">Lookbook</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/shipping-policy">Shipping Policy</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/returns-policy">
+                  Returns & Exchanges
+                </FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/terms-of-service">
+                  Terms of Service
+                </FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/privacy-policy" >
+                  Privacy Policy
+                </FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/ip-policy">
+                  IP &amp; Indemnification
+                </FooterLink>
+              </li>
             </ul>
             <div style={{ marginTop: 24 }}>
               <div style={COL_TITLE}>Support</div>
@@ -177,23 +278,25 @@ export function Footer() {
             </span>
           </div>
           <div className="flex gap-4">
-            {(["Instagram", "Facebook", "LinkedIn", "YouTube"] as const).map((s) => (
-              <a
-                key={s}
-                href="#"
-                style={{
-                  fontFamily: "'Josefin Sans', sans-serif",
-                  fontSize: 8,
-                  letterSpacing: "0.2em",
-                  color: MUTED,
-                  textTransform: "uppercase",
-                  textDecoration: "none",
-                }}
-                className="hover:!text-[#B8925A] transition-colors"
-              >
-                {s}
-              </a>
-            ))}
+            {(["Instagram", "Facebook", "LinkedIn", "YouTube"] as const).map(
+              (s) => (
+                <a
+                  key={s}
+                  href="#"
+                  style={{
+                    fontFamily: "'Josefin Sans', sans-serif",
+                    fontSize: 8,
+                    letterSpacing: "0.2em",
+                    color: MUTED,
+                    textTransform: "uppercase",
+                    textDecoration: "none",
+                  }}
+                  className="hover:!text-[#B8925A] transition-colors"
+                >
+                  {s}
+                </a>
+              ),
+            )}
           </div>
         </div>
       </div>
