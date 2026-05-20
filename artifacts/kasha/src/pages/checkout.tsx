@@ -374,7 +374,7 @@ export default function CheckoutPage() {
                     )}
                   </div>
                   <div className="flex-1 flex flex-col justify-center text-sm">
-                    <p className="font-serif font-medium">{item.product.name}</p>
+                    <p className="font-serif font-medium">{item.product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}</p>
                     <p className="text-muted-foreground">Qty: {item.quantity} | Size: {item.size}</p>
                     {item.customization && <p className="text-xs italic text-primary mt-1">Bespoke: {item.customization.name}</p>}
                   </div>

@@ -115,7 +115,7 @@ export default function CartPage() {
                     <div>
                       <div className="flex justify-between items-start gap-3 mb-1">
                         <Link href={`/products/${item.productId}`}>
-                          <h3 className="text-[15px] font-bold text-black hover:underline">{item.product.name}</h3>
+                          <h3 className="text-[15px] font-bold text-black hover:underline">{item.product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}</h3>
                         </Link>
                         <p className="font-bold text-black whitespace-nowrap">
                           {formatPrice(item.product.priceInPaise * item.quantity)}
@@ -179,11 +179,11 @@ export default function CartPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Shipping</span>
-                    <span className="font-semibold text-green-600">FREE</span>
+                    <span className="text-gray-500">Calculated at checkout</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Tax</span>
-                    <span className="text-gray-500">Calculated at checkout</span>
+                    <span className="text-gray-500">GST</span>
+                    <span className="text-gray-500">Included in price</span>
                   </div>
                 </div>
 
@@ -193,7 +193,7 @@ export default function CartPage() {
                 </div>
 
                 <Link href="/checkout">
-                  <button className="w-full bg-red-600 hover:bg-red-700 text-white text-[12px] font-bold tracking-[0.15em] py-4 transition-colors flex items-center justify-center gap-2 mb-3">
+                  <button className="w-full bg-black hover:bg-neutral-800 text-white text-[12px] font-bold tracking-[0.15em] py-4 transition-colors flex items-center justify-center gap-2 mb-3">
                     CHECKOUT <ArrowRight className="w-4 h-4" />
                   </button>
                 </Link>

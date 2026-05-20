@@ -136,7 +136,8 @@ export function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
       const rowBg = data.items.indexOf(item) % 2 === 0 ? "#FAFAF7" : "#FFFFFF";
       doc.rect(50, y, W, 24).fill(rowBg);
       doc.font("Helvetica").fontSize(8).fillColor(BLACK);
-      doc.text(`${item.name} (${item.size})`, cols.desc + 4, y + 8, { width: 185, ellipsis: true });
+      const displayName = item.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "");
+      doc.text(`${displayName} (${item.size})`, cols.desc + 4, y + 8, { width: 185, ellipsis: true });
       doc.text(HSN_CODE, cols.hsn + 4, y + 8, { width: 65 });
       doc.text(String(item.quantity), cols.qty + 4, y + 8, { width: 45 });
       doc.text(formatRupees(item.priceInPaise), cols.rate + 4, y + 8, { width: 50 });
@@ -166,8 +167,9 @@ export function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
     // ── Totals block ─────────────────────────────────────────────────────
     const totalBefore = subtotalExclGst + data.shippingChargeInPaise;
     const grandTotal = totalBefore + totalGst;
-    const cgst = Math.round(totalGst / 2);
-    const sgst = totalGst - cgst;
+
+    // Seller is registered in Delhi (GSTIN 07). Intra-state = customer in Delhi.
+    const isIntraState = data.shippingState.trim().toLowerCase() === "delhi";
 
     function totalRow(label: string, value: string, bold = false) {
       doc
@@ -184,17 +186,25 @@ export function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
     if (data.shippingChargeInPaise > 0) {
       totalRow("Shipping", formatRupees(data.shippingChargeInPaise));
     }
-    totalRow(`CGST`, formatRupees(cgst));
-    totalRow(`SGST`, formatRupees(sgst));
+    if (isIntraState) {
+      const cgst = Math.round(totalGst / 2);
+      const sgst = totalGst - cgst;
+      totalRow("CGST", formatRupees(cgst));
+      totalRow("SGST", formatRupees(sgst));
+    } else {
+      totalRow("IGST", formatRupees(totalGst));
+    }
     doc.moveTo(330, y).lineTo(545, y).strokeColor("#CCCCCC").lineWidth(0.5).stroke();
     y += 4;
     totalRow("TOTAL (incl. GST)", formatRupees(grandTotal), true);
 
     // ── GST note ─────────────────────────────────────────────────────────
     y += 16;
+    const gstTypeNote = isIntraState
+      ? "CGST + SGST (intra-state, seller & buyer both in Delhi)."
+      : "IGST (inter-state transaction).";
     doc.font("Helvetica").fontSize(7).fillColor(MUTED)
-      .text(`GST is calculated at 5% for items ≤ Rs. 1,000 and 12% for items > Rs. 1,000 (HSN: ${HSN_CODE}).`, 50, y, { width: W });
-    doc.text(`CGST + SGST applies for intra-state; IGST for inter-state transactions.`, 50, y + 10, { width: W });
+      .text(`GST at 5% for items ≤ Rs. 1,000 and 12% for items > Rs. 1,000 (HSN: ${HSN_CODE}). ${gstTypeNote}`, 50, y, { width: W });
 
     // ── Footer ────────────────────────────────────────────────────────────
     doc.moveTo(50, 770).lineTo(545, 770).strokeColor(GOLD).lineWidth(0.5).stroke();
