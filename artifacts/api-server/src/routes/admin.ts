@@ -107,12 +107,27 @@ router.post("/admin/products", requireAuth, async (req, res): Promise<void> => {
   const adminId = await requireAdmin(req, res);
   if (!adminId) return;
 
-  const { name, description, price, category, modelUrl, thumbnailUrl, available, gender, type, style } = req.body;
-  if (!name || !price) { res.status(400).json({ error: "name and price are required" }); return; }
+  const { name, description, category, gender, productType, subType, sku, stock, priceInPaise, modelUrl, thumbnailUrl, additionalImages, available, sizes, defaultColor } = req.body;
+  if (!name || !description || !category || !priceInPaise || !modelUrl) {
+    res.status(400).json({ error: "Missing required fields" }); return;
+  }
 
   const [product] = await db.insert(productsTable).values({
-    name, description, price: parseInt(price), category, modelUrl, thumbnailUrl,
-    available: available !== false, gender, type, style,
+    name,
+    description,
+    category,
+    gender: gender ?? null,
+    productType: productType ?? null,
+    subType: subType ?? null,
+    sku: sku ?? null,
+    stock: stock !== undefined ? Number(stock) : 100,
+    priceInPaise: Number(priceInPaise),
+    modelUrl,
+    thumbnailUrl: thumbnailUrl ?? null,
+    additionalImages: additionalImages ?? null,
+    available: available ?? true,
+    sizes: sizes ?? ["S", "M", "L", "XL"],
+    defaultColor: defaultColor ?? "#FFFFFF",
   }).returning();
   res.status(201).json(product);
 });
@@ -121,13 +136,28 @@ router.put("/admin/products/:id", requireAuth, async (req, res): Promise<void> =
   const adminId = await requireAdmin(req, res);
   if (!adminId) return;
 
-  const id = parseInt(req.params["id"] ?? "0");
-  const { name, description, price, category, modelUrl, thumbnailUrl, available, gender, type, style } = req.body;
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
 
-  const [product] = await db.update(productsTable)
-    .set({ name, description, price: price ? parseInt(price) : undefined, category, modelUrl, thumbnailUrl, available, gender, type, style, updatedAt: new Date() })
-    .where(eq(productsTable.id, id))
-    .returning();
+  const { name, description, priceInPaise, category, modelUrl, thumbnailUrl, available, gender, productType, subType, sku, stock, additionalImages, sizes, defaultColor } = req.body;
+  const updateData: Record<string, unknown> = { updatedAt: new Date() };
+  if (name !== undefined) updateData.name = name;
+  if (description !== undefined) updateData.description = description;
+  if (priceInPaise !== undefined) updateData.priceInPaise = Number(priceInPaise);
+  if (category !== undefined) updateData.category = category;
+  if (modelUrl !== undefined) updateData.modelUrl = modelUrl;
+  if (thumbnailUrl !== undefined) updateData.thumbnailUrl = thumbnailUrl;
+  if (available !== undefined) updateData.available = available;
+  if (gender !== undefined) updateData.gender = gender || null;
+  if (productType !== undefined) updateData.productType = productType || null;
+  if (subType !== undefined) updateData.subType = subType || null;
+  if (sku !== undefined) updateData.sku = sku || null;
+  if (stock !== undefined) updateData.stock = Number(stock);
+  if (additionalImages !== undefined) updateData.additionalImages = additionalImages || null;
+  if (sizes !== undefined) updateData.sizes = sizes;
+  if (defaultColor !== undefined) updateData.defaultColor = defaultColor;
+
+  const [product] = await db.update(productsTable).set(updateData).where(eq(productsTable.id, id)).returning();
   if (!product) { res.status(404).json({ error: "Product not found" }); return; }
   res.json(product);
 });
@@ -136,7 +166,8 @@ router.delete("/admin/products/:id", requireAuth, async (req, res): Promise<void
   const adminId = await requireAdmin(req, res);
   if (!adminId) return;
 
-  const id = parseInt(req.params["id"] ?? "0");
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
 
   // Clean up R2 assets if present
   const [product] = await db.select().from(productsTable).where(eq(productsTable.id, id));
@@ -148,6 +179,18 @@ router.delete("/admin/products/:id", requireAuth, async (req, res): Promise<void
   }
 
   await db.delete(productsTable).where(eq(productsTable.id, id));
+  res.sendStatus(204);
+});
+
+router.delete("/admin/customizations/:id", requireAuth, async (req, res): Promise<void> => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const result = await db.delete(customizationsTable).where(eq(customizationsTable.id, id)).returning({ id: customizationsTable.id });
+  if (result.length === 0) { res.status(404).json({ error: "Design not found" }); return; }
   res.sendStatus(204);
 });
 
