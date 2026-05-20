@@ -750,7 +750,7 @@ export default function AdminPage() {
                       </label>
                     </div>
                     {form.thumbnailUrl && (
-                      <img src={getAssetUrl(form.thumbnailUrl)} alt="Thumbnail" className="border border-input mt-1 object-contain bg-gray-50" style={{ height: 180, width: 140 }} />
+                      <img src={getAssetUrl(form.thumbnailUrl)} alt="Thumbnail" className="h-24 w-24 object-cover border border-input mt-1" />
                     )}
                   </div>
 
@@ -772,7 +772,7 @@ export default function AdminPage() {
                         <div className="flex flex-wrap gap-2 mt-1">
                           {imgs.map((url, idx) => (
                             <div key={idx} className="relative group">
-                              <img src={url} alt={`Extra ${idx + 1}`} className="object-contain border border-input bg-gray-50" style={{ height: 160, width: 120 }} />
+                              <img src={url} alt={`Extra ${idx + 1}`} className="h-20 w-20 object-cover border border-input" />
                               <button
                                 type="button"
                                 onClick={() => removeExtraImage(idx)}
