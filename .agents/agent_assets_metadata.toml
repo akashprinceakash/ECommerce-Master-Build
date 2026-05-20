@@ -53,3 +53,9 @@ id = "htOXOQgvs8U2uKAz6CJ-z"
 uri = "file://scripts/seed-products.txt"
 type = "text"
 title = "seed-products.sql — KA.SHA Production Seed"
+
+[[outputs]]
+id = "9rRetHrvKbgLgoKJJ7Thk"
+uri = "file://kasha-customization.zip"
+type = "unspecified"
+title = "KA.SHA Customization Studio — Full Source"
