@@ -4,7 +4,7 @@ import { formatPrice } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { getAssetUrl } from "@/lib/api";
-import { Loader2, ChevronDown, ChevronRight, MapPin, CreditCard, Package, Eye, Download, X } from "lucide-react";
+import { Loader2, ChevronDown, ChevronRight, MapPin, CreditCard, Package, Eye, Download, X, Truck, RefreshCw } from "lucide-react";
 import * as fabric from "fabric";
 
 interface AdminOrder {
@@ -20,6 +20,10 @@ interface AdminOrder {
   shippingPhone: string;
   paymentId: string | null;
   razorpayOrderId: string | null;
+  shiprocketOrderId: string | null;
+  shiprocketAwb: string | null;
+  trackingUrl: string | null;
+  shippingChargeInPaise: number | null;
   createdAt: string;
   updatedAt: string;
   customerEmail: string;
@@ -129,13 +133,33 @@ export function AdminOrders() {
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) =>
       apiFetch(`/api/admin/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
       queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] });
-      toast({ title: "Status updated" });
+      if (vars.status === "confirmed") {
+        toast({ title: "Order confirmed", description: "Shiprocket sync has been queued automatically." });
+      } else {
+        toast({ title: "Status updated" });
+      }
     },
     onError: (e: any) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
   });
+
+  const [syncing, setSyncing] = useState<number | null>(null);
+  const syncShiprocket = async (orderId: number) => {
+    setSyncing(orderId);
+    try {
+      await apiFetch(`/api/admin/orders/${orderId}/sync-shiprocket`, { method: "POST" });
+      toast({ title: "Shiprocket sync queued", description: "Refresh in a few seconds to see the Shiprocket order ID." });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+        setSyncing(null);
+      }, 4000);
+    } catch (e: any) {
+      toast({ title: "Sync failed", description: e.message, variant: "destructive" });
+      setSyncing(null);
+    }
+  };
 
   const toggle = (id: number) => {
     setExpanded(prev => {
@@ -238,6 +262,26 @@ export function AdminOrders() {
                     </div>
                   </div>
 
+                  {/* Shiprocket status */}
+                  <div className="flex flex-wrap items-center gap-3 py-2 border-t border-border/50 text-xs">
+                    <span className="flex items-center gap-1 text-muted-foreground uppercase tracking-wider"><Truck className="w-3 h-3" /> Shiprocket:</span>
+                    {o.shiprocketOrderId ? (
+                      <span className="font-mono text-emerald-700">#{o.shiprocketOrderId}{o.shiprocketAwb ? ` · AWB ${o.shiprocketAwb}` : ""}</span>
+                    ) : (
+                      <span className="text-amber-600 font-medium">Not synced</span>
+                    )}
+                    {!o.shiprocketOrderId && o.status !== "pending" && o.status !== "cancelled" && (
+                      <button
+                        disabled={syncing === o.id}
+                        onClick={() => syncShiprocket(o.id)}
+                        className="flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-1 border border-amber-400 text-amber-700 hover:bg-amber-50 disabled:opacity-50 transition"
+                      >
+                        {syncing === o.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                        Sync to Shiprocket
+                      </button>
+                    )}
+                  </div>
+
                   {/* Status update */}
                   <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50">
                     <span className="text-xs uppercase tracking-wider text-muted-foreground mr-1">Update status:</span>
@@ -315,6 +359,32 @@ export function AdminOrders() {
                     <div className="text-xs font-mono break-all text-muted-foreground">Razorpay Order: {viewOrder.razorpayOrderId}</div>
                   )}
                   <div className="text-base font-semibold mt-2">Total: {formatPrice(viewOrder.totalInPaise)}</div>
+                  <div className="mt-3 pt-3 border-t border-border/50">
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1"><Truck className="w-3 h-3" /> Shiprocket</div>
+                    {viewOrder.shiprocketOrderId ? (
+                      <div className="text-xs font-mono text-emerald-700">
+                        Order #{viewOrder.shiprocketOrderId}
+                        {viewOrder.shiprocketAwb && <div>AWB: {viewOrder.shiprocketAwb}</div>}
+                        {viewOrder.trackingUrl && (
+                          <a href={viewOrder.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline block mt-1">Track shipment →</a>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-amber-600">Not synced</span>
+                        {viewOrder.status !== "pending" && viewOrder.status !== "cancelled" && (
+                          <button
+                            disabled={syncing === viewOrder.id}
+                            onClick={() => syncShiprocket(viewOrder.id)}
+                            className="flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-1 border border-amber-400 text-amber-700 hover:bg-amber-50 disabled:opacity-50 transition"
+                          >
+                            {syncing === viewOrder.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                            Sync now
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
