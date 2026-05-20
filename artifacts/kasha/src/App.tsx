@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk } from '@clerk/react';
-import { Switch, Route, useLocation, Redirect, Router as WouterRouter } from 'wouter';
+import { Switch, Route, useLocation, useSearch, Redirect, Router as WouterRouter } from 'wouter';
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -71,9 +71,10 @@ function ProtectedRoute({ component: Component, ...rest }: any) {
 
 function ScrollToTop() {
   const [location] = useLocation();
+  const search = useSearch();
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [location]);
+  }, [location, search]);
   return null;
 }
 
