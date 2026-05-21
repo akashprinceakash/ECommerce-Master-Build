@@ -40,7 +40,7 @@ const BG_DARK    = "#0F1622";   // dark navy — bespoke card + studio bar
 //   banner 4 "All products"  → /products
 const SLIDES = [
   {
-    img:     "/images/slides/hero1_mens.png",
+    img:     "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Slide_images/KaSha%20Hero%20banner%201%20Mens.png",
     eyebrow: "Full Collection · 2026",
     title:   (<>Flair on the fairway<br />Ka.Sha Golfwear.</>),
     sub:     SHOW_KIDS ? "Men · Women · Kids · Bespoke" : "Men · Women",
@@ -48,7 +48,7 @@ const SLIDES = [
     outline: SHOW_CUSTOMIZATION ? { label: "Custom Studio", href: "/products/1/customize" } : undefined,
   },
   {
-    img:     "/images/slides/hero2_mens_tshirts.png",
+    img:     "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Slide_images/KaSha%20Hero%20banner%202%20Mens%20t%20shirts.png",
     eyebrow: "Ka·Sha Signature · Men's T-Shirts",
     title:   (<>Gentlemen golfers.<br />When precision meets panache.</>),
     sub:     "GT001–GT0032 · Signature Collection",
@@ -56,7 +56,7 @@ const SLIDES = [
     outline: { label: "View Collection", href: "/products?gender=men" },
   },
   {
-    img:     "/images/slides/hero3_womens.png",
+    img:     "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Slide_images/KaSha%20Hero%20banner%203%20Womens.png",
     eyebrow: "Women's Collection · 2026",
     title:   (<>Wear your game.<br />Style</>),
     sub:     "Women · Signature · Flair · Bottoms",
@@ -64,7 +64,7 @@ const SLIDES = [
     outline: { label: "View Collection", href: "/products?gender=women&type=tshirts" },
   },
   {
-    img:     "/images/slides/hero4_all_products.png ",
+    img:     "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Slide_images/KaSha%20Hero%20banner%204%20All%20products.png",
     eyebrow: "New Season · Golf Collection 2026",
     title:   (<>Crafted for players<br />Bespoke prints.Try our custom studio.</>),
     sub:     SHOW_KIDS ? "Men · Women · Kids · Custom" : "Men · Women",
@@ -362,6 +362,7 @@ export default function Home() {
                   width:      "100%",
                   height:     "100%",
                   objectFit:  "cover",
+                  objectPosition: "top",
                   transform:  i === active ? "scale(1)" : "scale(1.06)",
                   transition: "transform 8s ease-out",
                 }}
