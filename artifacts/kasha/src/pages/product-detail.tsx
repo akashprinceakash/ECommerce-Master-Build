@@ -161,7 +161,7 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
 
           {/* Product Image Carousel */}
-          <div className="sticky top-24">
+          <div>
             {/* Main slide area */}
             <div
               className="relative w-full overflow-hidden"

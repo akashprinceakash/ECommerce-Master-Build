@@ -5,7 +5,7 @@ import { formatPrice } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { ChevronRight, ChevronDown, ChevronLeft } from "lucide-react";
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { type Gender, getLastGender as _getLastGender, setLastGender } from "@/lib/genderPreference";
 import { getAssetUrl } from "@/lib/api";
 import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
@@ -509,7 +509,6 @@ interface ProductCardProps {
 function ProductCard({ product, imgSrc }: ProductCardProps) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const allImages = useMemo(() => {
     const imgs: string[] = [];
@@ -533,29 +532,17 @@ function ProductCard({ product, imgSrc }: ProductCardProps) {
 
   const hasMultiple = allImages.length > 1;
 
+  // Reset to first image when mouse leaves
   useEffect(() => {
-    if (isHovered && hasMultiple) {
-      timerRef.current = setInterval(() => {
-        setActiveIdx(i => (i + 1) % allImages.length);
-      }, 1400);
-    } else {
-      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-      if (!isHovered) setActiveIdx(0);
-    }
-    return () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } };
-  }, [isHovered, hasMultiple, allImages.length]);
+    if (!isHovered) setActiveIdx(0);
+  }, [isHovered]);
 
-  const stopTimer = () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } };
-
-  const goTo = (idx: number, e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation(); stopTimer(); setActiveIdx(idx);
-  };
   const goPrev = (e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation(); stopTimer();
+    e.preventDefault(); e.stopPropagation();
     setActiveIdx(i => (i - 1 + allImages.length) % allImages.length);
   };
   const goNext = (e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation(); stopTimer();
+    e.preventDefault(); e.stopPropagation();
     setActiveIdx(i => (i + 1) % allImages.length);
   };
 
@@ -602,30 +589,6 @@ function ProductCard({ product, imgSrc }: ProductCardProps) {
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
-
-            <div
-              className="absolute bottom-2.5 left-0 right-0 flex justify-center gap-1.5"
-              style={{ opacity: isHovered ? 1 : 0, transition: "opacity 0.25s" }}
-            >
-              {allImages.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={(e) => goTo(idx, e)}
-                  aria-label={`Image ${idx + 1}`}
-                  style={{
-                    width: idx === activeIdx ? 18 : 5,
-                    height: 5,
-                    borderRadius: 3,
-                    background: idx === activeIdx ? "#B8925A" : "rgba(255,255,255,0.85)",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
-                    transition: "width 0.3s, background 0.3s",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-                  }}
-                />
-              ))}
-            </div>
           </>
         )}
 
