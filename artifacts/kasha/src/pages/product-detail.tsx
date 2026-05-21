@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { useGetProduct, getGetProductQueryKey, useAddToCart, getGetCartQueryKey } from "@workspace/api-client-react";
 import { useParams, Link, useLocation } from "wouter";
 import { formatPrice } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Minus, Plus, ShoppingBag, Wand2, ChevronRight, ShieldCheck, ChevronDown } from "lucide-react";
+import { Minus, Plus, ShoppingBag, Wand2, ChevronRight, ChevronLeft, ShieldCheck, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
@@ -24,7 +24,8 @@ export default function ProductDetailPage() {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
-  const [activeImg, setActiveImg] = useState<string | null>(null);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const touchStartX = useRef<number | null>(null);
 
   const { data: product, isLoading, error } = useGetProduct(id, {
     query: {
@@ -117,15 +118,31 @@ export default function ProductDetailPage() {
 
   const mainThumbnail = getAssetUrl(product.thumbnailUrl) || "/images/product-tshirt.png";
 
-  // Parse additional images from JSON string stored in DB
+  // Parse additional images — handles both JSON arrays and raw URLs from CSV import
   let extraImages: string[] = [];
   if (product.additionalImages) {
-    try { extraImages = (JSON.parse(product.additionalImages) as string[]).map(u => getAssetUrl(u) || u); } catch { extraImages = []; }
+    try {
+      const parsed = JSON.parse(product.additionalImages);
+      if (Array.isArray(parsed)) extraImages = parsed.map(u => getAssetUrl(u) || u).filter(Boolean);
+      else if (typeof parsed === "string" && parsed.startsWith("http")) extraImages = [parsed];
+    } catch {
+      if (product.additionalImages.startsWith("http")) extraImages = [product.additionalImages];
+    }
   }
 
-  // All gallery images: main first, then extras
   const galleryImages = [mainThumbnail, ...extraImages];
-  const displayImage = activeImg ?? mainThumbnail;
+
+  const goPrev = () => { setImgLoaded(false); setActiveIdx(i => (i - 1 + galleryImages.length) % galleryImages.length); };
+  const goNext = () => { setImgLoaded(false); setActiveIdx(i => (i + 1) % galleryImages.length); };
+  const goTo   = (idx: number) => { if (idx !== activeIdx) { setImgLoaded(false); setActiveIdx(idx); } };
+
+  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchEnd   = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > 40) dx < 0 ? goNext() : goPrev();
+    touchStartX.current = null;
+  };
 
   return (
     <Layout>
@@ -143,34 +160,104 @@ export default function ProductDetailPage() {
       <div className="max-w-[1400px] mx-auto px-6 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
 
-          {/* Product Image */}
+          {/* Product Image Carousel */}
           <div className="sticky top-24">
-            <div className="aspect-[3/4] w-full bg-white overflow-hidden relative" style={{ border: "1px solid rgba(0,0,0,0.06)" }}>
+            {/* Main slide area */}
+            <div
+              className="relative w-full overflow-hidden"
+              style={{ background: "#F9F8F6", border: "1px solid rgba(0,0,0,0.07)", aspectRatio: "1 / 1" }}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
               {!imgLoaded && (
-                <div className="absolute inset-0 bg-gray-50 animate-pulse" />
+                <div className="absolute inset-0 bg-[#F0EEE9] animate-pulse z-0" />
               )}
-              <img
-                src={displayImage}
-                alt={product.name}
-                onLoad={() => setImgLoaded(true)}
-                className={`w-full h-full object-contain object-center transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
-              />
+
+              {/* Stacked images — fade between them */}
+              {galleryImages.map((img, idx) => (
+                <img
+                  key={idx}
+                  src={img}
+                  alt={`${product.name} — view ${idx + 1}`}
+                  onLoad={() => { if (idx === activeIdx) setImgLoaded(true); }}
+                  className="absolute inset-0 w-full h-full object-contain object-center"
+                  style={{ opacity: idx === activeIdx ? 1 : 0, transition: "opacity 0.5s ease", zIndex: idx === activeIdx ? 1 : 0 }}
+                />
+              ))}
+
               {!product.available && (
-                <div className="absolute top-4 left-4 bg-black text-white text-[10px] font-bold tracking-[0.15em] px-3 py-1">
+                <div className="absolute top-4 left-4 bg-black text-white text-[10px] font-bold tracking-[0.15em] px-3 py-1 z-10">
                   SOLD OUT
                 </div>
               )}
+
+              {/* Prev / Next arrows */}
+              {galleryImages.length > 1 && (
+                <>
+                  <button
+                    onClick={goPrev}
+                    aria-label="Previous image"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center bg-white/85 backdrop-blur-sm hover:bg-white transition-all z-10"
+                    style={{ border: "1px solid rgba(0,0,0,0.10)", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={goNext}
+                    aria-label="Next image"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center bg-white/85 backdrop-blur-sm hover:bg-white transition-all z-10"
+                    style={{ border: "1px solid rgba(0,0,0,0.10)", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+
+                  {/* Image counter */}
+                  <div className="absolute bottom-3 right-4 z-10" style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.12em", color: "rgba(0,0,0,0.4)" }}>
+                    {activeIdx + 1} / {galleryImages.length}
+                  </div>
+                </>
+              )}
             </div>
+
+            {/* Dot indicators */}
+            {galleryImages.length > 1 && (
+              <div className="flex justify-center gap-2 mt-3">
+                {galleryImages.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => goTo(idx)}
+                    aria-label={`View image ${idx + 1}`}
+                    style={{
+                      width: idx === activeIdx ? 22 : 6,
+                      height: 6,
+                      borderRadius: 3,
+                      background: idx === activeIdx ? "#B8925A" : "rgba(0,0,0,0.18)",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: 0,
+                      transition: "width 0.3s ease, background 0.3s ease",
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
             {/* Thumbnail strip */}
             {galleryImages.length > 1 && (
               <div className="mt-3 flex gap-2 flex-wrap">
                 {galleryImages.map((img, i) => (
                   <button
                     key={i}
-                    onClick={() => { setActiveImg(img); setImgLoaded(false); }}
-                    className={`w-16 h-16 bg-gray-100 overflow-hidden border-2 transition-colors ${
-                      displayImage === img ? "border-black" : "border-transparent hover:border-gray-400"
-                    }`}
+                    onClick={() => goTo(i)}
+                    className="overflow-hidden transition-all"
+                    style={{
+                      width: 60,
+                      height: 60,
+                      background: "#F9F8F6",
+                      border: `2px solid ${activeIdx === i ? "#1a1a1a" : "transparent"}`,
+                      outline: activeIdx === i ? "none" : "1px solid rgba(0,0,0,0.10)",
+                      transition: "border-color 0.2s",
+                    }}
                   >
                     <img src={img} alt="" className="w-full h-full object-cover" />
                   </button>

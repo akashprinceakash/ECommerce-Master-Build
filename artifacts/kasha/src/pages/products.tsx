@@ -4,8 +4,8 @@ import { Link, useSearch, useLocation } from "wouter";
 import { formatPrice } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { ChevronRight, ChevronDown } from "lucide-react";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { ChevronRight, ChevronDown, ChevronLeft } from "lucide-react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { type Gender, getLastGender as _getLastGender, setLastGender } from "@/lib/genderPreference";
 import { getAssetUrl } from "@/lib/api";
 import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
@@ -507,54 +507,135 @@ interface ProductCardProps {
 }
 
 function ProductCard({ product, imgSrc }: ProductCardProps) {
-  const [hovImg, setHovImg] = useState<string | null>(null);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  function parseSecondImg(): string | null {
-    if (!product.additionalImages) return null;
-    try {
-      const arr = JSON.parse(product.additionalImages) as string[];
-      return arr.length > 0 ? getAssetUrl(arr[0]) || arr[0] : null;
-    } catch {
-      return null;
+  const allImages = useMemo(() => {
+    const imgs: string[] = [];
+    if (imgSrc) imgs.push(imgSrc);
+    if (product.additionalImages) {
+      try {
+        const arr = JSON.parse(product.additionalImages) as string[];
+        for (const u of arr) {
+          const resolved = getAssetUrl(u) || u;
+          if (resolved && !imgs.includes(resolved)) imgs.push(resolved);
+        }
+      } catch {
+        if (typeof product.additionalImages === "string" && product.additionalImages.startsWith("http")) {
+          const resolved = getAssetUrl(product.additionalImages) || product.additionalImages;
+          if (!imgs.includes(resolved)) imgs.push(resolved);
+        }
+      }
     }
-  }
+    return imgs;
+  }, [imgSrc, product.additionalImages]);
 
-  const secondImg = parseSecondImg();
-  const displayImg = hovImg ?? imgSrc;
+  const hasMultiple = allImages.length > 1;
+
+  useEffect(() => {
+    if (isHovered && hasMultiple) {
+      timerRef.current = setInterval(() => {
+        setActiveIdx(i => (i + 1) % allImages.length);
+      }, 1400);
+    } else {
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      if (!isHovered) setActiveIdx(0);
+    }
+    return () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } };
+  }, [isHovered, hasMultiple, allImages.length]);
+
+  const stopTimer = () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } };
+
+  const goTo = (idx: number, e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation(); stopTimer(); setActiveIdx(idx);
+  };
+  const goPrev = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation(); stopTimer();
+    setActiveIdx(i => (i - 1 + allImages.length) % allImages.length);
+  };
+  const goNext = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation(); stopTimer();
+    setActiveIdx(i => (i + 1) % allImages.length);
+  };
 
   return (
     <Link href={`/products/${product.id}`} className="group block">
       <div
-        className="relative aspect-[3/4] overflow-hidden mb-3 transition-all"
-        style={{ background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)" }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.3)";
-          if (secondImg) setHovImg(secondImg);
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.08)";
-          setHovImg(null);
-        }}
+        className="relative overflow-hidden mb-3"
+        style={{ background: "#F9F8F6", border: `1px solid ${isHovered ? "rgba(184,146,90,0.35)" : "rgba(0,0,0,0.07)"}`, aspectRatio: "1 / 1", transition: "border-color 0.3s" }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
-        {displayImg ? (
-          <img
-            src={displayImg}
-            alt={product.name}
-            loading="lazy"
-            className="w-full h-full object-contain object-center transition-opacity duration-300"
-          />
+        {allImages.length > 0 ? (
+          allImages.map((src, idx) => (
+            <img
+              key={idx}
+              src={src}
+              alt={product.name}
+              loading="lazy"
+              className="absolute inset-0 w-full h-full object-contain object-center"
+              style={{ opacity: idx === activeIdx ? 1 : 0, transition: "opacity 0.55s ease" }}
+            />
+          ))
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center">
             <span style={{ color: "rgba(184,146,90,0.4)", fontFamily: "'Cormorant Garamond', serif", fontSize: 28, letterSpacing: "0.3em" }}>KS</span>
           </div>
         )}
+
+        {hasMultiple && (
+          <>
+            <button
+              onClick={goPrev}
+              aria-label="Previous image"
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center bg-white/80 backdrop-blur-sm hover:bg-white z-10"
+              style={{ border: "1px solid rgba(0,0,0,0.10)", opacity: isHovered ? 1 : 0, transition: "opacity 0.25s", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }}
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={goNext}
+              aria-label="Next image"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center bg-white/80 backdrop-blur-sm hover:bg-white z-10"
+              style={{ border: "1px solid rgba(0,0,0,0.10)", opacity: isHovered ? 1 : 0, transition: "opacity 0.25s", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }}
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+
+            <div
+              className="absolute bottom-2.5 left-0 right-0 flex justify-center gap-1.5"
+              style={{ opacity: isHovered ? 1 : 0, transition: "opacity 0.25s" }}
+            >
+              {allImages.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={(e) => goTo(idx, e)}
+                  aria-label={`Image ${idx + 1}`}
+                  style={{
+                    width: idx === activeIdx ? 18 : 5,
+                    height: 5,
+                    borderRadius: 3,
+                    background: idx === activeIdx ? "#B8925A" : "rgba(255,255,255,0.85)",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                    transition: "width 0.3s, background 0.3s",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
         {!product.available && (
-          <div className="absolute top-2 right-2 text-neutral-900 text-[8px] uppercase px-2 py-0.5" style={{ background: "#B8925A", fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.2em" }}>
+          <div className="absolute top-2 right-2 text-white text-[8px] uppercase px-2 py-0.5 z-10" style={{ background: "#1a1a1a", fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.2em" }}>
             Sold Out
           </div>
         )}
       </div>
-      <h3 className="text-neutral-900 mb-1 group-hover:!text-[#B8925A] transition-colors" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontWeight: 500 }}>
+      <h3 className="text-neutral-900 mb-1 group-hover:!text-[#B8925A] transition-colors" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontWeight: 500, lineHeight: 1.3 }}>
         {product.name}
       </h3>
       <p style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", color: "#B8925A" }}>
@@ -566,8 +647,8 @@ function ProductCard({ product, imgSrc }: ProductCardProps) {
 
 function ProductSkeleton() {
   return (
-    <div className="space-y-3">
-      <Skeleton className="aspect-[3/4] w-full rounded-none bg-black/[0.05]" />
+    <div className="space-y-2.5">
+      <Skeleton className="w-full rounded-none bg-black/[0.05]" style={{ aspectRatio: "1 / 1" }} />
       <Skeleton className="h-4 w-2/3 bg-black/[0.05]" />
       <Skeleton className="h-3 w-1/3 bg-black/[0.05]" />
     </div>
