@@ -522,14 +522,17 @@ export default function AdminPage() {
     setUploadingThumb(true);
     try {
       const token = await getToken();
-      const fd = new FormData(); fd.append("thumbnail", file);
+      const { compressImage } = await import("@/lib/imageCompression");
+      const compressed = await compressImage(file, { maxPx: 1200, quality: 0.82 });
+      const fd = new FormData(); fd.append("thumbnail", compressed);
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const res = await fetch(`${getApiUrl()}/api/admin/upload/thumbnail`, { method: "POST", body: fd, headers });
       if (!res.ok) throw new Error(await res.text());
       const { url } = await res.json();
       setForm(f => ({ ...f, thumbnailUrl: url }));
-      toast({ title: "Thumbnail uploaded" });
+      const savedKB = Math.round((file.size - compressed.size) / 1024);
+      toast({ title: "Thumbnail uploaded", description: savedKB > 0 ? `Compressed by ${savedKB} KB` : undefined });
     } catch (err: any) { toast({ title: "Upload failed", description: err.message, variant: "destructive" }); }
     finally { setUploadingThumb(false); if (e.target) e.target.value = ""; }
   };
@@ -553,10 +556,12 @@ export default function AdminPage() {
     setUploadingExtra(true);
     try {
       const token = await getToken();
+      const { compressImages } = await import("@/lib/imageCompression");
+      const compressed = await compressImages(files, { maxPx: 1200, quality: 0.82 });
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const urls: string[] = [];
-      for (const file of files) {
+      for (const file of compressed) {
         const fd = new FormData(); fd.append("thumbnail", file);
         const res = await fetch(`${getApiUrl()}/api/admin/upload/thumbnail`, { method: "POST", body: fd, headers });
         if (!res.ok) throw new Error(await res.text());

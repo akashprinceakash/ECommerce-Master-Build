@@ -204,6 +204,9 @@ export default function ProductDetailPage() {
                   key={idx}
                   src={img}
                   alt={`${getProductAltText()} — view ${idx + 1}`}
+                  loading={idx === 0 ? "eager" : "lazy"}
+                  decoding="async"
+                  fetchPriority={idx === 0 ? "high" : undefined}
                   onLoad={() => { if (idx === activeIdx) setImgLoaded(true); }}
                   className="absolute inset-0 w-full h-full object-contain object-center"
                   style={{ opacity: idx === activeIdx ? 1 : 0, transition: "opacity 0.5s ease", zIndex: idx === activeIdx ? 1 : 0 }}

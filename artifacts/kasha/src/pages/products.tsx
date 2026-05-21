@@ -594,6 +594,7 @@ function ProductCard({ product, imgSrc }: ProductCardProps) {
               src={src}
               alt={getProductAltText(product)}
               loading="lazy"
+              decoding="async"
               className="absolute inset-0 w-full h-full object-contain object-center"
               style={{ opacity: idx === activeIdx ? 1 : 0, transition: "opacity 0.55s ease" }}
             />

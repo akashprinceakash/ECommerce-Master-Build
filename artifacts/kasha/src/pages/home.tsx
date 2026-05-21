@@ -369,6 +369,9 @@ export default function Home() {
               <img
                 src={s.img}
                 alt="Premium golf fashion collection by Ka.Sha India"
+                loading={i === 0 ? "eager" : "lazy"}
+                decoding="async"
+                fetchPriority={i === 0 ? "high" : "low"}
                 style={{
                   position:   "absolute",
                   inset:      0,

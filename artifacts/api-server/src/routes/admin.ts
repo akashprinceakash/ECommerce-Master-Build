@@ -8,6 +8,7 @@ import path from "path";
 import fs from "fs";
 import type { Request, Response } from "express";
 import { uploadToR2, r2Enabled, keyFromR2Url, deleteFromR2 } from "../lib/r2";
+import sharp from "sharp";
 
 const router: IRouter = Router();
 
@@ -230,20 +231,37 @@ router.post("/admin/upload/model", requireAuth, (req, res) => {
   });
 });
 
+// ── Server-side image processing: resize + WebP conversion via sharp ──────────
+async function processImageBuffer(
+  buf: Buffer,
+  originalMime: string,
+): Promise<{ buffer: Buffer; mime: string; ext: string }> {
+  try {
+    const processed = await sharp(buf)
+      .resize(1200, 1200, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer();
+    return { buffer: processed, mime: "image/webp", ext: ".webp" };
+  } catch {
+    return { buffer: buf, mime: originalMime, ext: path.extname("x" + originalMime.replace("image/", ".")) || ".jpg" };
+  }
+}
+
 router.post("/admin/upload/thumbnail", requireAuth, (req, res) => {
   requireAdmin(req, res).then(async (adminId) => {
     if (!adminId) return;
 
     if (r2Enabled()) {
-      // R2 path
+      // R2 path — compress via sharp before uploading
       uploadThumb.single("thumbnail")(req, res, async (err) => {
         if (err) { res.status(400).json({ error: err.message }); return; }
         if (!req.file) { res.status(400).json({ error: "No file uploaded" }); return; }
 
-        const ext  = path.extname(req.file.originalname).toLowerCase() || ".jpg";
-        const key  = `thumbnails/thumb-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
         try {
-          const url = await uploadToR2(key, req.file.buffer, req.file.mimetype);
+          const { buffer: imgBuf, mime: imgMime, ext: imgExt } =
+            await processImageBuffer(req.file.buffer, req.file.mimetype);
+          const key = `thumbnails/thumb-${Date.now()}-${Math.round(Math.random() * 1e9)}${imgExt}`;
+          const url = await uploadToR2(key, imgBuf, imgMime);
           res.json({ url, filename: path.basename(key) });
         } catch (e) {
           res.status(500).json({ error: "Upload to storage failed" });

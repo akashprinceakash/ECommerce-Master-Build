@@ -32,7 +32,7 @@ export default function HeritagePage() {
         </section>
 
         {/* ── Founder Story ─────────────────────────────────────────────── */}
-        <section className="max-w-3xl mx-auto px-6 py-24 text-center">
+        <section className="max-w-3xl mx-auto px-6 py-15 text-center">
           <p className="text-[10px] tracking-[0.4em] text-[#B8925A] uppercase mb-6 font-medium">
             The Beginning
           </p>
@@ -77,7 +77,7 @@ export default function HeritagePage() {
                 The Garment
               </p>
               <h2 className="font-serif text-4xl md:text-5xl font-medium text-gray-900 leading-tight mb-6">
-                The Golf Shirt
+                The Golf T-Shirt
               </h2>
               <p className="text-gray-500 text-sm leading-relaxed mb-10">
                 The finesse is in the detail. Breathable, OEKO-TEX certified stretch fabric that
