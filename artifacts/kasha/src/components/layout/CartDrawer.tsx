@@ -232,7 +232,7 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
 
             {isGuest ? (
               <>
-                <Link href="/sign-in" onClick={onClose}>
+                <Link href={`/sign-in?redirect_url=${import.meta.env.BASE_URL.replace(/\/$/, "")}/cart`} onClick={onClose}>
                   <button className="w-full bg-black hover:bg-gray-900 text-white text-[12px] font-bold tracking-[0.15em] py-4 transition-colors flex items-center justify-center gap-2">
                     <LogIn className="w-4 h-4" /> SIGN IN TO CHECKOUT
                   </button>

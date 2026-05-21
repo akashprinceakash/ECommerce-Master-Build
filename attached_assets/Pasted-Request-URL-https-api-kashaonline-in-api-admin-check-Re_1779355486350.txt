@@ -1,0 +1,82 @@
+Request URL
+https://api.kashaonline.in/api/admin/check
+Request Method
+GET
+Status Code
+403 Forbidden
+Remote Address
+216.24.57.7:443
+Referrer Policy
+strict-origin-when-cross-origin
+access-control-allow-credentials
+true
+access-control-allow-origin
+https://www.kashaonline.in
+alt-svc
+h3=":443"; ma=86400
+cf-cache-status
+DYNAMIC
+cf-ray
+9ff286b39dd97f37-MAA
+content-encoding
+br
+content-length
+43
+content-type
+application/json; charset=utf-8
+date
+Thu, 21 May 2026 09:24:06 GMT
+etag
+W/"2c-/Fw+E1wHHG+ZSIg4CwwRMk8qA0k"
+priority
+u=1,i
+rndr-id
+c92837af-5215-4697
+server
+cloudflare
+server-timing
+cfExtPri
+vary
+Origin
+vary
+Accept-Encoding
+x-powered-by
+Express
+x-render-origin-server
+Render
+:authority
+api.kashaonline.in
+:method
+GET
+:path
+/api/admin/check
+:scheme
+https
+accept
+*/*
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-GB,en-US;q=0.9,en;q=0.8,kn;q=0.7,hi;q=0.6
+authorization
+Bearer eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18zRHZXeXVxbmZpZ3RlaUtmMkhzcXZRNzA4ZTQiLCJvaWF0IjoxNzc5MzU1NDQ1LCJ0eXAiOiJKV1QifQ.eyJhenAiOiJodHRwczovL3d3dy5rYXNoYW9ubGluZS5pbiIsImV4cCI6MTc3OTM1NTUwNSwiZnZhIjpbMCwtMV0sImlhdCI6MTc3OTM1NTQ0NSwiaXNzIjoiaHR0cHM6Ly9jbGVyay5rYXNoYW9ubGluZS5pbiIsIm5iZiI6MTc3OTM1NTQzNSwic2lkIjoic2Vzc18zRTFvVFVLSW5YUDFnV3ExTjZTS2tqenNtSjEiLCJzdHMiOiJhY3RpdmUiLCJzdWIiOiJ1c2VyXzNEdzljVE1QTFVIMWJhWHJZVWx0MU5DQ09EZiIsInYiOjJ9.sEr29gsRubbzyO7SbixXGXR9BncWol_VfNuKgMnXBOpTxkSP1FFXC7Dfb7brphsGWgpX8f1qx8nlFZIn2Yi6vUzCqvenhAxWhIJdbpPF5oY2JMEPrXd2hOiCmCw0TspKuoNZRwclwGbHP2qP65QREaaFaI-3dcEdiTWWUR4ruo4wU4Nf0uAg7iXtLRPh_PHLGCXPwOPAjaXI9rLKmfZfzDthubZvB4R3NmkFLchrVpckS0Nz1NcMhvGjjaRn0pDydiCQLn0TEyvgF3DeNuMif_ZiyhuD0ZmaxdufNv9MDR4z7EpiHjAMvQeSdMeOV20niNzU7nhs7o2mfngvGYtvOg
+if-none-match
+W/"10-RyPJjl4Ly2Vkn8X8xYwAjSogWjE"
+origin
+https://www.kashaonline.in
+priority
+u=1, i
+referer
+https://www.kashaonline.in/
+sec-ch-ua
+"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"
+sec-ch-ua-mobile
+?1
+sec-ch-ua-platform
+"Android"
+sec-fetch-dest
+empty
+sec-fetch-mode
+cors
+sec-fetch-site
+same-site

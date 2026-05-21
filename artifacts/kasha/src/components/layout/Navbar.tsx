@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { Show, useClerk, useUser } from "@clerk/react";
+import { useToast } from "@/hooks/use-toast";
 import {
   ShoppingBag,
   X,
@@ -29,6 +30,7 @@ const GOLD_LIGHT = "#D4A96A";
 export function Navbar() {
   const { user } = useUser();
   const { signOut } = useClerk();
+  const { toast } = useToast();
   const { openCart, isCartOpen, closeCart, guestCart, guestCartCount, clearGuestCart } = useCart();
   const queryClient = useQueryClient();
   const prevUserIdRef = useRef<string | null>(null);
@@ -67,6 +69,7 @@ export function Navbar() {
     const prevId = prevUserIdRef.current;
     prevUserIdRef.current = user?.id ?? null;
     if (!user || prevId === user.id || guestCart.length === 0) return;
+    const itemCount = guestCart.length;
     (async () => {
       try {
         const clerk = (window as any).Clerk;
@@ -80,7 +83,12 @@ export function Navbar() {
           });
         }
         clearGuestCart();
-        queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+        await queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+        toast({
+          title: "Cart saved",
+          description: `${itemCount} ${itemCount === 1 ? "item" : "items"} from your session ${itemCount === 1 ? "has" : "have"} been added to your cart.`,
+        });
+        openCart();
       } catch {}
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps

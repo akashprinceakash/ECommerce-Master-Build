@@ -46,24 +46,6 @@ export default function ProductDetailPage() {
     }
   });
 
-  // Auto-add to cart when user signs in with a pending cart item for this product
-  useEffect(() => {
-    if (!user || !product) return;
-    const raw = sessionStorage.getItem("pendingCartAdd");
-    if (!raw) return;
-    try {
-      const pending = JSON.parse(raw) as { productId: number; quantity: number; size: string | null };
-      if (pending.productId !== id || !pending.size) return;
-      sessionStorage.removeItem("pendingCartAdd");
-      setSelectedSize(pending.size);
-      setQuantity(pending.quantity);
-      addToCartMutation.mutate({ data: { productId: id, quantity: pending.quantity, size: pending.size } });
-    } catch {
-      sessionStorage.removeItem("pendingCartAdd");
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, product?.id]);
-
   function handleAddToCart() {
     if (!selectedSize) {
       toast({ title: "Select a size", description: "Please choose a size before adding to cart.", variant: "destructive" });
