@@ -725,7 +725,7 @@ export default function Home() {
                 <div style={{ height: 300, position: "relative", overflow: "hidden" }}>
                   <img src={b.img} alt={b.title} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }} />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(15,18,35,0.4) 0%, transparent 55%)" }} />
-                  <span style={{ position: "absolute", top: 8, left: 10, fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", color: "black", textTransform: "uppercase" }}>
+                  <span style={{ position: "absolute", top: 8, left: 10, fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", color: "black", textTransform: "uppercase",backgroundColor:"whitesmoke", padding: "3px 9px", borderRadius: 3,  }}>
                     {b.from}
                   </span>
                 </div>

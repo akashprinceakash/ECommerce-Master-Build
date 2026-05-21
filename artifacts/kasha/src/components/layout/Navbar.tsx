@@ -109,6 +109,7 @@ export function Navbar() {
             src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Horizontal%20logo%20coloured%20(350%20by%2075)%20(1).svg"
             alt="KA.SHA"
             className="h-10 w-auto object-contain"
+            style={{ filter: scrolled ? "brightness(1)" : "brightness(1.1)" }}
           />
         </Link>
 
