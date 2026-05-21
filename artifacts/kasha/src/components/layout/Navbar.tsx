@@ -76,7 +76,7 @@ export function Navbar() {
         const token = clerk?.session ? await clerk.session.getToken() : null;
         if (!token) return;
         for (const item of guestCart) {
-          await fetch(`${getApiUrl()}/api/cart`, {
+          await fetch(`${getApiUrl()}/api/cart/items`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
             body: JSON.stringify({ productId: item.productId, quantity: item.quantity, size: item.size }),
