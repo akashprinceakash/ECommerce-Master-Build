@@ -142,14 +142,14 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
       cat:   "T-Shirts",
       title: "Flair",
       desc:  "Statement prints & limited-run designs",
-      tags:  ["Limited Prints", "Seasonal"],
+      tags:  ["Limited Prints"],
     },
     {
       href:  "/products?gender=women&type=skirts",
       img:   "/images/shop/women_skorts.png",
       cat:   "Bottoms",
       title: "Pro Tour Skort",
-      desc:  "Technical stretch · Tailored fit · Active skirt",
+      desc:  "· Tailored fit · Active skirt",
       tags:  ["3 Colours", "Skirt", "Skort"],
     },
     ...(SHOW_CUSTOMIZATION ? [{
@@ -226,7 +226,7 @@ const BULK = [
     img:   "/images/bulk/clubs.png",
     from:  "Social clubs",
     num:   "03",
-    title: "SOCIAL GOLF CLUBS",
+    title: "Social Golf Clubs",
     desc:  "Give the group a shared identity without anyone feeling like they settled.",
     tags:  ["Mixed Sizes", "From 12"],
   },
@@ -453,7 +453,7 @@ export default function Home() {
                   {/* Secondary outline CTA */}
                   {s.outline && (
                     <Link
-                      href={s.outline.href}
+                      href="#"
                       style={{
                         background:    "rgba(255,255,255,0.08)",
                         backdropFilter:"blur(8px)",
@@ -548,7 +548,7 @@ export default function Home() {
                     onClick={() => setTab(t as "men" | "women" | "kids")}
                     style={{
                       fontFamily:    "'Josefin Sans', sans-serif",
-                      fontSize:      13,
+                      fontSize:      15,
                       fontWeight:    500,
                       letterSpacing: "0.18em",
                       textTransform: "uppercase",
@@ -564,7 +564,7 @@ export default function Home() {
                       transition:    "color 0.2s",
                     }}
                   >
-                    {t === "men" ? "Men's" : t === "women" ? "Women's" : "Kids'"}
+                    {t === "men" ? "Men" : t === "women" ? "Women" : "Kids"}
                   </button>
                 );
               })}
