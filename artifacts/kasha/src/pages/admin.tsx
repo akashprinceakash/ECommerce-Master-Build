@@ -534,6 +534,19 @@ export default function AdminPage() {
     finally { setUploadingThumb(false); if (e.target) e.target.value = ""; }
   };
 
+  function safeParseImages(raw: string | null | undefined): string[] {
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.filter((u): u is string => typeof u === "string");
+      if (typeof parsed === "string" && parsed.startsWith("http")) return [parsed];
+      return [];
+    } catch {
+      if (raw.startsWith("http")) return [raw];
+      return [];
+    }
+  }
+
   const handleExtraImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -551,7 +564,7 @@ export default function AdminPage() {
         urls.push(url);
       }
       setForm(f => {
-        const existing: string[] = f.additionalImages ? JSON.parse(f.additionalImages) : [];
+        const existing = safeParseImages(f.additionalImages);
         return { ...f, additionalImages: JSON.stringify([...existing, ...urls]) };
       });
       toast({ title: `${urls.length} image${urls.length > 1 ? "s" : ""} uploaded` });
@@ -561,7 +574,7 @@ export default function AdminPage() {
 
   const removeExtraImage = (idx: number) => {
     setForm(f => {
-      const imgs: string[] = f.additionalImages ? JSON.parse(f.additionalImages) : [];
+      const imgs = safeParseImages(f.additionalImages);
       imgs.splice(idx, 1);
       return { ...f, additionalImages: imgs.length ? JSON.stringify(imgs) : "" };
     });
@@ -766,8 +779,7 @@ export default function AdminPage() {
                       <input type="file" accept="image/*" multiple onChange={handleExtraImageUpload} className="hidden" disabled={uploadingExtra} />
                     </label>
                     {(() => {
-                      let imgs: string[] = [];
-                      try { imgs = form.additionalImages ? JSON.parse(form.additionalImages) : []; } catch { imgs = []; }
+                      const imgs = safeParseImages(form.additionalImages);
                       return imgs.length > 0 ? (
                         <div className="flex flex-wrap gap-2 mt-1">
                           {imgs.map((url, idx) => (

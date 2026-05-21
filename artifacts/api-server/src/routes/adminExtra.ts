@@ -327,6 +327,34 @@ router.get("/admin/users", requireAuth, async (req, res): Promise<void> => {
   res.json(result);
 });
 
+router.post("/admin/orders/:id/refund", requireAuth, async (req, res): Promise<void> => {
+  if (!(await requireAdmin(req, res))) return;
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid order ID" }); return; }
+
+  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
+  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+  if (!order.paymentId) { res.status(400).json({ error: "No Razorpay payment ID on record for this order" }); return; }
+
+  const keyId = process.env["RAZORPAY_KEY_ID"];
+  const keySecret = process.env["RAZORPAY_KEY_SECRET"];
+  if (!keyId || !keySecret) { res.status(500).json({ error: "Razorpay credentials not configured" }); return; }
+
+  const basicAuth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+  const rzRes = await fetch(`https://api.razorpay.com/v1/payments/${order.paymentId}/refund`, {
+    method: "POST",
+    headers: { "Authorization": `Basic ${basicAuth}`, "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  const rzData: any = await rzRes.json();
+  if (!rzRes.ok) {
+    res.status(rzRes.status).json({ error: rzData?.error?.description ?? "Refund failed" });
+    return;
+  }
+  await db.update(ordersTable).set({ status: "cancelled" }).where(eq(ordersTable.id, id));
+  res.json({ refundId: rzData.id, amount: rzData.amount, status: rzData.status });
+});
+
 router.patch("/admin/users/:id/admin", requireAuth, async (req, res): Promise<void> => {
   const adminId = await requireAdmin(req, res);
   if (!adminId) return;

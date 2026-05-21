@@ -4,7 +4,7 @@ import { formatPrice } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { getAssetUrl } from "@/lib/api";
-import { Loader2, ChevronDown, ChevronRight, MapPin, CreditCard, Package, Eye, Download, X, Truck, RefreshCw } from "lucide-react";
+import { Loader2, ChevronDown, ChevronRight, MapPin, CreditCard, Package, Eye, Download, X, Truck, RefreshCw, RotateCcw } from "lucide-react";
 import * as fabric from "fabric";
 
 interface AdminOrder {
@@ -144,6 +144,24 @@ export function AdminOrders() {
     },
     onError: (e: any) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
   });
+
+  const [refunding, setRefunding] = useState<number | null>(null);
+  const issueRefund = async (order: AdminOrder) => {
+    if (!confirm(`Issue a full refund of ${formatPrice(order.totalInPaise)} to ${order.customerName}? This cannot be undone.`)) return;
+    setRefunding(order.id);
+    try {
+      const result = await apiFetch(`/api/admin/orders/${order.id}/refund`, { method: "POST" });
+      toast({
+        title: "Refund issued",
+        description: `Refund ID: ${result.refundId} · Amount: ${formatPrice(result.amount)} · Status: ${result.status}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+    } catch (e: any) {
+      toast({ title: "Refund failed", description: e.message, variant: "destructive" });
+    } finally {
+      setRefunding(null);
+    }
+  };
 
   const [syncing, setSyncing] = useState<number | null>(null);
   const syncShiprocket = async (orderId: number) => {
@@ -287,7 +305,7 @@ export function AdminOrders() {
                     )}
                   </div>
 
-                  {/* Status update */}
+                  {/* Status update + refund */}
                   <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50">
                     <span className="text-xs uppercase tracking-wider text-muted-foreground mr-1">Update status:</span>
                     {STATUSES.map(s => (
@@ -304,6 +322,16 @@ export function AdminOrders() {
                         {s}
                       </button>
                     ))}
+                    {o.paymentId && o.status !== "cancelled" && (
+                      <button
+                        disabled={refunding === o.id}
+                        onClick={() => issueRefund(o)}
+                        className="ml-auto flex items-center gap-1 text-[10px] uppercase tracking-wider px-3 py-1.5 border border-rose-400 text-rose-600 hover:bg-rose-50 disabled:opacity-50 transition"
+                      >
+                        {refunding === o.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                        Issue Refund
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
