@@ -21,6 +21,21 @@ const PATTERN_CATEGORIES = ["pattern"];
 const PRINT_CATEGORIES = ["t-shirt", "polo", "fabric-tshirt"];
 const PRINT_NAME_HINTS = ["print", "flair", "seasonal", "limited"];
 
+const GENDER_SORT: Record<string, number> = { men: 0, unisex: 1, women: 2, kids: 3 };
+function typeSort(cat: string): number {
+  const c = cat.toLowerCase();
+  if (TSHIRT_CATEGORIES.includes(c)) return 0;
+  if ([...TROUSER_CATEGORIES, ...SHORTS_CATEGORIES, ...SKORT_CATEGORIES].includes(c)) return 1;
+  return 2;
+}
+function subTypeSort(sub: string): number {
+  const s = (sub || "").toLowerCase();
+  if (s === "solid") return 0;
+  if (s === "pattern") return 1;
+  if (s === "printed" || s === "print") return 2;
+  return 3;
+}
+
 const PRODUCT_GENDER: Record<number, "men" | "women" | "unisex"> = {
   1: "men",
   2: "unisex",
@@ -235,6 +250,17 @@ export default function ProductsPage() {
         });
       }
     }
+
+    // Sort: gender (men → women → kids), then type (tshirts → bottoms), then subType
+    list = [...list].sort((a, b) => {
+      const gA = GENDER_SORT[(a.gender || "unisex").toLowerCase()] ?? 99;
+      const gB = GENDER_SORT[(b.gender || "unisex").toLowerCase()] ?? 99;
+      if (gA !== gB) return gA - gB;
+      const tA = typeSort(a.category || "");
+      const tB = typeSort(b.category || "");
+      if (tA !== tB) return tA - tB;
+      return subTypeSort(a.subType || "") - subTypeSort(b.subType || "");
+    });
 
     return list;
   }, [rawProducts, type, gender, styleFilter]);
@@ -455,38 +481,7 @@ export default function ProductsPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.35, delay: Math.min(i, 8) * 0.04 }}
                     >
-                      <Link href={`/products/${product.id}`} className="group block">
-                        <div
-                          className="relative aspect-[3/4] overflow-hidden mb-3 transition-all"
-                          style={{ background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)" }}
-                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.3)")}
-                          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.08)")}
-                        >
-                          {imgSrc ? (
-                            <img
-                              src={imgSrc}
-                              alt={product.name}
-                              loading="lazy"
-                              className="w-full h-full object-contain object-center transition-transform duration-700 group-hover:scale-105"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <span style={{ color: "rgba(184,146,90,0.4)", fontFamily: "'Cormorant Garamond', serif", fontSize: 28, letterSpacing: "0.3em" }}>KS</span>
-                            </div>
-                          )}
-                          {!product.available && (
-                            <div className="absolute top-2 right-2 text-neutral-900 text-[8px] uppercase px-2 py-0.5" style={{ background: "#B8925A", fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.2em" }}>
-                              Sold Out
-                            </div>
-                          )}
-                        </div>
-                        <h3 className="text-neutral-900 mb-1 group-hover:!text-[#B8925A] transition-colors" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontWeight: 500 }}>
-                          {product.name}
-                        </h3>
-                        <p style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", color: "#B8925A" }}>
-                          {formatPrice(product.priceInPaise)}
-                        </p>
-                      </Link>
+                      <ProductCard product={product} imgSrc={imgSrc} />
                     </motion.div>
                   );
                 })}
@@ -496,6 +491,76 @@ export default function ProductsPage() {
         </div>
       </div>
     </Layout>
+  );
+}
+
+interface ProductCardProps {
+  product: {
+    id: number;
+    name: string;
+    priceInPaise: number;
+    available: boolean;
+    thumbnailUrl?: string | null;
+    additionalImages?: string | null;
+  };
+  imgSrc?: string;
+}
+
+function ProductCard({ product, imgSrc }: ProductCardProps) {
+  const [hovImg, setHovImg] = useState<string | null>(null);
+
+  function parseSecondImg(): string | null {
+    if (!product.additionalImages) return null;
+    try {
+      const arr = JSON.parse(product.additionalImages) as string[];
+      return arr.length > 0 ? getAssetUrl(arr[0]) || arr[0] : null;
+    } catch {
+      return null;
+    }
+  }
+
+  const secondImg = parseSecondImg();
+  const displayImg = hovImg ?? imgSrc;
+
+  return (
+    <Link href={`/products/${product.id}`} className="group block">
+      <div
+        className="relative aspect-[3/4] overflow-hidden mb-3 transition-all"
+        style={{ background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.08)" }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.3)";
+          if (secondImg) setHovImg(secondImg);
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.08)";
+          setHovImg(null);
+        }}
+      >
+        {displayImg ? (
+          <img
+            src={displayImg}
+            alt={product.name}
+            loading="lazy"
+            className="w-full h-full object-contain object-center transition-opacity duration-300"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span style={{ color: "rgba(184,146,90,0.4)", fontFamily: "'Cormorant Garamond', serif", fontSize: 28, letterSpacing: "0.3em" }}>KS</span>
+          </div>
+        )}
+        {!product.available && (
+          <div className="absolute top-2 right-2 text-neutral-900 text-[8px] uppercase px-2 py-0.5" style={{ background: "#B8925A", fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.2em" }}>
+            Sold Out
+          </div>
+        )}
+      </div>
+      <h3 className="text-neutral-900 mb-1 group-hover:!text-[#B8925A] transition-colors" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontWeight: 500 }}>
+        {product.name}
+      </h3>
+      <p style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", color: "#B8925A" }}>
+        {formatPrice(product.priceInPaise)}
+      </p>
+    </Link>
   );
 }
 

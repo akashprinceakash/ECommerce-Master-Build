@@ -51,7 +51,7 @@ const SLIDES = [
     img:     "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Slide_images/KaSha%20Hero%20banner%202%20Mens%20t%20shirts.png",
     eyebrow: "Ka·Sha Signature · Men's T-Shirts",
     title:   (<>Gentlemen golfers.<br />When precision meets panache.</>),
-    sub:     "GT001–GT0032 · Signature Collection",
+    sub:     "· Signature Collection",
     primary: { label: "Men's Store", href: "/products?gender=men&type=tshirts" },
     outline: { label: "View Collection", href: "/products?gender=men" },
   },
@@ -107,7 +107,7 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
       cat:   "T-Shirts",
       title: "Flair",
       desc:  "Statement prints & limited-run designs",
-      tags:  ["Limited Prints", "Seasonal"],
+      tags:  ["Limited Prints"],
     },
     {
       href:  "/products?gender=men&type=bottoms",
@@ -115,7 +115,7 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
       cat:   "Bottoms",
       title: "Pro Tour Trouser",
       desc:  "Glove dock · Tee holder · 4-way stretch",
-      tags:  ["4 Colours", "Technical"],
+      tags:  ["4 Colours"],
     },
     ...(SHOW_CUSTOMIZATION ? [{
       href:       "/products/1/customize",
@@ -733,7 +733,7 @@ export default function Home() {
                 <div style={{ padding: "13px 16px 16px" }}>
                   <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.2em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{b.num}</div>
                   <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 500, color: "#1a1f2e", marginBottom: 6 }}>{b.title}</div>
-                  <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 14, color: "rgba(20,28,60,0.72)", letterSpacing: "0.04em", lineHeight: 1.7, marginBottom: 10 }}>{b.desc}</div>
+                  <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 16, color: "rgba(20,28,60,0.72)", letterSpacing: "0.04em", lineHeight: 1.7, marginBottom: 10 }}>{b.desc}</div>
                   <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                     {b.tags.map((t) => (
                       <span key={t} style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, padding: "3px 8px", background: BG_SECTION, color: "rgba(20,28,60,0.68)", borderRadius: 3, letterSpacing: "0.08em", textTransform: "uppercase", border: "0.5px solid rgba(30,40,80,0.12)" }}>{t}</span>

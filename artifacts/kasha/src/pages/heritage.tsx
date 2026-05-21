@@ -39,7 +39,7 @@ export default function HeritagePage() {
           <h2 className="font-serif text-3xl md:text-4xl font-medium text-gray-900 leading-snug mb-10">
             Made by a golfer.<br />Backed by generations in textiles.
           </h2>
-          <div className="space-y-6 text-gray-600 text-[15px] leading-relaxed text-left md:text-center">
+          <div className="space-y-3 text-gray-600 text-[15px] leading-relaxed text-left md:text-center">
             <p>
               Ka.Sha was born of one man's passion for golf. After 30 years on the course,
               our founder Pranay Somaia knew exactly what golf wear needed to be — easy to move in,
@@ -116,10 +116,10 @@ export default function HeritagePage() {
 
               <div className="mt-12">
                 <Link
-                  href="/products?category=tshirts"
+                  href="/products?gender=men&type=tshirts"
                   className="inline-block border border-[#B8925A] text-[#B8925A] text-[11px] tracking-[0.25em] uppercase px-8 py-3 hover:bg-[#B8925A] hover:text-white transition-colors duration-300"
                 >
-                  Shop Shirts
+                  Shop T-Shirts
                 </Link>
               </div>
             </div>
@@ -194,10 +194,10 @@ export default function HeritagePage() {
 
                 <div className="mt-12">
                   <Link
-                    href="/products?category=bottoms"
+                    href="/products?gender=men&type=bottoms"
                     className="inline-block border border-[#B8925A] text-[#B8925A] text-[11px] tracking-[0.25em] uppercase px-8 py-3 hover:bg-[#B8925A] hover:text-white transition-colors duration-300"
                   >
-                    Shop Trousers
+                    Shop Bottoms
                   </Link>
                 </div>
               </div>

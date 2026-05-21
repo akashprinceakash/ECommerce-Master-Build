@@ -1,10 +1,12 @@
-import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, Lock } from "lucide-react";
+import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, Lock, LogIn } from "lucide-react";
 import { Link } from "wouter";
 import { formatPrice } from "@/lib/format";
 import { useRemoveCartItem, useUpdateCartItem, getGetCartQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Cart } from "@workspace/api-client-react";
 import { getAssetUrl } from "@/lib/api";
+import { useUser } from "@clerk/react";
+import { useCart } from "@/contexts/CartContext";
 
 interface CartDrawerProps {
   open: boolean;
@@ -16,6 +18,8 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
   const queryClient = useQueryClient();
   const removeCartItem = useRemoveCartItem();
   const updateCartItem = useUpdateCartItem();
+  const { user } = useUser();
+  const { guestCart, removeFromGuestCart, updateGuestCartQty, guestCartTotal, guestCartCount } = useCart();
 
   const handleUpdateQuantity = async (itemId: number, newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -28,7 +32,12 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
     queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
   };
 
-  const hasItems = cart && cart.items && cart.items.length > 0;
+  const isGuest = !user;
+  const serverHasItems = !!(cart && cart.items && cart.items.length > 0);
+  const guestHasItems = guestCart.length > 0;
+  const hasItems = isGuest ? guestHasItems : serverHasItems;
+  const itemCount = isGuest ? guestCartCount : (cart?.itemCount || 0);
+  const totalInPaise = isGuest ? guestCartTotal : (cart?.totalInPaise || 0);
 
   return (
     <>
@@ -47,7 +56,7 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
           <div className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5 text-black" />
             <h2 className="text-[13px] font-bold tracking-[0.1em] text-black">
-              CART ({cart?.itemCount || 0} {cart?.itemCount === 1 ? "ITEM" : "ITEMS"})
+              CART ({itemCount} {itemCount === 1 ? "ITEM" : "ITEMS"})
             </h2>
           </div>
           <button
@@ -73,11 +82,71 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
                 </button>
               </Link>
             </div>
+          ) : isGuest ? (
+            /* Guest cart items */
+            <div className="px-5 py-4 space-y-5">
+              {guestCart.map((item) => (
+                <div key={`${item.productId}-${item.size}`} className="flex gap-3 border-b border-gray-100 pb-5">
+                  <div className="w-20 h-24 bg-gray-100 flex-shrink-0 overflow-hidden">
+                    {item.thumbnailUrl ? (
+                      <img
+                        src={getAssetUrl(item.thumbnailUrl)}
+                        alt={item.productName}
+                        className="w-full h-full object-contain object-center"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">
+                        KA.SHA
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start gap-2">
+                        <Link href={`/products/${item.productId}`} onClick={onClose}>
+                          <p className="text-[13px] font-semibold text-black leading-tight hover:underline">
+                            {item.productName}
+                          </p>
+                        </Link>
+                        <p className="text-[13px] font-semibold text-black whitespace-nowrap">
+                          {formatPrice(item.priceInPaise * item.quantity)}
+                        </p>
+                      </div>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Size: {item.size}</p>
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="flex items-center border border-gray-300">
+                        <button
+                          className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-black transition-colors disabled:opacity-40"
+                          onClick={() => updateGuestCartQty(item.productId, item.size, item.quantity - 1)}
+                          disabled={item.quantity <= 1}
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="w-8 text-center text-[12px] font-medium">{item.quantity}</span>
+                        <button
+                          className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-black transition-colors"
+                          onClick={() => updateGuestCartQty(item.productId, item.size, item.quantity + 1)}
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <button
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        onClick={() => removeFromGuestCart(item.productId, item.size)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
+            /* Server cart items */
             <div className="px-5 py-4 space-y-5">
               {cart?.items.map((item) => (
                 <div key={item.id} className="flex gap-3 border-b border-gray-100 pb-5">
-                  {/* Image — prefer custom preview, then product thumbnail */}
                   <div className="w-20 h-24 bg-gray-100 flex-shrink-0 overflow-hidden relative">
                     {item.customization?.previewImageUrl ? (
                       <>
@@ -92,7 +161,7 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
                       <img
                         src={getAssetUrl(item.product.thumbnailUrl)}
                         alt={item.product.name}
-                        className="w-full h-full object-cover object-center"
+                        className="w-full h-full object-contain object-center"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">
@@ -100,8 +169,6 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
                       </div>
                     )}
                   </div>
-
-                  {/* Info */}
                   <div className="flex-1 flex flex-col justify-between">
                     <div>
                       <div className="flex justify-between items-start gap-2">
@@ -119,8 +186,6 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
                         <p className="text-[11px] text-gray-500">Custom: {item.customization.name}</p>
                       )}
                     </div>
-
-                    {/* Quantity + Remove */}
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center border border-gray-300">
                         <button
@@ -150,8 +215,6 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
                   </div>
                 </div>
               ))}
-
-              {/* Promo code */}
               <button className="text-[11px] font-semibold tracking-[0.06em] text-gray-500 hover:text-black transition-colors underline underline-offset-2">
                 + Enter a promo code
               </button>
@@ -164,20 +227,36 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
           <div className="border-t border-gray-200 px-5 py-5 space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-[12px] font-bold tracking-[0.08em] text-gray-700">ESTIMATED TOTAL</span>
-              <span className="text-[16px] font-bold text-black">{formatPrice(cart?.totalInPaise || 0)}</span>
+              <span className="text-[16px] font-bold text-black">{formatPrice(totalInPaise)}</span>
             </div>
 
-            <Link href="/checkout" onClick={onClose}>
-              <button className="w-full bg-red-600 hover:bg-red-700 text-white text-[12px] font-bold tracking-[0.15em] py-4 transition-colors flex items-center justify-center gap-2">
-                CHECKOUT <ArrowRight className="w-4 h-4" />
-              </button>
-            </Link>
-
-            <Link href="/cart" onClick={onClose}>
-              <button className="w-full border border-black text-black text-[11px] font-bold tracking-[0.12em] py-3 hover:bg-gray-50 transition-colors">
-                VIEW CART
-              </button>
-            </Link>
+            {isGuest ? (
+              <>
+                <Link href="/sign-in" onClick={onClose}>
+                  <button className="w-full bg-black hover:bg-gray-900 text-white text-[12px] font-bold tracking-[0.15em] py-4 transition-colors flex items-center justify-center gap-2">
+                    <LogIn className="w-4 h-4" /> SIGN IN TO CHECKOUT
+                  </button>
+                </Link>
+                <Link href="/products" onClick={onClose}>
+                  <button className="w-full border border-black text-black text-[11px] font-bold tracking-[0.12em] py-3 hover:bg-gray-50 transition-colors">
+                    CONTINUE SHOPPING
+                  </button>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link href="/checkout" onClick={onClose}>
+                  <button className="w-full bg-red-600 hover:bg-red-700 text-white text-[12px] font-bold tracking-[0.15em] py-4 transition-colors flex items-center justify-center gap-2">
+                    CHECKOUT <ArrowRight className="w-4 h-4" />
+                  </button>
+                </Link>
+                <Link href="/cart" onClick={onClose}>
+                  <button className="w-full border border-black text-black text-[11px] font-bold tracking-[0.12em] py-3 hover:bg-gray-50 transition-colors">
+                    VIEW CART
+                  </button>
+                </Link>
+              </>
+            )}
 
             <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-400 font-medium">
               <Lock className="w-3 h-3" /> SECURE CHECKOUT

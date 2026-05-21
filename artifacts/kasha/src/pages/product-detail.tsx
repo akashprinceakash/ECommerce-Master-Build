@@ -19,7 +19,7 @@ export default function ProductDetailPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { openCart } = useCart();
+  const { openCart, addToGuestCart } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
@@ -65,14 +65,21 @@ export default function ProductDetailPage() {
   }, [user?.id, product?.id]);
 
   function handleAddToCart() {
-    if (!user) {
-      sessionStorage.setItem("pendingCartAdd", JSON.stringify({ productId: id, quantity, size: selectedSize }));
-      toast({ title: "Sign in to continue", description: "Your selection has been saved. Please sign in to add to cart." });
-      navigate("/sign-in");
-      return;
-    }
     if (!selectedSize) {
       toast({ title: "Select a size", description: "Please choose a size before adding to cart.", variant: "destructive" });
+      return;
+    }
+    if (!user) {
+      addToGuestCart({
+        productId: id,
+        productName: product?.name ?? "",
+        thumbnailUrl: product?.thumbnailUrl ?? undefined,
+        priceInPaise: product?.priceInPaise ?? 0,
+        quantity,
+        size: selectedSize,
+      });
+      toast({ title: "Added to cart", description: `${product?.name} added. Sign in at checkout to complete your order.` });
+      openCart();
       return;
     }
     addToCartMutation.mutate({ data: { productId: id, quantity, size: selectedSize } });
@@ -156,15 +163,15 @@ export default function ProductDetailPage() {
 
           {/* Product Image */}
           <div className="sticky top-24">
-            <div className="aspect-[4/5] w-full bg-gray-100 overflow-hidden relative">
+            <div className="aspect-[3/4] w-full bg-white overflow-hidden relative" style={{ border: "1px solid rgba(0,0,0,0.06)" }}>
               {!imgLoaded && (
-                <div className="absolute inset-0 bg-gray-100 animate-pulse" />
+                <div className="absolute inset-0 bg-gray-50 animate-pulse" />
               )}
               <img
                 src={displayImage}
                 alt={product.name}
                 onLoad={() => setImgLoaded(true)}
-                className={`w-full h-full object-cover object-center transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+                className={`w-full h-full object-contain object-center transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
               />
               {!product.available && (
                 <div className="absolute top-4 left-4 bg-black text-white text-[10px] font-bold tracking-[0.15em] px-3 py-1">
@@ -217,7 +224,10 @@ export default function ProductDetailPage() {
             <div>
               <div className="flex justify-between items-center mb-3">
                 <span className="text-[11px] font-bold tracking-[0.15em] text-black">SELECT SIZE</span>
-                <button className="text-[11px] text-gray-400 hover:text-black underline transition-colors tracking-wider">
+                <button
+                  className="text-[11px] text-gray-400 hover:text-black underline transition-colors tracking-wider"
+                  onClick={() => setOpenAccordion(openAccordion === "sizing" ? null : "sizing")}
+                >
                   SIZE GUIDE
                 </button>
               </div>

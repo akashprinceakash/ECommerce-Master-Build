@@ -152,25 +152,25 @@ export function Footer() {
             <div style={COL_TITLE}>Services</div>
             <ul className="flex flex-col gap-2.5">
               <li>
-                <FooterLink href="/products/1/customize">
+                <FooterLink href="#">
                   Custom Studio
                 </FooterLink>
               </li>
               <li>
-                <FooterLink href="/products/1/customize">
+                <FooterLink href="#">
                   Bulk Orders
                 </FooterLink>
               </li>
               <li>
-                <FooterLink href="/products/1/customize">Corporate</FooterLink>
+                <FooterLink href="#">Corporate</FooterLink>
               </li>
               <li>
-                <FooterLink href="/products/1/customize">
+                <FooterLink href="#">
                   Tournaments
                 </FooterLink>
               </li>
               <li>
-                <FooterLink href="/products/1/customize">
+                <FooterLink href="#">
                   Golf Academies
                 </FooterLink>
               </li>

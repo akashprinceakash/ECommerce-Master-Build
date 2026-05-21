@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { Show, useClerk, useUser } from "@clerk/react";
 import {
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { getApiUrl } from "@/lib/api";
 import { useGetCart, getGetCartQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,7 +29,9 @@ const GOLD_LIGHT = "#D4A96A";
 export function Navbar() {
   const { user } = useUser();
   const { signOut } = useClerk();
-  const { openCart, isCartOpen, closeCart } = useCart();
+  const { openCart, isCartOpen, closeCart, guestCart, guestCartCount, clearGuestCart } = useCart();
+  const queryClient = useQueryClient();
+  const prevUserIdRef = useRef<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -59,15 +62,40 @@ export function Navbar() {
     })();
   }, [user]);
 
+  // Sync guest cart to server when user signs in
+  useEffect(() => {
+    const prevId = prevUserIdRef.current;
+    prevUserIdRef.current = user?.id ?? null;
+    if (!user || prevId === user.id || guestCart.length === 0) return;
+    (async () => {
+      try {
+        const clerk = (window as any).Clerk;
+        const token = clerk?.session ? await clerk.session.getToken() : null;
+        if (!token) return;
+        for (const item of guestCart) {
+          await fetch(`${getApiUrl()}/api/cart`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ productId: item.productId, quantity: item.quantity, size: item.size }),
+          });
+        }
+        clearGuestCart();
+        queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+      } catch {}
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   const { data: cart } = useGetCart({
     query: { enabled: !!user, queryKey: getGetCartQueryKey() },
   });
   const cartItemCount = cart?.itemCount || 0;
+  const totalCartCount = user ? cartItemCount : guestCartCount;
 
   const links = [
-    { label: "Men's", href: "/products?gender=men" },
-    { label: "Women's", href: "/products?gender=women" },
-    ...(SHOW_KIDS ? [{ label: "Kids'", href: "/products?gender=kids" }] : []),
+    { label: "Men", href: "/products?gender=men" },
+    { label: "Women", href: "/products?gender=women" },
+    ...(SHOW_KIDS ? [{ label: "Kids", href: "/products?gender=kids" }] : []),
     { label: "About Us", href: "/heritage" },
   ];
 
@@ -108,8 +136,7 @@ export function Navbar() {
           <img
             src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Horizontal%20logo%20coloured%20(350%20by%2075)%20(1).svg"
             alt="KA.SHA"
-            className="h-10 w-auto object-contain"
-            style={{ filter: scrolled ? "brightness(1)" : "brightness(1.1)" }}
+            style={{ width: 140, height: "auto", objectFit: "contain", filter: scrolled ? "brightness(1)" : "brightness(1.1)" }}
           />
         </Link>
 
@@ -291,12 +318,12 @@ export function Navbar() {
             onClick={openCart}
           >
             <ShoppingBag className="w-4 h-4" />
-            {cartItemCount > 0 && (
+            {totalCartCount > 0 && (
               <span
                 className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white"
                 style={{ background: GOLD }}
               >
-                {cartItemCount}
+                {totalCartCount}
               </span>
             )}
           </button>
