@@ -79,6 +79,7 @@ const SLIDE_DURATION = 6000;
 type Card = {
   href: string;
   img?: string;
+  seoAlt?: string;
   badge?: string;
   cat: string;
   title: string;
@@ -94,28 +95,31 @@ type Card = {
 const PANELS: Record<"men" | "women" | "kids", Card[]> = {
   men: [
     {
-      href:  "/products?gender=men&type=tshirts&style=patterns",
-      img:   "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Shop_by_Category_images/Home_men_Ka%20SHa%20Signature.png",
-      cat:   "T-Shirts",
-      title: "Ka·Sha Signature",
-      desc:  "Solids · 8 colours · 8 patterns · prints",
-      tags:  ["Solid", "8 Patterns", "Prints"],
+      href:   "/products?gender=men&type=tshirts&style=patterns",
+      img:    "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Shop_by_Category_images/Home_men_Ka%20SHa%20Signature.png",
+      seoAlt: "Luxury golf apparel for men with performance stretch fabric",
+      cat:    "T-Shirts",
+      title:  "Ka·Sha Signature",
+      desc:   "Solids · 8 colours · 8 patterns · prints",
+      tags:   ["Solid", "8 Patterns", "Prints"],
     },
     {
-      href:  "/products?gender=men&type=tshirts&style=prints",
-      img:   "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Shop_by_Category_images/Home_Men_Flair.png",
-      cat:   "T-Shirts",
-      title: "Flair",
-      desc:  "Statement prints & limited-run designs",
-      tags:  ["Limited Prints"],
+      href:   "/products?gender=men&type=tshirts&style=prints",
+      img:    "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Shop_by_Category_images/Home_Men_Flair.png",
+      seoAlt: "Designer printed golf polo for men with premium athletic fit",
+      cat:    "T-Shirts",
+      title:  "Flair",
+      desc:   "Statement prints & limited-run designs",
+      tags:   ["Limited Prints"],
     },
     {
-      href:  "/products?gender=men&type=bottoms",
-      img:   "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Shop_by_Category_images/Home_Men_Bottoms.png",
-      cat:   "Bottoms",
-      title: "Pro Tour Trouser",
-      desc:  "Glove dock · Tee holder · 4-way stretch",
-      tags:  ["4 Colours"],
+      href:   "/products?gender=men&type=bottoms",
+      img:    "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Shop_by_Category_images/Home_Men_Bottoms.png",
+      seoAlt: "Premium stretch golf trousers for men with performance fit by Ka.Sha",
+      cat:    "Bottoms",
+      title:  "Pro Tour Trouser",
+      desc:   "Glove dock · Tee holder · 4-way stretch",
+      tags:   ["4 Colours"],
     },
     ...(SHOW_CUSTOMIZATION ? [{
       href:       "/products/1/customize",
@@ -129,28 +133,31 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
   ],
   women: [
     {
-      href:  "/products?gender=women&type=tshirts&style=patterns",
-      img:   "/images/shop/women_kasha.png",
-      cat:   "T-Shirts",
-      title: "Ka·Sha Signature",
-      desc:  "Solids · 8 colours · 8 patterns · prints",
-      tags:  ["Solid", "8 Patterns", "Prints"],
+      href:   "/products?gender=women&type=tshirts&style=patterns",
+      img:    "/images/shop/women_kasha.png",
+      seoAlt: "Women's stylish golf wear and luxury performance apparel by Ka.Sha",
+      cat:    "T-Shirts",
+      title:  "Ka·Sha Signature",
+      desc:   "Solids · 8 colours · 8 patterns · prints",
+      tags:   ["Solid", "8 Patterns", "Prints"],
     },
     {
-      href:  "/products?gender=women&type=tshirts&style=prints",
-      img:   "/images/shop/women_flair.png",
-      cat:   "T-Shirts",
-      title: "Flair",
-      desc:  "Statement prints & limited-run designs",
-      tags:  ["Limited Prints"],
+      href:   "/products?gender=women&type=tshirts&style=prints",
+      img:    "/images/shop/women_flair.png",
+      seoAlt: "Designer printed golf polo for women with premium athletic fit",
+      cat:    "T-Shirts",
+      title:  "Flair",
+      desc:   "Statement prints & limited-run designs",
+      tags:   ["Limited Prints"],
     },
     {
-      href:  "/products?gender=women&type=skirts",
-      img:   "/images/shop/women_skorts.png",
-      cat:   "Bottoms",
-      title: "Pro Tour Skort",
-      desc:  "· Tailored fit · Active skirt",
-      tags:  ["3 Colours", "Skirt", "Skort"],
+      href:   "/products?gender=women&type=skirts",
+      img:    "/images/shop/women_skorts.png",
+      seoAlt: "Women's luxury golf skort with performance stretch fabric",
+      cat:    "Bottoms",
+      title:  "Pro Tour Skort",
+      desc:   "· Tailored fit · Active skirt",
+      tags:   ["3 Colours", "Skirt", "Skort"],
     },
     ...(SHOW_CUSTOMIZATION ? [{
       href:       "/products/1/customize",
@@ -164,30 +171,33 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
   ],
   kids: [
     {
-      href:  "/products?gender=kids&type=tshirts&style=patterns",
-      img:   "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80",
-      badge: "Boys",
-      cat:   "T-Shirts",
-      title: "Boys' T-Shirts",
-      desc:  "Solids · Patterns · XS–XL Junior",
-      tags:  ["Solid", "Patterns"],
+      href:   "/products?gender=kids&type=tshirts&style=patterns",
+      img:    "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80",
+      seoAlt: "Kids premium golf apparel collection by Ka.Sha",
+      badge:  "Boys",
+      cat:    "T-Shirts",
+      title:  "Boys' T-Shirts",
+      desc:   "Solids · Patterns · XS–XL Junior",
+      tags:   ["Solid", "Patterns"],
     },
     {
-      href:  "/products?gender=kids&type=tshirts&style=prints",
-      img:   "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=600&q=80",
-      badge: "Girls",
-      cat:   "T-Shirts",
-      title: "Girls' T-Shirts",
-      desc:  "Solids · Patterns · XS–XL Junior",
-      tags:  ["Solid", "Patterns"],
+      href:   "/products?gender=kids&type=tshirts&style=prints",
+      img:    "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=600&q=80",
+      seoAlt: "Kids premium golf apparel collection by Ka.Sha",
+      badge:  "Girls",
+      cat:    "T-Shirts",
+      title:  "Girls' T-Shirts",
+      desc:   "Solids · Patterns · XS–XL Junior",
+      tags:   ["Solid", "Patterns"],
     },
     {
-      href:  "/products?gender=kids&type=bottoms",
-      img:   "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80",
-      cat:   "Bottoms",
-      title: "All Bottoms",
-      desc:  "Trousers & skorts · All sizes",
-      tags:  ["Trousers", "Skorts"],
+      href:   "/products?gender=kids&type=bottoms",
+      img:    "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80",
+      seoAlt: "Kids premium golf apparel collection by Ka.Sha",
+      cat:    "Bottoms",
+      title:  "All Bottoms",
+      desc:   "Trousers & skorts · All sizes",
+      tags:   ["Trousers", "Skorts"],
     },
     ...(SHOW_CUSTOMIZATION ? [{
       href:       "/products/1/customize",
@@ -207,28 +217,31 @@ const CHIPS = ["Colour", "Print", "Pattern", "Size", "Upload logo", "Add text", 
 // ─── Bulk tiles ───────────────────────────────────────────────────────────────
 const BULK = [
   {
-    img:   "/images/bulk/tournament.png",
-    from:  "From 12 pieces",
-    num:   "01",
-    title: "Tournaments",
-    desc:  "Consistent kit across the full field. Sponsored logo in five placement options, any colour. .",
-    tags:  ["Player Names", "Sponsor Logo"],
+    img:    "/images/bulk/tournament.png",
+    seoAlt: "Personalized golf team uniforms and premium custom dri fit apparel",
+    from:   "From 12 pieces",
+    num:    "01",
+    title:  "Tournaments",
+    desc:   "Consistent kit across the full field. Sponsored logo in five placement options, any colour. .",
+    tags:   ["Player Names", "Sponsor Logo"],
   },
   {
-    img:   "/images/bulk/academy.png",
-    from:  "All ages & sizes",
-    num:   "02",
-    title: "Golf Academies",
-    desc:  "Your crest, your colours, your students — looking like they belong to something.",
-    tags:  ["Academy Crest", "All Sizes"],
+    img:    "/images/bulk/academy.png",
+    seoAlt: "Personalized golf team uniforms and premium custom dri fit apparel",
+    from:   "All ages & sizes",
+    num:    "02",
+    title:  "Golf Academies",
+    desc:   "Your crest, your colours, your students — looking like they belong to something.",
+    tags:   ["Academy Crest", "All Sizes"],
   },
   {
-    img:   "/images/bulk/clubs.png",
-    from:  "Social clubs",
-    num:   "03",
-    title: "Social Golf Clubs",
-    desc:  "Give the group a shared identity without anyone feeling like they settled.",
-    tags:  ["Mixed Sizes", "From 12"],
+    img:    "/images/bulk/clubs.png",
+    seoAlt: "Personalized golf team uniforms and premium custom dri fit apparel",
+    from:   "Social clubs",
+    num:    "03",
+    title:  "Social Golf Clubs",
+    desc:   "Give the group a shared identity without anyone feeling like they settled.",
+    tags:   ["Mixed Sizes", "From 12"],
   },
 ];
 
@@ -286,7 +299,7 @@ function CategoryCard({ c }: { c: Card }) {
     >
       {/* Image */}
       <div style={{ height: 300, position: "relative", overflow: "hidden" }}>
-        <img src={c.img} alt={c.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" style={{ display: "block" }} />
+        <img src={c.img} alt={c.seoAlt || c.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" style={{ display: "block" }} />
         {c.badge && (
           <span style={{ position: "absolute", top: 10, left: 10, background: GOLD, color: "#fff", fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", padding: "3px 9px" }}>{c.badge}</span>
         )}
@@ -355,7 +368,7 @@ export default function Home() {
               {/* Background photo */}
               <img
                 src={s.img}
-                alt={s.eyebrow}
+                alt="Premium golf fashion collection by Ka.Sha India"
                 style={{
                   position:   "absolute",
                   inset:      0,
@@ -723,7 +736,7 @@ export default function Home() {
               >
                 {/* Image */}
                 <div style={{ height: 300, position: "relative", overflow: "hidden" }}>
-                  <img src={b.img} alt={b.title} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }} />
+                  <img src={b.img} alt={b.seoAlt || b.title} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }} />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(15,18,35,0.4) 0%, transparent 55%)" }} />
                   <span style={{ position: "absolute", top: 8, left: 10, fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", color: "black", textTransform: "uppercase",backgroundColor:"whitesmoke", padding: "3px 9px", borderRadius: 3,  }}>
                     {b.from}

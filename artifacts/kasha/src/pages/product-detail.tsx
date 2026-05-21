@@ -116,6 +116,31 @@ export default function ProductDetailPage() {
     );
   }
 
+  function getProductAltText(): string {
+    const cat = (product?.category || "").toLowerCase();
+    const gender = (product?.gender || "").toLowerCase();
+    const sub = (product?.subType || "").toLowerCase();
+    if (cat.includes("trouser") || cat.includes("pant")) {
+      return gender === "women"
+        ? "Premium stretch golf trousers for women with performance fit by Ka.Sha"
+        : "Premium stretch golf trousers for men with performance fit by Ka.Sha";
+    }
+    if (cat.includes("skort") || cat.includes("skirt")) {
+      return "Women's luxury golf skort with performance stretch fabric";
+    }
+    if (cat.includes("short")) {
+      return "Premium golf shorts with performance stretch fabric by Ka.Sha";
+    }
+    if (sub === "printed" || sub === "print") {
+      return gender === "women"
+        ? "Designer printed golf polo for women with premium athletic fit"
+        : "Designer printed golf polo for men with premium athletic fit";
+    }
+    return gender === "women"
+      ? "Women's luxury golf polo shirt in breathable dri fit fabric by Ka.Sha"
+      : "Men's luxury golf polo shirt in breathable dri fit fabric by Ka.Sha";
+  }
+
   const mainThumbnail = getAssetUrl(product.thumbnailUrl) || "/images/product-tshirt.png";
 
   // Parse additional images — handles both JSON arrays and raw URLs from CSV import
@@ -178,7 +203,7 @@ export default function ProductDetailPage() {
                 <img
                   key={idx}
                   src={img}
-                  alt={`${product.name} — view ${idx + 1}`}
+                  alt={`${getProductAltText()} — view ${idx + 1}`}
                   onLoad={() => { if (idx === activeIdx) setImgLoaded(true); }}
                   className="absolute inset-0 w-full h-full object-contain object-center"
                   style={{ opacity: idx === activeIdx ? 1 : 0, transition: "opacity 0.5s ease", zIndex: idx === activeIdx ? 1 : 0 }}

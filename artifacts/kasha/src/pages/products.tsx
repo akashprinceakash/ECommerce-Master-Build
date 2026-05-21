@@ -494,6 +494,36 @@ export default function ProductsPage() {
   );
 }
 
+function getProductAltText(product: {
+  name: string;
+  category?: string | null;
+  gender?: string | null;
+  subType?: string | null;
+}): string {
+  const cat = (product.category || "").toLowerCase();
+  const gender = (product.gender || "").toLowerCase();
+  const sub = (product.subType || "").toLowerCase();
+  if (TROUSER_CATEGORIES.includes(cat)) {
+    return gender === "women"
+      ? "Premium stretch golf trousers for women with performance fit by Ka.Sha"
+      : "Premium stretch golf trousers for men with performance fit by Ka.Sha";
+  }
+  if (SKORT_CATEGORIES.some(s => cat.includes(s)) || cat.includes("skirt")) {
+    return "Women's luxury golf skort with performance stretch fabric";
+  }
+  if (SHORTS_CATEGORIES.includes(cat)) {
+    return "Premium golf shorts with performance stretch fabric by Ka.Sha";
+  }
+  if (sub === "printed" || sub === "print") {
+    return gender === "women"
+      ? "Designer printed golf polo for women with premium athletic fit"
+      : "Designer printed golf polo for men with premium athletic fit";
+  }
+  return gender === "women"
+    ? "Women's luxury golf polo shirt in breathable dri fit fabric by Ka.Sha"
+    : "Men's luxury golf polo shirt in breathable dri fit fabric by Ka.Sha";
+}
+
 interface ProductCardProps {
   product: {
     id: number;
@@ -502,6 +532,9 @@ interface ProductCardProps {
     available: boolean;
     thumbnailUrl?: string | null;
     additionalImages?: string | null;
+    category?: string | null;
+    gender?: string | null;
+    subType?: string | null;
   };
   imgSrc?: string;
 }
@@ -559,7 +592,7 @@ function ProductCard({ product, imgSrc }: ProductCardProps) {
             <img
               key={idx}
               src={src}
-              alt={product.name}
+              alt={getProductAltText(product)}
               loading="lazy"
               className="absolute inset-0 w-full h-full object-contain object-center"
               style={{ opacity: idx === activeIdx ? 1 : 0, transition: "opacity 0.55s ease" }}
