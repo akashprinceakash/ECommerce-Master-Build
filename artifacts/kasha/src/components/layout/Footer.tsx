@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 
 const GOLD = "#B8925A";
-const MUTED = "rgba(0,0,0,0.5)";
+const MUTED = "rgba(0,0,0,0.68)";
 
 const scrollToTop = () => {
   window.scrollTo({
@@ -12,7 +12,7 @@ const scrollToTop = () => {
 
 const COL_TITLE: React.CSSProperties = {
   fontFamily: "'Josefin Sans', sans-serif",
-  fontSize: 15,
+  fontSize: 16,
   letterSpacing: "0.35em",
   color: GOLD,
   textTransform: "uppercase",
@@ -21,7 +21,7 @@ const COL_TITLE: React.CSSProperties = {
 
 const LINK_STYLE: React.CSSProperties = {
   fontFamily: "'Josefin Sans', sans-serif",
-  fontSize: 12,
+  fontSize: 14,
   letterSpacing: "0.1em",
   color: MUTED,
   textDecoration: "none",
@@ -67,7 +67,7 @@ export function Footer() {
             <p
               style={{
                 fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: 12,
+                fontSize: 14,
                 letterSpacing: "0.06em",
                 color: MUTED,
                 lineHeight: 1.8,
@@ -88,7 +88,7 @@ export function Footer() {
               <span
                 style={{
                   fontFamily: "'Josefin Sans', sans-serif",
-                  fontSize: 13,
+                  fontSize: 14,
                   letterSpacing: "0.08em",
                   color: MUTED,
                 }}
@@ -98,7 +98,7 @@ export function Footer() {
               <span
                 style={{
                   fontFamily: "'Josefin Sans', sans-serif",
-                  fontSize: 12,
+                  fontSize: 13,
                   letterSpacing: "0.08em",
                   color: MUTED,
                 }}
@@ -108,7 +108,7 @@ export function Footer() {
               <span
                 style={{
                   fontFamily: "'Josefin Sans', sans-serif",
-                  fontSize: 10,
+                  fontSize: 13,
                   letterSpacing: "0.06em",
                   color: MUTED,
                   lineHeight: 1.6,
@@ -228,7 +228,7 @@ export function Footer() {
                 >
                   +91 95608 89594
                 </a>
-                <span style={{ ...LINK_STYLE, display: "block", fontSize: 10 }}>
+                <span style={{ ...LINK_STYLE, display: "block", fontSize: 13 }}>
                   Mon – Sat, 10 AM – 6 PM IST
                 </span>
               </div>
@@ -244,7 +244,7 @@ export function Footer() {
             <span
               style={{
                 fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: 10,
+                fontSize: 12,
                 letterSpacing: "0.15em",
                 color: MUTED,
               }}
@@ -254,7 +254,7 @@ export function Footer() {
             <span
               style={{
                 fontFamily: "'Josefin Sans', sans-serif",
-                fontSize: 9,
+                fontSize: 12,
                 letterSpacing: "0.1em",
                 color: MUTED,
               }}
@@ -271,7 +271,7 @@ export function Footer() {
                   onClick={scrollToTop}
                   style={{
                     fontFamily: "'Josefin Sans', sans-serif",
-                    fontSize: 8,
+                    fontSize: 12,
                     letterSpacing: "0.2em",
                     color: MUTED,
                     textTransform: "uppercase",

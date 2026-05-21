@@ -95,7 +95,7 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
   men: [
     {
       href:  "/products?gender=men&type=tshirts&style=patterns",
-      img:   "/images/shop/men_kasha.png",
+      img:   "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Shop_by_Category_images/Home_men_Ka%20SHa%20Signature.png",
       cat:   "T-Shirts",
       title: "Ka·Sha Signature",
       desc:  "Solids · 8 colours · 8 patterns · prints",
@@ -103,7 +103,7 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
     },
     {
       href:  "/products?gender=men&type=tshirts&style=prints",
-      img:   "/images/shop/men_flair.png",
+      img:   "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Shop_by_Category_images/Home_Men_Flair.png",
       cat:   "T-Shirts",
       title: "Flair",
       desc:  "Statement prints & limited-run designs",
@@ -111,7 +111,7 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
     },
     {
       href:  "/products?gender=men&type=bottoms",
-      img:   "/images/shop/men_bottoms.png",
+      img:   "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Shop_by_Category_images/Home_Men_Bottoms.png",
       cat:   "Bottoms",
       title: "Pro Tour Trouser",
       desc:  "Glove dock · Tee holder · 4-way stretch",
@@ -261,7 +261,7 @@ function CategoryCard({ c }: { c: Card }) {
         <div style={{ padding: "13px 16px 16px", borderTop: "0.5px solid rgba(184,146,90,0.25)" }}>
           <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.22em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{c.cat}</div>
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 500, color: "#fff", marginBottom: 4 }}>{c.title}</div>
-          <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 13, color: "rgba(255,255,255,0.4)", letterSpacing: "0.04em", lineHeight: 1.6, marginBottom: 10 }}>{c.desc}</div>
+          <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 14, color: "rgba(255,255,255,0.65)", letterSpacing: "0.04em", lineHeight: 1.7, marginBottom: 10 }}>{c.desc}</div>
           <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: GOLD, borderBottom: "0.5px solid rgba(184,146,90,0.4)", paddingBottom: 1 }}>Design yours →</span>
         </div>
       </Link>
@@ -296,11 +296,11 @@ function CategoryCard({ c }: { c: Card }) {
       <div style={{ padding: "13px 16px 16px" }}>
         <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.22em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{c.cat}</div>
         <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 500, color: "#1a1f2e", marginBottom: 4, lineHeight: 1.2 }}>{c.title}</div>
-        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 13, color: "rgba(30,40,80,0.5)", letterSpacing: "0.04em", lineHeight: 1.6, marginBottom: 10 }}>{c.desc}</div>
+        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 14, color: "rgba(20,28,60,0.72)", letterSpacing: "0.04em", lineHeight: 1.7, marginBottom: 10 }}>{c.desc}</div>
         {c.tags.length > 0 && (
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
             {c.tags.map((t) => (
-              <span key={t} style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.1em", padding: "3px 8px", background: BG_SECTION, color: "rgba(30,40,80,0.55)", borderRadius: 3, textTransform: "uppercase", border: "0.5px solid rgba(30,40,80,0.08)" }}>{t}</span>
+              <span key={t} style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.1em", padding: "3px 8px", background: BG_SECTION, color: "rgba(20,28,60,0.68)", borderRadius: 3, textTransform: "uppercase", border: "0.5px solid rgba(30,40,80,0.12)" }}>{t}</span>
             ))}
           </div>
         )}
@@ -733,10 +733,10 @@ export default function Home() {
                 <div style={{ padding: "13px 16px 16px" }}>
                   <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.2em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{b.num}</div>
                   <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 500, color: "#1a1f2e", marginBottom: 6 }}>{b.title}</div>
-                  <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 13, color: "rgba(30,40,80,0.5)", letterSpacing: "0.04em", lineHeight: 1.65, marginBottom: 10 }}>{b.desc}</div>
+                  <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 14, color: "rgba(20,28,60,0.72)", letterSpacing: "0.04em", lineHeight: 1.7, marginBottom: 10 }}>{b.desc}</div>
                   <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                     {b.tags.map((t) => (
-                      <span key={t} style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, padding: "3px 8px", background: BG_SECTION, color: "rgba(30,40,80,0.5)", borderRadius: 3, letterSpacing: "0.08em", textTransform: "uppercase", border: "0.5px solid rgba(30,40,80,0.08)" }}>{t}</span>
+                      <span key={t} style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, padding: "3px 8px", background: BG_SECTION, color: "rgba(20,28,60,0.68)", borderRadius: 3, letterSpacing: "0.08em", textTransform: "uppercase", border: "0.5px solid rgba(30,40,80,0.12)" }}>{t}</span>
                     ))}
                   </div>
                 </div>
