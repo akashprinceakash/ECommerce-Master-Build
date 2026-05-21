@@ -131,10 +131,10 @@ export function Footer() {
               <li>
                 <FooterLink href="/products?gender=women">Women's</FooterLink>
               </li>
-              <li>
+              {/* <li>
                 <FooterLink href="/products?gender=kids">Kids'</FooterLink>
-              </li>
-              <li>
+              </li> */}
+              {/* <li>
                 <FooterLink href="/products?type=tshirts&style=patterns">
                   Ka·Sha Signature
                 </FooterLink>
@@ -143,7 +143,7 @@ export function Footer() {
                 <FooterLink href="/products?type=tshirts&style=prints">
                   Flair
                 </FooterLink>
-              </li>
+              </li> */}
             </ul>
           </div>
 

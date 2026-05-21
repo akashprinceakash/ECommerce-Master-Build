@@ -383,11 +383,11 @@ export default function Home() {
                 padding:  `0 ${PAD} 76px`,
                 maxWidth: 720,
               }}>
-                <div style={{
+                {/* <div style={{
                   fontFamily:    "'Josefin Sans', sans-serif",
                   fontSize:      12,
                   letterSpacing: "0.4em",
-                  color:         GOLD,
+                  color:         "white",
                   textTransform: "uppercase",
                   marginBottom:  12,
                   opacity:       i === active ? 1 : 0,
@@ -395,7 +395,7 @@ export default function Home() {
                   transition:    "opacity 0.7s 0.2s ease, transform 0.7s 0.2s ease",
                 }}>
                   {s.eyebrow}
-                </div>
+                </div> */}
                 <h1 style={{
                   fontFamily:    "'Cormorant Garamond', serif",
                   fontSize:      "clamp(40px, 5.5vw, 70px)",
@@ -725,7 +725,7 @@ export default function Home() {
                 <div style={{ height: 300, position: "relative", overflow: "hidden" }}>
                   <img src={b.img} alt={b.title} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }} />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(15,18,35,0.4) 0%, transparent 55%)" }} />
-                  <span style={{ position: "absolute", top: 8, left: 10, fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", color: GOLD, textTransform: "uppercase" }}>
+                  <span style={{ position: "absolute", top: 8, left: 10, fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", color: "black", textTransform: "uppercase" }}>
                     {b.from}
                   </span>
                 </div>
