@@ -23,6 +23,7 @@ import {
 import { CartDrawer } from "@/components/layout/CartDrawer";
 import { useCart } from "@/contexts/CartContext";
 import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
+import { CustomizeEntryModal } from "@/components/layout/CustomizeEntryModal";
 
 const GOLD = "#B8925A";
 const GOLD_LIGHT = "#D4A96A";
@@ -37,6 +38,7 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [customizeModalOpen, setCustomizeModalOpen] = useState(false);
   const [location] = useLocation();
 
   useEffect(() => {
@@ -173,7 +175,7 @@ export function Navbar() {
           })}
           <Link
             href="/connect"
-            className="relative text-[12px] uppercase transition-colors hover:text-neutral-900"
+            className="relative text-[12px] uppercase transition-colors hover:text-neutral-900 "
             style={{
               fontFamily: "'Josefin Sans', sans-serif",
               letterSpacing: "0.25em",
@@ -184,9 +186,9 @@ export function Navbar() {
             Connect with Us
           </Link>
           {SHOW_CUSTOMIZATION && (
-            <Link
-              href="/products/1/customize"
-              className="text-[10px] uppercase text-white px-5 py-2 transition-colors"
+            <button
+              onClick={() => setCustomizeModalOpen(true)}
+              className="text-[10px] uppercase text-white px-5 py-2 transition-colors border-0 cursor-pointer"
               style={{
                 fontFamily: "'Josefin Sans', sans-serif",
                 letterSpacing: "0.2em",
@@ -200,7 +202,7 @@ export function Navbar() {
               }
             >
               Custom Studio
-            </Link>
+            </button>
           )}
         </nav>
 
