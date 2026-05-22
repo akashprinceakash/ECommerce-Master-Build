@@ -156,6 +156,7 @@ export default function CustomizePage() {
   // modelDisplayed: true once load/error fires or fallback timeout hits.
   // Drives the overlay via React state (not DOM mutation) so it's reliable in production.
   const [modelDisplayed, setModelDisplayed] = useState(false);
+  const [canvasReady, setCanvasReady] = useState(false);
   const [mats, setMats] = useState<MatEntry[]>([]);
   const syncTextureRef = useRef<(()=>void)|null>(null);
   const lastTextureUrlRef = useRef("");
@@ -198,6 +199,7 @@ export default function CustomizePage() {
   // KA.SHA Bespoke Design state
   const [activeKashaDesign, setActiveKashaDesign] = useState<KashaDesignDef|null>(null);
   const kdRequestIdRef = useRef(0);
+  const autoAppliedRef = useRef(false);
 
   // ── Parts step state ─────────────────────────────────────────────────────
   const [activePartZone, setActivePartZone] = useState<Exclude<PatternZone,"all">>("collar");
@@ -253,6 +255,7 @@ export default function CustomizePage() {
     } catch {}
     const fc = new fabric.Canvas(el, { width:1024, height:1024, preserveObjectStacking:true, backgroundColor:"#ffffff" });
     fcRef.current = fc;
+    setCanvasReady(true);
     const scaleCanvas = () => {
       const host=document.getElementById("fc-scale-host");
       const wrapper=document.getElementById("fc-wrapper");
@@ -441,6 +444,13 @@ export default function CustomizePage() {
     } catch { toast({title:"Could not apply print",variant:"destructive"}); }
   }, [syncTexture, toast]);
 
+  // Auto-apply first KA.SHA design when navigating to a pattern product from PDP
+  useEffect(() => {
+    if (!canvasReady || productType !== "pattern" || autoAppliedRef.current) return;
+    autoAppliedRef.current = true;
+    handleSelectKashaDesign(KASHA_DESIGNS[0]);
+  }, [canvasReady, productType, handleSelectKashaDesign]);
+
   const clearZonePrint = useCallback((zone: Exclude<PatternZone,"all">)=>{
     const fc=fcRef.current; if(!fc) return;
     fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint===zone).forEach((o:any)=>fc.remove(o));
@@ -529,6 +539,13 @@ export default function CustomizePage() {
     fontSize:"10px", letterSpacing:".12em", textTransform:"uppercase",
     color:V.mu, fontWeight:600, marginBottom:"8px",
     paddingBottom:"6px", borderBottom:`1px solid rgba(26,26,24,0.07)`,
+    fontFamily:"'Jost', sans-serif",
+  };
+  // Stronger section heading for typeMode blocks
+  const sbT: React.CSSProperties = {
+    fontSize:"13px", letterSpacing:".07em", textTransform:"uppercase",
+    color: V.tx, fontWeight:700, marginBottom:"10px",
+    paddingBottom:"7px", borderBottom:`1.5px solid rgba(201,168,76,0.22)`,
     fontFamily:"'Jost', sans-serif",
   };
 
@@ -767,19 +784,19 @@ export default function CustomizePage() {
           {step===1&&isTypeMode&&garmentType==="solid"&&(
             <div style={{display:"flex",flexDirection:"column",gap:18}}>
               <div>
-                <div style={sb}>Base colour</div>
+                <div style={sbT}>Base colour</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
                   {MAIN_PALETTE.map(hex=>swatch(hex,primaryColor===hex,()=>applyPrimary(hex)))}
-                  <label title="Custom colour" style={{width:30,height:30,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",flexShrink:0,border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:V.mu}}>
+                  <label title="Custom colour" style={{width:32,height:32,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",flexShrink:0,border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:V.tx}}>
                     +<input type="color" value={primaryColor} onChange={e=>applyPrimary(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
                   </label>
                 </div>
               </div>
 
               <div>
-                <div style={sb}>Customise individual parts</div>
-                <p style={{fontSize:10,color:V.mu,marginBottom:12,lineHeight:1.6,fontStyle:"italic"}}>Select a zone, then pick a colour to override it.</p>
-                <button onClick={()=>{if(zoneColors[activePartZone])PART_ZONES.forEach(z=>applyZoneColor(z.id,zoneColors[activePartZone]));}} style={{fontSize:10,padding:"6px 14px",border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",background:"transparent",color:V.mu,marginBottom:12,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>Apply colour to all parts</button>
+                <div style={sbT}>Customise individual parts</div>
+                <p style={{fontSize:12,color:"#3a3a36",marginBottom:12,lineHeight:1.65}}>Select a zone, then pick a colour to override it.</p>
+                <button onClick={()=>{if(zoneColors[activePartZone])PART_ZONES.forEach(z=>applyZoneColor(z.id,zoneColors[activePartZone]));}} style={{fontSize:12,padding:"7px 16px",border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",background:"transparent",color:"#4a4a42",marginBottom:12,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color="#4a4a42";}}>Apply colour to all parts</button>
                 {PART_ZONES.map(z=>{
                   const active=activePartZone===z.id; const col=zoneColors[z.id];
                   return(<div key={z.id} onClick={()=>setActivePartZone(z.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:`1.5px solid ${active?V.ac:V.bd}`,background:active?V.aclt:"transparent",cursor:"pointer",marginBottom:5,transition:"all 0.2s"}}>
@@ -789,29 +806,29 @@ export default function CustomizePage() {
                   </div>);
                 })}
                 <div style={{marginTop:12,background:V.sf,border:`1px solid ${V.bd}`,borderRadius:10,padding:12,boxShadow:"0 2px 12px rgba(26,26,24,0.04)"}}>
-                  <div style={{fontSize:10,color:V.mu,marginBottom:10,letterSpacing:".06em",textTransform:"uppercase",fontWeight:500}}>Colour for <strong style={{color:V.tx,fontFamily:"'Cormorant Garamond',serif",fontSize:13,fontWeight:600,textTransform:"none",letterSpacing:".02em"}}>{PART_ZONES.find(z=>z.id===activePartZone)?.label}</strong></div>
+                  <div style={{fontSize:12,color:"#4a4a42",marginBottom:10,letterSpacing:".06em",textTransform:"uppercase",fontWeight:600}}>Colour for <strong style={{color:V.tx,fontFamily:"'Cormorant Garamond',serif",fontSize:14,fontWeight:600,textTransform:"none",letterSpacing:".02em"}}>{PART_ZONES.find(z=>z.id===activePartZone)?.label}</strong></div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
                     {MAIN_PALETTE.map(hex=>swatch(hex,zoneColors[activePartZone]===hex,()=>applyZoneColor(activePartZone,hex)))}
-                    <label title="Custom" style={{width:30,height:30,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:V.mu,flexShrink:0}}>
+                    <label title="Custom" style={{width:32,height:32,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:V.tx,flexShrink:0}}>
                       +<input type="color" value={zoneColors[activePartZone]||primaryColor} onChange={e=>applyZoneColor(activePartZone,e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
                     </label>
                   </div>
-                  {zoneColors[activePartZone]&&(<button onClick={()=>applyZoneColor(activePartZone,"")} style={{fontSize:10,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Clear zone colour</button>)}
+                  {zoneColors[activePartZone]&&(<button onClick={()=>applyZoneColor(activePartZone,"")} style={{fontSize:11,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Clear zone colour</button>)}
                 </div>
               </div>
 
               <div>
-                <div style={sb}>Sleeve length</div>
+                <div style={sbT}>Sleeve length</div>
                 <div style={{display:"flex",gap:6}}>
                   {(["half","full"] as const).map(v=>(
-                    <button key={v} onClick={()=>setSleeveLength(v)} style={{flex:1,padding:"9px 0",fontSize:10,fontFamily:"'Jost',sans-serif",cursor:"pointer",borderRadius:99,letterSpacing:".07em",textTransform:"uppercase",border:sleeveLength===v?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,background:sleeveLength===v?V.aclt:"transparent",color:sleeveLength===v?V.tx:V.mu,fontWeight:sleeveLength===v?600:400,transition:"all .2s"}}>
+                    <button key={v} onClick={()=>setSleeveLength(v)} style={{flex:1,padding:"9px 0",fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",borderRadius:99,letterSpacing:".07em",textTransform:"uppercase",border:sleeveLength===v?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,background:sleeveLength===v?V.aclt:"transparent",color:sleeveLength===v?V.tx:"#4a4a42",fontWeight:sleeveLength===v?600:400,transition:"all .2s"}}>
                       {v.charAt(0).toUpperCase()+v.slice(1)} sleeve
                     </button>
                   ))}
                 </div>
               </div>
 
-              <button onClick={()=>setStep(2)} style={{marginTop:4,padding:"12px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
+              <button onClick={()=>setStep(2)} style={{marginTop:4,padding:"12px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
                 Next: Add Prints →
               </button>
             </div>
@@ -823,7 +840,7 @@ export default function CustomizePage() {
               <div>
                 <div style={{background:`rgba(201,168,76,0.08)`,border:`1px solid rgba(201,168,76,0.2)`,borderRadius:10,padding:"10px 12px",marginBottom:14}}>
                   <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:14,fontWeight:600,color:V.ac,letterSpacing:".02em",marginBottom:2}}>KA.SHA Bespoke Designs</div>
-                  <div style={{fontSize:10,color:V.mu,lineHeight:1.6}}>Select a signature pattern — colours customised in the next step</div>
+                  <div style={{fontSize:12,color:"#3a3a36",lineHeight:1.65}}>Select a signature pattern — colours customised in the next step</div>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:12}}>
                   {KASHA_DESIGNS.map(d=>{
@@ -847,21 +864,21 @@ export default function CustomizePage() {
                     <button onClick={()=>{const fc=fcRef.current;if(fc){clearKashaDesign(fc);syncTexture();}setActiveKashaDesign(null);}} style={{fontSize:9,color:V.mu,background:"transparent",border:`1px solid ${V.bd}`,borderRadius:99,padding:"4px 10px",cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".05em",flexShrink:0,transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>Clear</button>
                   </div>
                 )}
-                {!activeKashaDesign&&<p style={{fontSize:10,color:V.mu,marginTop:2,fontStyle:"italic",lineHeight:1.6}}>Select a bespoke design above to begin.</p>}
+                {!activeKashaDesign&&<p style={{fontSize:12,color:"#3a3a36",marginTop:2,lineHeight:1.65}}>Select a bespoke design above to begin.</p>}
               </div>
 
               <div>
-                <div style={sb}>Sleeve length</div>
+                <div style={sbT}>Sleeve length</div>
                 <div style={{display:"flex",gap:6}}>
                   {(["half","full"] as const).map(v=>(
-                    <button key={v} onClick={()=>setSleeveLength(v)} style={{flex:1,padding:"9px 0",fontSize:10,fontFamily:"'Jost',sans-serif",cursor:"pointer",borderRadius:99,letterSpacing:".07em",textTransform:"uppercase",border:sleeveLength===v?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,background:sleeveLength===v?V.aclt:"transparent",color:sleeveLength===v?V.tx:V.mu,fontWeight:sleeveLength===v?600:400,transition:"all .2s"}}>
+                    <button key={v} onClick={()=>setSleeveLength(v)} style={{flex:1,padding:"9px 0",fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",borderRadius:99,letterSpacing:".07em",textTransform:"uppercase",border:sleeveLength===v?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,background:sleeveLength===v?V.aclt:"transparent",color:sleeveLength===v?V.tx:"#4a4a42",fontWeight:sleeveLength===v?600:400,transition:"all .2s"}}>
                       {v.charAt(0).toUpperCase()+v.slice(1)} sleeve
                     </button>
                   ))}
                 </div>
               </div>
 
-              <button onClick={()=>setStep(2)} style={{marginTop:4,padding:"12px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
+              <button onClick={()=>setStep(2)} style={{marginTop:4,padding:"12px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
                 Next: Customise Colours →
               </button>
             </div>
@@ -871,7 +888,7 @@ export default function CustomizePage() {
           {step===1&&isTypeMode&&garmentType==="printed"&&(
             <div style={{display:"flex",flexDirection:"column",gap:18}}>
               <div>
-                <div style={sb}>Choose your print</div>
+                <div style={sbT}>Choose your print</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:12}}>
                   {PATTERNS.filter(p=>p.id!=="kasha-gt015").map(p=>{
                     const sel=activePrintId===p.id; const allApplied=allOverPrintId===p.id;
@@ -885,26 +902,26 @@ export default function CustomizePage() {
                   return(<div style={{background:V.sf,border:`1px solid ${V.bd}`,borderRadius:10,padding:12,boxShadow:"0 2px 12px rgba(26,26,24,0.05)"}}>
                     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
                       <div style={{width:36,height:36,borderRadius:7,background:`url(${patternUrl(p.file)}) center/cover`,border:`1px solid ${V.bd}`,flexShrink:0}}/>
-                      <div style={{fontSize:12,fontWeight:600,color:V.tx,fontFamily:"'Cormorant Garamond',serif",letterSpacing:".02em"}}>{p.label}</div>
+                      <div style={{fontSize:13,fontWeight:600,color:V.tx,fontFamily:"'Cormorant Garamond',serif",letterSpacing:".02em"}}>{p.label}</div>
                     </div>
-                    {allOverPrintId&&<button onClick={clearAllOverPrint} style={{padding:"7px 0",width:"100%",borderRadius:99,border:`1px solid rgba(196,92,92,.35)`,background:"transparent",color:"#c45c5c",fontSize:10,fontWeight:500,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Remove print</button>}
+                    {allOverPrintId&&<button onClick={clearAllOverPrint} style={{padding:"7px 0",width:"100%",borderRadius:99,border:`1px solid rgba(196,92,92,.35)`,background:"transparent",color:"#c45c5c",fontSize:11,fontWeight:500,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Remove print</button>}
                   </div>);
                 })()}
-                {!activePrintId&&<p style={{fontSize:10,color:V.mu,fontStyle:"italic",lineHeight:1.6}}>Select a print above — it will be applied across the whole garment.</p>}
+                {!activePrintId&&<p style={{fontSize:12,color:"#3a3a36",lineHeight:1.65}}>Select a print above — it will be applied across the whole garment.</p>}
               </div>
 
               <div>
-                <div style={sb}>Sleeve length</div>
+                <div style={sbT}>Sleeve length</div>
                 <div style={{display:"flex",gap:6}}>
                   {(["half","full"] as const).map(v=>(
-                    <button key={v} onClick={()=>setSleeveLength(v)} style={{flex:1,padding:"9px 0",fontSize:10,fontFamily:"'Jost',sans-serif",cursor:"pointer",borderRadius:99,letterSpacing:".07em",textTransform:"uppercase",border:sleeveLength===v?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,background:sleeveLength===v?V.aclt:"transparent",color:sleeveLength===v?V.tx:V.mu,fontWeight:sleeveLength===v?600:400,transition:"all .2s"}}>
+                    <button key={v} onClick={()=>setSleeveLength(v)} style={{flex:1,padding:"9px 0",fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",borderRadius:99,letterSpacing:".07em",textTransform:"uppercase",border:sleeveLength===v?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,background:sleeveLength===v?V.aclt:"transparent",color:sleeveLength===v?V.tx:"#4a4a42",fontWeight:sleeveLength===v?600:400,transition:"all .2s"}}>
                       {v.charAt(0).toUpperCase()+v.slice(1)} sleeve
                     </button>
                   ))}
                 </div>
               </div>
 
-              <button onClick={()=>setStep(2)} style={{marginTop:4,padding:"12px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
+              <button onClick={()=>setStep(2)} style={{marginTop:4,padding:"12px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
                 Next: Add Patterns →
               </button>
             </div>
@@ -1250,8 +1267,8 @@ export default function CustomizePage() {
           {step===2&&isTypeMode&&garmentType==="solid"&&(
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div>
-                <div style={sb}>Add prints <span style={{opacity:.5,fontWeight:400,letterSpacing:0,textTransform:"none",fontStyle:"italic"}}>(optional)</span></div>
-                <p style={{fontSize:10,color:V.mu,marginBottom:12,lineHeight:1.6,fontStyle:"italic"}}>Apply a repeating print to the whole garment or select individual parts.</p>
+                <div style={sbT}>Add prints <span style={{opacity:.5,fontWeight:400,letterSpacing:0,textTransform:"none",fontStyle:"italic"}}>(optional)</span></div>
+                <p style={{fontSize:12,color:"#3a3a36",marginBottom:12,lineHeight:1.65}}>Apply a repeating print to the whole garment or select individual parts.</p>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:12}}>
                   {PATTERNS.filter(p=>p.id!=="kasha-gt015").map(p=>{
                     const sel=activePrintId===p.id; const allApplied=allOverPrintId===p.id; const inZone=Object.values(zonePrintIds).includes(p.id);
@@ -1296,19 +1313,19 @@ export default function CustomizePage() {
           {step===2&&isTypeMode&&garmentType==="pattern"&&(
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div>
-                <div style={sb}>Body colour</div>
-                <p style={{fontSize:10,color:V.mu,marginBottom:10,lineHeight:1.6,fontStyle:"italic"}}>Choose a base colour to complement your pattern.</p>
+                <div style={sbT}>Body colour</div>
+                <p style={{fontSize:12,color:"#3a3a36",marginBottom:10,lineHeight:1.65}}>Choose a base colour to complement your pattern.</p>
                 <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
                   {MAIN_PALETTE.map(hex=>swatch(hex,primaryColor===hex,()=>applyPrimary(hex)))}
-                  <label title="Custom colour" style={{width:30,height:30,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",flexShrink:0,border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:V.mu}}>
+                  <label title="Custom colour" style={{width:32,height:32,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",flexShrink:0,border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:V.tx}}>
                     +<input type="color" value={primaryColor} onChange={e=>applyPrimary(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
                   </label>
                 </div>
               </div>
               <div>
-                <div style={sb}>Zone colour overrides</div>
-                <p style={{fontSize:10,color:V.mu,marginBottom:12,lineHeight:1.6,fontStyle:"italic"}}>Override colour for specific parts to complement your pattern.</p>
-                <button onClick={()=>{if(zoneColors[activePartZone])PART_ZONES.forEach(z=>applyZoneColor(z.id,zoneColors[activePartZone]));}} style={{fontSize:10,padding:"6px 14px",border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",background:"transparent",color:V.mu,marginBottom:12,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>Apply colour to all parts</button>
+                <div style={sbT}>Zone colour overrides</div>
+                <p style={{fontSize:12,color:"#3a3a36",marginBottom:12,lineHeight:1.65}}>Override colour for specific parts to complement your pattern.</p>
+                <button onClick={()=>{if(zoneColors[activePartZone])PART_ZONES.forEach(z=>applyZoneColor(z.id,zoneColors[activePartZone]));}} style={{fontSize:12,padding:"7px 16px",border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",background:"transparent",color:"#4a4a42",marginBottom:12,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color="#4a4a42";}}>Apply colour to all parts</button>
                 {PART_ZONES.map(z=>{
                   const active=activePartZone===z.id; const col=zoneColors[z.id];
                   return(<div key={z.id} onClick={()=>setActivePartZone(z.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:`1.5px solid ${active?V.ac:V.bd}`,background:active?V.aclt:"transparent",cursor:"pointer",marginBottom:5,transition:"all 0.2s"}}>
@@ -1318,19 +1335,19 @@ export default function CustomizePage() {
                   </div>);
                 })}
                 <div style={{marginTop:12,background:V.sf,border:`1px solid ${V.bd}`,borderRadius:10,padding:12,boxShadow:"0 2px 12px rgba(26,26,24,0.04)"}}>
-                  <div style={{fontSize:10,color:V.mu,marginBottom:10,letterSpacing:".06em",textTransform:"uppercase",fontWeight:500}}>Colour for <strong style={{color:V.tx,fontFamily:"'Cormorant Garamond',serif",fontSize:13,fontWeight:600,textTransform:"none",letterSpacing:".02em"}}>{PART_ZONES.find(z=>z.id===activePartZone)?.label}</strong></div>
+                  <div style={{fontSize:12,color:"#4a4a42",marginBottom:10,letterSpacing:".06em",textTransform:"uppercase",fontWeight:600}}>Colour for <strong style={{color:V.tx,fontFamily:"'Cormorant Garamond',serif",fontSize:14,fontWeight:600,textTransform:"none",letterSpacing:".02em"}}>{PART_ZONES.find(z=>z.id===activePartZone)?.label}</strong></div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
                     {MAIN_PALETTE.map(hex=>swatch(hex,zoneColors[activePartZone]===hex,()=>applyZoneColor(activePartZone,hex)))}
-                    <label title="Custom" style={{width:30,height:30,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:V.mu,flexShrink:0}}>
+                    <label title="Custom" style={{width:32,height:32,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:V.tx,flexShrink:0}}>
                       +<input type="color" value={zoneColors[activePartZone]||primaryColor} onChange={e=>applyZoneColor(activePartZone,e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
                     </label>
                   </div>
-                  {zoneColors[activePartZone]&&<button onClick={()=>applyZoneColor(activePartZone,"")} style={{fontSize:10,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Clear zone colour</button>}
+                  {zoneColors[activePartZone]&&<button onClick={()=>applyZoneColor(activePartZone,"")} style={{fontSize:11,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Clear zone colour</button>}
                 </div>
               </div>
               <div style={{display:"flex",gap:6,marginTop:4}}>
-                <button onClick={()=>setStep(1)} style={{flex:1,padding:"10px 0",borderRadius:99,border:`1px solid ${V.bd}`,background:"transparent",color:V.mu,fontSize:10,fontWeight:500,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>← Back</button>
-                <button onClick={()=>setStep(3)} style={{flex:2,padding:"10px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>Next: Add Logo →</button>
+                <button onClick={()=>setStep(1)} style={{flex:1,padding:"10px 0",borderRadius:99,border:`1px solid ${V.bd}`,background:"transparent",color:"#4a4a42",fontSize:12,fontWeight:500,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color="#4a4a42";}}>← Back</button>
+                <button onClick={()=>setStep(3)} style={{flex:2,padding:"10px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>Next: Add Logo →</button>
               </div>
             </div>
           )}
@@ -1339,8 +1356,8 @@ export default function CustomizePage() {
           {step===2&&isTypeMode&&garmentType==="printed"&&(
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div>
-                <div style={sb}>Add a pattern overlay <span style={{opacity:.5,fontWeight:400,letterSpacing:0,textTransform:"none",fontStyle:"italic"}}>(optional)</span></div>
-                <p style={{fontSize:10,color:V.mu,marginBottom:12,lineHeight:1.6,fontStyle:"italic"}}>Layer a KA.SHA bespoke pattern on top of your print.</p>
+                <div style={sbT}>Add a pattern overlay <span style={{opacity:.5,fontWeight:400,letterSpacing:0,textTransform:"none",fontStyle:"italic"}}>(optional)</span></div>
+                <p style={{fontSize:12,color:"#3a3a36",marginBottom:12,lineHeight:1.65}}>Layer a KA.SHA bespoke pattern on top of your print.</p>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:12}}>
                   {KASHA_DESIGNS.map(d=>{
                     const isA=activeKashaDesign?.id===d.id;

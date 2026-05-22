@@ -2,6 +2,7 @@
  * PersonalizeModal — shown when "Personalise This T-Shirt" is clicked on the PDP.
  * Two options: Quick Personalisation (logo/text only) or Full Customisation.
  */
+import { useState } from "react";
 import { useLocation } from "wouter";
 
 interface Props {
@@ -13,22 +14,25 @@ interface Props {
 
 export function PersonalizeModal({ isOpen, onClose, productId, productName }: Props) {
   const [, navigate] = useLocation();
+  const [selectedMode, setSelectedMode] = useState<"quick"|"full"|null>(null);
 
   if (!isOpen) return null;
 
-  function handleQuick() {
-    onClose();
-    navigate(`/products/${productId}/customize?mode=quick`);
-  }
-
-  function handleFull() {
-    onClose();
-    navigate(`/products/${productId}/customize`);
+  function handleSelect(mode: "quick"|"full") {
+    setSelectedMode(mode);
+    setTimeout(() => {
+      onClose();
+      if (mode === "quick") {
+        navigate(`/products/${productId}/customize?mode=quick`);
+      } else {
+        navigate(`/products/${productId}/customize`);
+      }
+    }, 160);
   }
 
   const OPTIONS = [
     {
-      key: "quick",
+      key: "quick" as const,
       icon: "✦",
       title: "Quick Personalisation",
       badge: "Popular",
@@ -41,11 +45,9 @@ export function PersonalizeModal({ isOpen, onClose, productId, productName }: Pr
         "Resize & reposition freely",
       ],
       time: "~2 min",
-      onClick: handleQuick,
-      primary: false,
     },
     {
-      key: "full",
+      key: "full" as const,
       icon: "◈",
       title: "Full Customisation",
       badge: "Complete Control",
@@ -58,8 +60,6 @@ export function PersonalizeModal({ isOpen, onClose, productId, productName }: Pr
         "Upload logos & add custom text",
       ],
       time: "~5 min",
-      onClick: handleFull,
-      primary: true,
     },
   ];
 
@@ -140,117 +140,118 @@ export function PersonalizeModal({ isOpen, onClose, productId, productName }: Pr
 
         {/* Option cards */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          {OPTIONS.map(opt => (
-            <button
-              key={opt.key}
-              onClick={opt.onClick}
-              style={{
-                padding: "24px 22px",
-                border: opt.primary ? "1.5px solid #c9a84c" : "1.5px solid rgba(26,26,24,0.1)",
-                borderRadius: 14, cursor: "pointer",
-                background: opt.primary ? "#1a1a18" : "#ffffff",
-                textAlign: "left", transition: "all 0.3s cubic-bezier(0.16,1,0.3,1)",
-                boxShadow: opt.primary
-                  ? "0 8px 32px rgba(26,26,24,0.18)"
-                  : "0 2px 12px rgba(26,26,24,0.05)",
-                display: "flex", flexDirection: "column", gap: 10,
-              }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLElement;
-                el.style.transform = "translateY(-3px)";
-                if (opt.primary) {
-                  el.style.background = "#c9a84c";
+          {OPTIONS.map(opt => {
+            const isSelected = selectedMode === opt.key;
+            const isOther = selectedMode !== null && selectedMode !== opt.key;
+            return (
+              <button
+                key={opt.key}
+                onClick={() => handleSelect(opt.key)}
+                style={{
+                  padding: "24px 22px",
+                  border: isSelected
+                    ? "2px solid #c9a84c"
+                    : "1.5px solid rgba(26,26,24,0.12)",
+                  borderRadius: 14, cursor: "pointer",
+                  background: isSelected ? "#1a1a18" : "#ffffff",
+                  textAlign: "left",
+                  transition: "all 0.25s cubic-bezier(0.16,1,0.3,1)",
+                  boxShadow: isSelected
+                    ? "0 12px 40px rgba(201,168,76,0.28), 0 4px 16px rgba(26,26,24,0.18)"
+                    : "0 2px 12px rgba(26,26,24,0.05)",
+                  display: "flex", flexDirection: "column", gap: 10,
+                  opacity: isOther ? 0.55 : 1,
+                  transform: isSelected ? "translateY(-2px)" : "none",
+                }}
+                onMouseEnter={e => {
+                  if (selectedMode !== null) return;
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.transform = "translateY(-3px)";
                   el.style.borderColor = "#c9a84c";
-                  el.style.boxShadow = "0 12px 40px rgba(201,168,76,0.25)";
-                } else {
-                  el.style.borderColor = "#c9a84c";
-                  el.style.boxShadow = "0 8px 28px rgba(201,168,76,0.15)";
-                }
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLElement;
-                el.style.transform = "translateY(0)";
-                if (opt.primary) {
-                  el.style.background = "#1a1a18";
-                  el.style.borderColor = "#c9a84c";
-                  el.style.boxShadow = "0 8px 32px rgba(26,26,24,0.18)";
-                } else {
-                  el.style.borderColor = "rgba(26,26,24,0.1)";
+                  el.style.boxShadow = "0 8px 28px rgba(201,168,76,0.18)";
+                  el.style.background = "#fdf9ee";
+                }}
+                onMouseLeave={e => {
+                  if (selectedMode !== null) return;
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.transform = "none";
+                  el.style.borderColor = "rgba(26,26,24,0.12)";
                   el.style.boxShadow = "0 2px 12px rgba(26,26,24,0.05)";
-                }
-              }}
-            >
-              {/* Badge + icon */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{
-                  fontSize: 22, lineHeight: 1,
-                  color: opt.primary ? "#c9a84c" : "#c9a84c",
-                }}>{opt.icon}</span>
-                <span style={{
-                  fontFamily: "'Jost', sans-serif",
-                  fontSize: 8, letterSpacing: ".12em", textTransform: "uppercase",
-                  fontWeight: 700,
-                  background: opt.primary ? "rgba(201,168,76,0.2)" : "rgba(201,168,76,0.12)",
-                  color: opt.primary ? "#c9a84c" : "#c9a84c",
-                  padding: "3px 8px", borderRadius: 99,
-                }}>{opt.badge}</span>
-              </div>
+                  el.style.background = "#ffffff";
+                }}
+              >
+                {/* Badge + icon */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{
+                    fontSize: 22, lineHeight: 1,
+                    color: "#c9a84c",
+                  }}>{opt.icon}</span>
+                  <span style={{
+                    fontFamily: "'Jost', sans-serif",
+                    fontSize: 8, letterSpacing: ".12em", textTransform: "uppercase",
+                    fontWeight: 700,
+                    background: isSelected ? "rgba(201,168,76,0.25)" : "rgba(201,168,76,0.12)",
+                    color: "#c9a84c",
+                    padding: "3px 8px", borderRadius: 99,
+                  }}>{opt.badge}</span>
+                </div>
 
-              {/* Title */}
-              <div>
+                {/* Title */}
+                <div>
+                  <div style={{
+                    fontFamily: "'Cormorant Garamond', serif",
+                    fontSize: 20, fontWeight: 600,
+                    color: isSelected ? "#ffffff" : "#1a1a18",
+                    letterSpacing: ".01em", lineHeight: 1.2, marginBottom: 3,
+                  }}>{opt.title}</div>
+                  <div style={{
+                    fontFamily: "'Cormorant Garamond', serif",
+                    fontSize: 13, fontStyle: "italic",
+                    color: isSelected ? "rgba(255,255,255,0.55)" : "#8a8780",
+                  }}>{opt.subtitle}</div>
+                </div>
+
+                {/* Description */}
                 <div style={{
-                  fontFamily: "'Cormorant Garamond', serif",
-                  fontSize: 20, fontWeight: 600,
-                  color: opt.primary ? "#ffffff" : "#1a1a18",
-                  letterSpacing: ".01em", lineHeight: 1.2, marginBottom: 3,
-                }}>{opt.title}</div>
+                  fontFamily: "'Jost', sans-serif",
+                  fontSize: 11, lineHeight: 1.6,
+                  color: isSelected ? "rgba(255,255,255,0.6)" : "#6b6865",
+                }}>{opt.description}</div>
+
+                {/* Feature list */}
+                <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 5 }}>
+                  {opt.features.map(f => (
+                    <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
+                      <span style={{ color: "#c9a84c", fontSize: 10, marginTop: 2, flexShrink: 0 }}>✦</span>
+                      <span style={{
+                        fontFamily: "'Jost', sans-serif",
+                        fontSize: 10, lineHeight: 1.5,
+                        color: isSelected ? "rgba(255,255,255,0.7)" : "#6b6865",
+                      }}>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Footer */}
                 <div style={{
-                  fontFamily: "'Cormorant Garamond', serif",
-                  fontSize: 13, fontStyle: "italic",
-                  color: opt.primary ? "rgba(255,255,255,0.55)" : "#8a8780",
-                }}>{opt.subtitle}</div>
-              </div>
-
-              {/* Description */}
-              <div style={{
-                fontFamily: "'Jost', sans-serif",
-                fontSize: 11, lineHeight: 1.6,
-                color: opt.primary ? "rgba(255,255,255,0.6)" : "#8a8780",
-              }}>{opt.description}</div>
-
-              {/* Feature list */}
-              <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 5 }}>
-                {opt.features.map(f => (
-                  <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
-                    <span style={{ color: "#c9a84c", fontSize: 10, marginTop: 2, flexShrink: 0 }}>✦</span>
-                    <span style={{
-                      fontFamily: "'Jost', sans-serif",
-                      fontSize: 10, lineHeight: 1.5,
-                      color: opt.primary ? "rgba(255,255,255,0.7)" : "#6b6865",
-                    }}>{f}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* Footer */}
-              <div style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                paddingTop: 10, borderTop: `1px solid ${opt.primary ? "rgba(255,255,255,0.1)" : "rgba(26,26,24,0.07)"}`,
-                marginTop: 4,
-              }}>
-                <span style={{
-                  fontFamily: "'Jost', sans-serif",
-                  fontSize: 9, letterSpacing: ".1em", textTransform: "uppercase",
-                  color: opt.primary ? "rgba(255,255,255,0.4)" : "#b8b5ae",
-                }}>Est. {opt.time}</span>
-                <span style={{
-                  fontFamily: "'Jost', sans-serif",
-                  fontSize: 10, fontWeight: 600, letterSpacing: ".06em",
-                  color: opt.primary ? "#c9a84c" : "#1a1a18",
-                }}>Begin →</span>
-              </div>
-            </button>
-          ))}
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  paddingTop: 10, borderTop: `1px solid ${isSelected ? "rgba(255,255,255,0.1)" : "rgba(26,26,24,0.07)"}`,
+                  marginTop: 4,
+                }}>
+                  <span style={{
+                    fontFamily: "'Jost', sans-serif",
+                    fontSize: 9, letterSpacing: ".1em", textTransform: "uppercase",
+                    color: isSelected ? "rgba(255,255,255,0.4)" : "#b8b5ae",
+                  }}>Est. {opt.time}</span>
+                  <span style={{
+                    fontFamily: "'Jost', sans-serif",
+                    fontSize: 10, fontWeight: 600, letterSpacing: ".06em",
+                    color: isSelected ? "#c9a84c" : "#1a1a18",
+                  }}>{isSelected ? "Opening…" : "Select →"}</span>
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         {/* Footer */}
