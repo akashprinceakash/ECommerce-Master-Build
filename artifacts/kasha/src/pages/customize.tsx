@@ -279,16 +279,35 @@ export default function CustomizePage() {
   useEffect(() => {
     if (!mvReady||!product?.modelUrl) return;
     const mv=mvRef.current; if(!mv) return;
-    const onLoad = async () => {
+
+    const hideOverlay = () => {
       const ov=document.getElementById("mv-overlay");
       if (ov){ov.style.opacity="0";setTimeout(()=>{if(ov)ov.style.display="none";},500);}
+    };
+
+    const onLoad = async () => {
+      hideOverlay();
       const model=mv.model; if(!model?.materials?.length){setModelLoaded(true);return;}
       const entries: MatEntry[] = model.materials.map((m:any,i:number)=>({idx:i,name:m.name||`Part ${i+1}`,mat:m,color:"#ffffff"}));
       setMats(entries); setModelLoaded(true);
       requestAnimationFrame(()=>syncTextureRef.current?.());
     };
-    mv.addEventListener("load",onLoad);
-    return () => mv.removeEventListener("load",onLoad);
+
+    const onError = () => { hideOverlay(); setModelLoaded(true); };
+
+    // Guard: if model-viewer already loaded before listener attached
+    if ((mv as any).loaded) { onLoad(); return; }
+
+    // Fallback: hide spinner after 12 s regardless (broken/slow model)
+    const fallback = setTimeout(() => { hideOverlay(); setModelLoaded(true); }, 12000);
+
+    mv.addEventListener("load", onLoad);
+    mv.addEventListener("error", onError);
+    return () => {
+      mv.removeEventListener("load", onLoad);
+      mv.removeEventListener("error", onError);
+      clearTimeout(fallback);
+    };
   }, [mvReady, product?.modelUrl]);
 
   // ── Auto-lock GT style for "pattern" products ────────────────────────────
