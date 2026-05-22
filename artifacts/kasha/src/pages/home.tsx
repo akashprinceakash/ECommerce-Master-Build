@@ -42,7 +42,7 @@ const BG_DARK    = "#0F1622";   // dark navy — bespoke card + studio bar
 //   banner 4 "All products"  → /products
 const SLIDES = [
   {
-    img:     "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Slide_images/KaSha%20Hero%20banner%201%20Mens.png",
+    img:     "/images/slides/hero1_mens.webp",
     eyebrow: "Full Collection · 2026",
     title:   (<>Flair on the fairway<br />Ka.Sha Golfwear.</>),
     sub:     SHOW_KIDS ? "Men · Women · Kids · Bespoke" : "Men · Women",
@@ -50,7 +50,7 @@ const SLIDES = [
     outline: SHOW_CUSTOMIZATION ? { label: "Custom Studio", href: "/products/1/customize" } : undefined,
   },
   {
-    img:     "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Slide_images/KaSha%20Hero%20banner%202%20Mens%20t%20shirts.png",
+    img:     "/images/slides/hero2_mens_tshirts.webp",
     eyebrow: "Ka·Sha Signature · Men's T-Shirts",
     title:   (<>Gentlemen golfers.<br />When precision meets panache.</>),
     sub:     "· Signature Collection",
@@ -58,7 +58,7 @@ const SLIDES = [
     outline: undefined,
   },
   {
-    img:     "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Slide_images/KaSha%20Hero%20banner%203%20Womens.png",
+    img:     "/images/slides/hero3_womens.webp",
     eyebrow: "Women's Collection · 2026",
     title:   (<>Wear your game.<br />Style</>),
     sub:     "Women · Signature · Flair · Bottoms",
@@ -66,7 +66,7 @@ const SLIDES = [
     outline: undefined,
   },
   {
-    img:     "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Slide_images/KaSha%20Hero%20banner%204%20All%20products.png",
+    img:     "/images/slides/hero4_all_products.webp",
     eyebrow: "New Season · Golf Collection 2026",
     title:   (<>Crafted for players<br />Bespoke prints.Try our custom studio.</>),
     sub:     SHOW_KIDS ? "Men · Women · Kids · Custom" : "Men · Women",
