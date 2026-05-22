@@ -156,7 +156,7 @@ export function Navbar() {
               <Link
                 key={l.label}
                 href={l.href}
-                className="relative text-[12px] uppercase transition-colors hover:text-neutral-900"
+                className="group relative text-[12px] uppercase transition-colors hover:text-neutral-900"
                 style={{
                   fontFamily: "'Josefin Sans', sans-serif",
                   letterSpacing: "0.25em",
@@ -165,8 +165,8 @@ export function Navbar() {
               >
                 {l.label}
                 <span
-                  className="absolute -bottom-1 left-0 h-px transition-all duration-300"
-                  style={{ width: active ? "100%" : 0, background: GOLD }}
+                  className={`absolute -bottom-1 left-0 h-px transition-all duration-300 ${active ? "w-full" : "w-0 group-hover:w-full"}`}
+                  style={{ background: GOLD }}
                 />
               </Link>
             );

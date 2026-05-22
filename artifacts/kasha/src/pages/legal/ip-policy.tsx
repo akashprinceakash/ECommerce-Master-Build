@@ -52,7 +52,7 @@ export default function IpPolicyPage() {
         </Section>
 
         <Section title="6. Reporting Infringement">
-          <p>If you believe that any content on the Ka.Sha platform infringes your intellectual property rights, please notify us at <strong>support@ka-sha.com</strong> with the following information: a description of the copyrighted or trademarked work claimed to have been infringed. a description of where the allegedly infringing material is located on our platform. your contact information. and a statement that you have a good-faith belief that the use is not authorised. We will investigate and respond promptly.</p>
+          <p>If you believe that any content on the Ka.Sha platform infringes your intellectual property rights, please notify us at <strong>support@kashaonline.in</strong> with the following information: a description of the copyrighted or trademarked work claimed to have been infringed. a description of where the allegedly infringing material is located on our platform. your contact information. and a statement that you have a good-faith belief that the use is not authorised. We will investigate and respond promptly.</p>
         </Section>
 
         <Section title="7. Governing Law">
@@ -62,7 +62,7 @@ export default function IpPolicyPage() {
         <Section title="8. Contact Us">
           <p>For any intellectual property queries, please contact:</p>
           <ul style={{ paddingLeft: 20, marginTop: 4, listStyle: "disc" }}>
-            <li>Email: <strong>support@ka-sha.com</strong></li>
+            <li>Email: <strong>support@kashaonline.in</strong></li>
             <li>Phone: <strong>9560889594</strong></li>
             <li>Business Hours: Monday to Saturday, 10:00 AM – 6:00 PM</li>
           </ul>

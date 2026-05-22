@@ -26,7 +26,7 @@ export default function TermsPage() {
         </Section>
         <Section title="4. Order Confirmation & Cancellation">
           <p>An order confirmation email is sent upon successful payment. KA.SHA reserves the right to cancel any order due to stock unavailability or suspected fraud, with a full refund to the original payment method within 5–7 business days.</p>
-          <p>You may cancel a standard (non-bespoke) order within 24 hours of placement by contacting us at hello@ka-sha.com.</p>
+          <p>You may cancel a standard (non-bespoke) order within 24 hours of placement by contacting us at <strong>support@kashaonline.in</strong>.</p>
         </Section>
         <Section title="5. Intellectual Property">
           <p>All content on this Site — including text, images, logos, product designs, and the KA.SHA brand — is the exclusive property of KA.SHA and protected under Indian copyright law. Unauthorised reproduction or commercial use is strictly prohibited.</p>
@@ -70,7 +70,7 @@ function LegalPage({ title, updated, children }: { title: string; updated: strin
         </p>
       </div>
       <div className="max-w-[760px] mx-auto px-6 py-14">
-        <div className="flex flex-col gap-8" style={{ fontFamily: FONT_UI, fontSize: 13, lineHeight: 1.9, color: MUTED, letterSpacing: "0.02em" }}>
+        <div className="flex flex-col gap-8" style={{ fontFamily: "'system-ui', -apple-system, sans-serif", fontSize: 14, lineHeight: 1.9, color: MUTED }}>
           {children}
         </div>
       </div>

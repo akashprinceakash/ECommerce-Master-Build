@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
-import { Loader2, ArrowLeft, Truck, X } from "lucide-react";
+import { Loader2, ArrowLeft, Truck, X, MapPin } from "lucide-react";
 import { getApiUrl, getAssetUrl } from "@/lib/api";
 import { useAuth } from "@clerk/react";
 
@@ -92,6 +92,79 @@ export default function CheckoutPage() {
   const [shippingRate, setShippingRate] = useState<ShippingRate | null>(null);
   const [shippingLoading, setShippingLoading] = useState(false);
   const rateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pincodeLoading, setPincodeLoading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  // ── Pincode → city/state auto-fill ───────────────────────────────────
+  const pincodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const pincode = formData.shippingPostalCode;
+    if (!/^\d{6}$/.test(pincode)) return;
+    if (pincodeTimerRef.current) clearTimeout(pincodeTimerRef.current);
+    pincodeTimerRef.current = setTimeout(async () => {
+      setPincodeLoading(true);
+      try {
+        const res = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const postOffice = data?.[0]?.PostOffice?.[0];
+        if (postOffice) {
+          const district = postOffice.District || postOffice.Block || postOffice.Name || "";
+          const state    = postOffice.State || "";
+          setFormData(prev => ({
+            ...prev,
+            shippingCity:  prev.shippingCity  || district,
+            shippingState: prev.shippingState || (INDIAN_STATES.includes(state) ? state : prev.shippingState),
+          }));
+        }
+      } catch { /* silently ignore */ } finally {
+        setPincodeLoading(false);
+      }
+    }, 600);
+    return () => { if (pincodeTimerRef.current) clearTimeout(pincodeTimerRef.current); };
+  }, [formData.shippingPostalCode]);
+
+  // ── Use current location ─────────────────────────────────────────────
+  function handleUseLocation() {
+    if (!navigator.geolocation) {
+      toast({ title: "Not supported", description: "Your browser doesn't support location access.", variant: "destructive" });
+      return;
+    }
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+            { headers: { "Accept-Language": "en" } }
+          );
+          if (!res.ok) throw new Error("lookup failed");
+          const data = await res.json();
+          const addr = data.address || {};
+          const city    = addr.city || addr.town || addr.village || addr.county || "";
+          const postcode = (addr.postcode || "").replace(/\s/g, "").slice(0, 6);
+          const stateRaw = addr.state || "";
+          const state    = INDIAN_STATES.find(s => stateRaw.toLowerCase().includes(s.toLowerCase())) || "";
+          setFormData(prev => ({
+            ...prev,
+            shippingCity:        city        || prev.shippingCity,
+            shippingState:       state       || prev.shippingState,
+            shippingPostalCode:  postcode    || prev.shippingPostalCode,
+          }));
+        } catch {
+          toast({ title: "Location lookup failed", description: "Could not resolve your address. Please fill in manually.", variant: "destructive" });
+        } finally {
+          setLocationLoading(false);
+        }
+      },
+      () => {
+        toast({ title: "Location denied", description: "Please allow location access or enter your address manually.", variant: "destructive" });
+        setLocationLoading(false);
+      },
+      { timeout: 10000 }
+    );
+  }
 
   useEffect(() => {
     const pincode = formData.shippingPostalCode;
@@ -322,16 +395,36 @@ export default function CheckoutPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="shippingPostalCode">PIN Code</Label>
-                  <Input 
-                    id="shippingPostalCode" 
-                    value={formData.shippingPostalCode} 
-                    onChange={(e) => handleChange("shippingPostalCode", e.target.value)} 
-                    className="rounded-none border-border/50 bg-secondary/10"
-                    placeholder="6-digit PIN"
-                    maxLength={6}
-                    required
-                  />
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="shippingPostalCode">PIN Code</Label>
+                    <button
+                      type="button"
+                      onClick={handleUseLocation}
+                      disabled={locationLoading}
+                      className="flex items-center gap-1 text-[9px] text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                      style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.1em" }}
+                    >
+                      {locationLoading
+                        ? <Loader2 className="w-3 h-3 animate-spin" />
+                        : <MapPin className="w-3 h-3" />
+                      }
+                      Use location
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Input 
+                      id="shippingPostalCode" 
+                      value={formData.shippingPostalCode} 
+                      onChange={(e) => handleChange("shippingPostalCode", e.target.value)} 
+                      className="rounded-none border-border/50 bg-secondary/10"
+                      placeholder="6-digit PIN"
+                      maxLength={6}
+                      required
+                    />
+                    {pincodeLoading && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -341,7 +434,7 @@ export default function CheckoutPage() {
                   <SelectTrigger className="rounded-none border-border/50 bg-secondary/10">
                     <SelectValue placeholder="Select State" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-60 overflow-y-auto">
                     {INDIAN_STATES.map(state => (
                       <SelectItem key={state} value={state}>{state}</SelectItem>
                     ))}

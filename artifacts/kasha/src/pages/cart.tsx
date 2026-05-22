@@ -102,7 +102,7 @@ export default function CartPage() {
                       <img
                         src={getAssetUrl(item.product.thumbnailUrl)}
                         alt={item.product.name}
-                        className="w-full h-full object-cover object-center"
+                        className="w-full h-full object-contain object-center"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs font-black">

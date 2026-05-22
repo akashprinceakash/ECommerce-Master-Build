@@ -27,6 +27,7 @@ export default function ProductDetailPage() {
   const [activeIdx, setActiveIdx] = useState(0);
   const [customSizeText, setCustomSizeText] = useState("");
   const touchStartX = useRef<number | null>(null);
+  const sizingAccordionRef = useRef<HTMLDivElement>(null);
 
   const { data: product, isLoading, error } = useGetProduct(id, {
     query: {
@@ -360,7 +361,12 @@ export default function ProductDetailPage() {
                 <span className="text-[11px] font-bold tracking-[0.15em] text-black">SELECT SIZE</span>
                 <button
                   className="text-[11px] text-gray-400 hover:text-black underline transition-colors tracking-wider"
-                  onClick={() => setOpenAccordion(openAccordion === "sizing" ? null : "sizing")}
+                  onClick={() => {
+                    setOpenAccordion("sizing");
+                    setTimeout(() => {
+                      sizingAccordionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }, 50);
+                  }}
                 >
                   SIZE GUIDE
                 </button>
@@ -510,22 +516,26 @@ export default function ProductDetailPage() {
             <div className="space-y-0 border-t border-gray-200">
               {[
                 {
-                  key: "details",
+                  key: "details" as const,
                   title: "Details & Care",
                   content: "Crafted with precision using premium performance fabrics. Machine wash cold, gentle cycle. Do not bleach. Tumble dry low. Iron on low heat. Store folded in a cool, dry place."
                 },
                 {
-                  key: "shipping",
+                  key: "shipping" as const,
                   title: "Shipping & Returns",
                   content: "Orders are processed within 1–3 business days. Metro deliveries: 3–5 business days. Other cities: 5–7 business days. Returns accepted within 7 days of delivery for unused, unwashed items in original condition with tags attached. Customised pieces are non-returnable."
                 },
                 {
-                  key: "sizing",
+                  key: "sizing" as const,
                   title: "Sizing Information",
                   content: "Our garments are designed for a contemporary athletic fit. We recommend ordering your usual size. If you are between sizes, size up for a more relaxed fit. See our full size guide for measurements."
                 }
               ].map(item => (
-                <div key={item.key} className="border-b border-gray-200">
+                <div
+                  key={item.key}
+                  className="border-b border-gray-200"
+                  ref={item.key === "sizing" ? sizingAccordionRef : undefined}
+                >
                   <button
                     className="w-full flex items-center justify-between py-4 text-left"
                     onClick={() => setOpenAccordion(openAccordion === item.key ? null : item.key)}

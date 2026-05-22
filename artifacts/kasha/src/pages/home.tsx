@@ -377,50 +377,6 @@ export default function Home() {
       ══════════════════════════════════════════════════════════════════════ */}
       <section style={{ position: "relative", height: "100vh", minHeight: 600, overflow: "hidden", marginTop: -64 }}>
 
-        {/* ── Vertical side markers ──────────────────────────────────────────── */}
-        <div style={{
-          position: "absolute", left: 20, top: "50%", transform: "translateY(-50%)",
-          zIndex: 6, pointerEvents: "none",
-        }}>
-          <span style={{
-            writingMode: "vertical-rl",
-            transform: "rotate(180deg)",
-            display: "block",
-            fontFamily: "'Josefin Sans', sans-serif",
-            fontSize: 9,
-            letterSpacing: "0.5em",
-            color: "rgba(255,255,255,0.28)",
-            textTransform: "uppercase",
-          }}>
-            Ka.Sha — Golf &amp; Sportswear
-          </span>
-        </div>
-
-        {/* ── Right-side slide counter ──────────────────────────────────────── */}
-        <div style={{
-          position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)",
-          zIndex: 6, pointerEvents: "none",
-          display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-        }}>
-          <span style={{
-            fontFamily: "'Josefin Sans', sans-serif",
-            fontSize: 11,
-            letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.55)",
-          }}>
-            {String(active + 1).padStart(2, "0")}
-          </span>
-          <div style={{ width: 1, height: 40, background: "rgba(255,255,255,0.18)" }} />
-          <span style={{
-            fontFamily: "'Josefin Sans', sans-serif",
-            fontSize: 11,
-            letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.22)",
-          }}>
-            {String(slides.length).padStart(2, "0")}
-          </span>
-        </div>
-
         {/* Slides strip */}
         <div style={{
           position:   "absolute",

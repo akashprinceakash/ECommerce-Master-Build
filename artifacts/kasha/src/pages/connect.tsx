@@ -45,6 +45,7 @@ export default function ConnectPage() {
   const [stylePreference, setStylePreference] = useState("");
   const [message,         setMessage]         = useState("");
   const [focused,         setFocused]         = useState<string | null>(null);
+  const [submitted,       setSubmitted]       = useState(false);
   const [location] = useLocation();
 
   useEffect(() => { document.title = "Connect with Us — Ka.Sha"; }, []);
@@ -67,7 +68,8 @@ export default function ConnectPage() {
     const body = encodeURIComponent(
       `Name: ${name}\nEmail: ${email}\nEnquiry Type: ${label}\nStyle Preference: ${stylePreference || "Not specified"}\n\nMessage:\n${message}\n\n---\nSent via Ka.sha website`
     );
-    window.location.href = `mailto:support@kashaonline.in?subject=${subject}&body=${body}`;
+    window.open(`mailto:support@kashaonline.in?subject=${subject}&body=${body}`, "_blank");
+    setSubmitted(true);
   }
 
   const borderFor = (key: string) => focused === key ? GOLD : "rgba(0,0,0,0.18)";
@@ -102,6 +104,36 @@ export default function ConnectPage() {
       {/* ── Form ──────────────────────────────────────────────────────────── */}
       <section id="connect-form" style={{ background: "#F9F8F6", padding: "80px 24px" }}>
         <div style={{ maxWidth: 700, margin: "0 auto" }}>
+          {submitted ? (
+            <div style={{ textAlign: "center", padding: "60px 24px" }}>
+              <div style={{
+                width: 64, height: 64, borderRadius: "50%",
+                background: "rgba(184,146,90,0.1)", border: `1px solid ${GOLD}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                margin: "0 auto 24px",
+              }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 32, fontWeight: 400, color: "#1a1a1a", marginBottom: 12 }}>
+                Enquiry Sent
+              </h2>
+              <p style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 14, letterSpacing: "0.06em", color: "rgba(0,0,0,0.5)", lineHeight: 1.8, maxWidth: 440, margin: "0 auto 32px" }}>
+                Thank you, {name}. Your enquiry has been opened in your email client. We'll respond within 1–2 business days.
+              </p>
+              <button
+                onClick={() => { setSubmitted(false); setName(""); setEmail(""); setMessage(""); setStylePreference(""); }}
+                style={{
+                  fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.3em",
+                  textTransform: "uppercase", padding: "14px 36px",
+                  border: `1px solid ${GOLD}`, background: "transparent", color: GOLD, cursor: "pointer",
+                }}
+              >
+                Send Another Enquiry
+              </button>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 28 }}>
 
             {/* Name + Email */}
@@ -177,6 +209,7 @@ export default function ConnectPage() {
             </button>
 
           </form>
+          )}
         </div>
       </section>
 
