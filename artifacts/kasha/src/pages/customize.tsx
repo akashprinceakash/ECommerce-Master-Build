@@ -2,24 +2,15 @@
  * customize.tsx — KA.SHA Bespoke Studio (4-Step Wizard)
  *
  * Implements the customer wireframe with 4 sequential steps:
- *   1. Style   — base colour / print / pattern (locked for "pattern" products)
+ *   1. Style   — base colour / print / bespoke design (locked for "pattern" products)
  *   2. Parts   — per-zone colour overrides (collar, front, back, sleeves)
  *   3. Logo    — optional logo upload + 9-point position grid + size slider
  *   4. Size    — XS → XXL + optional custom measurements
  *
  * Product-type behaviour:
- *   "fabric"  — Step 1 shows Solids + Prints tabs.  GT picker available in Patterns tab.
- *   "pattern" — Step 1 Pattern tab is pre-locked to the product's GT style (e.g. GT015).
- *                Only Color A / Color B swatches are shown; no print library.
- *   "print"   — Step 1 Prints tab only.  No colour controls on step 1.
- *
- * GT015 integration:
- *   The pixel-swap recoloring lives in gt-styles.ts → applyGtStyle().
- *   Calling handleGtColorChange("primary", hex) swaps Color A (black #000000).
- *   Calling handleGtColorChange("accent",  hex) swaps Color B (pink  #F0CED2).
- *   The engine reads GT_BASE_TEXTURES["GT015"] (embedded base64) and replaces
- *   exact source pixels via an offscreen canvas — same logic as the standalone
- *   GT015 colour customizer HTML.
+ *   "fabric"  — Step 1 shows Solids + Prints tabs. Bespoke Designs picker in Patterns tab.
+ *   "pattern" — Step 1 Pattern tab is pre-locked to a bespoke design.
+ *   "print"   — Step 1 Prints tab only. No colour controls on step 1.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -35,9 +26,9 @@ import {
   type PatternZone, type PatternDef, type ProductType,
 } from "@/components/3d/patterns";
 import {
-  GT_STYLES, applyGtStyle, clearGtStyle,
-  type GtStyleDef, type GtColors,
-} from "@/components/3d/gt-styles";
+  KASHA_DESIGNS, applyKashaDesign, clearKashaDesign,
+  type KashaDesignDef,
+} from "@/components/3d/kasha-designs";
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 const V = {
@@ -59,19 +50,7 @@ const MAIN_PALETTE = [
   "#378ADD","#185FA5","#4a7c59","#97C459","#E24B4A","#D85A30",
   "#D4537E","#7F77DD","#BA7517","#888780",
 ];
-const GT_PALETTE = [
-  "#C5D3DE","#F8F4E9","#ACB1A1","#F0CED2","#E9DAC3","#FFFFFF",
-  "#585858","#576043","#DA1F26","#273878","#243C2F","#362223","#000000",
-];
 const SIZES = ["XS","S","M","L","XL","XXL"];
-
-const T_COLLECTIONS = [
-  { id:"T1", label:"T-1", desc:"Classic",   groups:["classic"]           },
-  { id:"T2", label:"T-2", desc:"Sport",     groups:["sport-side"]        },
-  { id:"T3", label:"T-3", desc:"Wave",      groups:["triple","wave"]     },
-  { id:"T4", label:"T-4", desc:"Hourglass", groups:["hourglass","pinstripe"] },
-  { id:"T5", label:"T-5", desc:"Raglan",    groups:["raglan"]            },
-];
 
 // Garment part zones
 const PART_ZONES: { id: Exclude<PatternZone,"all">; label: string }[] = [
@@ -153,8 +132,6 @@ export default function CustomizePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Read ?gt=GTxxx from the URL once on mount (stable — URL never changes mid-session)
-  const [urlGtId] = useState<string|null>(() => new URLSearchParams(window.location.search).get("gt"));
 
   // ── Wizard step (1–4) ────────────────────────────────────────────────────
   const [step, setStep] = useState(1);
@@ -180,9 +157,9 @@ export default function CustomizePage() {
   const logoObjRef = useRef<any>(null);
 
   // ── Product type detection ───────────────────────────────────────────────
-  // "pattern" → locked GT style, only colour swaps
+  // "pattern" → locked bespoke design
   // "print"   → print library only, no colour controls
-  // "fabric"  → full editor (prints + colours + GT picker)
+  // "fabric"  → full editor (prints + colours + bespoke designs)
   const { data: product, isLoading } = useQuery<Product>({
     queryKey: ["product", id],
     queryFn:  () => apiFetch(`/api/products/${id}`),
@@ -190,16 +167,8 @@ export default function CustomizePage() {
   });
   const productType: ProductType = (product?.category as ProductType) ?? "fabric";
 
-  // Detect locked GT id from product name e.g. "Polo GT015 [gt:GT015]"
-  const lockedGtId = product?.name?.match(/\[gt:(GT\d+)\]/)?.[1] ?? null;
-
-  // The GT style to auto-apply: URL param wins, then locked product name
-  const autoGtId = urlGtId || lockedGtId;
-
   // ── Style step state ─────────────────────────────────────────────────────
-  // Default to "pattern" tab when a GT style is pre-selected via URL
   const [styleTab, setStyleTab] = useState<"solid"|"print"|"pattern">(
-    urlGtId ? "pattern" :
     productType === "pattern" ? "pattern" :
     productType === "print"   ? "print"   : "solid"
   );
@@ -215,11 +184,9 @@ export default function CustomizePage() {
   });
   const [printMode, setPrintMode] = useState<"fullBody"|"parts">("fullBody");
 
-  // GT / Pattern state
-  const [activeGtStyle, setActiveGtStyle] = useState<GtStyleDef|null>(null);
-  const [gtColors, setGtColors] = useState<GtColors>({ primary:"#000000", accent:"#F0CED2" });
-  const gtRequestIdRef = useRef(0);
-  const [activeGtCollection, setActiveGtCollection] = useState("T1");
+  // KA.SHA Bespoke Design state
+  const [activeKashaDesign, setActiveKashaDesign] = useState<KashaDesignDef|null>(null);
+  const kdRequestIdRef = useRef(0);
 
   // ── Parts step state ─────────────────────────────────────────────────────
   const [activePartZone, setActivePartZone] = useState<Exclude<PatternZone,"all">>("collar");
@@ -355,61 +322,24 @@ export default function CustomizePage() {
     };
   }, [mvReady, product?.modelUrl, webglAvailable]);
 
-  // ── Auto-apply GT style when canvas + model are both ready ───────────────
-  useEffect(() => {
-    if (!modelLoaded||!fcRef.current) return;
-    if (!autoGtId||activeGtStyle?.id===autoGtId) return;
-    const style=GT_STYLES.find(s=>s.id===autoGtId);
-    if (!style) return;
-    // Switch to the matching T collection so the grid shows the active style
-    const coll=T_COLLECTIONS.find(t=>t.groups.includes(style.group));
-    if (coll) setActiveGtCollection(coll.id);
-    handleSelectGtStyle(style);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modelLoaded, autoGtId]);
-
   // Update styleTab when productType resolves (after data fetch)
   useEffect(() => {
-    if (urlGtId) { setStyleTab("pattern"); return; }
     if (productType==="pattern") setStyleTab("pattern");
     else if (productType==="print") setStyleTab("print");
-  }, [productType, urlGtId]);
+  }, [productType]);
 
-  // Jump to the correct T-collection immediately when the GT id is known from the URL
-  useEffect(() => {
-    const id = urlGtId || lockedGtId;
-    if (!id) return;
-    const style = GT_STYLES.find(s => s.id === id);
-    if (!style) return;
-    const coll = T_COLLECTIONS.find(t => t.groups.includes(style.group));
-    if (coll) setActiveGtCollection(coll.id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlGtId, lockedGtId]);
-
-  // ── GT style handlers ────────────────────────────────────────────────────
-  const handleSelectGtStyle = useCallback(async (style: GtStyleDef) => {
+  // ── KA.SHA Bespoke Design handler ────────────────────────────────────────
+  const handleSelectKashaDesign = useCallback(async (design: KashaDesignDef) => {
     const fc=fcRef.current; if(!fc) return;
-    const myReq=++gtRequestIdRef.current;
-    setActiveGtStyle(style);
-    const colors: GtColors={...style.defaultColors};
-    setGtColors(colors);
+    const myReq=++kdRequestIdRef.current;
+    setActiveKashaDesign(design);
     if (allOverPrintId){setFabricBg(fc,"#ffffff");setAllOverPrintId(null);}
     try{mats[0]?.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]);}catch{}
-    await applyGtStyle(fc,style,colors);
-    if (myReq!==gtRequestIdRef.current) return;
+    await applyKashaDesign(fc, design);
+    if (myReq!==kdRequestIdRef.current) return;
     syncTexture();
-    toast({title:`${style.id} applied`,description:style.label});
+    toast({title:`${design.id} applied`, description:design.label});
   }, [allOverPrintId, mats, syncTexture, toast]);
-
-  const handleGtColorChange = useCallback(async (role: keyof GtColors, hex: string) => {
-    const fc=fcRef.current; if(!fc||!activeGtStyle) return;
-    const myReq=++gtRequestIdRef.current;
-    const updated: GtColors={...gtColors,[role]:hex};
-    setGtColors(updated);
-    await applyGtStyle(fc,activeGtStyle,updated);
-    if (myReq!==gtRequestIdRef.current) return;
-    syncTexture();
-  }, [activeGtStyle, gtColors, syncTexture]);
 
   // ── Primary colour (fabric/solid) ────────────────────────────────────────
   const applyPrimary = (hex: string) => {
@@ -426,7 +356,7 @@ export default function CustomizePage() {
   // ── Per-zone colour ──────────────────────────────────────────────────────
   const applyZoneColor = useCallback((zone: Exclude<PatternZone,"all">, hex: string) => {
     const fc=fcRef.current; if(!fc) return;
-    gtRequestIdRef.current++;
+    kdRequestIdRef.current++;
     const existing=fc.getObjects().filter((o:any)=>o?.data?.kashaZoneColor===zone);
     if (existing.length) fc.remove(...existing);
     if (!hex) { setZoneColors(prev=>({...prev,[zone]:""})); fc.renderAll(); syncTexture(); return; }
@@ -435,8 +365,8 @@ export default function CustomizePage() {
     (rect as any).data={kashaZoneColor:zone};
     fc.add(rect);
     (fc as any).sendObjectToBack?.(rect);
-    const gtBase=fc.getObjects().find((o:any)=>o?.data?.tag==="__kashaGtBg__");
-    if (gtBase) (fc as any).sendObjectToBack?.(gtBase);
+    const kdBase=fc.getObjects().find((o:any)=>o?.data?.tag==="__kashaKdBg__");
+    if (kdBase) (fc as any).sendObjectToBack?.(kdBase);
     fc.renderAll();
     setZoneColors(prev=>({...prev,[zone]:hex}));
     syncTexture();
@@ -447,12 +377,12 @@ export default function CustomizePage() {
 
   const applyAllOverPrint = useCallback(async (p: PatternDef) => {
     const fc=fcRef.current; if(!fc) return;
-    gtRequestIdRef.current++;
+    kdRequestIdRef.current++;
     try {
       const img=await loadHTMLImage(patternUrl(p.file));
       const off=document.createElement("canvas");off.width=ALL_OVER_TILE_PX;off.height=ALL_OVER_TILE_PX;
       const ctx=off.getContext("2d"); if(ctx){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";ctx.drawImage(img,0,0,ALL_OVER_TILE_PX,ALL_OVER_TILE_PX);}
-      if (activeGtStyle){clearGtStyle(fc);setActiveGtStyle(null);}
+      if (activeKashaDesign){clearKashaDesign(fc);setActiveKashaDesign(null);}
       const pattern=new fabric.Pattern({source:off,repeat:"repeat"});
       (fc as any).backgroundColor=pattern;
       fc.renderAll();
@@ -461,7 +391,7 @@ export default function CustomizePage() {
       syncTexture();
       toast({title:"Print applied",description:`${p.label} mapped across the whole garment.`});
     } catch { toast({title:"Could not load print",variant:"destructive"}); }
-  }, [activeGtStyle, mats, syncTexture, toast]);
+  }, [activeKashaDesign, mats, syncTexture, toast]);
 
   const clearAllOverPrint = useCallback(()=>{
     const fc=fcRef.current; if(!fc) return;
@@ -566,8 +496,8 @@ export default function CustomizePage() {
     return {
       productId:id, name:designName||`${product?.name} Custom`,
       color:primaryColor, size,
-      partsEnabled:{qty,zoneColors,primaryColor,gtStyleId:activeGtStyle?.id||lockedGtId||"",gtColors,activePrintId,sleeveLength},
-      canvasData:JSON.stringify({canvasJSON:JSON.stringify((fc as any).toJSON(["data"])),textureUrl:lastTextureUrlRef.current,primaryColor,gtColors,gtStyleId:activeGtStyle?.id||lockedGtId||"",zoneColors,activePrintId,allOverPrintId,sleeveLength}),
+      partsEnabled:{qty,zoneColors,primaryColor,kdDesignId:activeKashaDesign?.id||"",activePrintId,sleeveLength},
+      canvasData:JSON.stringify({canvasJSON:JSON.stringify((fc as any).toJSON(["data"])),textureUrl:lastTextureUrlRef.current,primaryColor,kdDesignId:activeKashaDesign?.id||"",zoneColors,activePrintId,allOverPrintId,sleeveLength}),
       previewImageUrl:snap,
     };
   };
@@ -788,112 +718,59 @@ export default function CustomizePage() {
                   </div>
                 )}
 
-                {/* ── PATTERN pane (GT T1-T5 styles) ── */}
+                {/* ── PATTERN pane (KA.SHA Bespoke Designs KD001–KD005) ── */}
                 {styleTab==="pattern"&&(
                   <div>
-                    {/* T1–T5 collection pill selector */}
-                    <div style={{...sb,marginBottom:6}}>Design Collections</div>
-                    <div style={{display:"flex",gap:"4px",flexWrap:"wrap",marginBottom:8}}>
-                      {T_COLLECTIONS.map(t=>{
-                        const active=activeGtCollection===t.id;
+                    <div style={{...sb,marginBottom:8}}>KA.SHA Bespoke Designs</div>
+
+                    {/* 5-card design grid */}
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:6,marginBottom:10}}>
+                      {KASHA_DESIGNS.map(d=>{
+                        const isA=activeKashaDesign?.id===d.id;
+                        const zones=Object.keys(d.zones).length;
                         return(
-                          <button key={t.id}
-                            onClick={()=>setActiveGtCollection(t.id)}
-                            style={{padding:"4px 10px",fontSize:10,fontWeight:700,letterSpacing:".05em",
-                              border:active?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,borderRadius:20,
-                              cursor:"pointer",fontFamily:"inherit",
-                              background:active?V.aclt:V.sf,
-                              color:active?V.ac:V.mu,transition:"all .15s"}}>
-                            {t.label}
-                            <span style={{fontSize:8,opacity:.65,marginLeft:3}}>{t.desc}</span>
+                          <button key={d.id} onClick={()=>handleSelectKashaDesign(d)}
+                            title={d.label}
+                            style={{padding:"10px 8px 8px",borderRadius:8,
+                              border:isA?`2px solid ${V.ac}`:`1px solid ${V.bd}`,
+                              background:isA?V.aclt:V.sf,
+                              cursor:"pointer",display:"flex",flexDirection:"column",
+                              alignItems:"center",gap:5,fontFamily:"inherit",
+                              transition:"all .15s",position:"relative"}}>
+                            {isA&&(
+                              <div style={{position:"absolute",top:5,right:7,width:8,height:8,borderRadius:"50%",background:V.ac}}/>
+                            )}
+                            {/* Zone texture strip using front zone preview */}
+                            <div style={{width:"100%",height:44,borderRadius:5,overflow:"hidden",background:V.sf2,
+                              border:`1px solid ${V.bd}`,flexShrink:0}}>
+                              {d.zones.front&&(
+                                <img src={d.zones.front} alt={d.label}
+                                  style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+                              )}
+                            </div>
+                            <span style={{fontSize:9,color:isA?V.ac:V.tx,fontWeight:700,letterSpacing:".04em"}}>{d.id}</span>
+                            <span style={{fontSize:8,color:V.mu,opacity:.85,textAlign:"center",lineHeight:1.3}}>{zones} zone{zones!==1?"s":""}</span>
                           </button>
                         );
                       })}
                     </div>
 
-                    {/* Style grid for selected collection */}
-                    {(()=>{
-                      const col=T_COLLECTIONS.find(t=>t.id===activeGtCollection);
-                      const styles=col ? GT_STYLES.filter(s=>col.groups.includes(s.group)) : [];
-                      return(
-                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4,marginBottom:10}}>
-                          {styles.map(s=>{
-                            const isA=activeGtStyle?.id===s.id;
-                            return(
-                              <button key={s.id} onClick={()=>handleSelectGtStyle(s)} title={`${s.id} — ${s.label}`}
-                                style={{padding:"6px 4px 4px",borderRadius:7,
-                                  border:isA?`2px solid ${V.ac}`:`1px solid ${V.bd}`,
-                                  background:isA?V.aclt:V.sf,
-                                  cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,fontFamily:"inherit"}}>
-                                {/* Color swatch bar */}
-                                <div style={{display:"flex",width:"100%",height:18,borderRadius:4,overflow:"hidden"}}>
-                                  <div style={{flex:1,background:s.defaultColors.primary}}/>
-                                  <div style={{flex:1,background:s.defaultColors.accent}}/>
-                                  {s.defaultColors.tertiary&&<div style={{flex:1,background:s.defaultColors.tertiary}}/>}
-                                </div>
-                                <span style={{fontSize:8,color:isA?V.ac:V.mu,fontWeight:600,letterSpacing:".03em"}}>{s.id.replace("GT","")}</span>
-                                <span style={{fontSize:7,color:V.mu,opacity:.8,textAlign:"center",lineHeight:1.2}}>{s.label.split("&")[0].trim()}</span>
-                                {isA&&<div style={{width:7,height:7,borderRadius:"50%",background:V.ac}}/>}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
-
-                    {/* Color A / Color B pickers shown once a style is selected */}
-                    {activeGtStyle&&(
-                      <div style={{background:V.sf,border:`1px solid ${V.bd}`,borderRadius:8,padding:10,display:"flex",flexDirection:"column",gap:10}}>
-                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                          <div style={{fontSize:11,fontWeight:600,color:V.tx}}>{activeGtStyle.id} — {activeGtStyle.label}</div>
-                          <button onClick={()=>{const fc=fcRef.current;if(fc){clearGtStyle(fc);syncTexture();}setActiveGtStyle(null);}}
-                            style={{fontSize:9,color:V.mu,background:"transparent",border:`1px solid ${V.bd}`,borderRadius:4,padding:"2px 6px",cursor:"pointer",fontFamily:"inherit"}}>
-                            Clear
-                          </button>
-                        </div>
-
-                        {/* Color A (primary) */}
+                    {/* Active design info + clear */}
+                    {activeKashaDesign&&(
+                      <div style={{background:V.sf,border:`1px solid ${V.bd}`,borderRadius:8,padding:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
                         <div>
-                          <div style={{fontSize:10,color:V.mu,marginBottom:5}}>Colour A <span style={{opacity:.6}}>(was {activeGtStyle.defaultColors.primary})</span></div>
-                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
-                            <div style={{width:28,height:28,borderRadius:6,background:gtColors.primary,border:`1px solid ${V.bd}`,flexShrink:0}}/>
-                            <span style={{fontSize:11,color:V.ac,fontFamily:"monospace"}}>{gtColors.primary.toUpperCase()}</span>
-                            <input type="color" value={gtColors.primary} onChange={e=>handleGtColorChange("primary",e.target.value)}
-                              style={{marginLeft:"auto",width:28,height:28,border:"none",cursor:"pointer",borderRadius:6,padding:0,background:"none"}}/>
-                          </div>
-                          <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                            {GT_PALETTE.map(hex=>swatch(hex,gtColors.primary.toLowerCase()===hex.toLowerCase(),()=>handleGtColorChange("primary",hex)))}
-                          </div>
+                          <div style={{fontSize:11,fontWeight:600,color:V.tx}}>{activeKashaDesign.id}</div>
+                          <div style={{fontSize:9,color:V.mu}}>{activeKashaDesign.label}</div>
                         </div>
-
-                        {/* Color B (accent) */}
-                        <div>
-                          <div style={{fontSize:10,color:V.mu,marginBottom:5}}>Colour B <span style={{opacity:.6}}>(was {activeGtStyle.defaultColors.accent})</span></div>
-                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
-                            <div style={{width:28,height:28,borderRadius:6,background:gtColors.accent,border:`1px solid ${V.bd}`,flexShrink:0}}/>
-                            <span style={{fontSize:11,color:V.ac,fontFamily:"monospace"}}>{gtColors.accent.toUpperCase()}</span>
-                            <input type="color" value={gtColors.accent} onChange={e=>handleGtColorChange("accent",e.target.value)}
-                              style={{marginLeft:"auto",width:28,height:28,border:"none",cursor:"pointer",borderRadius:6,padding:0,background:"none"}}/>
-                          </div>
-                          <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                            {GT_PALETTE.map(hex=>swatch(hex,gtColors.accent.toLowerCase()===hex.toLowerCase(),()=>handleGtColorChange("accent",hex)))}
-                          </div>
-                        </div>
-
-                        {/* Tertiary (optional) */}
-                        {activeGtStyle.defaultColors.tertiary!==undefined&&(
-                          <div>
-                            <div style={{fontSize:10,color:V.mu,marginBottom:5}}>Colour C <span style={{opacity:.6}}>(optional)</span></div>
-                            <input type="color" value={gtColors.tertiary??activeGtStyle.defaultColors.tertiary}
-                              onChange={e=>handleGtColorChange("tertiary",e.target.value)}
-                              style={{width:28,height:28,border:"none",cursor:"pointer",borderRadius:6,padding:0,background:"none"}}/>
-                          </div>
-                        )}
+                        <button onClick={()=>{const fc=fcRef.current;if(fc){clearKashaDesign(fc);syncTexture();}setActiveKashaDesign(null);}}
+                          style={{fontSize:9,color:V.mu,background:"transparent",border:`1px solid ${V.bd}`,borderRadius:4,padding:"3px 8px",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+                          Clear
+                        </button>
                       </div>
                     )}
 
-                    {!activeGtStyle&&(
-                      <p style={{fontSize:10,color:V.mu,marginTop:2}}>Select a pattern above to apply it to the garment.</p>
+                    {!activeKashaDesign&&(
+                      <p style={{fontSize:10,color:V.mu,marginTop:2}}>Select a bespoke design above to apply it to the garment.</p>
                     )}
                   </div>
                 )}
@@ -1062,7 +939,7 @@ export default function CustomizePage() {
                 <div style={sb}>Your design</div>
                 {[
                   ["Product",   product.name.replace(/\s*\[gt:GT\d+\]\s*$/,"")],
-                  ["Style",     activeGtStyle?`${activeGtStyle.id} (${gtColors.primary} / ${gtColors.accent})`:activePrintId?PATTERNS.find(p=>p.id===activePrintId)?.label||"—":primaryColor],
+                  ["Style",     activeKashaDesign?`${activeKashaDesign.id} — ${activeKashaDesign.label}`:activePrintId?PATTERNS.find(p=>p.id===activePrintId)?.label||"—":primaryColor],
                   ["Size",      size],
                   ["Qty",       String(qty)],
                   ["Price",     formatPrice(product.priceInPaise)],
@@ -1126,11 +1003,11 @@ export default function CustomizePage() {
           </div>
 
           {/* Active design badge */}
-          {(activeGtStyle||activePrintId)&&(
+          {(activeKashaDesign||activePrintId)&&(
             <div style={{position:"absolute",top:14,right:14,background:"rgba(255,255,255,.90)",border:`1px solid ${V.bd}`,borderRadius:9,padding:"6px 10px",backdropFilter:"blur(8px)",boxShadow:"0 1px 6px rgba(0,0,0,.07)"}}>
               <div style={{fontSize:9,color:V.mu,letterSpacing:".08em",textTransform:"uppercase"}}>Active Design</div>
               <div style={{fontSize:11,fontWeight:600,color:V.ac}}>
-                {activeGtStyle?`${activeGtStyle.id} · ${gtColors.primary} / ${gtColors.accent}`:PATTERNS.find(p=>p.id===activePrintId)?.label}
+                {activeKashaDesign?`${activeKashaDesign.id} · ${activeKashaDesign.label}`:PATTERNS.find(p=>p.id===activePrintId)?.label}
               </div>
             </div>
           )}

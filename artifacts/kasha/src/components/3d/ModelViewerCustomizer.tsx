@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from "react";
 import * as fabric from "fabric";
 import { ZONE_PRESETS, ZONE_LABEL, patternUrl, type PatternZone, type PatternDef } from "./patterns";
-import { GT_STYLES, GT_BASE_TEXTURES, type GtStyleDef, type GtColors } from "./gt-styles";
+import { GT_STYLES, type GtStyleDef, type GtColors } from "./gt-styles";
+const GT_BASE_TEXTURES: Record<string, string> = {};
 
 export interface CustomizerHandle {
   getCanvasData: () => { canvasJson: string; previewDataUrl: string } | null;
