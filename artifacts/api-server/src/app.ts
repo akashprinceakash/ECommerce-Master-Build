@@ -7,6 +7,7 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
 
 const app: Express = express();
 
@@ -62,7 +63,12 @@ app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
 app.use(clerkMiddleware());
 
-const publicDir = path.join(process.cwd(), "public");
+// Resolve public dir relative to this file so the path is correct whether the
+// server is started from the workspace root (production) or the artifact dir
+// (development).  In both cases the compiled bundle lives in dist/, so ".."
+// lands in artifacts/api-server/public/.
+const __appDir = path.dirname(fileURLToPath(import.meta.url));
+const publicDir = path.join(__appDir, "..", "public");
 if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
 
 // Smart image serving: WebP negotiation + long-term cache headers
