@@ -1,7 +1,7 @@
 /**
  * CustomizeEntryModal — shown when "Custom Studio" is clicked from the navbar.
  * Presents three premium category cards so the user picks a garment type first,
- * then routes them to the products listing pre-filtered for that type.
+ * then routes them directly to the Bespoke Studio for that type.
  */
 import { useLocation } from "wouter";
 
@@ -17,7 +17,7 @@ const CATEGORIES = [
     subtitle: "Pure colour. Infinite expression.",
     description: "Start from a clean canvas. Choose your base colour, add zone accents, prints, logos and text.",
     icon: "◻",
-    href: "/products?type=tshirts&subtype=solid",
+    href: "/customize?type=solid",
     accent: "#c9a84c",
     bg: "linear-gradient(135deg, #fafaf7 60%, #f5e9c8 100%)",
     preview: (
@@ -36,7 +36,7 @@ const CATEGORIES = [
     subtitle: "Bold designs. Bespoke craftsmanship.",
     description: "Select from our KA.SHA signature pattern library. Customise body and pattern colours independently.",
     icon: "◈",
-    href: "/products?type=tshirts&subtype=pattern",
+    href: "/customize?type=pattern",
     accent: "#c9a84c",
     bg: "linear-gradient(135deg, #fafaf7 60%, #ede9e1 100%)",
     preview: (
@@ -55,7 +55,7 @@ const CATEGORIES = [
     subtitle: "Artistry meets athleticism.",
     description: "Start with a signature KA.SHA print design. Personalise with text, logos and custom artwork.",
     icon: "⬡",
-    href: "/products?type=tshirts&subtype=printed",
+    href: "/customize?type=printed",
     accent: "#c9a84c",
     bg: "linear-gradient(135deg, #fafaf7 60%, #e8e5df 100%)",
     preview: (
@@ -234,7 +234,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           fontSize: 10, color: "#b8b5ae",
           letterSpacing: ".08em", fontStyle: "italic",
         }}>
-          Browse the collection, then click "Personalise This T-Shirt" on any product to begin
+          You'll customise the design now — choose a specific product later to add to cart
         </p>
       </div>
 

@@ -100,6 +100,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/products" component={ProductsPage} />
           <Route path="/products/:id" component={ProductDetailPage} />
           <Route path="/products/:id/customize" component={CustomizePage} />
+          <Route path="/customize" component={CustomizePage} />
           <Route path="/heritage" component={HeritagePage} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/search" component={SearchPage} />

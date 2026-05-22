@@ -1,0 +1,11 @@
+ok now the functionalities are working fine but the page flow should be changed there 2 cases to select the customization page
+1. is either user can select the customize the t-shirt either directly by  clicking the customize button or 
+2. by selecting the particula product from the product detail page..
+
+1. when user click on customization directly you should show pop and allow them to select what are things they want to customize either solid t-shirt, pattern t-shirt, prints t-shirt then you can navigate them to the customization page 
+->if user selects pattern t-shirts then in the cutomization page the first option should be pattern design selection and then user can select the color combination it should not show color buttons user can be select either body color from the color picker or the texture color from tha color picker next if optionally user wants to add prints on the  pattern they can add.. and the next section is the add/remove /replace the size of the logo and text for both of this provide an option to select part by part as like you are giving for the prints when they selected
+->comming back if you selects solid t-shirts then show the color picker and parts of the t-shirts and next user can add/remove prints and  they can change add/remove/replacer/resize the text and logo 
+-> comming back if user selects printed t-shirts and you have to show patterns which you are currently showing optionally if user wants they can add patterns on the prints  then user show the option to add/remove the prints after redirecting user to the customization page.. next user can add/remove/resize/replace the text/logo 
+
+2. the second case where user selects any product t-shirt from the product page and it navigates to the product details page there you instead of customize you have to say peronalise this t-shirt upon clicking that you have to ask them by showing giving 2 options one is either they wanted to change only add text /logo  or they want full customization of that t-shirt then you shoul navigate the user according to the t-shirt which they selected either pattern,prints,solids in the product details say supppose if user want to customize add text or logo on the different parts of the selected t-shirt for that the the parsonalisation section is used as mentioned by the client 
+enhance this to prompt
