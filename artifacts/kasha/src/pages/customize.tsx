@@ -620,78 +620,69 @@ export default function CustomizePage() {
                   </div>
                 )}
 
-                {/* ── PATTERN pane (GT styles) ── */}
+                {/* ── PATTERN pane (GT T1-T5 styles) ── */}
                 {styleTab==="pattern"&&(
                   <div>
-                    {/* Locked pattern badge for "pattern" products */}
-                    {productType==="pattern"&&activeGtStyle&&(
-                      <div style={{background:V.sf,border:`1px solid ${V.ac}`,borderRadius:8,padding:10,marginBottom:12}}>
-                        <div style={{fontSize:9,color:V.mu,letterSpacing:".06em",textTransform:"uppercase",marginBottom:2}}>Locked Pattern</div>
-                        <div style={{fontSize:13,fontWeight:600,color:V.ac}}>{activeGtStyle.id} — {activeGtStyle.label}</div>
-                        <div style={{fontSize:10,color:V.mu,marginTop:4,lineHeight:1.5}}>To use a different pattern, return to the home page and choose another product.</div>
-                      </div>
-                    )}
+                    {/* T1–T5 collection pill selector */}
+                    <div style={{...sb,marginBottom:6}}>Design Collections</div>
+                    <div style={{display:"flex",gap:"4px",flexWrap:"wrap",marginBottom:8}}>
+                      {T_COLLECTIONS.map(t=>{
+                        const active=activeGtCollection===t.id;
+                        return(
+                          <button key={t.id}
+                            onClick={()=>setActiveGtCollection(t.id)}
+                            style={{padding:"4px 10px",fontSize:10,fontWeight:700,letterSpacing:".05em",
+                              border:active?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,borderRadius:20,
+                              cursor:"pointer",fontFamily:"inherit",
+                              background:active?"rgba(201,168,124,.14)":V.sf,
+                              color:active?V.ac:V.mu,transition:"all .15s"}}>
+                            {t.label}
+                            <span style={{fontSize:8,opacity:.65,marginLeft:3}}>{t.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
 
-                    {/* GT style picker — T1-T5 collections, only for "fabric" */}
-                    {productType==="fabric"&&(
-                      <div style={{marginBottom:12}}>
-                        <div style={{...sb,marginBottom:6}}>Design Collections</div>
-
-                        {/* T1–T5 pill selector */}
-                        <div style={{display:"flex",gap:"4px",flexWrap:"wrap",marginBottom:8}}>
-                          {T_COLLECTIONS.map(t=>{
-                            const active=activeGtCollection===t.id;
+                    {/* Style grid for selected collection */}
+                    {(()=>{
+                      const col=T_COLLECTIONS.find(t=>t.id===activeGtCollection);
+                      const styles=col ? GT_STYLES.filter(s=>col.groups.includes(s.group)) : [];
+                      return(
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4,marginBottom:10}}>
+                          {styles.map(s=>{
+                            const isA=activeGtStyle?.id===s.id;
                             return(
-                              <button key={t.id}
-                                onClick={()=>setActiveGtCollection(t.id)}
-                                style={{padding:"4px 10px",fontSize:10,fontWeight:700,letterSpacing:".05em",
-                                  border:active?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,borderRadius:20,
-                                  cursor:"pointer",fontFamily:"inherit",
-                                  background:active?"rgba(201,168,124,.14)":V.sf,
-                                  color:active?V.ac:V.mu,transition:"all .15s"}}>
-                                {t.label}
-                                <span style={{fontSize:8,opacity:.65,marginLeft:3}}>{t.desc}</span>
+                              <button key={s.id} onClick={()=>handleSelectGtStyle(s)} title={`${s.id} — ${s.label}`}
+                                style={{padding:"6px 4px 4px",borderRadius:7,
+                                  border:isA?`2px solid ${V.ac}`:`1px solid ${V.bd}`,
+                                  background:isA?"rgba(201,168,124,.1)":V.sf,
+                                  cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,fontFamily:"inherit"}}>
+                                {/* Color swatch bar */}
+                                <div style={{display:"flex",width:"100%",height:18,borderRadius:4,overflow:"hidden"}}>
+                                  <div style={{flex:1,background:s.defaultColors.primary}}/>
+                                  <div style={{flex:1,background:s.defaultColors.accent}}/>
+                                  {s.defaultColors.tertiary&&<div style={{flex:1,background:s.defaultColors.tertiary}}/>}
+                                </div>
+                                <span style={{fontSize:8,color:isA?V.ac:V.mu,fontWeight:600,letterSpacing:".03em"}}>{s.id.replace("GT","")}</span>
+                                <span style={{fontSize:7,color:V.mu,opacity:.8,textAlign:"center",lineHeight:1.2}}>{s.label.split("&")[0].trim()}</span>
+                                {isA&&<div style={{width:7,height:7,borderRadius:"50%",background:V.ac}}/>}
                               </button>
                             );
                           })}
                         </div>
+                      );
+                    })()}
 
-                        {/* Style grid for selected collection */}
-                        {(()=>{
-                          const col=T_COLLECTIONS.find(t=>t.id===activeGtCollection);
-                          const styles=col ? GT_STYLES.filter(s=>col.groups.includes(s.group)) : [];
-                          return(
-                            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4}}>
-                              {styles.map(s=>{
-                                const isA=activeGtStyle?.id===s.id;
-                                return(
-                                  <button key={s.id} onClick={()=>handleSelectGtStyle(s)} title={`${s.id} — ${s.label}`}
-                                    style={{padding:"6px 4px 4px",borderRadius:7,
-                                      border:isA?`2px solid ${V.ac}`:`1px solid ${V.bd}`,
-                                      background:isA?"rgba(201,168,124,.1)":V.sf,
-                                      cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,fontFamily:"inherit"}}>
-                                    {/* Color swatch bar */}
-                                    <div style={{display:"flex",width:"100%",height:18,borderRadius:4,overflow:"hidden"}}>
-                                      <div style={{flex:1,background:s.defaultColors.primary}}/>
-                                      <div style={{flex:1,background:s.defaultColors.accent}}/>
-                                      {s.defaultColors.tertiary&&<div style={{flex:1,background:s.defaultColors.tertiary}}/>}
-                                    </div>
-                                    <span style={{fontSize:8,color:isA?V.ac:V.mu,fontWeight:600,letterSpacing:".03em"}}>{s.id.replace("GT","")}</span>
-                                    <span style={{fontSize:7,color:V.mu,opacity:.8,textAlign:"center",lineHeight:1.2}}>{s.label.split("&")[0].trim()}</span>
-                                    {isA&&<div style={{width:7,height:7,borderRadius:"50%",background:V.ac}}/>}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    )}
-
-                    {/* Color A / Color B pickers — the core GT015-style recoloring UI */}
+                    {/* Color A / Color B pickers shown once a style is selected */}
                     {activeGtStyle&&(
                       <div style={{background:V.sf,border:`1px solid ${V.bd}`,borderRadius:8,padding:10,display:"flex",flexDirection:"column",gap:10}}>
-                        <div style={{fontSize:11,fontWeight:600,color:V.tx}}>{activeGtStyle.id} — {activeGtStyle.label}</div>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                          <div style={{fontSize:11,fontWeight:600,color:V.tx}}>{activeGtStyle.id} — {activeGtStyle.label}</div>
+                          <button onClick={()=>{const fc=fcRef.current;if(fc){clearGtStyle(fc);syncTexture();}setActiveGtStyle(null);}}
+                            style={{fontSize:9,color:V.mu,background:"transparent",border:`1px solid ${V.bd}`,borderRadius:4,padding:"2px 6px",cursor:"pointer",fontFamily:"inherit"}}>
+                            Clear
+                          </button>
+                        </div>
 
                         {/* Color A (primary) */}
                         <div>
@@ -733,11 +724,8 @@ export default function CustomizePage() {
                       </div>
                     )}
 
-                    {!activeGtStyle&&productType!=="pattern"&&(
-                      <p style={{fontSize:10,color:V.mu,marginTop:4}}>Select a design style above to activate colour editing.</p>
-                    )}
-                    {!activeGtStyle&&productType==="pattern"&&(
-                      <p style={{fontSize:10,color:V.mu}}>Loading pattern…</p>
+                    {!activeGtStyle&&(
+                      <p style={{fontSize:10,color:V.mu,marginTop:2}}>Select a pattern above to apply it to the garment.</p>
                     )}
                   </div>
                 )}
