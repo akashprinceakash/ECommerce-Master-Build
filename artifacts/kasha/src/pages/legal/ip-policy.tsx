@@ -34,9 +34,9 @@ export default function IpPolicyPage() {
         <Section title="4. Customer Indemnification">
           <p>You agree to <strong>fully indemnify, defend, and hold harmless</strong> Ka.Sha (PS Fashion), its employees, agents, licensors, and service providers from and against any and all claims, liabilities, damages, judgements, awards, losses, costs, expenses, or fees (including reasonable legal fees) arising out of or relating to:</p>
           <ul style={{ paddingLeft: 20, marginTop: 4, listStyle: "disc" }}>
-            <li>Any Customer Content you submit, upload, or provide to Ka.Sha;</li>
-            <li>Any alleged or actual infringement of any intellectual property right, privacy right, or other proprietary right of any third party by Customer Content;</li>
-            <li>Any breach of the representations and warranties set out in Section 2 above;</li>
+            <li>Any Customer Content you submit, upload, or provide to Ka.Sha.</li>
+            <li>Any alleged or actual infringement of any intellectual property right, privacy right, or other proprietary right of any third party by Customer Content.</li>
+            <li>Any breach of the representations and warranties set out in Section 2 above.</li>
             <li>Any use of products produced based on Customer Content in violation of applicable law.</li>
           </ul>
           <p>This indemnification obligation shall survive the completion of your order and the termination of your account.</p>
@@ -45,15 +45,15 @@ export default function IpPolicyPage() {
         <Section title="5. Right to Refuse Orders">
           <p>Ka.Sha reserves the right, at its sole discretion, to refuse, cancel, or suspend any order or account if Ka.Sha reasonably believes that the Customer Content:</p>
           <ul style={{ paddingLeft: 20, marginTop: 4, listStyle: "disc" }}>
-            <li>Infringes or is likely to infringe any intellectual property right;</li>
-            <li>Violates any applicable law or regulation;</li>
+            <li>Infringes or is likely to infringe any intellectual property right.</li>
+            <li>Violates any applicable law or regulation.</li>
             <li>Is otherwise harmful, offensive, or contrary to Ka.Sha's values.</li>
           </ul>
           <p>In such cases, Ka.Sha will notify you and, where applicable, provide a full refund for the refused order.</p>
         </Section>
 
         <Section title="6. Reporting Infringement">
-          <p>If you believe that any content on the Ka.Sha platform infringes your intellectual property rights, please notify us at <strong>support@ka-sha.com</strong> with the following information: a description of the copyrighted or trademarked work claimed to have been infringed; a description of where the allegedly infringing material is located on our platform; your contact information; and a statement that you have a good-faith belief that the use is not authorised. We will investigate and respond promptly.</p>
+          <p>If you believe that any content on the Ka.Sha platform infringes your intellectual property rights, please notify us at <strong>support@ka-sha.com</strong> with the following information: a description of the copyrighted or trademarked work claimed to have been infringed. a description of where the allegedly infringing material is located on our platform. your contact information. and a statement that you have a good-faith belief that the use is not authorised. We will investigate and respond promptly.</p>
         </Section>
 
         <Section title="7. Governing Law">
