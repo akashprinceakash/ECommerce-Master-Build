@@ -154,7 +154,13 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
     },
   }), [syncTexture, updateLayerSelector]);
 
-  const effectiveModelUrl = uploadedModelUrl || modelUrl;
+  const rawModelUrl = uploadedModelUrl || modelUrl;
+  // Proxy R2 URLs through the API server to avoid browser CORS restrictions
+  const effectiveModelUrl = rawModelUrl
+    ? (rawModelUrl.includes(".r2.dev/") || rawModelUrl.includes("r2.cloudflarestorage.com/"))
+      ? `/api/r2-proxy?url=${encodeURIComponent(rawModelUrl)}`
+      : rawModelUrl
+    : null;
   const showModelViewer = !!(effectiveModelUrl && webglAvailable && mvScriptLoaded && !modelError);
   const showFallback = !showModelViewer;
 

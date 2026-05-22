@@ -115,6 +115,19 @@ async function apiFetch(path: string, opts?: RequestInit): Promise<any> {
 }
 const raf = () => new Promise<void>(r => requestAnimationFrame(() => r()));
 
+/**
+ * Rewrite direct R2 CDN URLs through our API proxy so model-viewer can fetch
+ * them without hitting the R2 CORS restriction.
+ * Local /api/public/... URLs are returned unchanged.
+ */
+function toProxiedUrl(url: string | null | undefined): string {
+  if (!url) return "";
+  if (url.includes(".r2.dev/") || url.includes("r2.cloudflarestorage.com/")) {
+    return `/api/r2-proxy?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Product {
   id: number; name: string; description: string;
@@ -928,7 +941,7 @@ export default function CustomizePage() {
           </div>
 
           {mvReady&&product.modelUrl&&webglAvailable&&(
-            <model-viewer ref={mvRef} src={product.modelUrl}
+            <model-viewer ref={mvRef} src={toProxiedUrl(product.modelUrl)}
               camera-controls auto-rotate rotation-per-second="8deg"
               shadow-intensity="1.5" environment-image="neutral" exposure="1.1"
               camera-orbit="0deg 75deg 2.5m" min-camera-orbit="auto auto 1.5m" max-camera-orbit="auto auto 5m"

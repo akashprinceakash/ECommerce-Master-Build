@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import type { Readable } from "stream";
 import { logger } from "./logger";
 
 const BUCKET     = process.env["R2_BUCKET_NAME"]     ?? "kasha-assets";

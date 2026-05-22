@@ -9,6 +9,7 @@ import adminRouter from "./admin";
 import adminExtraRouter from "./adminExtra";
 import paymentsRouter from "./payments";
 import siteSettingsRouter from "./siteSettings";
+import r2proxyRouter from "./r2proxy";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(adminRouter);
 router.use(adminExtraRouter);
 router.use(paymentsRouter);
 router.use(siteSettingsRouter);
+router.use(r2proxyRouter);
 
 export default router;
