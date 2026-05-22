@@ -64,6 +64,18 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
     res.status(400).json({ error: "Missing shipping fields" }); return;
   }
 
+  // Format validation
+  if (!/^[a-zA-Z\s]{2,60}$/.test(String(shippingName).trim())) {
+    res.status(400).json({ error: "Name must contain only letters and spaces (2–60 characters)" }); return;
+  }
+  const phoneDigits = String(shippingPhone).replace(/\D/g, "");
+  if (!/^\d{10}$/.test(phoneDigits)) {
+    res.status(400).json({ error: "Mobile number must be exactly 10 digits" }); return;
+  }
+  if (!/^\d{6}$/.test(String(shippingPostalCode))) {
+    res.status(400).json({ error: "PIN code must be exactly 6 digits" }); return;
+  }
+
   const [cart] = await db.select().from(cartsTable).where(eq(cartsTable.userId, userId));
   if (!cart) { res.status(400).json({ error: "Cart is empty" }); return; }
 

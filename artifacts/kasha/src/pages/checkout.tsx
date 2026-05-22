@@ -94,6 +94,25 @@ export default function CheckoutPage() {
   const rateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [pincodeLoading, setPincodeLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [pincodeResolved, setPincodeResolved] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function validateForm(): Record<string, string> {
+    const errs: Record<string, string> = {};
+    if (!/^[a-zA-Z\s]{2,60}$/.test(formData.shippingName.trim()))
+      errs.shippingName = "Name must contain only letters and spaces (2–60 chars)";
+    if (!/^\d{10}$/.test(formData.shippingPhone.trim()))
+      errs.shippingPhone = "Enter a valid 10-digit mobile number";
+    if (!formData.shippingAddress.trim())
+      errs.shippingAddress = "Address is required";
+    if (!formData.shippingCity.trim())
+      errs.shippingCity = "City is required";
+    if (!formData.shippingState)
+      errs.shippingState = "Please select a state";
+    if (!/^\d{6}$/.test(formData.shippingPostalCode))
+      errs.shippingPostalCode = "Enter a valid 6-digit PIN code";
+    return errs;
+  }
 
   // ── Pincode → city/state auto-fill ───────────────────────────────────
   const pincodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -111,11 +130,13 @@ export default function CheckoutPage() {
         if (postOffice) {
           const district = postOffice.District || postOffice.Block || postOffice.Name || "";
           const state    = postOffice.State || "";
+          const resolvedState = INDIAN_STATES.includes(state) ? state : "";
           setFormData(prev => ({
             ...prev,
-            shippingCity:  prev.shippingCity  || district,
-            shippingState: prev.shippingState || (INDIAN_STATES.includes(state) ? state : prev.shippingState),
+            shippingCity:  district || prev.shippingCity,
+            shippingState: resolvedState || prev.shippingState,
           }));
+          if (district || resolvedState) setPincodeResolved(true);
         }
       } catch { /* silently ignore */ } finally {
         setPincodeLoading(false);
@@ -152,6 +173,7 @@ export default function CheckoutPage() {
             shippingState:       state       || prev.shippingState,
             shippingPostalCode:  postcode    || prev.shippingPostalCode,
           }));
+          if (city && state) setPincodeResolved(true);
         } catch {
           toast({ title: "Location lookup failed", description: "Could not resolve your address. Please fill in manually.", variant: "destructive" });
         } finally {
@@ -224,11 +246,13 @@ export default function CheckoutPage() {
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.shippingName || !formData.shippingAddress || !formData.shippingCity ||
-        !formData.shippingState || !formData.shippingPostalCode || !formData.shippingPhone) {
-      toast({ title: "Missing Information", description: "Please fill in all shipping fields.", variant: "destructive" });
+    const formErrors = validateForm();
+    if (Object.keys(formErrors).length > 0) {
+      setErrors(formErrors);
+      toast({ title: "Please fix the errors in the form", variant: "destructive" });
       return;
     }
+    setErrors({});
 
     if (!shippingRate) {
       toast({ title: "Shipping Not Calculated", description: "Please enter a valid 6-digit PIN code to calculate shipping.", variant: "destructive" });
@@ -350,49 +374,72 @@ export default function CheckoutPage() {
             <form onSubmit={handleCheckout} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="shippingName">Full Name</Label>
-                <Input 
-                  id="shippingName" 
-                  value={formData.shippingName} 
-                  onChange={(e) => handleChange("shippingName", e.target.value)} 
-                  className="rounded-none border-border/50 bg-secondary/10"
-                  required
+                <Input
+                  id="shippingName"
+                  value={formData.shippingName}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+                    handleChange("shippingName", val);
+                    if (errors.shippingName) setErrors(prev => ({ ...prev, shippingName: "" }));
+                  }}
+                  className={`rounded-none bg-secondary/10 ${errors.shippingName ? "border-destructive" : "border-border/50"}`}
+                  placeholder="As per your ID"
                 />
+                {errors.shippingName && <p className="text-xs text-destructive mt-1">{errors.shippingName}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="shippingPhone">Mobile Number</Label>
-                <Input 
-                  id="shippingPhone" 
-                  value={formData.shippingPhone} 
-                  onChange={(e) => handleChange("shippingPhone", e.target.value)} 
-                  className="rounded-none border-border/50 bg-secondary/10"
-                  placeholder="+91"
-                  required
+                <Input
+                  id="shippingPhone"
+                  value={formData.shippingPhone}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                    handleChange("shippingPhone", val);
+                    if (errors.shippingPhone) setErrors(prev => ({ ...prev, shippingPhone: "" }));
+                  }}
+                  className={`rounded-none bg-secondary/10 ${errors.shippingPhone ? "border-destructive" : "border-border/50"}`}
+                  placeholder="10-digit mobile number"
+                  inputMode="numeric"
                 />
+                {errors.shippingPhone && <p className="text-xs text-destructive mt-1">{errors.shippingPhone}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="shippingAddress">Street Address</Label>
-                <Input 
-                  id="shippingAddress" 
-                  value={formData.shippingAddress} 
-                  onChange={(e) => handleChange("shippingAddress", e.target.value)} 
-                  className="rounded-none border-border/50 bg-secondary/10"
+                <Input
+                  id="shippingAddress"
+                  value={formData.shippingAddress}
+                  onChange={(e) => {
+                    handleChange("shippingAddress", e.target.value);
+                    if (errors.shippingAddress) setErrors(prev => ({ ...prev, shippingAddress: "" }));
+                  }}
+                  className={`rounded-none bg-secondary/10 ${errors.shippingAddress ? "border-destructive" : "border-border/50"}`}
                   placeholder="House/Flat No., Building Name, Street"
-                  required
                 />
+                {errors.shippingAddress && <p className="text-xs text-destructive mt-1">{errors.shippingAddress}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="shippingCity">City</Label>
-                  <Input 
-                    id="shippingCity" 
-                    value={formData.shippingCity} 
-                    onChange={(e) => handleChange("shippingCity", e.target.value)} 
-                    className="rounded-none border-border/50 bg-secondary/10"
-                    required
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="shippingCity">City</Label>
+                    {pincodeResolved && (
+                      <button type="button" onClick={() => setPincodeResolved(false)} className="text-[9px] text-primary hover:underline" style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.1em" }}>Edit</button>
+                    )}
+                  </div>
+                  <Input
+                    id="shippingCity"
+                    value={formData.shippingCity}
+                    readOnly={pincodeResolved}
+                    onChange={(e) => {
+                      if (pincodeResolved) return;
+                      handleChange("shippingCity", e.target.value);
+                      if (errors.shippingCity) setErrors(prev => ({ ...prev, shippingCity: "" }));
+                    }}
+                    className={`rounded-none bg-secondary/10 ${errors.shippingCity ? "border-destructive" : "border-border/50"} ${pincodeResolved ? "opacity-70 cursor-default" : ""}`}
                   />
+                  {errors.shippingCity && <p className="text-xs text-destructive mt-1">{errors.shippingCity}</p>}
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -412,34 +459,51 @@ export default function CheckoutPage() {
                     </button>
                   </div>
                   <div className="relative">
-                    <Input 
-                      id="shippingPostalCode" 
-                      value={formData.shippingPostalCode} 
-                      onChange={(e) => handleChange("shippingPostalCode", e.target.value)} 
-                      className="rounded-none border-border/50 bg-secondary/10"
+                    <Input
+                      id="shippingPostalCode"
+                      value={formData.shippingPostalCode}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                        handleChange("shippingPostalCode", val);
+                        setPincodeResolved(false);
+                        if (errors.shippingPostalCode) setErrors(prev => ({ ...prev, shippingPostalCode: "" }));
+                      }}
+                      className={`rounded-none bg-secondary/10 ${errors.shippingPostalCode ? "border-destructive" : "border-border/50"}`}
                       placeholder="6-digit PIN"
-                      maxLength={6}
-                      required
+                      inputMode="numeric"
                     />
                     {pincodeLoading && (
                       <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-muted-foreground" />
                     )}
                   </div>
+                  {errors.shippingPostalCode && <p className="text-xs text-destructive mt-1">{errors.shippingPostalCode}</p>}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="shippingState">State</Label>
-                <Select value={formData.shippingState} onValueChange={(val) => handleChange("shippingState", val)}>
-                  <SelectTrigger className="rounded-none border-border/50 bg-secondary/10">
-                    <SelectValue placeholder="Select State" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 overflow-y-auto">
-                    {INDIAN_STATES.map(state => (
-                      <SelectItem key={state} value={state}>{state}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="shippingState">State</Label>
+                  {pincodeResolved && (
+                    <button type="button" onClick={() => setPincodeResolved(false)} className="text-[9px] text-primary hover:underline" style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.1em" }}>Edit</button>
+                  )}
+                </div>
+                {pincodeResolved ? (
+                  <div className={`border rounded-none bg-secondary/20 h-10 px-3 flex items-center text-sm opacity-70 ${errors.shippingState ? "border-destructive" : "border-border/50"}`}>
+                    {formData.shippingState || <span className="text-muted-foreground">Not resolved</span>}
+                  </div>
+                ) : (
+                  <Select value={formData.shippingState} onValueChange={(val) => { handleChange("shippingState", val); if (errors.shippingState) setErrors(prev => ({ ...prev, shippingState: "" })); }}>
+                    <SelectTrigger className={`rounded-none bg-secondary/10 ${errors.shippingState ? "border-destructive" : "border-border/50"}`}>
+                      <SelectValue placeholder="Select State" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60 overflow-y-auto">
+                      {INDIAN_STATES.map(state => (
+                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {errors.shippingState && <p className="text-xs text-destructive mt-1">{errors.shippingState}</p>}
               </div>
 
               <div className="pt-8">

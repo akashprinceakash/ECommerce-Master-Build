@@ -183,6 +183,7 @@ export function Navbar() {
               textDecoration: "none",
             }}
           >
+            
             Connect with Us
           </Link>
           {SHOW_CUSTOMIZATION && (

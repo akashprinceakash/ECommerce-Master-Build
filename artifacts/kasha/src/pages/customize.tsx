@@ -230,12 +230,23 @@ export default function CustomizePage() {
   const [textPosition, setTextPosition] = useState("front-chest");
   const [textFontSize, setTextFontSize] = useState(48);
   const [textColor, setTextColor] = useState("#1a1a18");
+  const [textBold, setTextBold] = useState(false);
+  const [textItalic, setTextItalic] = useState(false);
+  const [textFont, setTextFont] = useState("DM Sans");
 
   // ── Size step state ──────────────────────────────────────────────────────
   const [size, setSize] = useState("M");
   const [customMeasurements, setCustomMeasurements] = useState({ chest:"", shoulder:"", length:"", sleeve:"" });
   const [designName, setDesignName] = useState("");
   const [qty, setQty] = useState(1);
+
+  // ── Studio UI state ───────────────────────────────────────────────────────
+  const [activeTool, setActiveTool] = useState<"products"|"text"|"image"|"art"|"name"|"order"|null>("products");
+  const [cameraView, setCameraView] = useState<"front"|"back"|"right"|"left">("front");
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const historyStack = useRef<string[]>([]);
+  const historyIdx = useRef(-1);
 
   // ── Design name ──────────────────────────────────────────────────────────
   const { data: existing } = useQuery<any>({
