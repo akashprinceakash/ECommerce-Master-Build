@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, inArray } from "drizzle-orm";
 import { db, ordersTable, orderItemsTable, productsTable, customizationsTable, userProfilesTable } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import { clerkClient } from "@clerk/express";
@@ -50,7 +50,8 @@ router.get("/admin/dashboard", requireAuth, async (req, res): Promise<void> => {
       totalRevenueInPaise: sql<number>`coalesce(sum(total_in_paise), 0)::int`,
       totalOrders: sql<number>`count(*)::int`,
     })
-    .from(ordersTable);
+    .from(ordersTable)
+    .where(inArray(ordersTable.status, ["confirmed", "shipped", "delivered"]));
 
   const statusRows = await db
     .select({

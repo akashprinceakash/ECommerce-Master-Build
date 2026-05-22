@@ -20,6 +20,7 @@ interface AdminOrder {
   shippingPhone: string;
   paymentId: string | null;
   razorpayOrderId: string | null;
+  razorpaySignature: string | null;
   shiprocketOrderId: string | null;
   shiprocketAwb: string | null;
   trackingUrl: string | null;
@@ -280,8 +281,24 @@ export function AdminOrders() {
                     </div>
                     <div>
                       <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-2"><CreditCard className="w-3 h-3" /> Payment</div>
-                      <div className="text-xs font-mono break-all">Payment: {o.paymentId ?? "—"}</div>
-                      {o.razorpayOrderId && <div className="text-xs font-mono break-all text-muted-foreground">Order: {o.razorpayOrderId}</div>}
+                      {/* Payment verification badge */}
+                      <div className="mb-2">
+                        {o.razorpaySignature && o.paymentId ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            ✅ Payment Verified
+                          </span>
+                        ) : o.status === "cancelled" ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-300">
+                            ❌ Payment Failed
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                            ⏳ Payment Pending
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs font-mono break-all">Payment ID: {o.paymentId ?? "—"}</div>
+                      {o.razorpayOrderId && <div className="text-xs font-mono break-all text-muted-foreground">Razorpay Order: {o.razorpayOrderId}</div>}
                     </div>
                   </div>
 

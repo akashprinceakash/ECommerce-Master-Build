@@ -1,0 +1,80 @@
+You can send this to your Replit developer/team. I checked the uploaded invoice PDF directly and these fixes are valid. 
+
+Please redesign and fix the production invoice PDF for KA.SHA Golf & Sportswear. The current invoice has formatting, branding, and layout issues that make it look unprofessional.
+
+Required fixes:
+
+1. BRANDING & HEADER
+
+* Properly display the KA.SHA logo at the top with correct sizing and alignment.
+* Keep brand colors and typography consistent with the website.
+* Improve spacing in the invoice header section.
+* Make the invoice visually premium and ecommerce-grade.
+
+2. GST NOTE IS BROKEN
+   Current text is getting cut:
+   “GST at 5% for items "d Rs. 1,000 and 12% for items > Rs. 1,000”
+
+Replace with:
+“GST at 5% for items under Rs. 1,000 and 12% for items above Rs. 1,000.”
+
+Ensure the sentence never wraps incorrectly or gets clipped in the PDF.
+
+3. TABLE ALIGNMENT FIXES
+   The product table columns are misaligned.
+   Fix:
+
+* RATE (incl. GST) column wrapping
+* Uneven spacing
+* Amount alignment
+* Padding between columns
+* Consistent row height
+
+The table should look clean, professional, and responsive in PDF format.
+
+4. SHIPPING GST CLARITY
+   Currently shipping is shown separately but GST handling is unclear.
+
+Update either as:
+“Shipping (incl. GST)”
+OR
+show separate GST breakdown for shipping.
+
+Ensure tax calculations remain accurate.
+
+5. BILLING ADDRESS FORMATTING
+   Correct capitalization:
+   “1512, RR nagar”
+   →
+   “1512, RR Nagar”
+
+Also improve spacing and typography in the billing/shipping section.
+
+6. FOOTER IMPROVEMENTS
+   Add a professional footer section with:
+
+* Support email
+* Phone number
+* Website URL
+* Return/refund note
+
+Suggested line:
+“Returns accepted as per KA.SHA return policy available on kashaonline.in”
+
+7. PDF LAYOUT IMPROVEMENTS
+
+* Better margins
+* Better spacing
+* Proper font hierarchy
+* Consistent alignment
+* Avoid text clipping
+* Make invoice suitable for real production customers
+
+8. IMPORTANT
+
+* Invoice must render correctly on both desktop and mobile PDF viewers.
+* Ensure no overlapping or clipped text.
+* Keep GST-compliant structure intact.
+* Keep IGST logic for interstate orders.
+
+Please redesign the invoice to look like a premium ecommerce brand invoice similar to Nike, Adidas, or premium D2C fashion brands.

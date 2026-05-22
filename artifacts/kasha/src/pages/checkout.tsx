@@ -14,11 +14,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
-import { Loader2, ArrowLeft, Truck } from "lucide-react";
+import { Loader2, ArrowLeft, Truck, X } from "lucide-react";
 import { getApiUrl, getAssetUrl } from "@/lib/api";
 import { useAuth } from "@clerk/react";
 
 declare global { interface Window { Razorpay?: any } }
+
+type PaymentResult =
+  | { type: "success"; orderId: number }
+  | { type: "failure"; error: string }
+  | null;
 
 const INDIAN_STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa",
@@ -126,6 +131,13 @@ export default function CheckoutPage() {
   }, [formData.shippingPostalCode, cart]);
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentResult, setPaymentResult] = useState<PaymentResult>(null);
+
+  useEffect(() => {
+    if (paymentResult?.type !== "success") return;
+    const t = setTimeout(() => setLocation(`/orders/${paymentResult.orderId}`), 3500);
+    return () => clearTimeout(t);
+  }, [paymentResult, setLocation]);
 
   async function authFetch(path: string, opts?: RequestInit) {
     const token = await getToken();
@@ -156,12 +168,12 @@ export default function CheckoutPage() {
     }
 
     setIsProcessing(true);
+    let modalShown = false;
     try {
       const { orderId, amount, currency, keyId } = await authFetch("/api/payment/order", {
         method: "POST",
         body: JSON.stringify({ ...formData, shippingChargeInPaise: shippingRate.chargeInPaise }),
       });
-
       await new Promise<void>((resolve, reject) => {
         const rzp = new window.Razorpay({
           key: keyId,
@@ -188,11 +200,12 @@ export default function CheckoutPage() {
                 }),
               });
               queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
-              toast({ title: "Payment Successful", description: "Thank you for your purchase." });
-              setLocation(`/orders/${order.id}`);
+              modalShown = true;
+              setPaymentResult({ type: "success", orderId: order.id });
               resolve();
             } catch (err: any) {
-              toast({ title: "Verification Failed", description: err.message ?? "Could not verify payment.", variant: "destructive" });
+              modalShown = true;
+              setPaymentResult({ type: "failure", error: err.message ?? "Payment verification failed. Please contact support." });
               reject(err);
             }
           },
@@ -204,13 +217,15 @@ export default function CheckoutPage() {
           },
         });
         rzp.on("payment.failed", (resp: any) => {
-          toast({ title: "Payment Failed", description: resp?.error?.description ?? "Try again.", variant: "destructive" });
-          reject(new Error(resp?.error?.description ?? "failed"));
+          const errMsg = resp?.error?.description ?? "Your payment could not be processed. Please try again.";
+          modalShown = true;
+          setPaymentResult({ type: "failure", error: errMsg });
+          reject(new Error(errMsg));
         });
         rzp.open();
       });
     } catch (e: any) {
-      if (e?.message !== "dismissed") {
+      if (e?.message !== "dismissed" && !modalShown) {
         toast({ title: "Checkout Failed", description: e?.message ?? "There was an error processing your order.", variant: "destructive" });
       }
     } finally {
@@ -420,6 +435,104 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+      {/* ── Payment Result Modal ────────────────────────────────────────── */}
+      {paymentResult && (
+        <>
+          <style>{`
+            @keyframes kasha-backdrop { from { opacity:0 } to { opacity:1 } }
+            @keyframes kasha-card { from { opacity:0; transform:scale(0.92) translateY(12px) } to { opacity:1; transform:scale(1) translateY(0) } }
+            @keyframes kasha-circle { from { stroke-dashoffset:164 } to { stroke-dashoffset:0 } }
+            @keyframes kasha-check { from { stroke-dashoffset:80 } to { stroke-dashoffset:0 } }
+            @keyframes kasha-cross { from { stroke-dashoffset:60 } to { stroke-dashoffset:0 } }
+            @keyframes kasha-progress { from { width:100% } to { width:0% } }
+            .kasha-backdrop { animation: kasha-backdrop 0.25s ease forwards; }
+            .kasha-card { animation: kasha-card 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+            .kasha-circle { stroke-dasharray:164; stroke-dashoffset:164; animation: kasha-circle 0.5s ease-out 0.1s forwards; }
+            .kasha-check { stroke-dasharray:80; stroke-dashoffset:80; animation: kasha-check 0.4s ease-out 0.55s forwards; }
+            .kasha-cross { stroke-dasharray:60; stroke-dashoffset:60; animation: kasha-cross 0.35s ease-out 0.45s forwards; }
+            .kasha-progress-bar { animation: kasha-progress 3.5s linear forwards; }
+          `}</style>
+
+          {/* Backdrop */}
+          <div
+            className="kasha-backdrop fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}
+            onClick={() => paymentResult.type === "failure" && setPaymentResult(null)}
+          >
+            {/* Card */}
+            <div
+              className="kasha-card relative bg-white w-full max-w-sm shadow-2xl overflow-hidden"
+              style={{ borderRadius: 4 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Top accent */}
+              <div className="h-1 w-full" style={{ background: paymentResult.type === "success" ? "#16a34a" : "#dc2626" }} />
+
+              {/* Close button */}
+              {paymentResult.type === "failure" && (
+                <button
+                  onClick={() => setPaymentResult(null)}
+                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+
+              <div className="px-8 py-10 flex flex-col items-center text-center">
+                {paymentResult.type === "success" ? (
+                  <>
+                    {/* Animated checkmark */}
+                    <svg viewBox="0 0 52 52" className="w-20 h-20 mb-6" fill="none">
+                      <circle cx="26" cy="26" r="26" className="kasha-circle" stroke="#16a34a" strokeWidth="2" fill="none" />
+                      <path className="kasha-check" d="M14 27l8 8 16-16" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                    </svg>
+                    <h2 className="font-serif text-2xl font-medium text-gray-900 mb-2">Payment Successful</h2>
+                    <p className="text-gray-500 text-sm mb-1">Your order has been placed successfully.</p>
+                    <p className="text-xs text-gray-400 mb-8">
+                      Order #{String(paymentResult.orderId).padStart(6, "0")} · Redirecting to your order…
+                    </p>
+                    {/* Auto-close progress bar */}
+                    <div className="w-full h-0.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="kasha-progress-bar h-full rounded-full" style={{ background: "#16a34a" }} />
+                    </div>
+                    <button
+                      onClick={() => setLocation(`/orders/${paymentResult.orderId}`)}
+                      className="mt-5 w-full py-3 text-sm tracking-widest font-medium bg-gray-900 text-white hover:bg-gray-700 transition"
+                    >
+                      VIEW ORDER
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Animated X */}
+                    <svg viewBox="0 0 52 52" className="w-20 h-20 mb-6" fill="none">
+                      <circle cx="26" cy="26" r="26" className="kasha-circle" stroke="#dc2626" strokeWidth="2" fill="none" />
+                      <path className="kasha-cross" d="M18 18l16 16M34 18L18 34" stroke="#dc2626" strokeWidth="3" strokeLinecap="round" fill="none" />
+                    </svg>
+                    <h2 className="font-serif text-2xl font-medium text-gray-900 mb-2">Payment Failed</h2>
+                    <p className="text-sm text-gray-500 mb-1">Payment was not received.</p>
+                    <p className="text-xs text-gray-400 mb-8 max-w-xs">{paymentResult.error}</p>
+                    <div className="flex gap-3 w-full">
+                      <button
+                        onClick={() => setPaymentResult(null)}
+                        className="flex-1 py-3 text-sm tracking-widest font-medium border border-gray-900 text-gray-900 hover:bg-gray-50 transition"
+                      >
+                        TRY AGAIN
+                      </button>
+                      <button
+                        onClick={() => setLocation("/cart")}
+                        className="flex-1 py-3 text-sm tracking-widest font-medium bg-gray-900 text-white hover:bg-gray-700 transition"
+                      >
+                        BACK TO BAG
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </Layout>
   );
 }

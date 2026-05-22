@@ -110,13 +110,14 @@ export function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
     const Y_TABLE = Y_BILL + 70;
     doc.rect(50, Y_TABLE, W, 20).fill(BLACK);
     doc.font("Helvetica-Bold").fontSize(8).fillColor("#FFFFFF");
-    const cols = { desc: 50, hsn: 240, qty: 310, rate: 360, gst: 415, total: 475 };
-    doc.text("ITEM DESCRIPTION", cols.desc + 4, Y_TABLE + 6, { width: 185 });
-    doc.text("HSN", cols.hsn + 4, Y_TABLE + 6, { width: 65 });
-    doc.text("QTY", cols.qty + 4, Y_TABLE + 6, { width: 45 });
-    doc.text("RATE (incl. GST)", cols.rate + 4, Y_TABLE + 6, { width: 50 });
-    doc.text("GST", cols.gst + 4, Y_TABLE + 6, { width: 55 });
-    doc.text("AMOUNT", cols.total + 4, Y_TABLE + 6, { width: 70 });
+    const cols = { desc: 50, hsn: 218, qty: 280, rate: 312, gst: 392, total: 440 };
+    const colW = { desc: 160, hsn: 54, qty: 28, rate: 72, gst: 40, total: 101 };
+    doc.text("ITEM DESCRIPTION", cols.desc + 4, Y_TABLE + 6, { width: colW.desc });
+    doc.text("HSN", cols.hsn + 4, Y_TABLE + 6, { width: colW.hsn });
+    doc.text("QTY", cols.qty + 4, Y_TABLE + 6, { width: colW.qty });
+    doc.text("UNIT PRICE", cols.rate + 4, Y_TABLE + 6, { width: colW.rate });
+    doc.text("GST", cols.gst + 4, Y_TABLE + 6, { width: colW.gst });
+    doc.text("AMOUNT", cols.total + 4, Y_TABLE + 6, { width: colW.total, align: "right" });
 
     // ── Table rows ───────────────────────────────────────────────────────
     let y = Y_TABLE + 20;
@@ -131,18 +132,18 @@ export function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
       subtotalExclGst += baseTotal;
       totalGst += gstTotal;
 
-      const gstLabel = rate === 0.05 ? "5% GST" : "12% GST";
+      const gstLabel = rate === 0.05 ? "5%" : "12%";
 
       const rowBg = data.items.indexOf(item) % 2 === 0 ? "#FAFAF7" : "#FFFFFF";
       doc.rect(50, y, W, 24).fill(rowBg);
       doc.font("Helvetica").fontSize(8).fillColor(BLACK);
       const displayName = item.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "");
-      doc.text(`${displayName} (${item.size})`, cols.desc + 4, y + 8, { width: 185, ellipsis: true });
-      doc.text(HSN_CODE, cols.hsn + 4, y + 8, { width: 65 });
-      doc.text(String(item.quantity), cols.qty + 4, y + 8, { width: 45 });
-      doc.text(formatRupees(item.priceInPaise), cols.rate + 4, y + 8, { width: 50 });
-      doc.fillColor(MUTED).text(gstLabel, cols.gst + 4, y + 8, { width: 55 });
-      doc.fillColor(BLACK).text(formatRupees(itemTotal), cols.total + 4, y + 8, { width: 70 });
+      doc.text(`${displayName} (${item.size})`, cols.desc + 4, y + 8, { width: colW.desc, ellipsis: true });
+      doc.text(HSN_CODE, cols.hsn + 4, y + 8, { width: colW.hsn });
+      doc.text(String(item.quantity), cols.qty + 4, y + 8, { width: colW.qty });
+      doc.text(formatRupees(item.priceInPaise), cols.rate + 4, y + 8, { width: colW.rate });
+      doc.fillColor(MUTED).text(gstLabel, cols.gst + 4, y + 8, { width: colW.gst });
+      doc.fillColor(BLACK).text(formatRupees(itemTotal), cols.total + 4, y + 8, { width: colW.total, align: "right" });
 
       y += 24;
     }
@@ -151,12 +152,12 @@ export function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
     if (data.shippingChargeInPaise > 0) {
       doc.rect(50, y, W, 24).fill("#FAFAF7");
       doc.font("Helvetica").fontSize(8).fillColor(BLACK)
-        .text("Shipping Charges", cols.desc + 4, y + 8, { width: 185 });
-      doc.text("—", cols.hsn + 4, y + 8, { width: 65 });
-      doc.text("—", cols.qty + 4, y + 8, { width: 45 });
-      doc.text("—", cols.rate + 4, y + 8, { width: 50 });
-      doc.text("—", cols.gst + 4, y + 8, { width: 55 });
-      doc.text(formatRupees(data.shippingChargeInPaise), cols.total + 4, y + 8, { width: 70 });
+        .text("Shipping Charges (incl. GST)", cols.desc + 4, y + 8, { width: colW.desc });
+      doc.text("—", cols.hsn + 4, y + 8, { width: colW.hsn });
+      doc.text("—", cols.qty + 4, y + 8, { width: colW.qty });
+      doc.text("—", cols.rate + 4, y + 8, { width: colW.rate });
+      doc.fillColor(MUTED).text("18%", cols.gst + 4, y + 8, { width: colW.gst });
+      doc.fillColor(BLACK).text(formatRupees(data.shippingChargeInPaise), cols.total + 4, y + 8, { width: colW.total, align: "right" });
       y += 24;
     }
 
@@ -204,18 +205,17 @@ export function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
       ? "CGST + SGST (intra-state, seller & buyer both in Delhi)."
       : "IGST (inter-state transaction).";
     doc.font("Helvetica").fontSize(7).fillColor(MUTED)
-      .text(`GST at 5% for items ≤ Rs. 1,000 and 12% for items > Rs. 1,000 (HSN: ${HSN_CODE}). ${gstTypeNote}`, 50, y, { width: W });
+      .text(`GST at 5% for items under Rs. 1,000 and 12% for items above Rs. 1,000 (HSN: ${HSN_CODE}). ${gstTypeNote}`, 50, y, { width: W });
 
     // ── Footer ────────────────────────────────────────────────────────────
-    doc.moveTo(50, 770).lineTo(545, 770).strokeColor(GOLD).lineWidth(0.5).stroke();
+    doc.moveTo(50, 760).lineTo(545, 760).strokeColor(GOLD).lineWidth(0.5).stroke();
+    doc.font("Helvetica-Bold").fontSize(7).fillColor(BLACK)
+      .text(TRADE_NAME, 50, 766, { width: W, align: "center" });
     doc.font("Helvetica").fontSize(7).fillColor(MUTED)
-      .text(
-        `${TRADE_NAME} · ${ADDRESS_LINE1}, ${ADDRESS_LINE2} · ${SUPPORT_EMAIL} · ${SUPPORT_PHONE}`,
-        50, 775, { width: W, align: "center" },
-      )
-      .text("This is a computer-generated invoice and does not require a physical signature.", 50, 785, {
-        width: W, align: "center",
-      });
+      .text(`${ADDRESS_LINE1}, ${ADDRESS_LINE2}`, 50, 776, { width: W, align: "center" })
+      .text(`${SUPPORT_EMAIL}  |  ${SUPPORT_PHONE}  |  kashaonline.in`, 50, 786, { width: W, align: "center" })
+      .text("Returns accepted as per KA.SHA return policy available on kashaonline.in", 50, 796, { width: W, align: "center" })
+      .text("This is a computer-generated invoice and does not require a physical signature.", 50, 806, { width: W, align: "center" });
 
     // ── Seal the document — MUST be last ────────────────────────────────
     doc.end();
