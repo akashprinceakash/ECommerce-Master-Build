@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Plus, Pencil, Trash2, Upload, X, Check,
-  ShieldCheck, Package, Users, Eye, ArrowLeft, BarChart3, ShoppingBag, UserCog, Download,
+  ShieldCheck, Package, Users, Eye, ArrowLeft, BarChart3, ShoppingBag, UserCog, Download, ImageIcon,
 } from "lucide-react";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { AdminOrders } from "@/components/admin/AdminOrders";
@@ -411,13 +411,15 @@ export default function AdminPage() {
   const modelFileRef = useRef<HTMLInputElement>(null);
   const thumbFileRef = useRef<HTMLInputElement>(null);
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "orders" | "users" | "designs">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "orders" | "users" | "designs" | "site">("dashboard");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [uploadingModel, setUploadingModel] = useState(false);
   const [uploadingThumb, setUploadingThumb] = useState(false);
   const [uploadingExtra, setUploadingExtra] = useState(false);
+  const [uploadingHeroIdx, setUploadingHeroIdx] = useState<number | null>(null);
+  const [heroImageUrls, setHeroImageUrls] = useState<(string | null)[]>([null, null, null, null]);
   const [viewingDesign, setViewingDesign] = useState<UserDesign | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
@@ -444,6 +446,22 @@ export default function AdminPage() {
     queryFn: () => apiFetch("/api/admin/customizations"),
     enabled: isAdmin === true && activeTab === "designs",
   });
+
+  const { data: siteSettings } = useQuery<Record<string, unknown>>({
+    queryKey: ["site-settings"],
+    queryFn: () => apiFetch("/api/site-settings"),
+    enabled: isAdmin === true,
+  });
+
+  useEffect(() => {
+    if (!siteSettings?.hero_banners) return;
+    const banners = siteSettings.hero_banners as { slideIndex: number; imageUrl: string }[];
+    const urls: (string | null)[] = [null, null, null, null];
+    for (const b of banners) {
+      if (b.slideIndex >= 0 && b.slideIndex < 4) urls[b.slideIndex] = b.imageUrl;
+    }
+    setHeroImageUrls(urls);
+  }, [siteSettings]);
 
   const createMutation = useMutation({
     mutationFn: (data: Partial<Product>) => apiFetch("/api/admin/products", { method: "POST", body: JSON.stringify(data) }),
@@ -577,6 +595,38 @@ export default function AdminPage() {
     finally { setUploadingExtra(false); if (e.target) e.target.value = ""; }
   };
 
+  const handleHeroUpload = async (slideIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingHeroIdx(slideIndex);
+    try {
+      const token = await getToken();
+      const { compressImage } = await import("@/lib/imageCompression");
+      const compressed = await compressImage(file, { maxPx: 1920, quality: 0.80 });
+      const fd = new FormData(); fd.append("hero", compressed);
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`${getApiUrl()}/api/admin/upload/hero`, { method: "POST", body: fd, headers });
+      if (!res.ok) throw new Error(await res.text());
+      const { url } = await res.json();
+      const newUrls = [...heroImageUrls];
+      newUrls[slideIndex] = url;
+      setHeroImageUrls(newUrls);
+      const banners = newUrls
+        .map((imageUrl, idx) => (imageUrl ? { slideIndex: idx, imageUrl } : null))
+        .filter((b): b is { slideIndex: number; imageUrl: string } => b !== null);
+      await fetch(`${getApiUrl()}/api/admin/site-settings/hero-banners`, {
+        method: "PUT",
+        body: JSON.stringify({ banners }),
+        headers: { ...headers, "Content-Type": "application/json" },
+      });
+      queryClient.invalidateQueries({ queryKey: ["site-settings"] });
+      const savedKB = Math.round((file.size - compressed.size) / 1024);
+      toast({ title: `Slide ${slideIndex + 1} updated`, description: savedKB > 0 ? `Compressed by ${savedKB} KB` : undefined });
+    } catch (err: any) { toast({ title: "Upload failed", description: err.message, variant: "destructive" }); }
+    finally { setUploadingHeroIdx(null); if (e.target) e.target.value = ""; }
+  };
+
   const removeExtraImage = (idx: number) => {
     setForm(f => {
       const imgs = safeParseImages(f.additionalImages);
@@ -639,6 +689,7 @@ export default function AdminPage() {
             { id: "orders", label: "Orders", icon: ShoppingBag, count: 0 },
             { id: "users", label: "Users", icon: UserCog, count: 0 },
             { id: "designs", label: "Designs", icon: Users, count: designs.length },
+            { id: "site", label: "Site", icon: ImageIcon, count: 0 },
           ].map(tab => (
             <button
               key={tab.id}
@@ -983,6 +1034,63 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+        {/* ── SITE TAB ── */}
+        {activeTab === "site" && (
+          <div>
+            <div className="mb-8">
+              <h2 className="text-lg font-semibold mb-1">Hero Banners</h2>
+              <p className="text-sm text-muted-foreground">Upload optimised images for the homepage carousel. Images are automatically compressed and converted to WebP before being saved to the CDN.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {[
+                "Men's Collection (Slide 1)",
+                "Men's T-Shirts (Slide 2)",
+                "Women's Collection (Slide 3)",
+                "All Products (Slide 4)",
+              ].map((label, idx) => {
+                const currentUrl = heroImageUrls[idx];
+                const isUploading = uploadingHeroIdx === idx;
+                const inputId = `hero-upload-${idx}`;
+                return (
+                  <div key={idx} className="border border-border rounded-sm overflow-hidden">
+                    <div className="relative bg-[#F2F3F7]" style={{ aspectRatio: "16/9" }}>
+                      {currentUrl ? (
+                        <img src={currentUrl} alt={label} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                          <ImageIcon className="w-8 h-8 text-muted-foreground/40" />
+                          <span className="text-xs text-muted-foreground">No image set</span>
+                        </div>
+                      )}
+                      {isUploading && (
+                        <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                          <Loader2 className="w-6 h-6 animate-spin text-[#B8925A]" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3 flex items-center justify-between gap-3 bg-white border-t border-border">
+                      <span className="text-xs font-medium text-muted-foreground truncate">{label}</span>
+                      <label htmlFor={inputId} className={`flex items-center gap-1.5 text-xs px-3 py-1.5 border border-input font-medium cursor-pointer transition-colors ${isUploading ? "opacity-50 pointer-events-none" : "hover:bg-accent"}`}>
+                        <Upload className="w-3 h-3" />
+                        {currentUrl ? "Replace" : "Upload"}
+                      </label>
+                      <input
+                        id={inputId}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={isUploading}
+                        onChange={(e) => handleHeroUpload(idx, e)}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground">Recommended: landscape photos, minimum 1920×1080 px. The system resizes and converts to WebP automatically.</p>
+          </div>
+        )}
 
       {/* Design Viewer Modal */}
       {viewingDesign && (

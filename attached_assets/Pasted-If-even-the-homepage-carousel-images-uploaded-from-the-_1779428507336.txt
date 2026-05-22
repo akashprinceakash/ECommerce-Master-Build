@@ -1,0 +1,97 @@
+If even the homepage carousel images uploaded from the admin panel are loading/rendering late, then the issue is almost certainly with the uploaded image quality/size/format rather than the 3D renderer.
+
+Since your manually uploaded R2 images load fast but admin-uploaded carousel images load late, the difference is usually one of these:
+
+* Admin uploads are very large
+* PNG instead of WebP
+* No compression
+* Huge dimensions
+* Progressive decoding/rendering in browser
+* Missing Cloudflare caching headers
+* Images not optimized before upload
+
+The “loading from top to bottom slowly” symptom is a classic sign of:
+
+* oversized JPEG/PNG rendering
+* progressive image decoding
+* large browser paint/render time
+
+Most likely scenario:
+Your manually uploaded homepage banners were:
+✅ resized
+✅ optimized
+✅ compressed
+✅ WebP
+
+But admin uploads are:
+❌ raw designer exports
+❌ 5–20MB files
+❌ 4000px+ dimensions
+❌ PNG with transparency
+
+You can confirm immediately:
+
+Open browser DevTools → Network tab → click the slow image.
+
+Check:
+
+* File size
+* Dimensions
+* Format
+* Response headers
+
+If you see something like:
+
+* 8MB PNG
+* 5000×3000
+* image/png
+
+that is the problem.
+
+For homepage carousel banners, recommended:
+
+* WebP format
+* Under 300KB ideally
+* Max width:
+
+  * 1920px desktop
+  * 1200px usually enough
+* Quality around 70–80%
+
+Another important thing:
+If your admin upload system stores original images directly without optimization, every uploaded banner becomes heavy automatically.
+
+Best production solution:
+When admin uploads image:
+
+1. Compress automatically
+2. Convert to WebP
+3. Resize automatically
+4. Upload optimized version to R2
+5. Store optimized URL only
+
+Example ideal flow:
+
+```txt
+Admin Upload
+→ Sharp compression
+→ Resize
+→ Convert WebP
+→ Upload optimized file to R2
+→ Serve via CDN
+```
+
+For Node.js apps, people usually use:
+
+* [Sharp](https://sharp.pixelplumbing.com/?utm_source=chatgpt.com)
+  for optimization before uploading to R2.
+
+Your current setup is probably:
+
+```txt
+Admin Upload
+→ Original raw image
+→ Directly stored in R2
+```
+
+R2/CDN can deliver files fast, but it cannot magically optimize huge raw images automatically.

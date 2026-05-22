@@ -8,6 +8,7 @@ import usersRouter from "./users";
 import adminRouter from "./admin";
 import adminExtraRouter from "./adminExtra";
 import paymentsRouter from "./payments";
+import siteSettingsRouter from "./siteSettings";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(usersRouter);
 router.use(adminRouter);
 router.use(adminExtraRouter);
 router.use(paymentsRouter);
+router.use(siteSettingsRouter);
 
 export default router;

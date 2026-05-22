@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
+import { useQuery } from "@tanstack/react-query";
+import { getApiUrl } from "@/lib/api";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const GOLD       = "#B8925A";
@@ -330,13 +332,33 @@ export default function Home() {
   const [tab,      setTab]      = useState<"men" | "women" | "kids">("men");
   const [chips,    setChips]    = useState<string[]>(["Colour"]);
 
+  // Fetch hero banner overrides from CMS (set via admin → Site tab)
+  const { data: siteSettings } = useQuery<Record<string, unknown>>({
+    queryKey: ["site-settings"],
+    queryFn: async () => {
+      const res = await fetch(`${getApiUrl()}/api/site-settings`);
+      if (!res.ok) return {};
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Overlay admin-uploaded banner images onto the static SLIDES defaults
+  const slides = useMemo(() => {
+    const banners = (siteSettings?.hero_banners ?? []) as { slideIndex: number; imageUrl: string }[];
+    return SLIDES.map((s, i) => {
+      const override = banners.find(b => b.slideIndex === i);
+      return override ? { ...s, img: override.imageUrl } : s;
+    });
+  }, [siteSettings]);
+
   // Hero auto-advance
   useEffect(() => {
     setProgress(0);
     const start = Date.now();
     const id = setInterval(() => {
       const p = ((Date.now() - start) / SLIDE_DURATION) * 100;
-      if (p >= 100) setActive((c) => (c + 1) % SLIDES.length);
+      if (p >= 100) setActive((c) => (c + 1) % slides.length);
       else          setProgress(p);
     }, 100);
     return () => clearInterval(id);
@@ -363,7 +385,7 @@ export default function Home() {
           transform:  `translateX(-${active * 100}%)`,
           transition: "transform 900ms cubic-bezier(0.77,0,0.175,1)",
         }}>
-          {SLIDES.map((s, i) => (
+          {slides.map((s, i) => (
             <div key={i} style={{ minWidth: "100%", height: "100%", position: "relative", overflow: "hidden" }}>
               {/* Background photo */}
               <img
@@ -497,7 +519,7 @@ export default function Home() {
 
         {/* Dot indicators */}
         <div style={{ position: "absolute", bottom: 80, right: PAD, zIndex: 3, display: "flex", gap: 6, alignItems: "center" }}>
-          {SLIDES.map((_, i) => (
+          {slides.map((_, i) => (
             <button
               key={i}
               onClick={() => setActive(i)}
@@ -528,7 +550,7 @@ export default function Home() {
           letterSpacing: "0.3em",
           color:         "rgba(255,255,255,0.18)",
         }}>
-          {String(active + 1).padStart(2, "0")} / 0{SLIDES.length}
+          {String(active + 1).padStart(2, "0")} / 0{slides.length}
         </div>
 
         {/* Progress bar */}
