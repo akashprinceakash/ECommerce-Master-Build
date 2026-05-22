@@ -44,7 +44,7 @@ const SLIDES = [
   {
     img:     "/images/slides/hero1_mens.webp",
     eyebrow: "Full Collection · 2026",
-    title:   (<>Flair on the fairway<br />Ka.Sha Golfwear.</>),
+    title:   (<>Flair on the fairway<br />Ka.sha Golfwear.</>),
     sub:     SHOW_KIDS ? "Men · Women · Kids · Bespoke" : "Men · Women",
     primary: { label: "All Products", href: "/products" },
     outline: SHOW_CUSTOMIZATION ? { label: "Custom Studio", href: "/products/1/customize" } : undefined,
@@ -75,7 +75,7 @@ const SLIDES = [
   },
 ] as const;
 
-const SLIDE_DURATION = 6000;
+const SLIDE_DURATION = 9000;
 
 // ─── Category card type ───────────────────────────────────────────────────────
 type Card = {
@@ -117,7 +117,7 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
     {
       href:   "/products?gender=men&type=bottoms",
       img:    "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Shop_by_Category_images/Home_Men_Bottoms.png",
-      seoAlt: "Premium stretch golf trousers for men with performance fit by Ka.Sha",
+      seoAlt: "Premium stretch golf trousers for men with performance fit by Ka.sha",
       cat:    "Bottoms",
       title:  "Pro Tour Trouser",
       desc:   "Glove dock · Tee holder · 4-way stretch",
@@ -137,7 +137,7 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
     {
       href:   "/products?gender=women&type=tshirts&style=patterns",
       img:    "/images/shop/women_kasha.png",
-      seoAlt: "Women's stylish golf wear and luxury performance apparel by Ka.Sha",
+      seoAlt: "Women's stylish golf wear and luxury performance apparel by Ka.sha",
       cat:    "T-Shirts",
       title:  "Ka·Sha Signature",
       desc:   "Solids · 8 colours · 8 patterns · prints",
@@ -175,7 +175,7 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
     {
       href:   "/products?gender=kids&type=tshirts&style=patterns",
       img:    "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80",
-      seoAlt: "Kids premium golf apparel collection by Ka.Sha",
+      seoAlt: "Kids premium golf apparel collection by Ka.sha",
       badge:  "Boys",
       cat:    "T-Shirts",
       title:  "Boys' T-Shirts",
@@ -185,7 +185,7 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
     {
       href:   "/products?gender=kids&type=tshirts&style=prints",
       img:    "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=600&q=80",
-      seoAlt: "Kids premium golf apparel collection by Ka.Sha",
+      seoAlt: "Kids premium golf apparel collection by Ka.sha",
       badge:  "Girls",
       cat:    "T-Shirts",
       title:  "Girls' T-Shirts",
@@ -195,7 +195,7 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
     {
       href:   "/products?gender=kids&type=bottoms",
       img:    "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=600&q=80",
-      seoAlt: "Kids premium golf apparel collection by Ka.Sha",
+      seoAlt: "Kids premium golf apparel collection by Ka.sha",
       cat:    "Bottoms",
       title:  "All Bottoms",
       desc:   "Trousers & skorts · All sizes",
@@ -309,9 +309,9 @@ function CategoryCard({ c }: { c: Card }) {
       </div>
       {/* Body */}
       <div style={{ padding: "13px 16px 16px" }}>
-        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.22em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{c.cat}</div>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 500, color: "#1a1f2e", marginBottom: 4, lineHeight: 1.2 }}>{c.title}</div>
-        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 14, color: "rgba(20,28,60,0.72)", letterSpacing: "0.04em", lineHeight: 1.7, marginBottom: 10 }}>{c.desc}</div>
+        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 12, letterSpacing: "0.22em", color: GOLD, textTransform: "uppercase", marginBottom: 6 }}>{c.cat}</div>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 500, color: "#1a1f2e", marginBottom: 5, lineHeight: 1.2 }}>{c.title}</div>
+        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 15, color: "rgba(20,28,60,0.72)", letterSpacing: "0.04em", lineHeight: 1.7, marginBottom: 10 }}>{c.desc}</div>
         {c.tags.length > 0 && (
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
             {c.tags.map((t) => (
@@ -319,7 +319,7 @@ function CategoryCard({ c }: { c: Card }) {
             ))}
           </div>
         )}
-        <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "#1a1f2e", borderBottom: "0.5px solid rgba(30,40,80,0.15)", paddingBottom: 1 }}>Shop →</span>
+        <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", color: "#1a1f2e", borderBottom: "0.5px solid rgba(30,40,80,0.15)", paddingBottom: 1 }}>Shop →</span>
       </div>
     </Link>
   );
@@ -392,30 +392,7 @@ export default function Home() {
             color: "rgba(255,255,255,0.28)",
             textTransform: "uppercase",
           }}>
-            Ka.Sha — Golf &amp; Sportswear
-          </span>
-        </div>
-        <div style={{
-          position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)",
-          zIndex: 6, display: "flex", flexDirection: "column", alignItems: "center",
-          gap: 8, pointerEvents: "none",
-        }}>
-          <span style={{
-            writingMode: "vertical-rl",
-            fontFamily: "'Josefin Sans', sans-serif",
-            fontSize: 11, letterSpacing: "0.35em",
-            color: "rgba(255,255,255,0.6)", fontWeight: 300,
-          }}>
-            {String(active + 1).padStart(2, "0")}
-          </span>
-          <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.2)" }} />
-          <span style={{
-            writingMode: "vertical-rl",
-            fontFamily: "'Josefin Sans', sans-serif",
-            fontSize: 11, letterSpacing: "0.35em",
-            color: "rgba(255,255,255,0.28)", fontWeight: 300,
-          }}>
-            {String(slides.length).padStart(2, "0")}
+            Ka.sha — Golf &amp; Sportswear
           </span>
         </div>
 
@@ -432,7 +409,7 @@ export default function Home() {
               {/* Background photo */}
               <img
                 src={s.img}
-                alt="Premium golf fashion collection by Ka.Sha India"
+                alt="Premium golf fashion collection by Ka.sha India"
                 loading={i === 0 ? "eager" : "lazy"}
                 decoding="async"
                 fetchPriority={i === 0 ? "high" : "low"}
@@ -492,11 +469,11 @@ export default function Home() {
                 </h1>
                 <p style={{
                   fontFamily:    "'Josefin Sans', sans-serif",
-                  fontSize:      13,
-                  letterSpacing: "0.25em",
-                  color:         "rgba(255,255,255,0.65)",
+                  fontSize:      15,
+                  letterSpacing: "0.22em",
+                  color:         "rgba(255,255,255,0.72)",
                   textTransform: "uppercase",
-                  marginBottom:  26,
+                  marginBottom:  30,
                   opacity:       i === active ? 1 : 0,
                   transition:    "opacity 0.7s 0.5s ease",
                 }}>
@@ -517,10 +494,10 @@ export default function Home() {
                       background:    GOLD,
                       color:         "#fff",
                       fontFamily:    "'Josefin Sans', sans-serif",
-                      fontSize:      12,
-                      letterSpacing: "0.28em",
+                      fontSize:      14,
+                      letterSpacing: "0.22em",
                       textTransform: "uppercase",
-                      padding:       "13px 28px",
+                      padding:       "14px 32px",
                       display:       "inline-block",
                       transition:    "background 0.2s, transform 0.2s",
                       boxShadow:     "0 6px 18px rgba(184,146,90,0.4)",
@@ -539,10 +516,10 @@ export default function Home() {
                         backdropFilter:"blur(8px)",
                         color:         "rgba(255,255,255,0.72)",
                         fontFamily:    "'Josefin Sans', sans-serif",
-                        fontSize:      12,
-                        letterSpacing: "0.28em",
+                        fontSize:      14,
+                        letterSpacing: "0.22em",
                         textTransform: "uppercase",
-                        padding:       "12px 28px",
+                        padding:       "13px 32px",
                         border:        "0.5px solid rgba(255,255,255,0.32)",
                         display:       "inline-block",
                         transition:    "border-color 0.2s, color 0.2s",
@@ -579,24 +556,6 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Vertical slide counter */}
-        <div className="hidden md:block" style={{
-          position:      "absolute",
-          top:           "50%",
-          right:         80,
-          transform:     "translateY(-50%)",
-          zIndex:        3,
-          writingMode:   "vertical-rl" as const,
-          fontFamily:    "'Josefin Sans', sans-serif",
-          fontSize:      11,
-          letterSpacing: "0.3em",
-          color:         "rgba(255,255,255,0.18)",
-        }}>
-          {String(active + 1).padStart(2, "0")} / 0{slides.length}
-        </div>
-
-        {/* Progress bar */}
-        <div style={{ position: "absolute", bottom: 0, left: 0, height: 1.5, zIndex: 3, background: GOLD, width: `${progress}%`, transition: "width 0.1s linear" }} />
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════

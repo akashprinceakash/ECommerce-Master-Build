@@ -138,7 +138,7 @@ export function Navbar() {
         <Link
           href="/"
           className="flex items-center shrink-0"
-          aria-label="Ka.Sha home"
+          aria-label="Ka.sha home"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         >
           <img

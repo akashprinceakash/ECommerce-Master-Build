@@ -4,7 +4,7 @@ import { useGetProduct, getGetProductQueryKey, useAddToCart, getGetCartQueryKey 
 import { useParams, Link, useLocation } from "wouter";
 import { formatPrice } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Minus, Plus, ShoppingBag, Wand2, ChevronRight, ChevronLeft, ShieldCheck, ChevronDown, Users } from "lucide-react";
+import { Minus, Plus, ShoppingBag, Wand2, ChevronRight, ChevronLeft, ShieldCheck, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
@@ -26,8 +26,6 @@ export default function ProductDetailPage() {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [customSizeText, setCustomSizeText] = useState("");
-  const [showPersonalise, setShowPersonalise] = useState(false);
-  const [personQty, setPersonQty] = useState(1);
   const touchStartX = useRef<number | null>(null);
 
   const { data: product, isLoading, error } = useGetProduct(id, {
@@ -88,12 +86,6 @@ export default function ProductDetailPage() {
 
   const sizes = ["XS", "S", "M", "L", "XL", "XXL", "CUSTOM"];
 
-  const PERSON_PRICES = [2000, 1800, 1700, 1600]; // per piece at qty 1,2,3,4
-  const PERSON_DISCOUNTS = [null, "10% off", "15% off", "20% off"];
-  const personTotal = personQty >= 1 && personQty <= 4
-    ? personQty * PERSON_PRICES[personQty - 1]
-    : 0;
-
   if (isLoading) {
     return (
       <Layout>
@@ -131,14 +123,14 @@ export default function ProductDetailPage() {
     const sub = (product?.subType || "").toLowerCase();
     if (cat.includes("trouser") || cat.includes("pant")) {
       return gender === "women"
-        ? "Premium stretch golf trousers for women with performance fit by Ka.Sha"
-        : "Premium stretch golf trousers for men with performance fit by Ka.Sha";
+        ? "Premium stretch golf trousers for women with performance fit by Ka.sha"
+        : "Premium stretch golf trousers for men with performance fit by Ka.sha";
     }
     if (cat.includes("skort") || cat.includes("skirt")) {
       return "Women's luxury golf skort with performance stretch fabric";
     }
     if (cat.includes("short")) {
-      return "Premium golf shorts with performance stretch fabric by Ka.Sha";
+      return "Premium golf shorts with performance stretch fabric by Ka.sha";
     }
     if (sub === "printed" || sub === "print") {
       return gender === "women"
@@ -146,8 +138,8 @@ export default function ProductDetailPage() {
         : "Designer printed golf polo for men with premium athletic fit";
     }
     return gender === "women"
-      ? "Women's luxury golf polo shirt in breathable dri fit fabric by Ka.Sha"
-      : "Men's luxury golf polo shirt in breathable dri fit fabric by Ka.Sha";
+      ? "Women's luxury golf polo shirt in breathable dri fit fabric by Ka.sha"
+      : "Men's luxury golf polo shirt in breathable dri fit fabric by Ka.sha";
   }
 
   const mainThumbnail = getAssetUrl(product.thumbnailUrl) || "/images/product-tshirt.png";
@@ -310,7 +302,7 @@ export default function ProductDetailPage() {
                 {product.category || "Golf Collection"}
               </p>
               <h1 className="text-3xl md:text-4xl font-black text-black mb-3 leading-tight">{product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}</h1>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
                 <p className="text-2xl font-bold text-black">{formatPrice(product.priceInPaise)}</p>
                 {product.available ? (
                   <span className="text-[10px] font-bold tracking-[0.15em] text-green-600 bg-green-50 border border-green-200 px-2 py-0.5">
@@ -324,6 +316,7 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
+            <p className="text-[11px] text-gray-400 tracking-wide">Inclusive of all taxes &nbsp;·&nbsp; Free shipping on all orders</p>
             <p className="text-gray-600 leading-relaxed text-sm">{product.description}</p>
 
             {/* Size Selector */}
@@ -342,7 +335,7 @@ export default function ProductDetailPage() {
                   <button
                     key={size}
                     onClick={() => setSelectedSize(size)}
-                    className={`w-12 h-12 text-[12px] font-bold border transition-all ${
+                    className={`h-11 text-[12px] font-bold border transition-all ${size === "CUSTOM" ? "px-4 min-w-[72px]" : "w-11"} ${
                       selectedSize === size
                         ? "bg-black text-white border-black"
                         : "bg-white text-black border-gray-300 hover:border-black"
@@ -398,75 +391,10 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Personalisation */}
-            <div style={{ border: "1px solid rgba(0,0,0,0.1)" }}>
-              <button
-                type="button"
-                className="w-full flex items-center justify-between p-4 text-left"
-                onClick={() => setShowPersonalise(p => !p)}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-[11px] font-bold tracking-[0.15em] text-black">ADD PERSONALISATION</span>
-                  <span style={{ fontSize: 10, color: "#B8925A", letterSpacing: "0.08em" }}>from ₹2,000/pc</span>
-                </div>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${showPersonalise ? "rotate-180" : ""}`} />
-              </button>
-
-              {showPersonalise && (
-                <div className="px-4 pb-5 space-y-4">
-                  <p className="text-[12px] text-gray-500 leading-relaxed">
-                    Add your name, initials, number, or logo to each piece. Pricing is per piece; bulk discounts apply automatically.
-                  </p>
-
-                  {/* Qty tiles */}
-                  <div className="grid grid-cols-4 gap-2">
-                    {[1, 2, 3, 4].map((qty) => (
-                      <button
-                        key={qty}
-                        type="button"
-                        onClick={() => setPersonQty(qty)}
-                        className="py-3 text-center transition-all"
-                        style={{
-                          border: `1px solid ${personQty === qty ? "#B8925A" : "rgba(0,0,0,0.15)"}`,
-                          background: personQty === qty ? "#fff" : "transparent",
-                        }}
-                      >
-                        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 15, fontWeight: 700 }}>
-                          {qty}
-                        </div>
-                        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, color: "#B8925A", marginTop: 2 }}>
-                          ₹{PERSON_PRICES[qty - 1].toLocaleString("en-IN")}/pc
-                        </div>
-                        {PERSON_DISCOUNTS[qty - 1] && (
-                          <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 9, color: "rgba(0,0,0,0.4)", marginTop: 1 }}>
-                            {PERSON_DISCOUNTS[qty - 1]}
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="text-[12px] text-gray-600">Personalisation total</span>
-                    <span className="text-[14px] font-bold text-black">₹{personTotal.toLocaleString("en-IN")}</span>
-                  </div>
-
-                  <p className="text-[11px] text-gray-400">
-                    Need 5+ personalised pieces?{" "}
-                    <Link href="/connect?type=bulk-order" style={{ color: "#B8925A", textDecoration: "underline" }}>
-                      Use our bulk order form
-                    </Link>{" "}
-                    or call{" "}
-                    <a href="tel:+919560889594" style={{ color: "#B8925A" }}>+91 95608 89594</a>.
-                  </p>
-                </div>
-              )}
-            </div>
-
             {/* Action Buttons */}
             <div className="space-y-3 pt-2">
               <button
-                className="w-full border-2 border-black text-black text-[12px] font-bold tracking-[0.15em] py-4 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full border-2 border-black text-black text-[14px] font-bold tracking-[0.15em] py-4 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleAddToCart}
                 disabled={addToCartMutation.isPending || !product.available}
               >
@@ -475,7 +403,7 @@ export default function ProductDetailPage() {
               </button>
 
               <button
-                className="w-full bg-black text-white text-[12px] font-bold tracking-[0.15em] py-4 hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-black text-white text-[14px] font-bold tracking-[0.15em] py-4 hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleBuyNow}
                 disabled={addToCartMutation.isPending || !product.available}
               >
@@ -490,13 +418,6 @@ export default function ProductDetailPage() {
                   </button>
                 </Link>
               )}
-
-              <Link href="/connect?type=bulk-order">
-                <button className="w-full border border-[#B8925A] text-[#B8925A] text-[12px] font-bold tracking-[0.12em] py-4 hover:bg-[#B8925A] hover:text-white transition-all flex items-center justify-center gap-2 mt-1">
-                  <Users className="w-4 h-4" />
-                  BULK ORDER — 5+ PIECES
-                </button>
-              </Link>
             </div>
 
             {/* Trust Badge */}

@@ -505,14 +505,14 @@ function getProductAltText(product: {
   const sub = (product.subType || "").toLowerCase();
   if (TROUSER_CATEGORIES.includes(cat)) {
     return gender === "women"
-      ? "Premium stretch golf trousers for women with performance fit by Ka.Sha"
-      : "Premium stretch golf trousers for men with performance fit by Ka.Sha";
+      ? "Premium stretch golf trousers for women with performance fit by Ka.sha"
+      : "Premium stretch golf trousers for men with performance fit by Ka.sha";
   }
   if (SKORT_CATEGORIES.some(s => cat.includes(s)) || cat.includes("skirt")) {
     return "Women's luxury golf skort with performance stretch fabric";
   }
   if (SHORTS_CATEGORIES.includes(cat)) {
-    return "Premium golf shorts with performance stretch fabric by Ka.Sha";
+    return "Premium golf shorts with performance stretch fabric by Ka.sha";
   }
   if (sub === "printed" || sub === "print") {
     return gender === "women"
@@ -520,8 +520,8 @@ function getProductAltText(product: {
       : "Designer printed golf polo for men with premium athletic fit";
   }
   return gender === "women"
-    ? "Women's luxury golf polo shirt in breathable dri fit fabric by Ka.Sha"
-    : "Men's luxury golf polo shirt in breathable dri fit fabric by Ka.Sha";
+    ? "Women's luxury golf polo shirt in breathable dri fit fabric by Ka.sha"
+    : "Men's luxury golf polo shirt in breathable dri fit fabric by Ka.sha";
 }
 
 interface ProductCardProps {

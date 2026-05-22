@@ -61,7 +61,7 @@ export function Footer() {
           <div>
             <img
               src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Horizontal%20logo%20coloured%20(350%20by%2075)%20(1).svg"
-              alt="Ka.Sha"
+              alt="Ka.sha"
               style={{ height: 40, width: "auto", objectFit: "contain", marginBottom: 16 }}
             />
             <p
@@ -182,7 +182,7 @@ export function Footer() {
             <div style={COL_TITLE}>Company</div>
             <ul className="flex flex-col gap-2.5">
               <li>
-                <FooterLink href="/heritage">About Ka.Sha</FooterLink>
+                <FooterLink href="/heritage">About Ka.sha</FooterLink>
               </li>
               <li>
                 <FooterLink href="/lookbook">Lookbook</FooterLink>

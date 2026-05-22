@@ -46,14 +46,14 @@ export default function ConnectPage() {
   const [message,         setMessage]         = useState("");
   const [focused,         setFocused]         = useState<string | null>(null);
 
-  useEffect(() => { document.title = "Connect with Us — Ka.Sha"; }, []);
+  useEffect(() => { document.title = "Connect with Us — Ka.sha"; }, []);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const label = INQUIRY_OPTIONS.find(o => o.value === inquiryType)?.label ?? inquiryType;
     const subject = encodeURIComponent(`${label} Enquiry from ${name}`);
     const body = encodeURIComponent(
-      `Name: ${name}\nEmail: ${email}\nEnquiry Type: ${label}\nStyle Preference: ${stylePreference || "Not specified"}\n\nMessage:\n${message}\n\n---\nSent via Ka.Sha website`
+      `Name: ${name}\nEmail: ${email}\nEnquiry Type: ${label}\nStyle Preference: ${stylePreference || "Not specified"}\n\nMessage:\n${message}\n\n---\nSent via Ka.sha website`
     );
     window.location.href = `mailto:support@kashaonline.in?subject=${subject}&body=${body}`;
   }
@@ -69,7 +69,7 @@ export default function ConnectPage() {
           fontFamily: "'Josefin Sans', sans-serif", fontSize: 11,
           letterSpacing: "0.45em", color: GOLD, textTransform: "uppercase", marginBottom: 20,
         }}>
-          Ka.Sha — Partnerships &amp; Enquiries
+          Ka.sha — Partnerships &amp; Enquiries
         </p>
         <h1 style={{
           fontFamily: "'Cormorant Garamond', serif",
