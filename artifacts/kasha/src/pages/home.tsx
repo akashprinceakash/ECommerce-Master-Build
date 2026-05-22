@@ -60,7 +60,7 @@ const SLIDES = [
   {
     img:     "/images/slides/hero3_womens.webp",
     eyebrow: "Women's Collection · 2026",
-    title:   (<>Wear your game.<br />Style</>),
+    title:   (<>Wear your game.<br />In Style</>),
     sub:     "Women · Signature · Flair · Bottoms",
     primary: { label: "Women's Store", href: "/products?gender=women&type=tshirts" },
     outline: undefined,
