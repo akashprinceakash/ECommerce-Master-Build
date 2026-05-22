@@ -26,7 +26,7 @@ import {
   type PatternZone, type PatternDef, type ProductType,
 } from "@/components/3d/patterns";
 import {
-  KASHA_DESIGNS, applyKashaDesign, clearKashaDesign,
+  KASHA_DESIGNS, applyKashaDesign, clearKashaDesign, SKU_KASHA_DESIGN_MAP,
   type KashaDesignDef,
 } from "@/components/3d/kasha-designs";
 
@@ -119,7 +119,9 @@ function toProxiedUrl(url: string | null | undefined): string {
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Product {
   id: number; name: string; description: string;
-  category: string;    // maps to ProductType
+  category: string;
+  subType?: string | null;   // "pattern" | "printed" | "solid" | null
+  sku?: string | null;
   priceInPaise: number; modelUrl: string;
   thumbnailUrl?: string|null; defaultColor?: string;
 }
@@ -175,7 +177,9 @@ export default function CustomizePage() {
     queryFn:  () => apiFetch(`/api/products/${id}`),
     enabled:  !!id,
   });
-  const productType: ProductType = (product?.category as ProductType) ?? "fabric";
+  const productType: ProductType =
+    product?.subType === "pattern" ? "pattern" :
+    product?.subType === "printed" ? "print"   : "fabric";
 
   // ── Style step state ─────────────────────────────────────────────────────
   const [styleTab, setStyleTab] = useState<"solid"|"print"|"pattern">(
@@ -444,12 +448,16 @@ export default function CustomizePage() {
     } catch { toast({title:"Could not apply print",variant:"destructive"}); }
   }, [syncTexture, toast]);
 
-  // Auto-apply first KA.SHA design when navigating to a pattern product from PDP
+  // Auto-apply the correct KA.SHA design for this product's SKU when navigating
+  // from the PDP (both quick and full customisation modes).
   useEffect(() => {
     if (!canvasReady || productType !== "pattern" || autoAppliedRef.current) return;
+    if (!product) return; // wait until product data is loaded
     autoAppliedRef.current = true;
-    handleSelectKashaDesign(KASHA_DESIGNS[0]);
-  }, [canvasReady, productType, handleSelectKashaDesign]);
+    const designId = SKU_KASHA_DESIGN_MAP[product.sku ?? ""] ?? "KD001";
+    const design = KASHA_DESIGNS.find(d => d.id === designId) ?? KASHA_DESIGNS[0];
+    handleSelectKashaDesign(design);
+  }, [canvasReady, productType, handleSelectKashaDesign, product]);
 
   const clearZonePrint = useCallback((zone: Exclude<PatternZone,"all">)=>{
     const fc=fcRef.current; if(!fc) return;

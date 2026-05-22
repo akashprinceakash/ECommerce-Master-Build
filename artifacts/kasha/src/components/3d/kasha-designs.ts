@@ -152,3 +152,14 @@ export async function applyKashaDesign(
   }
   fc.renderAll();
 }
+
+// ── SKU → KA.SHA Design mapping ──────────────────────────────────────────────
+// Maps each pattern product SKU to the KD design ID that should be
+// auto-applied when the user enters the customisation studio.
+export const SKU_KASHA_DESIGN_MAP: Record<string, string> = {
+  "KS1001B-SB": "KD001",
+  "KS1001B-BB": "KD001",
+  "KS1002B-RB": "KD002",
+  "KS1003B-PB": "KD003",
+  "KS1006B-BP": "KD004",
+};
