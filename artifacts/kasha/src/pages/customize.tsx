@@ -453,16 +453,19 @@ export default function CustomizePage() {
   const applyZonePrint = useCallback(async (zone: Exclude<PatternZone,"all">, p: PatternDef) => {
     const fc=fcRef.current; if(!fc) return;
     const preset=ZONE_PRESETS[zone];
-    const tileSize=Math.min(preset.w, preset.h, 256);
+    // Use a consistent tile size — canvas clips overflow, so edges are never squished
+    const tileSize=192;
     try {
       const img=await loadHTMLImage(patternUrl(p.file));
       const off=document.createElement("canvas");
       off.width=preset.w; off.height=preset.h;
       const ctx=off.getContext("2d"); if(!ctx) return;
       ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
-      for (let y=0; y<preset.h; y+=tileSize) {
-        for (let x=0; x<preset.w; x+=tileSize) {
-          ctx.drawImage(img, x, y, Math.min(tileSize, preset.w-x), Math.min(tileSize, preset.h-y));
+      // 9-arg drawImage: always scale source to tileSize×tileSize at each position.
+      // The offscreen canvas (preset.w × preset.h) clips any overflow automatically.
+      for (let row=0; row*tileSize<preset.h; row++) {
+        for (let col=0; col*tileSize<preset.w; col++) {
+          ctx.drawImage(img, 0, 0, img.width, img.height, col*tileSize, row*tileSize, tileSize, tileSize);
         }
       }
       // Remove any existing print for this zone
