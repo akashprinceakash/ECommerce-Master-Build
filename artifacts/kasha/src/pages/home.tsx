@@ -44,7 +44,7 @@ const SLIDES = [
   {
     img:     "/images/slides/hero1_mens.webp",
     eyebrow: "Full Collection · 2026",
-    title:   (<>Flair on the fairway<br />Ka.sha Golfwear.</>),
+    title:   (<>Flair on the fairway<br />Ka.Sha Golfwear.</>),
     sub:     SHOW_KIDS ? "Men · Women · Kids · Bespoke" : "Men · Women",
     primary: { label: "All Products", href: "/products" },
     outline: SHOW_CUSTOMIZATION ? { label: "Custom Studio", href: "/products/1/customize" } : undefined,
@@ -392,7 +392,32 @@ export default function Home() {
             color: "rgba(255,255,255,0.28)",
             textTransform: "uppercase",
           }}>
-            Ka.sha — Golf &amp; Sportswear
+            Ka.Sha — Golf &amp; Sportswear
+          </span>
+        </div>
+
+        {/* ── Right-side slide counter ──────────────────────────────────────── */}
+        <div style={{
+          position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)",
+          zIndex: 6, pointerEvents: "none",
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+        }}>
+          <span style={{
+            fontFamily: "'Josefin Sans', sans-serif",
+            fontSize: 11,
+            letterSpacing: "0.18em",
+            color: "rgba(255,255,255,0.55)",
+          }}>
+            {String(active + 1).padStart(2, "0")}
+          </span>
+          <div style={{ width: 1, height: 40, background: "rgba(255,255,255,0.18)" }} />
+          <span style={{
+            fontFamily: "'Josefin Sans', sans-serif",
+            fontSize: 11,
+            letterSpacing: "0.18em",
+            color: "rgba(255,255,255,0.22)",
+          }}>
+            {String(slides.length).padStart(2, "0")}
           </span>
         </div>
 
@@ -751,20 +776,34 @@ export default function Home() {
           {/* 3-col tile grid */}
           <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: 10 }}>
             {BULK.map((b) => (
-              <div
+              <Link
                 key={b.title}
+                href={`/connect?type=bulk-order`}
                 style={{
+                  display:      "block",
                   background:   BG_CARD,
                   border:       "0.5px solid rgba(30,40,80,0.1)",
                   borderRadius: 10,
                   overflow:     "hidden",
+                  transition:   "transform 0.25s, box-shadow 0.25s, border-color 0.25s",
+                  textDecoration: "none",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)";
+                  (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 28px rgba(184,146,90,0.18)";
+                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.35)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                  (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(30,40,80,0.1)";
                 }}
               >
                 {/* Image */}
                 <div style={{ height: 300, position: "relative", overflow: "hidden" }}>
                   <img src={b.img} alt={b.seoAlt || b.title} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }} />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(15,18,35,0.4) 0%, transparent 55%)" }} />
-                  <span style={{ position: "absolute", top: 8, left: 10, fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", color: "black", textTransform: "uppercase",backgroundColor:"whitesmoke", padding: "3px 9px", borderRadius: 3,  }}>
+                  <span style={{ position: "absolute", top: 8, left: 10, fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", color: "black", textTransform: "uppercase", backgroundColor: "whitesmoke", padding: "3px 9px", borderRadius: 3 }}>
                     {b.from}
                   </span>
                 </div>
@@ -773,13 +812,16 @@ export default function Home() {
                   <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.2em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{b.num}</div>
                   <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 500, color: "#1a1f2e", marginBottom: 6 }}>{b.title}</div>
                   <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 16, color: "rgba(20,28,60,0.72)", letterSpacing: "0.04em", lineHeight: 1.7, marginBottom: 10 }}>{b.desc}</div>
-                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 14 }}>
                     {b.tags.map((t) => (
                       <span key={t} style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, padding: "3px 8px", background: BG_SECTION, color: "rgba(20,28,60,0.68)", borderRadius: 3, letterSpacing: "0.08em", textTransform: "uppercase", border: "0.5px solid rgba(30,40,80,0.12)" }}>{t}</span>
                     ))}
                   </div>
+                  <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: GOLD, borderBottom: `0.5px solid ${GOLD}`, paddingBottom: 1 }}>
+                    Enquire Now →
+                  </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 

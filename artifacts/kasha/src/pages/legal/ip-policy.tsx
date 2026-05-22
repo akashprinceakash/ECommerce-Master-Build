@@ -9,7 +9,8 @@ export default function IpPolicyPage() {
     <Layout>
       <LegalPage title="Intellectual Property & Indemnification" updated="18 May 2026">
         <Section title="1. Ownership of Ka·Sha Intellectual Property">
-          <p>All content on the Ka·Sha website and platform — including but not limited to brand names, logos, trade dress (the distinctive visual characteristics of Ka·Sha's products, labels, colour palette, garment silhouettes, and overall aesthetic that identify Ka·Sha as the source of origin), product designs, graphics, text, photographs, software, and the Custom Studio interface — is the exclusive intellectual property of Ka·Sha (PS Fashion) and is protected under applicable Indian and international copyright, trademark, and design laws. Unauthorised reproduction, modification, distribution, or commercial use of any Ka·Sha content is strictly prohibited.</p>
+          <p>All content on the Ka·Sha website and platform — including but not limited to brand names, logos, product designs, graphics, text, photographs, software, and the Custom Studio interface — is the exclusive intellectual property of Ka·Sha (PS Fashion) and is protected under applicable Indian and international copyright, trademark, and design laws. Unauthorised reproduction, modification, distribution, or commercial use of any Ka·Sha content is strictly prohibited.</p>
+          <p><strong>Trade Dress:</strong> "Trade Dress" refers to the overall visual image and appearance of Ka·Sha's brand and products that identifies Ka·Sha as their source. This includes, but is not limited to, Ka·Sha's distinctive colour palette, garment silhouettes, label design, packaging aesthetics, the look and feel of the website, and the combination of design elements that together create Ka·Sha's recognisable identity. Ka·Sha's Trade Dress is legally protected and may not be copied, imitated, or used in any manner that is likely to cause confusion as to the source or origin of products.</p>
         </Section>
 
         <Section title="2. Customer-Submitted Designs and Content">
@@ -23,7 +24,7 @@ export default function IpPolicyPage() {
         </Section>
 
         <Section title="3. Ka·Sha's Limitation of Liability for Customer Content">
-          <p>Ka·Sha acts solely as a manufacturer/facilitator in producing garments based on Customer Content provided by you. Ka·Sha is not obligated to independently verify, review, or pre-approve Customer Content for intellectual property compliance prior to production. For the avoidance of doubt, and without limiting the generality of the foregoing:</p>
+          <p>Ka·Sha acts solely as a manufacturer and production facilitator in producing garments based on Customer Content provided by you. Ka·Sha does not independently verify, review, or pre-approve Customer Content for intellectual property compliance prior to production. By submitting Customer Content, you accept full responsibility for ensuring it does not infringe any third-party rights. Accordingly:</p>
           <ul style={{ paddingLeft: 20, marginTop: 4, listStyle: "disc" }}>
             <li>Ka·Sha accepts <strong>no responsibility or liability</strong> for any infringement of third-party intellectual property rights arising from or in connection with any Customer Content submitted by you.</li>
             <li>Ka·Sha shall not be liable for any claims, damages, losses, or penalties — whether civil, criminal, or administrative — resulting from Customer Content that infringes any copyright, trademark, or other intellectual property right.</li>
@@ -31,7 +32,7 @@ export default function IpPolicyPage() {
         </Section>
 
         <Section title="4. Customer Indemnification">
-          <p>You agree to <strong>fully indemnify, defend, and hold harmless</strong> Ka·Sha (PS Fashion), its officers, employees, agents, licensors, and service providers from and against any and all claims, liabilities, damages, judgements, awards, losses, costs, expenses, or fees (including reasonable legal fees) arising out of or relating to:</p>
+          <p>You agree to <strong>fully indemnify, defend, and hold harmless</strong> Ka·Sha (PS Fashion), its employees, agents, licensors, and service providers from and against any and all claims, liabilities, damages, judgements, awards, losses, costs, expenses, or fees (including reasonable legal fees) arising out of or relating to:</p>
           <ul style={{ paddingLeft: 20, marginTop: 4, listStyle: "disc" }}>
             <li>Any Customer Content you submit, upload, or provide to Ka·Sha;</li>
             <li>Any alleged or actual infringement of any intellectual property right, privacy right, or other proprietary right of any third party by Customer Content;</li>

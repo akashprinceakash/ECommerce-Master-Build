@@ -138,13 +138,13 @@ export function Navbar() {
         <Link
           href="/"
           className="flex items-center shrink-0"
-          aria-label="Ka.sha home"
+          aria-label="Ka.Sha home"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         >
           <img
             src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Horizontal%20logo%20coloured%20(350%20by%2075)%20(1).svg"
             alt="Ka.Sha"
-            style={{ width: 165, height: "auto", objectFit: "contain", filter: scrolled ? "brightness(1)" : "brightness(1.1)" }}
+            style={{ width: 185, height: "auto", objectFit: "contain", filter: scrolled ? "brightness(1)" : "brightness(1.1)" }}
           />
         </Link>
 
@@ -156,10 +156,10 @@ export function Navbar() {
               <Link
                 key={l.label}
                 href={l.href}
-                className="relative text-[10px] uppercase transition-colors hover:text-neutral-900"
+                className="relative text-[12px] uppercase transition-colors hover:text-neutral-900"
                 style={{
                   fontFamily: "'Josefin Sans', sans-serif",
-                  letterSpacing: "0.28em",
+                  letterSpacing: "0.25em",
                   color: active ? GOLD : "rgba(0,0,0,0.6)",
                 }}
               >
@@ -173,10 +173,10 @@ export function Navbar() {
           })}
           <Link
             href="/connect"
-            className="relative text-[10px] uppercase transition-colors hover:text-neutral-900"
+            className="relative text-[12px] uppercase transition-colors hover:text-neutral-900"
             style={{
               fontFamily: "'Josefin Sans', sans-serif",
-              letterSpacing: "0.28em",
+              letterSpacing: "0.25em",
               color: "rgba(0,0,0,0.6)",
               textDecoration: "none",
             }}
@@ -227,7 +227,7 @@ export function Navbar() {
                   className="w-8 h-8 flex items-center justify-center hover:text-neutral-900 transition-colors"
                   style={{ color: "rgba(0,0,0,0.6)" }}
                 >
-                  <UserIcon className="w-4 h-4" />
+                  <UserIcon className="w-5 h-5" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -318,14 +318,14 @@ export function Navbar() {
             style={{ color: "rgba(0,0,0,0.6)" }}
             title="Search"
           >
-            <Search className="w-4 h-4" />
+            <Search className="w-5 h-5" />
           </Link>
           <button
             className="w-8 h-8 flex items-center justify-center relative hover:text-neutral-900 transition-colors"
             style={{ color: "rgba(0,0,0,0.6)" }}
             onClick={openCart}
           >
-            <ShoppingBag className="w-4 h-4" />
+            <ShoppingBag className="w-5 h-5" />
             {totalCartCount > 0 && (
               <span
                 className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white"

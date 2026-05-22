@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 const GOLD = "#B8925A";
 
@@ -45,8 +45,20 @@ export default function ConnectPage() {
   const [stylePreference, setStylePreference] = useState("");
   const [message,         setMessage]         = useState("");
   const [focused,         setFocused]         = useState<string | null>(null);
+  const [location] = useLocation();
 
-  useEffect(() => { document.title = "Connect with Us — Ka.sha"; }, []);
+  useEffect(() => { document.title = "Connect with Us — Ka.Sha"; }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const type = params.get("type") as InquiryType | null;
+    if (type && INQUIRY_OPTIONS.some(o => o.value === type)) {
+      setInquiryType(type);
+      setTimeout(() => {
+        document.getElementById("connect-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 300);
+    }
+  }, [location]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,7 +81,7 @@ export default function ConnectPage() {
           fontFamily: "'Josefin Sans', sans-serif", fontSize: 11,
           letterSpacing: "0.45em", color: GOLD, textTransform: "uppercase", marginBottom: 20,
         }}>
-          Ka.sha — Partnerships &amp; Enquiries
+          Ka.Sha — Partnerships &amp; Enquiries
         </p>
         <h1 style={{
           fontFamily: "'Cormorant Garamond', serif",
@@ -88,7 +100,7 @@ export default function ConnectPage() {
       </section>
 
       {/* ── Form ──────────────────────────────────────────────────────────── */}
-      <section style={{ background: "#F9F8F6", padding: "80px 24px" }}>
+      <section id="connect-form" style={{ background: "#F9F8F6", padding: "80px 24px" }}>
         <div style={{ maxWidth: 700, margin: "0 auto" }}>
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 28 }}>
 

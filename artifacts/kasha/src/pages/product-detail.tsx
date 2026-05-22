@@ -314,6 +314,9 @@ export default function ProductDetailPage() {
                   </span>
                 )}
               </div>
+              <p className="text-[11px] mt-1.5" style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.06em", color: "#B8925A" }}>
+                Add personalisation from ₹2,000 &nbsp;·&nbsp; Up to 20% off for 2–4 pieces
+              </p>
             </div>
 
             <p className="text-[11px] text-gray-400 tracking-wide">Inclusive of all taxes &nbsp;·&nbsp; Free shipping on all orders</p>
@@ -389,6 +392,66 @@ export default function ProductDetailPage() {
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
+            </div>
+
+            {/* Personalisation & Custom Orders */}
+            <div style={{ border: "1px solid rgba(184,146,90,0.3)", borderRadius: 4, overflow: "hidden" }}>
+              <button
+                onClick={() => setOpenAccordion(openAccordion === "personalise" ? null : "personalise")}
+                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-amber-50/30 transition-colors"
+                style={{ background: "rgba(184,146,90,0.04)" }}
+              >
+                <div className="flex items-center gap-2">
+                  <Wand2 className="w-4 h-4" style={{ color: "#B8925A" }} />
+                  <span className="text-[12px] font-bold tracking-[0.12em] uppercase" style={{ color: "#B8925A" }}>
+                    Personalisation &amp; Custom Orders
+                  </span>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-200 ${openAccordion === "personalise" ? "rotate-180" : ""}`}
+                  style={{ color: "#B8925A" }}
+                />
+              </button>
+              {openAccordion === "personalise" && (
+                <div className="px-4 pb-4 pt-2" style={{ borderTop: "1px solid rgba(184,146,90,0.15)" }}>
+                  <p className="text-[12px] text-gray-500 mb-4 leading-relaxed">
+                    Add your name, initials, club logo, or custom artwork. Each personalised piece is made-to-order.
+                  </p>
+                  {/* Pricing table */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                    {[
+                      { qty: "1 Piece",  price: "₹2,000",  discount: null },
+                      { qty: "2 Pieces", price: "₹1,800",  discount: "10% off" },
+                      { qty: "3 Pieces", price: "₹1,700",  discount: "15% off" },
+                      { qty: "4 Pieces", price: "₹1,600",  discount: "20% off" },
+                    ].map(tier => (
+                      <div key={tier.qty} style={{
+                        background: tier.discount ? "rgba(184,146,90,0.06)" : "#fff",
+                        border: `1px solid ${tier.discount ? "rgba(184,146,90,0.3)" : "rgba(0,0,0,0.1)"}`,
+                        borderRadius: 4,
+                        padding: "10px 10px 8px",
+                        textAlign: "center",
+                      }}>
+                        <div className="text-[10px] text-gray-400 tracking-wider mb-1" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>{tier.qty}</div>
+                        <div className="text-[14px] font-bold text-black">{tier.price}</div>
+                        <div className="text-[10px] mt-0.5" style={{ color: tier.discount ? "#B8925A" : "transparent", fontFamily: "'Josefin Sans', sans-serif" }}>
+                          {tier.discount ?? "—"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-gray-400 mb-3 leading-relaxed">
+                    Per piece (personalisation add-on only) · Non-refundable once production begins
+                  </p>
+                  <Link
+                    href="/connect?type=bulk-order"
+                    className="inline-block text-[11px] font-bold tracking-[0.15em] uppercase transition-colors hover:opacity-80"
+                    style={{ fontFamily: "'Josefin Sans', sans-serif", color: "#B8925A", borderBottom: "0.5px solid #B8925A", paddingBottom: 1 }}
+                  >
+                    5+ pieces? Get a bulk order quote →
+                  </Link>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}

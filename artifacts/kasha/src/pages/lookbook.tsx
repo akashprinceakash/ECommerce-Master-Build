@@ -8,7 +8,7 @@ import { formatPrice } from "@/lib/format";
 const GOLD = "#B8925A";
 
 export default function LookbookPage() {
-  useEffect(() => { document.title = "Lookbook — Ka.sha"; }, []);
+  useEffect(() => { document.title = "Lookbook — Ka.Sha"; }, []);
 
   const { data: products, isLoading } = useListProducts(
     {},
@@ -26,7 +26,7 @@ export default function LookbookPage() {
           fontFamily: "'Josefin Sans', sans-serif", fontSize: 11,
           letterSpacing: "0.45em", color: GOLD, textTransform: "uppercase", marginBottom: 20,
         }}>
-          Ka.sha — SS 2026
+          Ka.Sha — SS 2026
         </p>
         <h1 style={{
           fontFamily: "'Cormorant Garamond', serif",
@@ -51,7 +51,7 @@ export default function LookbookPage() {
           lineHeight: 1.8, letterSpacing: "0.02em",
         }}>
           Designed for the discerning golfer who refuses to choose between form and function.
-          Each piece in the Ka.sha collection carries the quiet confidence of bespoke craftsmanship.
+          Each piece in the Ka.Sha collection carries the quiet confidence of bespoke craftsmanship.
         </p>
       </section>
 

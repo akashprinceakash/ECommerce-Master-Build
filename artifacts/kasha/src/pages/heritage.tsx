@@ -14,7 +14,7 @@ export default function HeritagePage() {
         <section className="relative h-[70vh] min-h-[500px] overflow-hidden">
           <img
             src={HERO_IMG}
-            alt="KA.SHA golfers on the course"
+            alt="Ka.Sha golfers on the course"
             className="absolute inset-0 w-full h-full object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/70" />
@@ -64,7 +64,7 @@ export default function HeritagePage() {
               {SHIRT_IMG && (
                 <img
                   src={SHIRT_IMG}
-                  alt="KA.SHA Golf Shirt"
+                  alt="Ka.Sha Golf Shirt"
                   className="w-full h-full object-cover object-center"
                 />
               )}
@@ -207,7 +207,7 @@ export default function HeritagePage() {
                 {TROUSER_IMG && (
                   <img
                     src={TROUSER_IMG}
-                    alt="KA.SHA Golf Trousers"
+                    alt="Ka.Sha Golf Trousers"
                     className="w-full h-full object-cover object-center"
                   />
                 )}
