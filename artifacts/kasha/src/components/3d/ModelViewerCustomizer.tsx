@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from "react";
 import * as fabric from "fabric";
-import { PATTERNS, ZONE_PRESETS, ZONE_LABEL, patternUrl, type PatternZone, type PatternDef } from "./patterns";
+import { ZONE_PRESETS, ZONE_LABEL, patternUrl, type PatternZone, type PatternDef } from "./patterns";
+import { GT_STYLES, GT_BASE_TEXTURES, type GtStyleDef, type GtColors } from "./gt-styles";
 
 export interface CustomizerHandle {
   getCanvasData: () => { canvasJson: string; previewDataUrl: string } | null;
@@ -34,6 +35,24 @@ function isWebGLAvailable(): boolean {
 }
 
 const FONTS = ["Outfit", "Arial", "Times New Roman", "Courier New", "Impact", "Comic Sans MS"];
+
+// ── GT helpers ────────────────────────────────────────────────────────────────
+function hexToRgb(hex: string) {
+  const h = hex.replace("#", "");
+  return { r: parseInt(h.slice(0,2),16), g: parseInt(h.slice(2,4),16), b: parseInt(h.slice(4,6),16) };
+}
+function rgbDist(r1:number,g1:number,b1:number,r2:number,g2:number,b2:number) {
+  return Math.sqrt((r1-r2)**2+(g1-g2)**2+(b1-b2)**2);
+}
+const GT_TOL = 60;
+
+const T_COLLECTIONS = [
+  { id:"T1", label:"T-1", desc:"Classic",   groups:["classic"] },
+  { id:"T2", label:"T-2", desc:"Sport",     groups:["sport-side"] },
+  { id:"T3", label:"T-3", desc:"Wave",      groups:["triple","wave"] },
+  { id:"T4", label:"T-4", desc:"Hourglass", groups:["hourglass","pinstripe"] },
+  { id:"T5", label:"T-5", desc:"Raglan",    groups:["raglan"] },
+] as const;
 
 const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizerProps>(
   function ModelViewerCustomizer({ modelUrl, thumbnailUrl, initialColor = "#ffffff", onPartsChange, onColorChange }, ref) {
@@ -81,6 +100,11 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
   const [activePatternId, setActivePatternId] = useState<string | null>(null);
   const [allOverPatternId, setAllOverPatternId] = useState<string | null>(null);
   const baseBgColorRef = useRef<string>("#ffffff");
+
+  // GT Design Collection state
+  const [activeGtCollection, setActiveGtCollection] = useState("T1");
+  const [activeGtStyleId, setActiveGtStyleId] = useState<string | null>(null);
+  const [gtColors, setGtColors] = useState<GtColors>({ primary: "#ffffff", accent: "#000000" });
 
   const SIZE_SCALES: Record<string, string> = { S: "0.88 0.88 0.88", M: "1 1 1", L: "1.12 1.12 1.12", XL: "1.25 1.25 1.25" };
 
@@ -354,6 +378,64 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
     setAllOverPatternId(null);
     syncTexture();
   };
+
+  // ── GT STYLE HANDLERS ────────────────────────────────────────────────────────
+  const handleApplyGtStyle = useCallback(async (style: GtStyleDef, colors: GtColors) => {
+    const fc = fabricCanvasRef.current;
+    if (!fc) return;
+    const src = GT_BASE_TEXTURES[style.id];
+    if (!src) return;
+    const baseImg = await new Promise<HTMLImageElement>((res, rej) => {
+      const img = new Image(); img.onload = () => res(img); img.onerror = rej; img.src = src;
+    });
+    const offscreen = document.createElement("canvas");
+    offscreen.width = baseImg.naturalWidth || 1024;
+    offscreen.height = baseImg.naturalHeight || 1024;
+    const ctx = offscreen.getContext("2d")!;
+    ctx.drawImage(baseImg, 0, 0);
+    const defP = hexToRgb(style.defaultColors.primary);
+    const defA = hexToRgb(style.defaultColors.accent);
+    const defT = style.defaultColors.tertiary ? hexToRgb(style.defaultColors.tertiary) : null;
+    const newP = hexToRgb(colors.primary);
+    const newA = hexToRgb(colors.accent);
+    const newT = colors.tertiary ? hexToRgb(colors.tertiary) : null;
+    const imgData = ctx.getImageData(0, 0, offscreen.width, offscreen.height);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], g = d[i+1], b = d[i+2];
+      if (rgbDist(r,g,b,defP.r,defP.g,defP.b) < GT_TOL) {
+        d[i]=newP.r; d[i+1]=newP.g; d[i+2]=newP.b;
+      } else if (rgbDist(r,g,b,defA.r,defA.g,defA.b) < GT_TOL) {
+        d[i]=newA.r; d[i+1]=newA.g; d[i+2]=newA.b;
+      } else if (defT && newT && rgbDist(r,g,b,defT.r,defT.g,defT.b) < GT_TOL) {
+        d[i]=newT.r; d[i+1]=newT.g; d[i+2]=newT.b;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+    const finalUrl = offscreen.toDataURL("image/png");
+    const fImg = await fabric.FabricImage.fromURL(finalUrl);
+    const W = fImg.width || 1024, H = fImg.height || 1024;
+    fImg.set({ left:0, top:0, originX:"left", originY:"top", scaleX:1024/W, scaleY:1024/H, selectable:false, evented:false });
+    (fImg as any).kashaGtStyle = style.id;
+    const existing = fc.getObjects().find((o:any) => (o as any).kashaGtStyle);
+    if (existing) fc.remove(existing);
+    fc.insertAt(0, fImg);
+    fc.renderAll();
+    setActiveGtStyleId(style.id);
+    setAllOverPatternId(null);
+    syncTexture();
+    updateLayerSelector();
+  }, [syncTexture, updateLayerSelector]);
+
+  const handleClearGtStyle = useCallback(() => {
+    const fc = fabricCanvasRef.current;
+    if (!fc) return;
+    const existing = fc.getObjects().find((o:any) => (o as any).kashaGtStyle);
+    if (existing) { fc.remove(existing); fc.renderAll(); }
+    setActiveGtStyleId(null);
+    syncTexture();
+    updateLayerSelector();
+  }, [syncTexture, updateLayerSelector]);
 
   const handlePlacePatternOnZone = async (p: PatternDef, zone: Exclude<PatternZone, "all">) => {
     const fc = fabricCanvasRef.current;
@@ -790,54 +872,103 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
             </label>
           </div>
 
-          {/* ── PATTERNS / PRINTS LIBRARY ── */}
+          {/* ── GT DESIGN COLLECTIONS (T1–T5) ── */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             <div style={{ fontSize: "0.9rem", textTransform: "uppercase", letterSpacing: "2px", color: "#8b949e", fontWeight: 600 }}>
-              Patterns & Prints
+              GT Design Collections
             </div>
             <p style={{ margin: 0, fontSize: "0.78rem", color: "#8b949e", lineHeight: 1.5 }}>
-              Select a print, then either apply it across the whole garment or place it on a single zone. You can stack multiple prints — drag in the canvas below to reposition.
+              Pick a collection (T-1 to T-5), select a style, customise the colour palette, then apply to the garment.
             </p>
 
-            {/* Pattern thumbnail grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.5rem" }}>
-              {PATTERNS.map((p) => {
-                const selected = activePatternId === p.id;
-                const allOver   = allOverPatternId === p.id;
+            {/* T1–T5 collection selector */}
+            <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+              {T_COLLECTIONS.map(t => {
+                const active = activeGtCollection === t.id;
                 return (
                   <button
-                    key={p.id}
-                    onClick={() => setActivePatternId(p.id)}
-                    title={p.label}
+                    key={t.id}
+                    onClick={() => { setActiveGtCollection(t.id); setActiveGtStyleId(null); }}
                     style={{
-                      position: "relative",
-                      padding: 0,
-                      aspectRatio: "1/1",
-                      borderRadius: "10px",
-                      overflow: "hidden",
+                      padding: "5px 13px",
+                      fontSize: "11px", fontWeight: 700,
+                      letterSpacing: "0.06em",
+                      border: active ? "1.5px solid #6ee7b7" : "1.5px solid rgba(255,255,255,0.18)",
+                      borderRadius: "20px",
                       cursor: "pointer",
-                      background: `url(${patternUrl(p.file)}) center/cover`,
-                      border: selected ? "2px solid #6ee7b7" : "1px solid rgba(255,255,255,0.12)",
-                      boxShadow: selected ? "0 0 0 2px rgba(110,231,183,0.25)" : "none",
+                      background: active ? "rgba(110,231,183,0.15)" : "rgba(255,255,255,0.05)",
+                      color: active ? "#6ee7b7" : "#888",
                       transition: "all 0.15s",
+                      fontFamily: "inherit",
                     }}
                   >
-                    {allOver && (
-                      <span style={{
-                        position: "absolute", top: 4, right: 4,
-                        fontSize: "0.55rem", fontWeight: 700,
-                        background: "#6ee7b7", color: "#0b0c10",
-                        padding: "2px 5px", borderRadius: "4px",
-                        letterSpacing: "0.5px",
-                      }}>ALL</span>
-                    )}
+                    {t.label}
+                    <span style={{ fontSize: "9px", opacity: 0.65, marginLeft: 4 }}>{t.desc}</span>
                   </button>
                 );
               })}
             </div>
 
-            {activePatternId && (() => {
-              const p = PATTERNS.find(x => x.id === activePatternId)!;
+            {/* Style grid for the selected collection */}
+            {(() => {
+              const col = T_COLLECTIONS.find(t => t.id === activeGtCollection);
+              if (!col) return null;
+              const styles = GT_STYLES.filter(s => (col.groups as readonly string[]).includes(s.group));
+              return (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.45rem" }}>
+                  {styles.map(style => {
+                    const sel = activeGtStyleId === style.id;
+                    return (
+                      <button
+                        key={style.id}
+                        onClick={() => {
+                          setActiveGtStyleId(style.id);
+                          setGtColors({
+                            primary: style.defaultColors.primary,
+                            accent: style.defaultColors.accent,
+                            ...(style.defaultColors.tertiary ? { tertiary: style.defaultColors.tertiary } : {}),
+                          });
+                        }}
+                        title={style.label}
+                        style={{
+                          padding: "7px 5px 5px",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          border: sel ? "2px solid #6ee7b7" : "1px solid rgba(255,255,255,0.12)",
+                          background: sel ? "rgba(110,231,183,0.07)" : "rgba(0,0,0,0.3)",
+                          boxShadow: sel ? "0 0 0 2px rgba(110,231,183,0.18)" : "none",
+                          transition: "all 0.15s",
+                          display: "flex", flexDirection: "column", alignItems: "center", gap: "4px",
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        {/* Primary + Accent swatch bar */}
+                        <div style={{ display: "flex", width: "100%", height: "22px", borderRadius: "5px", overflow: "hidden" }}>
+                          <div style={{ flex: 1, background: style.defaultColors.primary }} />
+                          <div style={{ flex: 1, background: style.defaultColors.accent }} />
+                          {style.defaultColors.tertiary && (
+                            <div style={{ flex: 1, background: style.defaultColors.tertiary }} />
+                          )}
+                        </div>
+                        <div style={{ fontSize: "8.5px", color: sel ? "#6ee7b7" : "#666", textAlign: "center", letterSpacing: "0.02em", lineHeight: 1.3 }}>
+                          {style.label}
+                        </div>
+                        {sel && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#6ee7b7" }} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            {/* Colour customisation + apply panel for selected style */}
+            {activeGtStyleId && (() => {
+              const style = GT_STYLES.find(s => s.id === activeGtStyleId)!;
+              const colorKeys = [
+                { key: "primary" as const, label: "Primary" },
+                { key: "accent" as const, label: "Accent" },
+                ...(style.defaultColors.tertiary ? [{ key: "tertiary" as const, label: "Tertiary" }] : []),
+              ];
               return (
                 <div style={{
                   background: "rgba(0,0,0,0.25)",
@@ -846,20 +977,35 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
                   border: "1px solid rgba(255,255,255,0.1)",
                   display: "flex", flexDirection: "column", gap: "0.65rem",
                 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 6, background: `url(${patternUrl(p.file)}) center/cover`, flexShrink: 0 }} />
-                    <div>
-                      <div style={{ color: "#f8f9fa", fontWeight: 600, fontSize: "0.9rem" }}>{p.label}</div>
-                      <div style={{ display: "flex", gap: 3, marginTop: 4 }}>
-                        {p.swatchColors.map((c) => (
-                          <span key={c} style={{ width: 12, height: 12, borderRadius: "50%", background: c, border: "1px solid rgba(255,255,255,0.2)" }} />
-                        ))}
+                  <div style={{ color: "#f8f9fa", fontWeight: 700, fontSize: "0.88rem", letterSpacing: "0.03em" }}>
+                    {style.label} <span style={{ color: "#555", fontWeight: 400, fontSize: "0.8rem" }}>· {style.id}</span>
+                  </div>
+
+                  {/* Color pickers */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                    {colorKeys.map(({ key, label }) => (
+                      <div key={key} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <input
+                          type="color"
+                          value={gtColors[key] ?? style.defaultColors[key] ?? "#888888"}
+                          onChange={e => setGtColors(prev => ({ ...prev, [key]: e.target.value }))}
+                          style={{ width: "30px", height: "30px", border: "none", cursor: "pointer", background: "none", borderRadius: "6px", padding: 0, flexShrink: 0 }}
+                        />
+                        <span style={{ fontSize: "0.82rem", color: "#8b949e", width: 60 }}>{label}</span>
+                        <span style={{ fontSize: "0.73rem", color: "#555", fontFamily: "monospace" }}>
+                          {(gtColors[key] ?? style.defaultColors[key] ?? "").toUpperCase()}
+                        </span>
+                        <button
+                          onClick={() => setGtColors(prev => ({ ...prev, [key]: style.defaultColors[key] ?? "#888" }))}
+                          title="Reset to default"
+                          style={{ marginLeft: "auto", fontSize: "10px", color: "#444", background: "none", border: "none", cursor: "pointer", padding: "2px 4px" }}
+                        >↺</button>
                       </div>
-                    </div>
+                    ))}
                   </div>
 
                   <button
-                    onClick={() => handleApplyAllOver(p)}
+                    onClick={() => handleApplyGtStyle(style, gtColors)}
                     style={{
                       padding: "0.7rem", background: "#6ee7b7", color: "#0b0c10",
                       border: "none", borderRadius: "8px", fontFamily: "inherit",
@@ -867,42 +1013,20 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
                       textTransform: "uppercase", letterSpacing: "1px",
                     }}
                   >
-                    {allOverPatternId === p.id ? "✓ Applied All-Over" : "Apply to whole T-shirt"}
+                    ⚡ Apply GT Style
                   </button>
 
-                  <div style={{ fontSize: "0.7rem", color: "#8b949e", textTransform: "uppercase", letterSpacing: "1px" }}>
-                    Or place on a zone
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.4rem" }}>
-                    {(["front", "back", "leftSleeve", "rightSleeve", "collar"] as const).map((zone) => (
-                      <button
-                        key={zone}
-                        onClick={() => handlePlacePatternOnZone(p, zone)}
-                        style={{
-                          padding: "0.55rem", background: "rgba(255,255,255,0.08)",
-                          color: "#f8f9fa", border: "1px solid rgba(255,255,255,0.12)",
-                          borderRadius: "6px", fontFamily: "inherit",
-                          fontWeight: 600, fontSize: "0.78rem", cursor: "pointer",
-                        }}
-                      >
-                        + {ZONE_LABEL[zone]}
-                      </button>
-                    ))}
-                  </div>
-
-                  {allOverPatternId && (
-                    <button
-                      onClick={handleClearAllOver}
-                      style={{
-                        padding: "0.5rem", background: "transparent",
-                        color: "rgba(209,73,91,0.8)", border: "1px solid rgba(209,73,91,0.4)",
-                        borderRadius: "6px", fontFamily: "inherit",
-                        fontWeight: 600, fontSize: "0.78rem", cursor: "pointer",
-                      }}
-                    >
-                      ✕ Remove all-over print
-                    </button>
-                  )}
+                  <button
+                    onClick={handleClearGtStyle}
+                    style={{
+                      padding: "0.5rem", background: "transparent",
+                      color: "rgba(209,73,91,0.8)", border: "1px solid rgba(209,73,91,0.4)",
+                      borderRadius: "6px", fontFamily: "inherit",
+                      fontWeight: 600, fontSize: "0.78rem", cursor: "pointer",
+                    }}
+                  >
+                    ✕ Remove GT Style
+                  </button>
                 </div>
               );
             })()}

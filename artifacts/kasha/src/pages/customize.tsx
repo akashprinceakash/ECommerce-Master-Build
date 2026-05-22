@@ -58,6 +58,14 @@ const GT_PALETTE = [
 ];
 const SIZES = ["XS","S","M","L","XL","XXL"];
 
+const T_COLLECTIONS = [
+  { id:"T1", label:"T-1", desc:"Classic",   groups:["classic"]           },
+  { id:"T2", label:"T-2", desc:"Sport",     groups:["sport-side"]        },
+  { id:"T3", label:"T-3", desc:"Wave",      groups:["triple","wave"]     },
+  { id:"T4", label:"T-4", desc:"Hourglass", groups:["hourglass","pinstripe"] },
+  { id:"T5", label:"T-5", desc:"Raglan",    groups:["raglan"]            },
+];
+
 // Garment part zones
 const PART_ZONES: { id: Exclude<PatternZone,"all">; label: string }[] = [
   { id:"collar",      label:"Collar"       },
@@ -176,6 +184,7 @@ export default function CustomizePage() {
   const [activeGtStyle, setActiveGtStyle] = useState<GtStyleDef|null>(null);
   const [gtColors, setGtColors] = useState<GtColors>({ primary:"#000000", accent:"#F0CED2" });
   const gtRequestIdRef = useRef(0);
+  const [activeGtCollection, setActiveGtCollection] = useState("T1");
 
   // ── Parts step state ─────────────────────────────────────────────────────
   const [activePartZone, setActivePartZone] = useState<Exclude<PatternZone,"all">>("collar");
@@ -591,21 +600,59 @@ export default function CustomizePage() {
                       </div>
                     )}
 
-                    {/* GT style picker — only for "fabric" */}
+                    {/* GT style picker — T1-T5 collections, only for "fabric" */}
                     {productType==="fabric"&&(
                       <div style={{marginBottom:12}}>
-                        <div style={{...sb,marginBottom:6}}>Design Styles</div>
-                        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:4}}>
-                          {GT_STYLES.slice(0,15).map(s=>{
-                            const isA=activeGtStyle?.id===s.id;
+                        <div style={{...sb,marginBottom:6}}>Design Collections</div>
+
+                        {/* T1–T5 pill selector */}
+                        <div style={{display:"flex",gap:"4px",flexWrap:"wrap",marginBottom:8}}>
+                          {T_COLLECTIONS.map(t=>{
+                            const active=activeGtCollection===t.id;
                             return(
-                              <button key={s.id} onClick={()=>handleSelectGtStyle(s)} title={`${s.id} — ${s.label}`}
-                                style={{padding:"4px 0",borderRadius:6,border:isA?`2px solid ${V.ac}`:`1px solid ${V.bd}`,background:isA?"rgba(201,168,124,.1)":V.sf,cursor:"pointer",color:isA?V.ac:V.mu,fontSize:9,fontWeight:600,letterSpacing:".04em"}}>
-                                {s.id.replace("GT","")}<br/><span style={{fontSize:8,opacity:.7}}>{s.label.split("&")[0].trim()}</span>
+                              <button key={t.id}
+                                onClick={()=>setActiveGtCollection(t.id)}
+                                style={{padding:"4px 10px",fontSize:10,fontWeight:700,letterSpacing:".05em",
+                                  border:active?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,borderRadius:20,
+                                  cursor:"pointer",fontFamily:"inherit",
+                                  background:active?"rgba(201,168,124,.14)":V.sf,
+                                  color:active?V.ac:V.mu,transition:"all .15s"}}>
+                                {t.label}
+                                <span style={{fontSize:8,opacity:.65,marginLeft:3}}>{t.desc}</span>
                               </button>
                             );
                           })}
                         </div>
+
+                        {/* Style grid for selected collection */}
+                        {(()=>{
+                          const col=T_COLLECTIONS.find(t=>t.id===activeGtCollection);
+                          const styles=col ? GT_STYLES.filter(s=>col.groups.includes(s.group)) : [];
+                          return(
+                            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4}}>
+                              {styles.map(s=>{
+                                const isA=activeGtStyle?.id===s.id;
+                                return(
+                                  <button key={s.id} onClick={()=>handleSelectGtStyle(s)} title={`${s.id} — ${s.label}`}
+                                    style={{padding:"6px 4px 4px",borderRadius:7,
+                                      border:isA?`2px solid ${V.ac}`:`1px solid ${V.bd}`,
+                                      background:isA?"rgba(201,168,124,.1)":V.sf,
+                                      cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,fontFamily:"inherit"}}>
+                                    {/* Color swatch bar */}
+                                    <div style={{display:"flex",width:"100%",height:18,borderRadius:4,overflow:"hidden"}}>
+                                      <div style={{flex:1,background:s.defaultColors.primary}}/>
+                                      <div style={{flex:1,background:s.defaultColors.accent}}/>
+                                      {s.defaultColors.tertiary&&<div style={{flex:1,background:s.defaultColors.tertiary}}/>}
+                                    </div>
+                                    <span style={{fontSize:8,color:isA?V.ac:V.mu,fontWeight:600,letterSpacing:".03em"}}>{s.id.replace("GT","")}</span>
+                                    <span style={{fontSize:7,color:V.mu,opacity:.8,textAlign:"center",lineHeight:1.2}}>{s.label.split("&")[0].trim()}</span>
+                                    {isA&&<div style={{width:7,height:7,borderRadius:"50%",background:V.ac}}/>}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
 

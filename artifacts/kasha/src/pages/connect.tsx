@@ -19,7 +19,7 @@ const FIELD: React.CSSProperties = {
   border: "1px solid rgba(0,0,0,0.18)",
   background: "#fff",
   fontFamily: "'Josefin Sans', sans-serif",
-  fontSize: 14,
+  fontSize: 16,
   letterSpacing: "0.04em",
   color: "#1a1a1a",
   padding: "14px 16px",
@@ -31,7 +31,7 @@ const FIELD: React.CSSProperties = {
 const LABEL: React.CSSProperties = {
   display: "block",
   fontFamily: "'Josefin Sans', sans-serif",
-  fontSize: 11,
+  fontSize: 14,
   letterSpacing: "0.22em",
   color: "rgba(0,0,0,0.5)",
   marginBottom: 8,
@@ -78,7 +78,7 @@ export default function ConnectPage() {
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section style={{ background: "#0a0c14", padding: "120px 24px 80px", textAlign: "center" }}>
         <p style={{
-          fontFamily: "'Josefin Sans', sans-serif", fontSize: 11,
+          fontFamily: "'Josefin Sans', sans-serif", fontSize: 14,
           letterSpacing: "0.45em", color: GOLD, textTransform: "uppercase", marginBottom: 20,
         }}>
           Ka.Sha — Partnerships &amp; Enquiries
@@ -91,7 +91,7 @@ export default function ConnectPage() {
           Connect With Us
         </h1>
         <p style={{
-          fontFamily: "'Josefin Sans', sans-serif", fontSize: 14, letterSpacing: "0.08em",
+          fontFamily: "'Josefin Sans', sans-serif", fontSize: 16, letterSpacing: "0.08em",
           color: "rgba(255,255,255,0.55)", maxWidth: 560, margin: "0 auto", lineHeight: 1.9,
         }}>
           Whether you're a golf academy, a tournament organiser, a corporate looking for team kits,
@@ -186,28 +186,28 @@ export default function ConnectPage() {
         borderTop: "1px solid rgba(0,0,0,0.08)",
       }}>
         <p style={{
-          fontFamily: "'Josefin Sans', sans-serif", fontSize: 11,
+          fontFamily: "'Josefin Sans', sans-serif", fontSize: 14,
           letterSpacing: "0.35em", color: GOLD, textTransform: "uppercase", marginBottom: 24,
         }}>
           Reach Us Directly
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
           <a href="mailto:support@kashaonline.in" style={{
-            fontFamily: "'Josefin Sans', sans-serif", fontSize: 16, letterSpacing: "0.08em",
+            fontFamily: "'Josefin Sans', sans-serif", fontSize: 18, letterSpacing: "0.08em",
             color: "#1a1a1a", textDecoration: "none",
           }}
             className="hover:text-[#B8925A] transition-colors">
             support@kashaonline.in
           </a>
           <a href="tel:+919560889594" style={{
-            fontFamily: "'Josefin Sans', sans-serif", fontSize: 15, letterSpacing: "0.08em",
+            fontFamily: "'Josefin Sans', sans-serif", fontSize: 17, letterSpacing: "0.08em",
             color: "rgba(0,0,0,0.55)", textDecoration: "none",
           }}
             className="hover:text-[#B8925A] transition-colors">
             +91 95608 89594
           </a>
           <p style={{
-            fontFamily: "'Josefin Sans', sans-serif", fontSize: 12,
+            fontFamily: "'Josefin Sans', sans-serif", fontSize: 14,
             letterSpacing: "0.06em", color: "rgba(0,0,0,0.38)", marginTop: 4,
           }}>
             Mon – Sat &nbsp;·&nbsp; 10 AM – 6 PM IST
@@ -216,7 +216,7 @@ export default function ConnectPage() {
 
         <div style={{ marginTop: 40 }}>
           <Link href="/products" style={{
-            fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.3em",
+            fontFamily: "'Josefin Sans', sans-serif", fontSize: 13, letterSpacing: "0.3em",
             color: "rgba(0,0,0,0.5)", textDecoration: "none", textTransform: "uppercase",
           }}
             className="hover:text-[#B8925A] transition-colors">

@@ -36,7 +36,6 @@ export default function IpPolicyPage() {
           <ul style={{ paddingLeft: 20, marginTop: 4, listStyle: "disc" }}>
             <li>Any Customer Content you submit, upload, or provide to Ka.Sha.</li>
             <li>Any alleged or actual infringement of any intellectual property right, privacy right, or other proprietary right of any third party by Customer Content.</li>
-            <li>Any breach of the representations and warranties set out in Section 2 above.</li>
             <li>Any use of products produced based on Customer Content in violation of applicable law.</li>
           </ul>
           <p>This indemnification obligation shall survive the completion of your order and the termination of your account.</p>
