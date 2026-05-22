@@ -20,7 +20,7 @@ export default function HeritagePage() {
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/70" />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
             <p className="text-[10px] tracking-[0.4em] text-white/70 uppercase mb-5 font-medium">
-              Ka·Sha Golf &amp; Sportswear
+              Ka.Sha Golf &amp; Sportswear
             </p>
             <h1 className="font-serif text-5xl md:text-7xl font-medium text-white leading-tight mb-6">
               Our Story

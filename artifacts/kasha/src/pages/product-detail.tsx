@@ -314,12 +314,44 @@ export default function ProductDetailPage() {
                   </span>
                 )}
               </div>
-              <p className="text-[11px] mt-1.5" style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.06em", color: "#B8925A" }}>
-                Add personalisation from ₹2,000 &nbsp;·&nbsp; Up to 20% off for 2–4 pieces
-              </p>
+              {/* Multi-piece order pricing */}
+              <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(0,0,0,0.07)" }}>
+                <p className="text-[10px] font-bold tracking-[0.22em] text-gray-400 mb-2 uppercase">Multi-piece pricing</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: "1 Piece",    note: "Base price" },
+                    { label: "2 Pieces",   note: "10% off",   highlight: true },
+                    { label: "3 Pieces",   note: "15% off",   highlight: true },
+                    { label: "4 Pieces",   note: "20% off",   highlight: true },
+                  ].map(t => (
+                    <div key={t.label} style={{
+                      padding: "5px 10px",
+                      border: `1px solid ${(t as any).highlight ? "rgba(184,146,90,0.35)" : "rgba(0,0,0,0.1)"}`,
+                      borderRadius: 3,
+                      background: (t as any).highlight ? "rgba(184,146,90,0.05)" : "transparent",
+                      textAlign: "center",
+                    }}>
+                      <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.08em", color: "rgba(0,0,0,0.45)" }}>{t.label}</div>
+                      <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, fontWeight: 700, color: (t as any).highlight ? "#B8925A" : "#1a1a1a", letterSpacing: "0.06em" }}>{t.note}</div>
+                    </div>
+                  ))}
+                  <Link href="/connect?type=bulk-order" style={{
+                    padding: "5px 10px",
+                    border: "1px solid rgba(184,146,90,0.5)",
+                    borderRadius: 3,
+                    background: "#B8925A",
+                    textAlign: "center",
+                    textDecoration: "none",
+                    display: "flex", flexDirection: "column", justifyContent: "center",
+                  }}>
+                    <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.08em", color: "rgba(255,255,255,0.75)" }}>5+ Pieces</div>
+                    <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, fontWeight: 700, color: "#fff", letterSpacing: "0.06em" }}>Bulk Order →</div>
+                  </Link>
+                </div>
+              </div>
             </div>
 
-            <p className="text-[11px] text-gray-400 tracking-wide">Inclusive of all taxes &nbsp;·&nbsp; Free shipping on all orders</p>
+            {/* <p className="text-[11px] text-gray-400 tracking-wide">Inclusive of all taxes &nbsp;·&nbsp; Free shipping on all orders</p> */}
             <p className="text-gray-600 leading-relaxed text-sm">{product.description}</p>
 
             {/* Size Selector */}
@@ -394,65 +426,40 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Personalisation & Custom Orders */}
-            <div style={{ border: "1px solid rgba(184,146,90,0.3)", borderRadius: 4, overflow: "hidden" }}>
-              <button
-                onClick={() => setOpenAccordion(openAccordion === "personalise" ? null : "personalise")}
-                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-amber-50/30 transition-colors"
-                style={{ background: "rgba(184,146,90,0.04)" }}
-              >
-                <div className="flex items-center gap-2">
-                  <Wand2 className="w-4 h-4" style={{ color: "#B8925A" }} />
-                  <span className="text-[12px] font-bold tracking-[0.12em] uppercase" style={{ color: "#B8925A" }}>
-                    Personalisation &amp; Custom Orders
-                  </span>
-                </div>
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform duration-200 ${openAccordion === "personalise" ? "rotate-180" : ""}`}
-                  style={{ color: "#B8925A" }}
-                />
-              </button>
-              {openAccordion === "personalise" && (
-                <div className="px-4 pb-4 pt-2" style={{ borderTop: "1px solid rgba(184,146,90,0.15)" }}>
-                  <p className="text-[12px] text-gray-500 mb-4 leading-relaxed">
-                    Add your name, initials, club logo, or custom artwork. Each personalised piece is made-to-order.
-                  </p>
-                  {/* Pricing table */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-                    {[
-                      { qty: "1 Piece",  price: "₹2,000",  discount: null },
-                      { qty: "2 Pieces", price: "₹1,800",  discount: "10% off" },
-                      { qty: "3 Pieces", price: "₹1,700",  discount: "15% off" },
-                      { qty: "4 Pieces", price: "₹1,600",  discount: "20% off" },
-                    ].map(tier => (
-                      <div key={tier.qty} style={{
-                        background: tier.discount ? "rgba(184,146,90,0.06)" : "#fff",
-                        border: `1px solid ${tier.discount ? "rgba(184,146,90,0.3)" : "rgba(0,0,0,0.1)"}`,
-                        borderRadius: 4,
-                        padding: "10px 10px 8px",
-                        textAlign: "center",
-                      }}>
-                        <div className="text-[10px] text-gray-400 tracking-wider mb-1" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>{tier.qty}</div>
-                        <div className="text-[14px] font-bold text-black">{tier.price}</div>
-                        <div className="text-[10px] mt-0.5" style={{ color: tier.discount ? "#B8925A" : "transparent", fontFamily: "'Josefin Sans', sans-serif" }}>
-                          {tier.discount ?? "—"}
-                        </div>
-                      </div>
-                    ))}
+            {/* Customise This Piece */}
+            <Link
+              href="/connect?type=customisation"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "14px 16px",
+                border: "1px solid rgba(184,146,90,0.3)",
+                borderRadius: 4,
+                background: "rgba(184,146,90,0.04)",
+                textDecoration: "none",
+                transition: "background 0.2s, border-color 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.09)";
+                (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.55)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.04)";
+                (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.3)";
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <Wand2 className="w-4 h-4" style={{ color: "#B8925A" }} />
+                <div>
+                  <div className="text-[12px] font-bold tracking-[0.12em] uppercase" style={{ color: "#B8925A" }}>
+                    Customise This Piece
                   </div>
-                  <p className="text-[11px] text-gray-400 mb-3 leading-relaxed">
-                    Per piece (personalisation add-on only) · Non-refundable once production begins
-                  </p>
-                  <Link
-                    href="/connect?type=bulk-order"
-                    className="inline-block text-[11px] font-bold tracking-[0.15em] uppercase transition-colors hover:opacity-80"
-                    style={{ fontFamily: "'Josefin Sans', sans-serif", color: "#B8925A", borderBottom: "0.5px solid #B8925A", paddingBottom: 1 }}
-                  >
-                    5+ pieces? Get a bulk order quote →
-                  </Link>
+                  <div className="text-[11px] text-gray-400 mt-0.5">Add name, logo, club crest or artwork</div>
                 </div>
-              )}
-            </div>
+              </div>
+              <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "#B8925A" }} />
+            </Link>
 
             {/* Action Buttons */}
             <div className="space-y-3 pt-2">

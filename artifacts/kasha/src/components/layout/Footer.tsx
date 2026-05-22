@@ -136,7 +136,7 @@ export function Footer() {
               </li> */}
               {/* <li>
                 <FooterLink href="/products?type=tshirts&style=patterns">
-                  Ka·Sha Signature
+                  Ka.Sha Signature
                 </FooterLink>
               </li>
               <li>
