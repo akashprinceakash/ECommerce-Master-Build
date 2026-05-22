@@ -6,5 +6,5 @@
  *
  * To re-enable in a week: set both to `true` and redeploy.
  */
-export const SHOW_KIDS = true;
-export const SHOW_CUSTOMIZATION = true;
+export const SHOW_KIDS = false;
+export const SHOW_CUSTOMIZATION = false;
