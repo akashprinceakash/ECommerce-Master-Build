@@ -64,7 +64,42 @@ app.use(clerkMiddleware());
 
 const publicDir = path.join(process.cwd(), "public");
 if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
-app.use("/api/public", express.static(publicDir));
+
+// Smart image serving: WebP negotiation + long-term cache headers
+const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif"]);
+const MIME: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+};
+
+app.use("/api/public", (req, res, next) => {
+  const ext = path.extname(req.path).toLowerCase();
+  if (!IMAGE_EXTS.has(ext)) return next();
+
+  const absPath = path.join(publicDir, req.path);
+  const webpPath = absPath.replace(/\.[^.]+$/, ".webp");
+  const acceptsWebP = (req.headers["accept"] ?? "").includes("image/webp");
+
+  const serveFile = (filePath: string, mime: string) => {
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.setHeader("Content-Type", mime);
+    res.sendFile(filePath);
+  };
+
+  if (acceptsWebP && fs.existsSync(webpPath)) {
+    return serveFile(webpPath, "image/webp");
+  }
+  if (fs.existsSync(absPath)) {
+    return serveFile(absPath, MIME[ext] ?? "application/octet-stream");
+  }
+  next();
+});
+
+// Non-image static files (models, etc.)
+app.use("/api/public", express.static(publicDir, { maxAge: "365d", immutable: true }));
 
 app.use("/api", router);
 
