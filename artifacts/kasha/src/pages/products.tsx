@@ -481,7 +481,7 @@ export default function ProductsPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.35, delay: Math.min(i, 8) * 0.04 }}
                     >
-                      <ProductCard product={product} imgSrc={imgSrc} />
+                      <ProductCard product={product} imgSrc={imgSrc} cardIndex={i} />
                     </motion.div>
                   );
                 })}
@@ -537,11 +537,21 @@ interface ProductCardProps {
     subType?: string | null;
   };
   imgSrc?: string;
+  /** Position in the grid — used to decide eager vs lazy loading */
+  cardIndex?: number;
 }
 
-function ProductCard({ product, imgSrc }: ProductCardProps) {
+function ProductCard({ product, imgSrc, cardIndex = 0 }: ProductCardProps) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const [thumbLoaded, setThumbLoaded] = useState(false);
+  // Only unlock src for images that actually need to be fetched.
+  // Additional carousel images are unlocked on hover / navigation to avoid
+  // flooding the network with hidden images on initial page load.
+  const [unlockedIdxs, setUnlockedIdxs] = useState<ReadonlySet<number>>(() => new Set([0]));
+
+  const unlock = (idx: number) =>
+    setUnlockedIdxs(prev => prev.has(idx) ? prev : new Set([...prev, idx]));
 
   const allImages = useMemo(() => {
     const imgs: string[] = [];
@@ -570,14 +580,26 @@ function ProductCard({ product, imgSrc }: ProductCardProps) {
     if (!isHovered) setActiveIdx(0);
   }, [isHovered]);
 
+  // Preload second image on hover so the carousel transition is instant
+  useEffect(() => {
+    if (isHovered && allImages.length > 1) unlock(1);
+  }, [isHovered, allImages.length]);
+
   const goPrev = (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
-    setActiveIdx(i => (i - 1 + allImages.length) % allImages.length);
+    const next = (activeIdx - 1 + allImages.length) % allImages.length;
+    unlock(next);
+    setActiveIdx(next);
   };
   const goNext = (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
-    setActiveIdx(i => (i + 1) % allImages.length);
+    const next = (activeIdx + 1) % allImages.length;
+    unlock(next);
+    setActiveIdx(next);
   };
+
+  // First two rows (6 cards) are above the fold → load eagerly with high priority
+  const aboveFold = cardIndex < 6;
 
   return (
     <Link href={`/products/${product.id}`} className="group block">
@@ -587,16 +609,23 @@ function ProductCard({ product, imgSrc }: ProductCardProps) {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
+        {/* Skeleton pulse — visible until the thumbnail finishes loading */}
+        {!thumbLoaded && allImages.length > 0 && (
+          <div className="absolute inset-0 bg-[#EDEAE4] animate-pulse z-[1]" />
+        )}
+
         {allImages.length > 0 ? (
           allImages.map((src, idx) => (
             <img
               key={idx}
-              src={src}
+              src={unlockedIdxs.has(idx) ? src : undefined}
               alt={getProductAltText(product)}
-              loading="lazy"
+              loading={aboveFold && idx === 0 ? "eager" : "lazy"}
               decoding="async"
-              className="absolute inset-0 w-full h-full object-contain object-center"
-              style={{ opacity: idx === activeIdx ? 1 : 0, transition: "opacity 0.55s ease" }}
+              fetchPriority={aboveFold && idx === 0 ? "high" : undefined}
+              onLoad={() => { if (idx === 0) setThumbLoaded(true); }}
+              className="absolute inset-0 w-full h-full object-contain object-center z-[2]"
+              style={{ opacity: idx === activeIdx && (idx > 0 || thumbLoaded) ? 1 : 0, transition: "opacity 0.55s ease" }}
             />
           ))
         ) : (
