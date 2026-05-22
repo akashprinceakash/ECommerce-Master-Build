@@ -10,7 +10,7 @@ export default function IpPolicyPage() {
       <LegalPage title="Intellectual Property & Indemnification" updated="18 May 2026">
         <Section title="1. Ownership of Ka.Sha Intellectual Property">
           <p>All content on the Ka.Sha website and platform — including but not limited to brand names, logos, product designs, graphics, text, photographs, software, and the Custom Studio interface — is the exclusive intellectual property of Ka.Sha (PS Fashion) and is protected under applicable Indian and international copyright, trademark, and design laws. Unauthorised reproduction, modification, distribution, or commercial use of any Ka.Sha content is strictly prohibited.</p>
-          <p><strong>Trade Dress:</strong> "Trade Dress" refers to the overall visual image and appearance of Ka.Sha's brand and products that identifies Ka.Sha as their source. This includes, but is not limited to, Ka.Sha's distinctive colour palette, garment silhouettes, label design, packaging aesthetics, the look and feel of the website, and the combination of design elements that together create Ka.Sha's recognisable identity. Ka.Sha's Trade Dress is legally protected and may not be copied, imitated, or used in any manner that is likely to cause confusion as to the source or origin of products.</p>
+        
         </Section>
 
         <Section title="2. Customer-Submitted Designs and Content">

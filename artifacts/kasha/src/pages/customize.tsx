@@ -41,9 +41,16 @@ import {
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 const V = {
-  bg:  "#0e0c0a", sf:  "rgba(255,255,255,0.04)", sf2: "rgba(255,255,255,0.08)",
-  bd:  "rgba(255,255,255,0.09)", bd2: "rgba(255,255,255,0.15)",
-  tx:  "#f0ece4", mu:  "#7a7470", ac:  "#c9a87c",
+  bg:   "#fafaf7",
+  sf:   "#ffffff",
+  sf2:  "#f4f4f0",
+  bd:   "#e2e2dc",
+  bd2:  "#ccccc6",
+  tx:   "#1a1a18",
+  mu:   "#8a8a84",
+  ac:   "#2d6a4f",
+  aclt: "#e8f5ee",
+  gold: "#B8925A",
 };
 
 // ── Colour palettes ───────────────────────────────────────────────────────────
@@ -160,6 +167,9 @@ export default function CustomizePage() {
   const mvRef = useRef<any>(null);
   const [mvReady, setMvReady] = useState(false);
   const [modelLoaded, setModelLoaded] = useState(false);
+  // modelDisplayed: true once load/error fires or fallback timeout hits.
+  // Drives the overlay via React state (not DOM mutation) so it's reliable in production.
+  const [modelDisplayed, setModelDisplayed] = useState(false);
   const [mats, setMats] = useState<MatEntry[]>([]);
   const syncTextureRef = useRef<(()=>void)|null>(null);
   const lastTextureUrlRef = useRef("");
@@ -193,13 +203,13 @@ export default function CustomizePage() {
     productType === "pattern" ? "pattern" :
     productType === "print"   ? "print"   : "solid"
   );
-  const [primaryColor, setPrimaryColor] = useState("#1a1a1a");
+  const [primaryColor, setPrimaryColor] = useState("#ffffff");
   const [sleeveLength, setSleeveLength] = useState<"half"|"full">("half");
 
   // Print library
   const [activePrintId, setActivePrintId] = useState<string|null>(null);
   const [allOverPrintId, setAllOverPrintId] = useState<string|null>(null);
-  const baseBgRef = useRef("#1a1a1a");
+  const baseBgRef = useRef("#ffffff");
   const [zonePrintIds, setZonePrintIds] = useState<Record<Exclude<PatternZone,"all">,string|null>>({
     front:null, back:null, collar:null, leftSleeve:null, rightSleeve:null,
   });
@@ -237,12 +247,14 @@ export default function CustomizePage() {
 
   // ── Load model-viewer script ─────────────────────────────────────────────
   useEffect(() => {
-    if (!webglAvailable) return;
+    if (!webglAvailable) { setModelDisplayed(true); return; }
     if (document.querySelector('script[data-mv-loader]')) { setMvReady(true); return; }
     const s = document.createElement("script");
     s.type = "module"; s.setAttribute("data-mv-loader","1");
     s.src = "https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js";
-    s.onload = () => setMvReady(true);
+    s.onload  = () => setMvReady(true);
+    // If CDN is unreachable, surface the fallback immediately instead of hanging
+    s.onerror = () => { setMvReady(false); setModelDisplayed(true); };
     document.head.appendChild(s);
   }, [webglAvailable]);
 
@@ -261,7 +273,7 @@ export default function CustomizePage() {
         configurable:true, set(v) { d.set!.call(this,v==="alphabetical"?"alphabetic":v); }, get() { return d.get!.call(this); },
       });
     } catch {}
-    const fc = new fabric.Canvas(el, { width:1024, height:1024, preserveObjectStacking:true, backgroundColor:"#1a1a1a" });
+    const fc = new fabric.Canvas(el, { width:1024, height:1024, preserveObjectStacking:true, backgroundColor:"#ffffff" });
     fcRef.current = fc;
     const scaleCanvas = () => {
       const host=document.getElementById("fc-scale-host");
@@ -302,29 +314,37 @@ export default function CustomizePage() {
 
   // ── model-viewer load ────────────────────────────────────────────────────
   useEffect(() => {
-    if (!mvReady||!product?.modelUrl) return;
-    const mv=mvRef.current; if(!mv) return;
+    // No model URL or WebGL unavailable → nothing to load, show fallback immediately
+    if (!product?.modelUrl || !webglAvailable) { setModelDisplayed(true); return; }
+    if (!mvReady) return;
 
-    const hideOverlay = () => {
-      const ov=document.getElementById("mv-overlay");
-      if (ov){ov.style.opacity="0";setTimeout(()=>{if(ov)ov.style.display="none";},500);}
-    };
+    const mv = mvRef.current;
+    if (!mv) {
+      // model-viewer element not yet in DOM; wait for next render
+      const t = setTimeout(() => setModelDisplayed(true), 15000);
+      return () => clearTimeout(t);
+    }
+
+    const reveal = () => { setModelDisplayed(true); };
 
     const onLoad = async () => {
-      hideOverlay();
-      const model=mv.model; if(!model?.materials?.length){setModelLoaded(true);return;}
-      const entries: MatEntry[] = model.materials.map((m:any,i:number)=>({idx:i,name:m.name||`Part ${i+1}`,mat:m,color:"#ffffff"}));
-      setMats(entries); setModelLoaded(true);
-      requestAnimationFrame(()=>syncTextureRef.current?.());
+      const model = mv.model;
+      if (model?.materials?.length) {
+        const entries: MatEntry[] = model.materials.map((m:any,i:number)=>({idx:i,name:m.name||`Part ${i+1}`,mat:m,color:"#ffffff"}));
+        setMats(entries);
+        requestAnimationFrame(()=>syncTextureRef.current?.());
+      }
+      setModelLoaded(true);
+      reveal();
     };
 
-    const onError = () => { hideOverlay(); setModelLoaded(true); };
+    const onError = () => { setModelLoaded(true); reveal(); };
 
-    // Guard: if model-viewer already loaded before listener attached
+    // Guard: model-viewer fires load synchronously on cached models
     if ((mv as any).loaded) { onLoad(); return; }
 
-    // Fallback: hide spinner after 12 s regardless (broken/slow model)
-    const fallback = setTimeout(() => { hideOverlay(); setModelLoaded(true); }, 12000);
+    // Safety net: hide spinner after 15 s regardless
+    const fallback = setTimeout(() => { reveal(); setModelLoaded(true); }, 15000);
 
     mv.addEventListener("load", onLoad);
     mv.addEventListener("error", onError);
@@ -333,7 +353,7 @@ export default function CustomizePage() {
       mv.removeEventListener("error", onError);
       clearTimeout(fallback);
     };
-  }, [mvReady, product?.modelUrl]);
+  }, [mvReady, product?.modelUrl, webglAvailable]);
 
   // ── Auto-apply GT style when canvas + model are both ready ───────────────
   useEffect(() => {
@@ -571,21 +591,21 @@ export default function CustomizePage() {
       border:selected?`2.5px solid ${V.ac}`:`1px solid ${V.bd}`,
       outline:selected?`1px solid ${V.ac}`:undefined,
       outlineOffset:selected?"2px":undefined,
-      boxShadow:hex==="#FFFFFF"?`inset 0 0 0 1px rgba(0,0,0,.15)`:undefined,
+      boxShadow:`inset 0 0 0 1px rgba(0,0,0,.10)`,
     }}/>
   );
 
   // ── Step indicator ───────────────────────────────────────────────────────
   const STEP_LABELS=["Style","Parts","Logo","Size"];
   const stepIndicator=(
-    <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:20,flexShrink:0}}>
+    <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:20,flexShrink:0,borderBottom:`1px solid ${V.bd}`,paddingBottom:16}}>
       {STEP_LABELS.map((label,i)=>{
         const n=i+1; const active=step===n; const done=step>n;
         return(<React.Fragment key={n}>
-          {i>0&&<div style={{flex:1,height:"1px",background:done?V.ac:V.bd,minWidth:12}}/>}
-          <div onClick={()=>setStep(n)} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:active?V.tx:done?V.mu:"#4a4640",cursor:"pointer",padding:"5px 8px",borderRadius:6,background:active?"rgba(201,168,124,.1)":"transparent",transition:"all .2s"}}>
-            <div style={{width:20,height:20,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:600,background:active?V.ac:done?"rgba(201,168,124,.25)":"rgba(255,255,255,.06)",color:active?V.bg:done?V.ac:V.mu,border:`1px solid ${active?V.ac:done?"rgba(201,168,124,.4)":V.bd}`,flexShrink:0}}>{done?"✓":n}</div>
-            <span style={{fontWeight:active?600:400}}>{label}</span>
+          {i>0&&<div style={{flex:1,height:"1px",background:done?V.ac:V.bd,minWidth:10}}/>}
+          <div onClick={()=>setStep(n)} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:active?V.tx:done?V.mu:V.bd2,cursor:"pointer",padding:"5px 7px",borderRadius:8,background:active?V.aclt:"transparent",transition:"all .2s"}}>
+            <div style={{width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,background:active?V.ac:done?V.aclt:V.sf,color:active?V.sf:done?V.ac:V.mu,border:`1.5px solid ${active?V.ac:done?V.ac:V.bd}`,flexShrink:0}}>{done?"✓":n}</div>
+            <span style={{fontWeight:active?600:400,fontSize:11}}>{label}</span>
           </div>
         </React.Fragment>);
       })}
@@ -605,24 +625,24 @@ export default function CustomizePage() {
     <div style={{display:"flex",flexDirection:"column",height:"100vh",background:V.bg,color:V.tx,fontFamily:"'DM Sans',sans-serif",overflow:"hidden"}}>
 
       {/* HEADER */}
-      <header style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 20px",height:48,borderBottom:`1px solid ${V.bd}`,background:"rgba(8,6,4,.9)",backdropFilter:"blur(12px)",flexShrink:0,zIndex:50}}>
+      <header style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 20px",height:52,borderBottom:`1px solid ${V.bd}`,background:V.sf,flexShrink:0,zIndex:50,boxShadow:"0 1px 3px rgba(0,0,0,.06)"}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <Link href={`/products/${id}`} style={{color:V.mu,fontSize:13,textDecoration:"none"}}>← Back</Link>
+          <Link href={`/products/${id}`} style={{color:V.mu,fontSize:13,textDecoration:"none",display:"flex",alignItems:"center",gap:4}}>← Back</Link>
           <div style={{width:1,height:16,background:V.bd}}/>
-          <span style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:V.ac,letterSpacing:".04em"}}>Golf Studio ✦ 3D Customizer</span>
+          <span style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:V.ac,letterSpacing:".04em",fontWeight:600}}>Golf Studio · 3D Customizer</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <input value={designName} onChange={e=>setDesignName(e.target.value)} placeholder="Name your design…"
-            style={{padding:"6px 10px",background:"rgba(0,0,0,.4)",border:`1px solid ${V.bd}`,borderRadius:8,color:V.tx,fontSize:12,outline:"none",width:160}}/>
+            style={{padding:"6px 10px",background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:8,color:V.tx,fontSize:12,outline:"none",width:160}}/>
           <Show when="signed-in">
             <button onClick={()=>saveMut.mutate()} disabled={saveMut.isPending}
-              style={{padding:"6px 14px",borderRadius:8,border:"none",background:V.ac,color:V.bg,fontSize:12,fontWeight:600,cursor:"pointer",opacity:saveMut.isPending?.6:1}}>
-              {saveMut.isPending?"Saving…":"💾 Save"}
+              style={{padding:"6px 14px",borderRadius:8,border:`1px solid ${V.bd}`,background:V.sf,color:V.tx,fontSize:12,fontWeight:500,cursor:"pointer",opacity:saveMut.isPending?.6:1}}>
+              {saveMut.isPending?"Saving…":"Save"}
             </button>
           </Show>
           <button onClick={()=>cartMut.mutate()} disabled={cartMut.isPending||saveMut.isPending}
-            style={{padding:"6px 14px",borderRadius:8,border:"none",background:"#2d6a4f",color:"white",fontSize:12,fontWeight:600,cursor:"pointer",opacity:cartMut.isPending?.6:1}}>
-            {cartMut.isPending?"Adding…":"🛒 Add to Cart"}
+            style={{padding:"6px 16px",borderRadius:8,border:"none",background:V.ac,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",opacity:cartMut.isPending?.6:1}}>
+            {cartMut.isPending?"Adding…":"Add to Cart"}
           </button>
         </div>
       </header>
@@ -631,7 +651,7 @@ export default function CustomizePage() {
       <div style={{display:"flex",flex:1,overflow:"hidden"}}>
 
         {/* LEFT PANEL: Wizard */}
-        <div style={{width:380,minWidth:340,borderRight:`1px solid ${V.bd}`,overflowY:"auto",padding:"16px 18px",display:"flex",flexDirection:"column",background:V.bg,scrollbarWidth:"thin"}}>
+        <div style={{width:520,minWidth:400,borderRight:`1px solid ${V.bd}`,overflowY:"auto",padding:"20px 22px",display:"flex",flexDirection:"column",background:V.bg,scrollbarWidth:"thin"}}>
           {stepIndicator}
 
           {/* ── STEP 1: Style ─────────────────────────────────────────────── */}
@@ -674,9 +694,9 @@ export default function CustomizePage() {
                             style={{position:"relative",padding:0,aspectRatio:"1/1",borderRadius:8,overflow:"hidden",cursor:"pointer",
                               background:`url(${patternUrl(p.file)}) center/cover`,
                               border:sel?`2px solid ${V.ac}`:`1px solid ${V.bd}`,
-                              boxShadow:sel?`0 0 0 2px rgba(201,168,124,.25)`:"none"}}>
+                              boxShadow:sel?`0 0 0 2px rgba(45,106,79,.18)`:"none"}}>
                             {allApplied&&<span style={{position:"absolute",top:2,right:2,fontSize:7,fontWeight:800,background:V.ac,color:"#fff",padding:"1px 3px",borderRadius:3}}>ALL</span>}
-                            {!allApplied&&inZone&&<span style={{position:"absolute",top:2,right:2,fontSize:7,fontWeight:800,background:"#5a7a5a",color:"#fff",padding:"1px 3px",borderRadius:3}}>ZONE</span>}
+                            {!allApplied&&inZone&&<span style={{position:"absolute",top:2,right:2,fontSize:7,fontWeight:800,background:V.ac,color:"#fff",padding:"1px 3px",borderRadius:3}}>ZONE</span>}
                           </button>
                         );
                       })}
@@ -701,7 +721,7 @@ export default function CustomizePage() {
                                   style={{flex:1,padding:"6px 0",fontSize:10,fontWeight:700,cursor:"pointer",
                                     borderRadius:7,fontFamily:"inherit",letterSpacing:".03em",
                                     border:printMode===m?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,
-                                    background:printMode===m?"rgba(201,168,124,.14)":V.sf,
+                                    background:printMode===m?V.aclt:V.sf,
                                     color:printMode===m?V.ac:V.mu,transition:"all .15s"}}>
                                   {m==="fullBody"?"Full Body":"By Part"}
                                 </button>
@@ -744,9 +764,9 @@ export default function CustomizePage() {
                                         title={otherPrint?`Currently: ${PATTERNS.find(x=>x.id===zonePrintIds[z.id])?.label}`:""}
                                         style={{padding:"5px 10px",fontSize:10,fontWeight:applied?700:500,cursor:"pointer",
                                           borderRadius:16,fontFamily:"inherit",letterSpacing:".03em",
-                                          border:applied?`1.5px solid ${V.ac}`:otherPrint?`1px solid #5a7a5a`:`1px solid ${V.bd}`,
-                                          background:applied?"rgba(201,168,124,.14)":otherPrint?"rgba(90,122,90,.12)":V.sf,
-                                          color:applied?V.ac:otherPrint?"#7ab07a":V.mu,transition:"all .15s"}}>
+                                          border:applied?`1.5px solid ${V.ac}`:otherPrint?`1px solid ${V.ac}`:`1px solid ${V.bd}`,
+                                          background:applied?V.aclt:otherPrint?"rgba(45,106,79,.07)":V.sf,
+                                          color:applied?V.ac:otherPrint?V.ac:V.mu,transition:"all .15s"}}>
                                         {applied?"✓ ":""}{z.label}
                                       </button>
                                     );
@@ -782,7 +802,7 @@ export default function CustomizePage() {
                             style={{padding:"4px 10px",fontSize:10,fontWeight:700,letterSpacing:".05em",
                               border:active?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,borderRadius:20,
                               cursor:"pointer",fontFamily:"inherit",
-                              background:active?"rgba(201,168,124,.14)":V.sf,
+                              background:active?V.aclt:V.sf,
                               color:active?V.ac:V.mu,transition:"all .15s"}}>
                             {t.label}
                             <span style={{fontSize:8,opacity:.65,marginLeft:3}}>{t.desc}</span>
@@ -803,7 +823,7 @@ export default function CustomizePage() {
                               <button key={s.id} onClick={()=>handleSelectGtStyle(s)} title={`${s.id} — ${s.label}`}
                                 style={{padding:"6px 4px 4px",borderRadius:7,
                                   border:isA?`2px solid ${V.ac}`:`1px solid ${V.bd}`,
-                                  background:isA?"rgba(201,168,124,.1)":V.sf,
+                                  background:isA?V.aclt:V.sf,
                                   cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,fontFamily:"inherit"}}>
                                 {/* Color swatch bar */}
                                 <div style={{display:"flex",width:"100%",height:18,borderRadius:4,overflow:"hidden"}}>
@@ -885,7 +905,7 @@ export default function CustomizePage() {
                   <div style={sb}>Sleeve length</div>
                   <div style={{display:"flex",gap:6}}>
                     {(["half","full"] as const).map(v=>(
-                      <button key={v} onClick={()=>setSleeveLength(v)} style={{flex:1,padding:"8px 0",fontSize:11,fontFamily:"inherit",cursor:"pointer",borderRadius:8,border:`1px solid ${sleeveLength===v?V.ac:V.bd}`,background:sleeveLength===v?"rgba(201,168,124,.12)":V.sf,color:sleeveLength===v?V.ac:V.mu,fontWeight:sleeveLength===v?600:400,transition:"all .15s"}}>
+                      <button key={v} onClick={()=>setSleeveLength(v)} style={{flex:1,padding:"8px 0",fontSize:11,fontFamily:"inherit",cursor:"pointer",borderRadius:8,border:`1px solid ${sleeveLength===v?V.ac:V.bd}`,background:sleeveLength===v?V.aclt:V.sf,color:sleeveLength===v?V.ac:V.mu,fontWeight:sleeveLength===v?600:400,transition:"all .15s"}}>
                         {v.charAt(0).toUpperCase()+v.slice(1)} sleeve
                       </button>
                     ))}
@@ -916,7 +936,7 @@ export default function CustomizePage() {
                 {PART_ZONES.map(z=>{
                   const active=activePartZone===z.id; const col=zoneColors[z.id];
                   return(
-                    <div key={z.id} onClick={()=>setActivePartZone(z.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 11px",borderRadius:9,border:`1px solid ${active?V.ac:V.bd}`,background:active?"rgba(201,168,124,.08)":V.sf,cursor:"pointer",marginBottom:5,transition:"all .15s"}}>
+                    <div key={z.id} onClick={()=>setActivePartZone(z.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 11px",borderRadius:9,border:`1px solid ${active?V.ac:V.bd}`,background:active?V.aclt:V.sf,cursor:"pointer",marginBottom:5,transition:"all .15s"}}>
                       <div style={{width:18,height:18,borderRadius:"50%",background:col||primaryColor,border:`1px solid ${V.bd2}`,flexShrink:0}}/>
                       <span style={{flex:1,fontSize:12,fontWeight:active?600:400}}>{z.label}</span>
                       <span style={{fontSize:10,color:V.mu,padding:"2px 8px",border:`1px solid ${V.bd}`,borderRadius:10}}>{col?col.toUpperCase():"Base"}</span>
@@ -973,7 +993,7 @@ export default function CustomizePage() {
                 <div style={sb}>Logo position</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4,maxWidth:120,marginBottom:10}}>
                   {POS_GRID.flat().map(pos=>(
-                    <button key={pos} onClick={()=>setLogoPosition(pos)} style={{aspectRatio:"1",borderRadius:6,border:`1px solid ${logoPosition===pos?V.ac:V.bd}`,background:logoPosition===pos?"rgba(201,168,124,.15)":V.sf,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:logoPosition===pos?V.ac:V.mu}}>
+                    <button key={pos} onClick={()=>setLogoPosition(pos)} style={{aspectRatio:"1",borderRadius:6,border:`1px solid ${logoPosition===pos?V.ac:V.bd}`,background:logoPosition===pos?V.aclt:V.sf,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:logoPosition===pos?V.ac:V.mu}}>
                       {pos==="center"?"◉":pos.includes("top-left")?"↖":pos.includes("top-center")?"↑":pos.includes("top-right")?"↗":pos.includes("mid-left")?"←":pos.includes("mid-right")?"→":pos.includes("bottom-left")?"↙":pos.includes("bottom-center")?"↓":"↘"}
                     </button>
                   ))}
@@ -1020,7 +1040,7 @@ export default function CustomizePage() {
                         <label style={{fontSize:10,color:V.mu,display:"block",marginBottom:3,textTransform:"capitalize"}}>{key}</label>
                         <input value={customMeasurements[key]} onChange={e=>setCustomMeasurements(p=>({...p,[key]:e.target.value}))}
                           placeholder={'e.g. 38"'}
-                          style={{width:"100%",padding:"6px 8px",background:"rgba(0,0,0,.3)",border:`1px solid ${V.bd}`,borderRadius:7,color:V.tx,fontSize:11,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
+                          style={{width:"100%",padding:"6px 8px",background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:7,color:V.tx,fontSize:11,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/>
                       </div>
                     ))}
                   </div>
@@ -1070,26 +1090,29 @@ export default function CustomizePage() {
         </div>
 
         {/* CENTER: 3D Viewer */}
-        <div style={{flex:1,position:"relative",background:"radial-gradient(ellipse at center,#1a1612 0%,#080604 100%)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
-          <div id="mv-overlay" style={{position:"absolute",inset:0,background:V.bg,display:webglAvailable?"flex":"none",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12,zIndex:10,transition:"opacity .5s"}}>
-            <div style={{width:32,height:32,border:`2px solid ${V.bd2}`,borderTopColor:V.ac,borderRadius:"50%",animation:"spin .9s linear infinite"}}/>
-            <p style={{fontSize:12,color:V.mu}}>Loading 3D T-Shirt…</p>
-          </div>
+        <div style={{flex:1,position:"relative",background:"radial-gradient(ellipse at center,#e8ede9 0%,#d4ddd5 100%)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+          {/* Loading overlay — driven by React state, not DOM mutation */}
+          {!modelDisplayed&&webglAvailable&&product.modelUrl&&(
+            <div style={{position:"absolute",inset:0,background:V.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:14,zIndex:10,transition:"opacity .4s"}}>
+              <div style={{width:36,height:36,border:`2px solid ${V.bd}`,borderTopColor:V.ac,borderRadius:"50%",animation:"spin .9s linear infinite"}}/>
+              <p style={{fontSize:12,color:V.mu,letterSpacing:".04em"}}>Loading 3D preview…</p>
+            </div>
+          )}
 
           {mvReady&&product.modelUrl&&webglAvailable&&(
             <model-viewer ref={mvRef} src={toProxiedUrl(product.modelUrl)}
               camera-controls auto-rotate rotation-per-second="8deg"
-              shadow-intensity="1.5" environment-image="neutral" exposure="1.1"
+              shadow-intensity="1" environment-image="neutral" exposure="1.0"
               camera-orbit="0deg 75deg 2.5m" min-camera-orbit="auto auto 1.5m" max-camera-orbit="auto auto 5m"
               interaction-prompt="none"
-              style={{width:"100%",height:"100%","--poster-color":"transparent"} as any}/>
+              style={{width:"100%",height:"100%","--poster-color":"transparent",opacity:modelDisplayed?1:0,transition:"opacity .4s"} as any}/>
           )}
 
           {(!product.modelUrl||!webglAvailable)&&(
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16,color:V.mu,padding:24,maxWidth:320,textAlign:"center"}}>
               {product.thumbnailUrl
-                ? <img src={product.thumbnailUrl} alt={product.name} style={{maxHeight:360,objectFit:"contain",borderRadius:12,opacity:.85}}/>
-                : <div style={{fontSize:64,opacity:.2}}>👕</div>}
+                ? <img src={product.thumbnailUrl} alt={product.name} style={{maxHeight:360,objectFit:"contain",borderRadius:12,opacity:.9}}/>
+                : <div style={{fontSize:64,opacity:.15}}>👕</div>}
               <p style={{fontSize:11,lineHeight:1.6}}>
                 {!webglAvailable?"3D preview requires WebGL. Your design is still applied correctly.":"No 3D model uploaded for this product."}
               </p>
@@ -1097,14 +1120,14 @@ export default function CustomizePage() {
           )}
 
           {/* Product badge */}
-          <div style={{position:"absolute",top:14,left:14,background:"rgba(8,6,4,.85)",border:`1px solid ${V.bd}`,borderRadius:9,padding:"8px 12px",backdropFilter:"blur(8px)"}}>
-            <div style={{fontSize:11,fontWeight:600,color:V.ac}}>{product.name.replace(/\s*\[gt:GT\d+\]\s*$/,"")}</div>
+          <div style={{position:"absolute",top:14,left:14,background:"rgba(255,255,255,.90)",border:`1px solid ${V.bd}`,borderRadius:9,padding:"8px 12px",backdropFilter:"blur(8px)",boxShadow:"0 1px 6px rgba(0,0,0,.07)"}}>
+            <div style={{fontSize:11,fontWeight:700,color:V.ac}}>{product.name.replace(/\s*\[gt:GT\d+\]\s*$/,"")}</div>
             <div style={{fontSize:10,color:V.mu}}>{formatPrice(product.priceInPaise)}</div>
           </div>
 
           {/* Active design badge */}
           {(activeGtStyle||activePrintId)&&(
-            <div style={{position:"absolute",top:14,right:14,background:"rgba(8,6,4,.85)",border:`1px solid ${V.bd}`,borderRadius:9,padding:"6px 10px",backdropFilter:"blur(8px)"}}>
+            <div style={{position:"absolute",top:14,right:14,background:"rgba(255,255,255,.90)",border:`1px solid ${V.bd}`,borderRadius:9,padding:"6px 10px",backdropFilter:"blur(8px)",boxShadow:"0 1px 6px rgba(0,0,0,.07)"}}>
               <div style={{fontSize:9,color:V.mu,letterSpacing:".08em",textTransform:"uppercase"}}>Active Design</div>
               <div style={{fontSize:11,fontWeight:600,color:V.ac}}>
                 {activeGtStyle?`${activeGtStyle.id} · ${gtColors.primary} / ${gtColors.accent}`:PATTERNS.find(p=>p.id===activePrintId)?.label}
@@ -1112,7 +1135,7 @@ export default function CustomizePage() {
             </div>
           )}
 
-          <div style={{position:"absolute",bottom:14,left:"50%",transform:"translateX(-50%)",fontSize:10,color:V.mu,background:"rgba(0,0,0,.55)",padding:"4px 12px",borderRadius:20,pointerEvents:"none",letterSpacing:".04em"}}>
+          <div style={{position:"absolute",bottom:14,left:"50%",transform:"translateX(-50%)",fontSize:10,color:"rgba(0,0,0,.4)",background:"rgba(255,255,255,.7)",padding:"4px 12px",borderRadius:20,pointerEvents:"none",letterSpacing:".04em",backdropFilter:"blur(4px)"}}>
             Drag to rotate · Scroll to zoom
           </div>
         </div>
