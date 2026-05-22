@@ -55,7 +55,7 @@ const SLIDES = [
     title:   (<>Gentlemen golfers.<br />When precision meets panache.</>),
     sub:     "· Signature Collection",
     primary: { label: "Men's Store", href: "/products?gender=men&type=tshirts" },
-    outline: { label: "View Collection", href: "/products?gender=men" },
+    outline: undefined,
   },
   {
     img:     "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Slide_images/KaSha%20Hero%20banner%203%20Womens.png",
@@ -63,7 +63,7 @@ const SLIDES = [
     title:   (<>Wear your game.<br />Style</>),
     sub:     "Women · Signature · Flair · Bottoms",
     primary: { label: "Women's Store", href: "/products?gender=women&type=tshirts" },
-    outline: { label: "View Collection", href: "/products?gender=women&type=tshirts" },
+    outline: undefined,
   },
   {
     img:     "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Slide_images/KaSha%20Hero%20banner%204%20All%20products.png",
@@ -376,6 +376,48 @@ export default function Home() {
           HERO CAROUSEL
       ══════════════════════════════════════════════════════════════════════ */}
       <section style={{ position: "relative", height: "100vh", minHeight: 600, overflow: "hidden", marginTop: -64 }}>
+
+        {/* ── Vertical side markers ──────────────────────────────────────────── */}
+        <div style={{
+          position: "absolute", left: 20, top: "50%", transform: "translateY(-50%)",
+          zIndex: 6, pointerEvents: "none",
+        }}>
+          <span style={{
+            writingMode: "vertical-rl",
+            transform: "rotate(180deg)",
+            display: "block",
+            fontFamily: "'Josefin Sans', sans-serif",
+            fontSize: 9,
+            letterSpacing: "0.5em",
+            color: "rgba(255,255,255,0.28)",
+            textTransform: "uppercase",
+          }}>
+            Ka.Sha — Golf &amp; Sportswear
+          </span>
+        </div>
+        <div style={{
+          position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)",
+          zIndex: 6, display: "flex", flexDirection: "column", alignItems: "center",
+          gap: 8, pointerEvents: "none",
+        }}>
+          <span style={{
+            writingMode: "vertical-rl",
+            fontFamily: "'Josefin Sans', sans-serif",
+            fontSize: 11, letterSpacing: "0.35em",
+            color: "rgba(255,255,255,0.6)", fontWeight: 300,
+          }}>
+            {String(active + 1).padStart(2, "0")}
+          </span>
+          <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.2)" }} />
+          <span style={{
+            writingMode: "vertical-rl",
+            fontFamily: "'Josefin Sans', sans-serif",
+            fontSize: 11, letterSpacing: "0.35em",
+            color: "rgba(255,255,255,0.28)", fontWeight: 300,
+          }}>
+            {String(slides.length).padStart(2, "0")}
+          </span>
+        </div>
 
         {/* Slides strip */}
         <div style={{

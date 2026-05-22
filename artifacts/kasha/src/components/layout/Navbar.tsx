@@ -138,13 +138,13 @@ export function Navbar() {
         <Link
           href="/"
           className="flex items-center shrink-0"
-          aria-label="KA.SHA home"
+          aria-label="Ka.Sha home"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         >
           <img
             src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Horizontal%20logo%20coloured%20(350%20by%2075)%20(1).svg"
-            alt="KA.SHA"
-            style={{ width: 140, height: "auto", objectFit: "contain", filter: scrolled ? "brightness(1)" : "brightness(1.1)" }}
+            alt="Ka.Sha"
+            style={{ width: 165, height: "auto", objectFit: "contain", filter: scrolled ? "brightness(1)" : "brightness(1.1)" }}
           />
         </Link>
 
@@ -171,8 +171,8 @@ export function Navbar() {
               </Link>
             );
           })}
-          <a
-            href="mailto:support@kashaonline.in"
+          <Link
+            href="/connect"
             className="relative text-[10px] uppercase transition-colors hover:text-neutral-900"
             style={{
               fontFamily: "'Josefin Sans', sans-serif",
@@ -182,7 +182,7 @@ export function Navbar() {
             }}
           >
             Connect with Us
-          </a>
+          </Link>
           {SHOW_CUSTOMIZATION && (
             <Link
               href="/products/1/customize"
@@ -382,8 +382,8 @@ export function Navbar() {
                 {l.label}
               </Link>
             ))}
-            <a
-              href="mailto:support@kashaonline.in"
+            <Link
+              href="/connect"
               onClick={() => setMobileOpen(false)}
               className="text-[14px] uppercase text-neutral-900/80"
               style={{
@@ -393,7 +393,7 @@ export function Navbar() {
               }}
             >
               Connect with Us
-            </a>
+            </Link>
             {SHOW_CUSTOMIZATION && (
               <Link
                 href="/products/1/customize"

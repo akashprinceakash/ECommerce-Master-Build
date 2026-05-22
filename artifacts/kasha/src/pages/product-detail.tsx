@@ -4,7 +4,7 @@ import { useGetProduct, getGetProductQueryKey, useAddToCart, getGetCartQueryKey 
 import { useParams, Link, useLocation } from "wouter";
 import { formatPrice } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Minus, Plus, ShoppingBag, Wand2, ChevronRight, ChevronLeft, ShieldCheck, ChevronDown } from "lucide-react";
+import { Minus, Plus, ShoppingBag, Wand2, ChevronRight, ChevronLeft, ShieldCheck, ChevronDown, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
@@ -25,6 +25,9 @@ export default function ProductDetailPage() {
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [customSizeText, setCustomSizeText] = useState("");
+  const [showPersonalise, setShowPersonalise] = useState(false);
+  const [personQty, setPersonQty] = useState(1);
   const touchStartX = useRef<number | null>(null);
 
   const { data: product, isLoading, error } = useGetProduct(id, {
@@ -83,7 +86,13 @@ export default function ProductDetailPage() {
     );
   }
 
-  const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
+  const sizes = ["XS", "S", "M", "L", "XL", "XXL", "CUSTOM"];
+
+  const PERSON_PRICES = [2000, 1800, 1700, 1600]; // per piece at qty 1,2,3,4
+  const PERSON_DISCOUNTS = [null, "10% off", "15% off", "20% off"];
+  const personTotal = personQty >= 1 && personQty <= 4
+    ? personQty * PERSON_PRICES[personQty - 1]
+    : 0;
 
   if (isLoading) {
     return (
@@ -346,6 +355,26 @@ export default function ProductDetailPage() {
               {!selectedSize && (
                 <p className="text-[11px] text-gray-400 mt-2">Please select a size</p>
               )}
+
+              {/* Custom size input */}
+              {selectedSize === "CUSTOM" && (
+                <div className="mt-4 space-y-2">
+                  <label className="text-[11px] font-bold tracking-[0.15em] text-black block">
+                    YOUR MEASUREMENTS
+                  </label>
+                  <input
+                    type="text"
+                    value={customSizeText}
+                    onChange={e => setCustomSizeText(e.target.value)}
+                    placeholder="e.g. Chest 42, Waist 34, Length 28 (inches)"
+                    className="w-full border border-gray-300 focus:border-black px-4 py-3 text-sm outline-none transition-colors"
+                    style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.03em" }}
+                  />
+                  <p className="text-[11px] text-gray-400">
+                    Our team will contact you within 24 hours to confirm your measurements and discuss the fit.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Quantity */}
@@ -367,6 +396,71 @@ export default function ProductDetailPage() {
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
+            </div>
+
+            {/* Personalisation */}
+            <div style={{ border: "1px solid rgba(0,0,0,0.1)" }}>
+              <button
+                type="button"
+                className="w-full flex items-center justify-between p-4 text-left"
+                onClick={() => setShowPersonalise(p => !p)}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-bold tracking-[0.15em] text-black">ADD PERSONALISATION</span>
+                  <span style={{ fontSize: 10, color: "#B8925A", letterSpacing: "0.08em" }}>from ₹2,000/pc</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${showPersonalise ? "rotate-180" : ""}`} />
+              </button>
+
+              {showPersonalise && (
+                <div className="px-4 pb-5 space-y-4">
+                  <p className="text-[12px] text-gray-500 leading-relaxed">
+                    Add your name, initials, number, or logo to each piece. Pricing is per piece; bulk discounts apply automatically.
+                  </p>
+
+                  {/* Qty tiles */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {[1, 2, 3, 4].map((qty) => (
+                      <button
+                        key={qty}
+                        type="button"
+                        onClick={() => setPersonQty(qty)}
+                        className="py-3 text-center transition-all"
+                        style={{
+                          border: `1px solid ${personQty === qty ? "#B8925A" : "rgba(0,0,0,0.15)"}`,
+                          background: personQty === qty ? "#fff" : "transparent",
+                        }}
+                      >
+                        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 15, fontWeight: 700 }}>
+                          {qty}
+                        </div>
+                        <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, color: "#B8925A", marginTop: 2 }}>
+                          ₹{PERSON_PRICES[qty - 1].toLocaleString("en-IN")}/pc
+                        </div>
+                        {PERSON_DISCOUNTS[qty - 1] && (
+                          <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 9, color: "rgba(0,0,0,0.4)", marginTop: 1 }}>
+                            {PERSON_DISCOUNTS[qty - 1]}
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[12px] text-gray-600">Personalisation total</span>
+                    <span className="text-[14px] font-bold text-black">₹{personTotal.toLocaleString("en-IN")}</span>
+                  </div>
+
+                  <p className="text-[11px] text-gray-400">
+                    Need 5+ personalised pieces?{" "}
+                    <Link href="/connect?type=bulk-order" style={{ color: "#B8925A", textDecoration: "underline" }}>
+                      Use our bulk order form
+                    </Link>{" "}
+                    or call{" "}
+                    <a href="tel:+919560889594" style={{ color: "#B8925A" }}>+91 95608 89594</a>.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}
@@ -396,6 +490,13 @@ export default function ProductDetailPage() {
                   </button>
                 </Link>
               )}
+
+              <Link href="/connect?type=bulk-order">
+                <button className="w-full border border-[#B8925A] text-[#B8925A] text-[12px] font-bold tracking-[0.12em] py-4 hover:bg-[#B8925A] hover:text-white transition-all flex items-center justify-center gap-2 mt-1">
+                  <Users className="w-4 h-4" />
+                  BULK ORDER — 5+ PIECES
+                </button>
+              </Link>
             </div>
 
             {/* Trust Badge */}
