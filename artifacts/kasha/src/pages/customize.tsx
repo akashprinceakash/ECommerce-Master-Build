@@ -63,17 +63,25 @@ const PART_ZONES: { id: Exclude<PatternZone,"all">; label: string }[] = [
   { id:"rightSleeve", label:"Right Sleeve" },
 ];
 
-// Logo 9-point position grid → fabric canvas coordinates
+// Named placement positions → fabric canvas coordinates (1024×1024 UV space)
 const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
-  "top-left":    { left: 160, top: 360 }, "top-center":    { left: 512, top: 360 }, "top-right":   { left: 864, top: 360 },
-  "mid-left":    { left: 160, top: 620 }, "center":        { left: 512, top: 620 }, "mid-right":   { left: 864, top: 620 },
-  "bottom-left": { left: 160, top: 880 }, "bottom-center": { left: 512, top: 880 }, "bottom-right":{ left: 864, top: 880 },
+  "front-chest": { left: 512, top: 390 },
+  "front-left":  { left: 300, top: 390 },
+  "front-right": { left: 724, top: 390 },
+  "back-center": { left: 512, top: 500 },
+  "back-left":   { left: 300, top: 500 },
+  "back-right":  { left: 724, top: 500 },
+  "left-sleeve": { left: 175, top: 560 },
+  "right-sleeve":{ left: 849, top: 560 },
 };
-const POS_GRID = [
-  ["top-left","top-center","top-right"],
-  ["mid-left","center","mid-right"],
-  ["bottom-left","bottom-center","bottom-right"],
+const PLACEMENT_GROUPS = [
+  { label:"FRONT",  items:[{key:"front-chest",label:"Chest"},{key:"front-left",label:"Left"},{key:"front-right",label:"Right"}] },
+  { label:"BACK",   items:[{key:"back-center",label:"Center"},{key:"back-left",label:"Left"},{key:"back-right",label:"Right"}] },
+  { label:"SLEEVES",items:[{key:"left-sleeve",label:"Left"},{key:"right-sleeve",label:"Right"}] },
 ];
+
+// Zones available for colour overrides (sleeves excluded — colour only on body parts)
+const COLOUR_ZONES = PART_ZONES.filter(z => z.id !== "leftSleeve" && z.id !== "rightSleeve");
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function hexToRgba(hex: string): [number,number,number,number] {
@@ -212,9 +220,16 @@ export default function CustomizePage() {
   });
 
   // ── Logo step state ──────────────────────────────────────────────────────
-  const [logoPosition, setLogoPosition] = useState("top-center");
+  const [logoPosition, setLogoPosition] = useState("front-chest");
   const [logoSize, setLogoSize] = useState(50);
   const [logoPreview, setLogoPreview] = useState<string|null>(null);
+
+  // ── Text step state ───────────────────────────────────────────────────────
+  const textObjRef = useRef<any>(null);
+  const [textInput, setTextInput] = useState("");
+  const [textPosition, setTextPosition] = useState("front-chest");
+  const [textFontSize, setTextFontSize] = useState(48);
+  const [textColor, setTextColor] = useState("#1a1a18");
 
   // ── Size step state ──────────────────────────────────────────────────────
   const [size, setSize] = useState("M");
@@ -506,6 +521,40 @@ export default function CustomizePage() {
   const removeLogo=()=>{
     const fc=fcRef.current; if(!fc) return;
     if(logoObjRef.current){fc.remove(logoObjRef.current);logoObjRef.current=null;setLogoPreview(null);fc.renderAll();syncTexture();}
+  };
+
+  // ── Text handlers ─────────────────────────────────────────────────────────
+  const applyText = () => {
+    const fc=fcRef.current; if(!fc||!textInput.trim()) return;
+    const pos=LOGO_POSITIONS[textPosition]||{left:512,top:512};
+    if (textObjRef.current) fc.remove(textObjRef.current);
+    const txt=new (fabric as any).IText(textInput.trim(),{
+      left:pos.left, top:pos.top,
+      originX:"center", originY:"center",
+      fontSize:textFontSize,
+      fill:textColor,
+      fontFamily:"DM Sans",
+      fontWeight:"600",
+      flipX:true,
+      selectable:true, evented:true,
+      data:{tag:"user-text"},
+    });
+    fc.add(txt); fc.setActiveObject(txt);
+    textObjRef.current=txt;
+    fc.renderAll(); syncTexture();
+  };
+
+  const repositionText = () => {
+    const o=textObjRef.current; if(!o) return;
+    const pos=LOGO_POSITIONS[textPosition]||{left:512,top:512};
+    o.set({left:pos.left, top:pos.top, originX:"center", originY:"center", fontSize:textFontSize, fill:textColor});
+    fcRef.current?.renderAll(); syncTexture();
+  };
+
+  const removeText = () => {
+    const fc=fcRef.current; if(!fc) return;
+    if(textObjRef.current){fc.remove(textObjRef.current);textObjRef.current=null;}
+    fc.renderAll(); syncTexture();
   };
 
   // ── Snapshot ─────────────────────────────────────────────────────────────
@@ -804,8 +853,8 @@ export default function CustomizePage() {
               <div>
                 <div style={sbT}>Customise individual parts</div>
                 <p style={{fontSize:12,color:"#3a3a36",marginBottom:12,lineHeight:1.65}}>Select a zone, then pick a colour to override it.</p>
-                <button onClick={()=>{if(zoneColors[activePartZone])PART_ZONES.forEach(z=>applyZoneColor(z.id,zoneColors[activePartZone]));}} style={{fontSize:12,padding:"7px 16px",border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",background:"transparent",color:"#4a4a42",marginBottom:12,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color="#4a4a42";}}>Apply colour to all parts</button>
-                {PART_ZONES.map(z=>{
+                <button onClick={()=>{if(zoneColors[activePartZone])COLOUR_ZONES.forEach(z=>applyZoneColor(z.id,zoneColors[activePartZone]));}} style={{fontSize:12,padding:"7px 16px",border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",background:"transparent",color:"#4a4a42",marginBottom:12,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color="#4a4a42";}}>Apply colour to all parts</button>
+                {COLOUR_ZONES.map(z=>{
                   const active=activePartZone===z.id; const col=zoneColors[z.id];
                   return(<div key={z.id} onClick={()=>setActivePartZone(z.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:`1.5px solid ${active?V.ac:V.bd}`,background:active?V.aclt:"transparent",cursor:"pointer",marginBottom:5,transition:"all 0.2s"}}>
                     <div style={{width:20,height:20,borderRadius:"50%",background:col||primaryColor,border:`1.5px solid ${active?V.ac:V.bd2}`,flexShrink:0}}/>
@@ -822,17 +871,6 @@ export default function CustomizePage() {
                     </label>
                   </div>
                   {zoneColors[activePartZone]&&(<button onClick={()=>applyZoneColor(activePartZone,"")} style={{fontSize:11,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Clear zone colour</button>)}
-                </div>
-              </div>
-
-              <div>
-                <div style={sbT}>Sleeve length</div>
-                <div style={{display:"flex",gap:6}}>
-                  {(["half","full"] as const).map(v=>(
-                    <button key={v} onClick={()=>setSleeveLength(v)} style={{flex:1,padding:"9px 0",fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",borderRadius:99,letterSpacing:".07em",textTransform:"uppercase",border:sleeveLength===v?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,background:sleeveLength===v?V.aclt:"transparent",color:sleeveLength===v?V.tx:"#4a4a42",fontWeight:sleeveLength===v?600:400,transition:"all .2s"}}>
-                      {v.charAt(0).toUpperCase()+v.slice(1)} sleeve
-                    </button>
-                  ))}
                 </div>
               </div>
 
@@ -875,17 +913,6 @@ export default function CustomizePage() {
                 {!activeKashaDesign&&<p style={{fontSize:12,color:"#3a3a36",marginTop:2,lineHeight:1.65}}>Select a bespoke design above to begin.</p>}
               </div>
 
-              <div>
-                <div style={sbT}>Sleeve length</div>
-                <div style={{display:"flex",gap:6}}>
-                  {(["half","full"] as const).map(v=>(
-                    <button key={v} onClick={()=>setSleeveLength(v)} style={{flex:1,padding:"9px 0",fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",borderRadius:99,letterSpacing:".07em",textTransform:"uppercase",border:sleeveLength===v?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,background:sleeveLength===v?V.aclt:"transparent",color:sleeveLength===v?V.tx:"#4a4a42",fontWeight:sleeveLength===v?600:400,transition:"all .2s"}}>
-                      {v.charAt(0).toUpperCase()+v.slice(1)} sleeve
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <button onClick={()=>setStep(2)} style={{marginTop:4,padding:"12px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
                 Next: Customise Colours →
               </button>
@@ -916,17 +943,6 @@ export default function CustomizePage() {
                   </div>);
                 })()}
                 {!activePrintId&&<p style={{fontSize:12,color:"#3a3a36",lineHeight:1.65}}>Select a print above — it will be applied across the whole garment.</p>}
-              </div>
-
-              <div>
-                <div style={sbT}>Sleeve length</div>
-                <div style={{display:"flex",gap:6}}>
-                  {(["half","full"] as const).map(v=>(
-                    <button key={v} onClick={()=>setSleeveLength(v)} style={{flex:1,padding:"9px 0",fontSize:12,fontFamily:"'Jost',sans-serif",cursor:"pointer",borderRadius:99,letterSpacing:".07em",textTransform:"uppercase",border:sleeveLength===v?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,background:sleeveLength===v?V.aclt:"transparent",color:sleeveLength===v?V.tx:"#4a4a42",fontWeight:sleeveLength===v?600:400,transition:"all .2s"}}>
-                      {v.charAt(0).toUpperCase()+v.slice(1)} sleeve
-                    </button>
-                  ))}
-                </div>
               </div>
 
               <button onClick={()=>setStep(2)} style={{marginTop:4,padding:"12px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
@@ -1235,26 +1251,6 @@ export default function CustomizePage() {
                 )}
               </div>
 
-              {/* Sleeve length toggle */}
-              {productType!=="print"&&(
-                <div>
-                  <div style={sb}>Sleeve length</div>
-                  <div style={{display:"flex",gap:6}}>
-                    {(["half","full"] as const).map(v=>(
-                      <button key={v} onClick={()=>setSleeveLength(v)} style={{
-                        flex:1,padding:"9px 0",fontSize:10,fontFamily:"'Jost',sans-serif",cursor:"pointer",
-                        borderRadius:99,letterSpacing:".07em",textTransform:"uppercase",
-                        border:sleeveLength===v?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,
-                        background:sleeveLength===v?V.aclt:"transparent",
-                        color:sleeveLength===v?V.tx:V.mu,
-                        fontWeight:sleeveLength===v?600:400,transition:"all .2s",
-                      }}>
-                        {v.charAt(0).toUpperCase()+v.slice(1)} sleeve
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               <button onClick={()=>setStep(2)} style={{
                 marginTop:4,padding:"12px 0",borderRadius:99,border:"none",
@@ -1333,8 +1329,8 @@ export default function CustomizePage() {
               <div>
                 <div style={sbT}>Zone colour overrides</div>
                 <p style={{fontSize:12,color:"#3a3a36",marginBottom:12,lineHeight:1.65}}>Override colour for specific parts to complement your pattern.</p>
-                <button onClick={()=>{if(zoneColors[activePartZone])PART_ZONES.forEach(z=>applyZoneColor(z.id,zoneColors[activePartZone]));}} style={{fontSize:12,padding:"7px 16px",border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",background:"transparent",color:"#4a4a42",marginBottom:12,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color="#4a4a42";}}>Apply colour to all parts</button>
-                {PART_ZONES.map(z=>{
+                <button onClick={()=>{if(zoneColors[activePartZone])COLOUR_ZONES.forEach(z=>applyZoneColor(z.id,zoneColors[activePartZone]));}} style={{fontSize:12,padding:"7px 16px",border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",background:"transparent",color:"#4a4a42",marginBottom:12,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color="#4a4a42";}}>Apply colour to all parts</button>
+                {COLOUR_ZONES.map(z=>{
                   const active=activePartZone===z.id; const col=zoneColors[z.id];
                   return(<div key={z.id} onClick={()=>setActivePartZone(z.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:`1.5px solid ${active?V.ac:V.bd}`,background:active?V.aclt:"transparent",cursor:"pointer",marginBottom:5,transition:"all 0.2s"}}>
                     <div style={{width:20,height:20,borderRadius:"50%",background:col||primaryColor,border:`1.5px solid ${active?V.ac:V.bd2}`,flexShrink:0}}/>
@@ -1403,7 +1399,7 @@ export default function CustomizePage() {
                 <div style={sb}>Customise individual parts</div>
                 <p style={{fontSize:10,color:V.mu,marginBottom:12,lineHeight:1.6,fontStyle:"italic"}}>Select a zone, then choose a colour. These override the base style per section.</p>
 
-                <button onClick={()=>{if(zoneColors[activePartZone])PART_ZONES.forEach(z=>applyZoneColor(z.id,zoneColors[activePartZone]));}}
+                <button onClick={()=>{if(zoneColors[activePartZone])COLOUR_ZONES.forEach(z=>applyZoneColor(z.id,zoneColors[activePartZone]));}}
                   style={{
                     fontSize:10,padding:"6px 14px",
                     border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",
@@ -1535,35 +1531,42 @@ export default function CustomizePage() {
                 )}
               </div>
 
-              {/* 9-point position grid */}
+              {/* Named placement groups — logo */}
               <div>
-                <div style={sb}>Logo position</div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5,maxWidth:120,marginBottom:10}}>
-                  {POS_GRID.flat().map(pos=>(
-                    <button key={pos} onClick={()=>setLogoPosition(pos)} style={{
-                      aspectRatio:"1",borderRadius:8,
-                      border:`1.5px solid ${logoPosition===pos?V.ac:V.bd}`,
-                      background:logoPosition===pos?V.aclt:"transparent",
-                      cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",
-                      fontSize:11,color:logoPosition===pos?V.tx:V.mu,transition:"all 0.2s",
-                    }}>
-                      {pos==="center"?"◉":pos.includes("top-left")?"↖":pos.includes("top-center")?"↑":pos.includes("top-right")?"↗":pos.includes("mid-left")?"←":pos.includes("mid-right")?"→":pos.includes("bottom-left")?"↙":pos.includes("bottom-center")?"↓":"↘"}
-                    </button>
-                  ))}
-                </div>
+                <div style={sb}>Logo placement</div>
+                {PLACEMENT_GROUPS.map(grp=>(
+                  <div key={grp.label} style={{marginBottom:10}}>
+                    <div style={{fontSize:9,color:V.mu,letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:600,marginBottom:5}}>{grp.label}</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                      {grp.items.map(item=>(
+                        <button key={item.key} onClick={()=>setLogoPosition(item.key)} style={{
+                          padding:"6px 12px",borderRadius:99,fontSize:11,
+                          fontFamily:"'Jost',sans-serif",letterSpacing:".05em",cursor:"pointer",
+                          border:`1.5px solid ${logoPosition===item.key?V.ac:V.bd}`,
+                          background:logoPosition===item.key?V.aclt:"transparent",
+                          color:logoPosition===item.key?V.tx:V.mu,
+                          fontWeight:logoPosition===item.key?600:400,
+                          transition:"all 0.2s",
+                        }}>
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
                 {logoPreview&&(
                   <button onClick={repositionLogo} style={{
-                    fontSize:10,padding:"6px 14px",
+                    fontSize:10,padding:"6px 14px",marginTop:2,
                     border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",
                     background:"transparent",color:V.mu,fontFamily:"'Jost',sans-serif",
                     letterSpacing:".05em",transition:"all 0.2s",
                   }}
                   onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>Apply position</button>
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>Apply placement</button>
                 )}
               </div>
 
-              {/* Size slider */}
+              {/* Logo size slider */}
               <div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                   <div style={sb}>Logo size</div>
@@ -1572,6 +1575,121 @@ export default function CustomizePage() {
                 <input type="range" min={10} max={100} step={5} value={logoSize}
                   onChange={e=>{setLogoSize(+e.target.value);if(logoObjRef.current){logoObjRef.current.scaleToWidth(Math.round(+e.target.value*(1024/100)));fcRef.current?.renderAll();syncTexture();}}}
                   style={{width:"100%",height:4,background:V.bd2,borderRadius:2,outline:"none",WebkitAppearance:"none",appearance:"none",accentColor:V.ac}}/>
+              </div>
+
+              {/* ── Text section ─────────────────────────────────────────── */}
+              <div style={{borderTop:`1px solid ${V.bd}`,paddingTop:16}}>
+                <div style={sb}>Add text <span style={{opacity:.5,fontWeight:400,letterSpacing:0,textTransform:"none",fontStyle:"italic"}}>(optional)</span></div>
+
+                {/* Input */}
+                <input
+                  value={textInput}
+                  onChange={e=>{
+                    setTextInput(e.target.value);
+                    if(textObjRef.current){textObjRef.current.set({text:e.target.value});fcRef.current?.renderAll();syncTexture();}
+                  }}
+                  placeholder="Enter text…"
+                  style={{
+                    width:"100%",padding:"9px 12px",boxSizing:"border-box",
+                    background:V.sf2,border:`1.5px solid ${V.bd}`,borderRadius:10,
+                    color:V.tx,fontSize:13,fontFamily:"'Jost',sans-serif",
+                    outline:"none",marginBottom:10,transition:"border-color 0.2s",
+                  }}
+                  onFocus={e=>e.target.style.borderColor=V.ac}
+                  onBlur={e=>e.target.style.borderColor=V.bd}
+                />
+
+                {/* Text placement */}
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:10,color:V.mu,letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:600,marginBottom:6}}>Placement</div>
+                  {PLACEMENT_GROUPS.map(grp=>(
+                    <div key={grp.label} style={{marginBottom:8}}>
+                      <div style={{fontSize:9,color:V.mul,letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",marginBottom:4}}>{grp.label}</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                        {grp.items.map(item=>(
+                          <button key={item.key} onClick={()=>setTextPosition(item.key)} style={{
+                            padding:"5px 10px",borderRadius:99,fontSize:10,
+                            fontFamily:"'Jost',sans-serif",letterSpacing:".05em",cursor:"pointer",
+                            border:`1.5px solid ${textPosition===item.key?V.ac:V.bd}`,
+                            background:textPosition===item.key?V.aclt:"transparent",
+                            color:textPosition===item.key?V.tx:V.mu,
+                            fontWeight:textPosition===item.key?600:400,
+                            transition:"all 0.2s",
+                          }}>
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Font size */}
+                <div style={{marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                    <div style={{fontSize:10,color:V.mu,letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:600}}>Size</div>
+                    <span style={{fontSize:11,color:V.tx,fontWeight:600,fontFamily:"'Jost',sans-serif"}}>{textFontSize}px</span>
+                  </div>
+                  <input type="range" min={14} max={120} step={2} value={textFontSize}
+                    onChange={e=>{setTextFontSize(+e.target.value);if(textObjRef.current){textObjRef.current.set({fontSize:+e.target.value});fcRef.current?.renderAll();syncTexture();}}}
+                    style={{width:"100%",height:4,background:V.bd2,borderRadius:2,outline:"none",WebkitAppearance:"none",appearance:"none",accentColor:V.ac}}/>
+                </div>
+
+                {/* Text colour */}
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:10,color:V.mu,letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:600,marginBottom:6}}>Colour</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center"}}>
+                    {["#1a1a18","#FFFFFF","#c9a84c","#E24B4A","#185FA5","#4a7c59","#D4537E","#7F77DD"].map(hex=>(
+                      <div key={hex} onClick={()=>{setTextColor(hex);if(textObjRef.current){textObjRef.current.set({fill:hex});fcRef.current?.renderAll();syncTexture();}}} style={{
+                        width:22,height:22,borderRadius:"50%",background:hex,cursor:"pointer",flexShrink:0,
+                        border:`2px solid ${textColor===hex?V.ac:"transparent"}`,
+                        boxShadow:textColor===hex?`0 0 0 1.5px ${V.ac}`:"0 1px 3px rgba(0,0,0,.12)",
+                        transition:"all 0.2s",
+                      }}/>
+                    ))}
+                    <label title="Custom" style={{width:22,height:22,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:V.mu,flexShrink:0}}>
+                      +<input type="color" value={textColor} onChange={e=>{setTextColor(e.target.value);if(textObjRef.current){textObjRef.current.set({fill:e.target.value});fcRef.current?.renderAll();syncTexture();}}} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{display:"flex",gap:6}}>
+                  <button
+                    onClick={applyText}
+                    disabled={!textInput.trim()}
+                    style={{
+                      flex:2,padding:"9px 0",borderRadius:99,border:"none",
+                      background:textInput.trim()?V.tx:"#ccc",
+                      color:"#fff",fontSize:10,fontWeight:600,cursor:textInput.trim()?"pointer":"default",
+                      fontFamily:"'Jost',sans-serif",letterSpacing:".07em",textTransform:"uppercase",
+                      transition:"all 0.2s",
+                    }}
+                    onMouseEnter={e=>{if(textInput.trim()){e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}}
+                    onMouseLeave={e=>{e.currentTarget.style.background=textInput.trim()?V.tx:"#ccc";e.currentTarget.style.color="#fff";}}>
+                    {textObjRef.current?"Replace text":"Add text"}
+                  </button>
+                  {textObjRef.current&&(
+                    <button onClick={()=>{repositionText();}} style={{
+                      flex:1,padding:"9px 0",borderRadius:99,
+                      border:`1px solid ${V.bd}`,background:"transparent",
+                      color:V.mu,fontSize:10,fontWeight:500,cursor:"pointer",
+                      fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",
+                      transition:"all 0.2s",
+                    }}
+                    onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
+                    onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>Reposition</button>
+                  )}
+                  {textObjRef.current&&(
+                    <button onClick={removeText} style={{
+                      padding:"9px 12px",borderRadius:99,
+                      border:`1px solid rgba(196,92,92,.35)`,background:"transparent",
+                      color:"#c45c5c",fontSize:10,fontWeight:500,cursor:"pointer",
+                      fontFamily:"'Jost',sans-serif",letterSpacing:".05em",
+                      transition:"all 0.2s",
+                    }}>✕</button>
+                  )}
+                </div>
               </div>
 
               <div style={{display:"flex",gap:6,marginTop:4}}>
