@@ -146,6 +146,9 @@ export default function CustomizePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Read ?gt=GTxxx from the URL once on mount (stable — URL never changes mid-session)
+  const [urlGtId] = useState<string|null>(() => new URLSearchParams(window.location.search).get("gt"));
+
   // ── Wizard step (1–4) ────────────────────────────────────────────────────
   const [step, setStep] = useState(1);
 
@@ -180,8 +183,13 @@ export default function CustomizePage() {
   // Detect locked GT id from product name e.g. "Polo GT015 [gt:GT015]"
   const lockedGtId = product?.name?.match(/\[gt:(GT\d+)\]/)?.[1] ?? null;
 
+  // The GT style to auto-apply: URL param wins, then locked product name
+  const autoGtId = urlGtId || lockedGtId;
+
   // ── Style step state ─────────────────────────────────────────────────────
+  // Default to "pattern" tab when a GT style is pre-selected via URL
   const [styleTab, setStyleTab] = useState<"solid"|"print"|"pattern">(
+    urlGtId ? "pattern" :
     productType === "pattern" ? "pattern" :
     productType === "print"   ? "print"   : "solid"
   );
@@ -323,20 +331,36 @@ export default function CustomizePage() {
     };
   }, [mvReady, product?.modelUrl]);
 
-  // ── Auto-lock GT style for "pattern" products ────────────────────────────
+  // ── Auto-apply GT style when canvas + model are both ready ───────────────
   useEffect(() => {
-    if (productType!=="pattern"||!modelLoaded||!fcRef.current) return;
-    if (!lockedGtId||activeGtStyle?.id===lockedGtId) return;
-    const style=GT_STYLES.find(s=>s.id===lockedGtId);
-    if (style) handleSelectGtStyle(style);
+    if (!modelLoaded||!fcRef.current) return;
+    if (!autoGtId||activeGtStyle?.id===autoGtId) return;
+    const style=GT_STYLES.find(s=>s.id===autoGtId);
+    if (!style) return;
+    // Switch to the matching T collection so the grid shows the active style
+    const coll=T_COLLECTIONS.find(t=>t.groups.includes(style.group));
+    if (coll) setActiveGtCollection(coll.id);
+    handleSelectGtStyle(style);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productType, modelLoaded, lockedGtId]);
+  }, [modelLoaded, autoGtId]);
 
-  // Also update styleTab when productType resolves
+  // Update styleTab when productType resolves (after data fetch)
   useEffect(() => {
+    if (urlGtId) { setStyleTab("pattern"); return; }
     if (productType==="pattern") setStyleTab("pattern");
     else if (productType==="print") setStyleTab("print");
-  }, [productType]);
+  }, [productType, urlGtId]);
+
+  // Jump to the correct T-collection immediately when the GT id is known from the URL
+  useEffect(() => {
+    const id = urlGtId || lockedGtId;
+    if (!id) return;
+    const style = GT_STYLES.find(s => s.id === id);
+    if (!style) return;
+    const coll = T_COLLECTIONS.find(t => t.groups.includes(style.group));
+    if (coll) setActiveGtCollection(coll.id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlGtId, lockedGtId]);
 
   // ── GT style handlers ────────────────────────────────────────────────────
   const handleSelectGtStyle = useCallback(async (style: GtStyleDef) => {
@@ -558,7 +582,7 @@ export default function CustomizePage() {
       <div style={{display:"flex",flex:1,overflow:"hidden"}}>
 
         {/* LEFT PANEL: Wizard */}
-        <div style={{width:300,minWidth:300,borderRight:`1px solid ${V.bd}`,overflowY:"auto",padding:"16px 14px",display:"flex",flexDirection:"column",background:V.bg,scrollbarWidth:"thin"}}>
+        <div style={{width:380,minWidth:340,borderRight:`1px solid ${V.bd}`,overflowY:"auto",padding:"16px 18px",display:"flex",flexDirection:"column",background:V.bg,scrollbarWidth:"thin"}}>
           {stepIndicator}
 
           {/* ── STEP 1: Style ─────────────────────────────────────────────── */}

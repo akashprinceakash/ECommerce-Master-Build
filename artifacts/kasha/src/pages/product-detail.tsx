@@ -427,39 +427,49 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Customise This Piece */}
-            <Link
-              href="/connect?type=customisation"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "14px 16px",
-                border: "1px solid rgba(184,146,90,0.3)",
-                borderRadius: 4,
-                background: "rgba(184,146,90,0.04)",
-                textDecoration: "none",
-                transition: "background 0.2s, border-color 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.09)";
-                (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.55)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.04)";
-                (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.3)";
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <Wand2 className="w-4 h-4" style={{ color: "#B8925A" }} />
-                <div>
-                  <div className="text-[12px] font-bold tracking-[0.12em] uppercase" style={{ color: "#B8925A" }}>
-                    Customise This Piece
+            {(()=>{
+              const lockedGtId = product?.name?.match(/\[gt:(GT\d+)\]/)?.[1] ?? null;
+              const customiseHref = lockedGtId
+                ? `/products/${product?.id}/customize?gt=${lockedGtId}`
+                : `/products/${product?.id}/customize`;
+              return (
+                <Link
+                  href={customiseHref}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "14px 16px",
+                    border: "1px solid rgba(184,146,90,0.3)",
+                    borderRadius: 4,
+                    background: "rgba(184,146,90,0.04)",
+                    textDecoration: "none",
+                    transition: "background 0.2s, border-color 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.09)";
+                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.55)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.04)";
+                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.3)";
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <Wand2 className="w-4 h-4" style={{ color: "#B8925A" }} />
+                    <div>
+                      <div className="text-[12px] font-bold tracking-[0.12em] uppercase" style={{ color: "#B8925A" }}>
+                        Customise This Piece
+                      </div>
+                      <div className="text-[11px] text-gray-400 mt-0.5">
+                        {lockedGtId ? `Style ${lockedGtId} pre-selected — add name, logo or artwork` : "Add name, logo, club crest or artwork"}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-[11px] text-gray-400 mt-0.5">Add name, logo, club crest or artwork</div>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "#B8925A" }} />
-            </Link>
+                  <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "#B8925A" }} />
+                </Link>
+              );
+            })()}
 
             {/* Action Buttons */}
             <div className="space-y-3 pt-2">
