@@ -200,6 +200,10 @@ export default function CustomizePage() {
   const [activePrintId, setActivePrintId] = useState<string|null>(null);
   const [allOverPrintId, setAllOverPrintId] = useState<string|null>(null);
   const baseBgRef = useRef("#1a1a1a");
+  const [zonePrintIds, setZonePrintIds] = useState<Record<Exclude<PatternZone,"all">,string|null>>({
+    front:null, back:null, collar:null, leftSleeve:null, rightSleeve:null,
+  });
+  const [printMode, setPrintMode] = useState<"fullBody"|"parts">("fullBody");
 
   // GT / Pattern state
   const [activeGtStyle, setActiveGtStyle] = useState<GtStyleDef|null>(null);
@@ -445,6 +449,48 @@ export default function CustomizePage() {
     fc.renderAll(); setAllOverPrintId(null); syncTexture();
   }, [syncTexture]);
 
+  // ── Zone (part-by-part) print placement ───────────────────────────────────
+  const applyZonePrint = useCallback(async (zone: Exclude<PatternZone,"all">, p: PatternDef) => {
+    const fc=fcRef.current; if(!fc) return;
+    const preset=ZONE_PRESETS[zone];
+    const tileSize=Math.min(preset.w, preset.h, 256);
+    try {
+      const img=await loadHTMLImage(patternUrl(p.file));
+      const off=document.createElement("canvas");
+      off.width=preset.w; off.height=preset.h;
+      const ctx=off.getContext("2d"); if(!ctx) return;
+      ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
+      for (let y=0; y<preset.h; y+=tileSize) {
+        for (let x=0; x<preset.w; x+=tileSize) {
+          ctx.drawImage(img, x, y, Math.min(tileSize, preset.w-x), Math.min(tileSize, preset.h-y));
+        }
+      }
+      // Remove any existing print for this zone
+      fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint===zone).forEach((o:any)=>fc.remove(o));
+      const fimg=await fabric.FabricImage.fromURL(off.toDataURL());
+      fimg.set({ left:preset.left, top:preset.top, selectable:false, evented:false, originX:"left", originY:"top" });
+      (fimg as any).data={kashaZonePrint:zone};
+      fc.add(fimg);
+      setZonePrintIds(prev=>({...prev,[zone]:p.id}));
+      fc.renderAll(); syncTexture();
+      toast({title:`Print applied to ${ZONE_LABEL[zone]}`});
+    } catch { toast({title:"Could not apply print",variant:"destructive"}); }
+  }, [syncTexture, toast]);
+
+  const clearZonePrint = useCallback((zone: Exclude<PatternZone,"all">)=>{
+    const fc=fcRef.current; if(!fc) return;
+    fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint===zone).forEach((o:any)=>fc.remove(o));
+    setZonePrintIds(prev=>({...prev,[zone]:null}));
+    fc.renderAll(); syncTexture();
+  }, [syncTexture]);
+
+  const clearAllZonePrints = useCallback(()=>{
+    const fc=fcRef.current; if(!fc) return;
+    fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint).forEach((o:any)=>fc.remove(o));
+    setZonePrintIds({front:null,back:null,collar:null,leftSleeve:null,rightSleeve:null});
+    fc.renderAll(); syncTexture();
+  }, [syncTexture]);
+
   // ── Logo ─────────────────────────────────────────────────────────────────
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file=e.target.files?.[0]; if(!file) return;
@@ -615,28 +661,103 @@ export default function CustomizePage() {
                 {styleTab==="print"&&(
                   <div>
                     <div style={{...sb,marginBottom:6}}>Print library</div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:10}}>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:10}}>
                       {PATTERNS.filter(p=>p.id!=="kasha-gt015").map(p=>{
-                        const sel=activePrintId===p.id; const all=allOverPrintId===p.id;
+                        const sel=activePrintId===p.id;
+                        const allApplied=allOverPrintId===p.id;
+                        const inZone=Object.values(zonePrintIds).includes(p.id);
                         return(
-                          <button key={p.id} onClick={()=>setActivePrintId(p.id)} title={p.label} style={{position:"relative",padding:0,aspectRatio:"1/1",borderRadius:8,overflow:"hidden",cursor:"pointer",background:`url(${patternUrl(p.file)}) center/cover`,border:sel?`2px solid ${V.ac}`:`1px solid ${V.bd}`,boxShadow:sel?`0 0 0 2px rgba(201,168,124,.25)`:"none"}}>
-                            {all&&<span style={{position:"absolute",top:3,right:3,fontSize:8,fontWeight:800,background:V.ac,color:"#fff",padding:"1px 4px",borderRadius:3}}>ALL</span>}
+                          <button key={p.id} onClick={()=>setActivePrintId(p.id)} title={p.label}
+                            style={{position:"relative",padding:0,aspectRatio:"1/1",borderRadius:8,overflow:"hidden",cursor:"pointer",
+                              background:`url(${patternUrl(p.file)}) center/cover`,
+                              border:sel?`2px solid ${V.ac}`:`1px solid ${V.bd}`,
+                              boxShadow:sel?`0 0 0 2px rgba(201,168,124,.25)`:"none"}}>
+                            {allApplied&&<span style={{position:"absolute",top:2,right:2,fontSize:7,fontWeight:800,background:V.ac,color:"#fff",padding:"1px 3px",borderRadius:3}}>ALL</span>}
+                            {!allApplied&&inZone&&<span style={{position:"absolute",top:2,right:2,fontSize:7,fontWeight:800,background:"#5a7a5a",color:"#fff",padding:"1px 3px",borderRadius:3}}>ZONE</span>}
                           </button>
                         );
                       })}
                     </div>
+
+                    {/* Selected print actions */}
                     {activePrintId&&(()=>{
                       const p=PATTERNS.find(x=>x.id===activePrintId); if(!p) return null;
                       return(
-                        <div style={{background:V.sf,border:`1px solid ${V.bd}`,borderRadius:8,padding:10,display:"flex",flexDirection:"column",gap:7}}>
-                          <div style={{fontSize:11,fontWeight:600,color:V.tx}}>{p.label}</div>
-                          {productType!=="print"&&<button onClick={()=>applyAllOverPrint(p)} style={{padding:"7px 0",borderRadius:8,border:"none",background:V.ac,color:V.bg,fontSize:11,fontWeight:700,cursor:"pointer"}}>
-                            {allOverPrintId===p.id?"✓ Applied All-Over":"Apply to whole T-shirt"}
-                          </button>}
-                          {productType==="print"&&<button onClick={()=>applyAllOverPrint(p)} style={{padding:"7px 0",borderRadius:8,border:"none",background:V.ac,color:V.bg,fontSize:11,fontWeight:700,cursor:"pointer"}}>
-                            {allOverPrintId===p.id?"✓ Selected":"Select this Print"}
-                          </button>}
-                          {allOverPrintId&&productType!=="print"&&<button onClick={clearAllOverPrint} style={{padding:"6px 0",borderRadius:7,border:`1px solid rgba(196,92,92,.4)`,background:"transparent",color:"#c45c5c",fontSize:10,fontWeight:600,cursor:"pointer"}}>✕ Remove print</button>}
+                        <div style={{background:V.sf,border:`1px solid ${V.bd}`,borderRadius:8,padding:10,display:"flex",flexDirection:"column",gap:8}}>
+                          {/* Print name + swatch */}
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            <div style={{width:32,height:32,borderRadius:5,background:`url(${patternUrl(p.file)}) center/cover`,border:`1px solid ${V.bd}`,flexShrink:0}}/>
+                            <div style={{fontSize:11,fontWeight:600,color:V.tx}}>{p.label}</div>
+                          </div>
+
+                          {/* Mode toggle: Full Body / By Part */}
+                          {productType!=="print"&&(
+                            <div style={{display:"flex",gap:4}}>
+                              {(["fullBody","parts"] as const).map(m=>(
+                                <button key={m} onClick={()=>setPrintMode(m)}
+                                  style={{flex:1,padding:"6px 0",fontSize:10,fontWeight:700,cursor:"pointer",
+                                    borderRadius:7,fontFamily:"inherit",letterSpacing:".03em",
+                                    border:printMode===m?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,
+                                    background:printMode===m?"rgba(201,168,124,.14)":V.sf,
+                                    color:printMode===m?V.ac:V.mu,transition:"all .15s"}}>
+                                  {m==="fullBody"?"Full Body":"By Part"}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Full Body mode */}
+                          {(productType==="print"||printMode==="fullBody")&&(
+                            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                              <button onClick={()=>applyAllOverPrint(p)}
+                                style={{padding:"7px 0",borderRadius:8,border:"none",background:V.ac,color:V.bg,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                                {allOverPrintId===p.id?(productType==="print"?"✓ Selected":"✓ Applied All-Over"):(productType==="print"?"Select this Print":"Apply to whole T-shirt")}
+                              </button>
+                              {allOverPrintId&&productType!=="print"&&(
+                                <button onClick={clearAllOverPrint}
+                                  style={{padding:"5px 0",borderRadius:7,border:`1px solid rgba(196,92,92,.4)`,background:"transparent",color:"#c45c5c",fontSize:10,fontWeight:600,cursor:"pointer"}}>
+                                  ✕ Remove full-body print
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {/* By Part mode */}
+                          {productType!=="print"&&printMode==="parts"&&(()=>{
+                            const zones: {id:Exclude<PatternZone,"all">;label:string}[]=[
+                              {id:"front",label:"Front"},{id:"back",label:"Back"},
+                              {id:"collar",label:"Collar"},{id:"leftSleeve",label:"L.Sleeve"},{id:"rightSleeve",label:"R.Sleeve"},
+                            ];
+                            return(
+                              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                                <div style={{fontSize:10,color:V.mu,marginBottom:2}}>Click a part to apply / remove:</div>
+                                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                                  {zones.map(z=>{
+                                    const applied=zonePrintIds[z.id]===p.id;
+                                    const otherPrint=zonePrintIds[z.id]&&zonePrintIds[z.id]!==p.id;
+                                    return(
+                                      <button key={z.id}
+                                        onClick={()=>applied?clearZonePrint(z.id):applyZonePrint(z.id,p)}
+                                        title={otherPrint?`Currently: ${PATTERNS.find(x=>x.id===zonePrintIds[z.id])?.label}`:""}
+                                        style={{padding:"5px 10px",fontSize:10,fontWeight:applied?700:500,cursor:"pointer",
+                                          borderRadius:16,fontFamily:"inherit",letterSpacing:".03em",
+                                          border:applied?`1.5px solid ${V.ac}`:otherPrint?`1px solid #5a7a5a`:`1px solid ${V.bd}`,
+                                          background:applied?"rgba(201,168,124,.14)":otherPrint?"rgba(90,122,90,.12)":V.sf,
+                                          color:applied?V.ac:otherPrint?"#7ab07a":V.mu,transition:"all .15s"}}>
+                                        {applied?"✓ ":""}{z.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                {Object.values(zonePrintIds).some(Boolean)&&(
+                                  <button onClick={clearAllZonePrints}
+                                    style={{padding:"5px 0",borderRadius:7,border:`1px solid rgba(196,92,92,.4)`,background:"transparent",color:"#c45c5c",fontSize:10,fontWeight:600,cursor:"pointer",marginTop:2}}>
+                                    ✕ Clear all zone prints
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       );
                     })()}
