@@ -1,0 +1,1736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KA.SHA — Design Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream: #fafaf7;
+  --cream-2: #f4f3ef;
+  --cream-3: #ede9e1;
+  --gold: #c9a84c;
+  --gold-light: #e8c97e;
+  --gold-pale: #f5e9c8;
+  --charcoal: #1a1a18;
+  --charcoal-2: #2d2d2a;
+  --warm-grey: #8a8780;
+  --warm-grey-light: #b8b5ae;
+  --white: #ffffff;
+  --shadow-soft: 0 4px 32px rgba(26,26,24,0.08);
+  --shadow-card: 0 2px 16px rgba(26,26,24,0.06);
+  --shadow-gold: 0 4px 24px rgba(201,168,76,0.18);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --transition: all 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'Jost', sans-serif;
+  background: var(--cream);
+  color: var(--charcoal);
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+
+/* ─── HEADER ─────────────────────────────────────────── */
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: 60px;
+  background: rgba(250,250,247,0.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(201,168,76,0.15);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px;
+}
+.logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--charcoal);
+}
+.logo span { color: var(--gold); }
+.header-actions { display: flex; gap: 10px; align-items: center; }
+.btn-ghost {
+  padding: 7px 18px; border-radius: 40px;
+  border: 1px solid rgba(201,168,76,0.3);
+  background: transparent; cursor: pointer;
+  font-family: 'Jost', sans-serif; font-size: 12px; font-weight: 500;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--charcoal); transition: var(--transition);
+}
+.btn-ghost:hover { border-color: var(--gold); background: var(--gold-pale); }
+.btn-gold {
+  padding: 8px 22px; border-radius: 40px;
+  border: none; background: var(--charcoal);
+  cursor: pointer; font-family: 'Jost', sans-serif;
+  font-size: 12px; font-weight: 500; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--white);
+  transition: var(--transition); display: flex; align-items: center; gap: 6px;
+}
+.btn-gold:hover { background: var(--gold); color: var(--charcoal); box-shadow: var(--shadow-gold); }
+
+/* ─── MAIN LAYOUT ─────────────────────────────────────── */
+.app {
+  display: flex; height: 100vh; padding-top: 60px;
+}
+
+/* ─── LEFT PANEL ──────────────────────────────────────── */
+.panel-left {
+  width: 72px; background: var(--cream);
+  border-right: 1px solid rgba(26,26,24,0.06);
+  display: flex; flex-direction: column;
+  align-items: center; padding: 24px 0; gap: 4px;
+  overflow-y: auto; flex-shrink: 0;
+}
+.tool-btn {
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; cursor: pointer; border: none; background: transparent;
+  transition: var(--transition); position: relative;
+}
+.tool-btn:hover { background: var(--cream-3); }
+.tool-btn.active { background: var(--charcoal); color: var(--white); }
+.tool-btn.active .tool-icon { color: var(--gold); }
+.tool-icon { font-size: 18px; color: var(--warm-grey); transition: var(--transition); }
+.tool-btn:hover .tool-icon { color: var(--charcoal); }
+.tool-label {
+  font-size: 8px; font-weight: 500; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--warm-grey-light);
+}
+.tool-btn.active .tool-label { color: var(--gold); }
+.tool-divider { width: 30px; height: 1px; background: var(--cream-3); margin: 6px 0; }
+
+/* ─── SIDE PANEL (Tools) ──────────────────────────────── */
+.panel-tool {
+  width: 300px; background: var(--cream);
+  border-right: 1px solid rgba(26,26,24,0.06);
+  display: flex; flex-direction: column;
+  overflow: hidden; flex-shrink: 0;
+  transition: var(--transition);
+}
+.panel-tool.hidden { width: 0; }
+
+.panel-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid rgba(26,26,24,0.06);
+}
+.panel-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px; font-weight: 500; color: var(--charcoal);
+  letter-spacing: 0.02em;
+}
+.panel-subtitle { font-size: 11px; color: var(--warm-grey); margin-top: 2px; letter-spacing: 0.04em; }
+
+.panel-body { flex: 1; overflow-y: auto; padding: 16px; }
+.panel-body::-webkit-scrollbar { width: 3px; }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--cream-3); border-radius: 99px; }
+
+/* Section label */
+.sec-label {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--warm-grey);
+  margin: 16px 0 8px; padding-bottom: 6px;
+  border-bottom: 1px solid rgba(26,26,24,0.06);
+}
+
+/* ─── PRODUCT GRID ──────────────────────────────────────── */
+.product-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.product-card {
+  border-radius: var(--radius-sm); overflow: hidden;
+  cursor: pointer; border: 2px solid transparent;
+  transition: var(--transition); background: var(--cream-2);
+  position: relative;
+}
+.product-card:hover { border-color: var(--gold-light); transform: translateY(-2px); box-shadow: var(--shadow-card); }
+.product-card.active { border-color: var(--gold); box-shadow: var(--shadow-gold); }
+.product-card img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; }
+.product-card-label {
+  padding: 6px 8px; font-size: 9px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--charcoal); text-align: center;
+  background: var(--cream);
+}
+.product-card-badge {
+  position: absolute; top: 6px; right: 6px;
+  background: var(--charcoal); color: var(--gold);
+  font-size: 8px; padding: 2px 6px; border-radius: 99px;
+  font-weight: 600; letter-spacing: 0.06em;
+}
+.active-check {
+  position: absolute; top: 6px; left: 6px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--gold); display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--charcoal); opacity: 0; transition: var(--transition);
+}
+.product-card.active .active-check { opacity: 1; }
+
+/* ─── COLOR PICKER ────────────────────────────────────── */
+.color-section { margin-bottom: 20px; }
+.zone-tabs {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;
+}
+.zone-tab {
+  padding: 5px 12px; border-radius: 99px; cursor: pointer;
+  border: 1.5px solid rgba(26,26,24,0.12); font-size: 11px;
+  font-weight: 500; transition: var(--transition); background: transparent;
+  color: var(--charcoal); font-family: 'Jost', sans-serif;
+}
+.zone-tab:hover { border-color: var(--gold); color: var(--gold); }
+.zone-tab.active { background: var(--charcoal); color: var(--gold); border-color: var(--charcoal); }
+
+.color-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.color-swatch {
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; transition: var(--transition);
+  position: relative;
+}
+.color-swatch:hover { transform: scale(1.15); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.color-swatch.active { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.25); }
+.color-swatch.active::after {
+  content: '✓'; position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: white; font-weight: bold;
+}
+
+.custom-color-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.custom-color-row label { font-size: 11px; color: var(--warm-grey); flex: 1; }
+input[type="color"] {
+  width: 40px; height: 32px; border-radius: var(--radius-sm);
+  border: 1px solid rgba(26,26,24,0.12); cursor: pointer;
+  padding: 2px; background: var(--cream);
+}
+
+/* ─── PATTERN GALLERY ─────────────────────────────────── */
+.pattern-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+.pattern-card {
+  border-radius: var(--radius-sm); overflow: hidden;
+  cursor: pointer; border: 2px solid transparent;
+  transition: var(--transition); aspect-ratio: 1;
+  background: var(--cream-2); position: relative;
+}
+.pattern-card:hover { border-color: var(--gold-light); }
+.pattern-card.active { border-color: var(--gold); }
+.pattern-card img { width: 100%; height: 100%; object-fit: cover; }
+.pattern-none {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--warm-grey); flex-direction: column; gap: 4px;
+}
+.pattern-none .icon { font-size: 20px; }
+
+/* ─── TEXT TOOL ───────────────────────────────────────── */
+.input-field {
+  width: 100%; padding: 10px 14px; border-radius: var(--radius-sm);
+  border: 1.5px solid rgba(26,26,24,0.12); background: var(--cream-2);
+  font-family: 'Jost', sans-serif; font-size: 13px; color: var(--charcoal);
+  transition: var(--transition); outline: none; margin-bottom: 10px;
+}
+.input-field:focus { border-color: var(--gold); background: var(--white); }
+.input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.input-row .input-field { margin-bottom: 0; }
+
+select.input-field { cursor: pointer; }
+
+.font-preview-row {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
+}
+.font-chip {
+  padding: 5px 10px; border-radius: 6px; cursor: pointer;
+  border: 1.5px solid rgba(26,26,24,0.1); font-size: 12px;
+  transition: var(--transition); background: transparent;
+  color: var(--charcoal);
+}
+.font-chip:hover, .font-chip.active { border-color: var(--gold); background: var(--gold-pale); }
+
+.slider-row { margin-bottom: 12px; }
+.slider-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--warm-grey); margin-bottom: 6px; }
+input[type="range"] {
+  width: 100%; accent-color: var(--gold); cursor: pointer; height: 4px;
+}
+
+/* ─── LOGO UPLOAD ─────────────────────────────────────── */
+.upload-zone {
+  border: 2px dashed rgba(201,168,76,0.3); border-radius: var(--radius);
+  padding: 28px 20px; text-align: center; cursor: pointer;
+  transition: var(--transition); background: rgba(201,168,76,0.02);
+}
+.upload-zone:hover { border-color: var(--gold); background: var(--gold-pale); }
+.upload-zone input { display: none; }
+.upload-icon { font-size: 28px; margin-bottom: 8px; }
+.upload-text { font-size: 12px; color: var(--warm-grey); line-height: 1.6; }
+.upload-text strong { color: var(--charcoal); display: block; }
+
+.logo-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.logo-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  border-radius: var(--radius-sm); background: var(--cream-2);
+  border: 1.5px solid transparent; cursor: pointer; transition: var(--transition);
+}
+.logo-item:hover, .logo-item.active { border-color: var(--gold); }
+.logo-item img { width: 36px; height: 36px; object-fit: contain; border-radius: 4px; }
+.logo-item-info { flex: 1; }
+.logo-item-name { font-size: 11px; font-weight: 500; color: var(--charcoal); }
+.logo-item-size { font-size: 10px; color: var(--warm-grey); }
+.logo-item-del { cursor: pointer; color: var(--warm-grey); font-size: 14px; padding: 4px; border-radius: 4px; }
+.logo-item-del:hover { color: #c0392b; background: #ffeaea; }
+
+/* ─── CENTER CANVAS ───────────────────────────────────── */
+.canvas-area {
+  flex: 1; display: flex; flex-direction: column;
+  position: relative; overflow: hidden; background: var(--cream);
+}
+
+.canvas-top-bar {
+  padding: 12px 20px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid rgba(26,26,24,0.06);
+}
+.garment-zone-selector { display: flex; gap: 6px; }
+.gzone-btn {
+  padding: 6px 14px; border-radius: 99px; cursor: pointer;
+  border: 1.5px solid rgba(26,26,24,0.1); font-size: 11px; font-weight: 500;
+  letter-spacing: 0.04em; transition: var(--transition); background: transparent;
+  color: var(--charcoal); font-family: 'Jost', sans-serif;
+}
+.gzone-btn:hover { border-color: var(--gold); color: var(--gold); }
+.gzone-btn.active {
+  background: var(--gold); border-color: var(--gold); color: var(--charcoal);
+  font-weight: 600;
+}
+
+.preview-controls { display: flex; align-items: center; gap: 8px; }
+.ctrl-btn {
+  width: 32px; height: 32px; border-radius: var(--radius-sm);
+  border: 1px solid rgba(26,26,24,0.1); background: transparent;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; transition: var(--transition);
+}
+.ctrl-btn:hover { background: var(--cream-3); border-color: var(--gold); }
+
+.canvas-main {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+
+/* Main garment preview */
+.garment-preview-wrap {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 100%;
+}
+
+.garment-container {
+  position: relative;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.garment-img-wrap {
+  position: relative; display: inline-block;
+  filter: drop-shadow(0 12px 40px rgba(26,26,24,0.15));
+  transition: var(--transition);
+}
+.garment-img-wrap:hover { filter: drop-shadow(0 16px 48px rgba(26,26,24,0.2)); }
+
+.garment-main-img {
+  max-height: calc(100vh - 160px); max-width: 100%;
+  display: block; user-select: none;
+  transition: opacity 0.35s ease;
+}
+
+/* Color overlay canvas */
+#colorCanvas {
+  position: absolute; top: 0; left: 0;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: 0.7;
+}
+
+/* Design canvas overlay */
+#designCanvas {
+  position: absolute; top: 0; left: 0;
+  cursor: crosshair;
+}
+
+/* Garment zone highlight overlay */
+.zone-highlight-svg {
+  position: absolute; top: 0; left: 0;
+  pointer-events: none;
+}
+
+/* ─── RIGHT VIEW SELECTOR ─────────────────────────────── */
+.panel-right {
+  width: 90px; background: var(--cream);
+  border-left: 1px solid rgba(26,26,24,0.06);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 24px 10px; gap: 16px; flex-shrink: 0;
+}
+.view-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  cursor: pointer; transition: var(--transition);
+}
+.view-btn-img {
+  width: 58px; height: 58px; border-radius: 10px;
+  overflow: hidden; border: 2px solid transparent;
+  background: var(--cream-2); transition: var(--transition);
+  display: flex; align-items: center; justify-content: center;
+}
+.view-btn-img img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.view-btn:hover .view-btn-img { border-color: var(--gold-light); box-shadow: var(--shadow-card); }
+.view-btn.active .view-btn-img { border-color: var(--gold); box-shadow: var(--shadow-gold); }
+.view-btn-label {
+  font-size: 9px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--warm-grey);
+}
+.view-btn.active .view-btn-label { color: var(--gold); }
+
+/* ─── STEP PROGRESS ───────────────────────────────────── */
+.step-progress {
+  display: flex; align-items: center; gap: 0;
+}
+.step-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 99px; cursor: pointer;
+  transition: var(--transition); font-size: 11px; font-weight: 500;
+  color: var(--warm-grey); letter-spacing: 0.04em;
+}
+.step-item.done { color: var(--gold); }
+.step-item.active { color: var(--charcoal); font-weight: 600; }
+.step-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--cream-3); transition: var(--transition);
+}
+.step-item.done .step-dot { background: var(--gold); }
+.step-item.active .step-dot { background: var(--charcoal); }
+.step-arrow { color: var(--cream-3); font-size: 10px; }
+
+/* ─── COLOR OVERLAY SYSTEM ────────────────────────────── */
+.tint-layer {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; mix-blend-mode: multiply;
+  transition: opacity 0.35s ease;
+}
+
+/* ─── TOAST NOTIFICATION ──────────────────────────────── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--charcoal); color: var(--cream);
+  padding: 10px 20px; border-radius: 99px; font-size: 12px;
+  opacity: 0; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 999; pointer-events: none; letter-spacing: 0.04em;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ─── LOADING ─────────────────────────────────────────── */
+.loading-overlay {
+  position: absolute; inset: 0; background: rgba(250,250,247,0.9);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 50; transition: opacity 0.4s ease; backdrop-filter: blur(4px);
+}
+.loading-spinner {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 2px solid var(--cream-3); border-top-color: var(--gold);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── INFO BADGE ──────────────────────────────────────── */
+.info-badge {
+  background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.2);
+  border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 14px;
+  font-size: 11px; color: var(--warm-grey); line-height: 1.6;
+}
+.info-badge strong { color: var(--gold); }
+
+/* ─── ACTIVE ZONE GLOW ────────────────────────────────── */
+@keyframes zoneGlow {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(201,168,76,0.3); }
+  50% { box-shadow: 0 0 0 4px rgba(201,168,76,0.15); }
+}
+.active-zone-glow { animation: zoneGlow 1.5s ease infinite; }
+
+/* ─── CANVAS WATERMARK ────────────────────────────────── */
+.canvas-watermark {
+  position: absolute; bottom: 20px; left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 11px; letter-spacing: 0.2em;
+  color: rgba(26,26,24,0.15); text-transform: uppercase;
+  pointer-events: none; white-space: nowrap;
+}
+
+/* ─── DRAG HANDLE ─────────────────────────────────────── */
+.drag-handle {
+  position: absolute;
+  background: rgba(201,168,76,0.9);
+  border: 2px solid var(--white);
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  cursor: move;
+  display: none;
+}
+
+/* ─── TABS ────────────────────────────────────────────── */
+.mode-tabs { display: flex; gap: 4px; margin-bottom: 16px; background: var(--cream-2); padding: 4px; border-radius: var(--radius-sm); }
+.mode-tab {
+  flex: 1; padding: 7px 4px; border-radius: 6px; cursor: pointer;
+  border: none; background: transparent; font-family: 'Jost', sans-serif;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--warm-grey); transition: var(--transition);
+}
+.mode-tab.active { background: var(--white); color: var(--charcoal); box-shadow: var(--shadow-card); }
+
+/* ─── RESPONSIVE ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .panel-tool { width: 260px; }
+  .panel-right { display: none; }
+  .step-progress { display: none; }
+}
+@media (max-width: 480px) {
+  .panel-left { width: 56px; }
+  .panel-tool { position: fixed; z-index: 90; height: calc(100vh - 60px); top: 60px; left: 0; box-shadow: var(--shadow-soft); }
+}
+
+/* ─── EXPORT PANEL ────────────────────────────────────── */
+.export-options { display: flex; flex-direction: column; gap: 10px; }
+.export-btn {
+  width: 100%; padding: 12px 16px; border-radius: var(--radius-sm);
+  border: 1.5px solid rgba(26,26,24,0.1); background: transparent;
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+  transition: var(--transition); font-family: 'Jost', sans-serif;
+  text-align: left;
+}
+.export-btn:hover { border-color: var(--gold); background: var(--gold-pale); }
+.export-btn .icon { font-size: 20px; }
+.export-btn-info { flex: 1; }
+.export-btn-title { font-size: 13px; font-weight: 500; color: var(--charcoal); }
+.export-btn-desc { font-size: 10px; color: var(--warm-grey); margin-top: 1px; }
+
+/* Design layer stack */
+.design-layer {
+  position: absolute; cursor: move;
+  user-select: none; transition: none;
+}
+.design-layer:hover .layer-controls { opacity: 1; }
+.layer-controls {
+  position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+  background: var(--charcoal); border-radius: 6px; display: flex;
+  opacity: 0; transition: opacity 0.2s; pointer-events: auto; overflow: hidden;
+}
+.layer-ctrl-btn {
+  padding: 5px 8px; border: none; background: transparent;
+  cursor: pointer; color: var(--cream); font-size: 11px;
+  border-right: 1px solid rgba(255,255,255,0.1);
+  transition: background 0.15s;
+}
+.layer-ctrl-btn:hover { background: rgba(255,255,255,0.1); }
+.layer-ctrl-btn:last-child { border-right: none; }
+
+/* Preview shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.shimmer {
+  background: linear-gradient(90deg, var(--cream-2) 25%, var(--cream) 50%, var(--cream-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Gold line decoration */
+.gold-line {
+  height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  margin: 16px 0; opacity: 0.4;
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">KA.<span>SHA</span></div>
+  <div class="step-progress" id="stepProgress">
+    <div class="step-item done" onclick="setStep(0)"><div class="step-dot"></div>Style</div>
+    <div class="step-arrow">›</div>
+    <div class="step-item active" onclick="setStep(1)"><div class="step-dot"></div>Colors</div>
+    <div class="step-arrow">›</div>
+    <div class="step-item" onclick="setStep(2)"><div class="step-dot"></div>Pattern</div>
+    <div class="step-arrow">›</div>
+    <div class="step-item" onclick="setStep(3)"><div class="step-dot"></div>Logo</div>
+    <div class="step-arrow">›</div>
+    <div class="step-item" onclick="setStep(4)"><div class="step-dot"></div>Text</div>
+    <div class="step-arrow">›</div>
+    <div class="step-item" onclick="setStep(5)"><div class="step-dot"></div>Export</div>
+  </div>
+  <div class="header-actions">
+    <button class="btn-ghost" onclick="undoAction()">↩ Undo</button>
+    <button class="btn-gold" onclick="openExport()">✦ Save Design</button>
+  </div>
+</header>
+
+<div class="app">
+  <!-- LEFT TOOL ICONS -->
+  <nav class="panel-left">
+    <button class="tool-btn active" onclick="switchTool('style')" id="toolStyle">
+      <span class="tool-icon">👕</span>
+      <span class="tool-label">Style</span>
+    </button>
+    <button class="tool-btn" onclick="switchTool('color')" id="toolColor">
+      <span class="tool-icon">🎨</span>
+      <span class="tool-label">Color</span>
+    </button>
+    <div class="tool-divider"></div>
+    <button class="tool-btn" onclick="switchTool('pattern')" id="toolPattern">
+      <span class="tool-icon">◈</span>
+      <span class="tool-label">Pattern</span>
+    </button>
+    <button class="tool-btn" onclick="switchTool('logo')" id="toolLogo">
+      <span class="tool-icon">⬡</span>
+      <span class="tool-label">Logo</span>
+    </button>
+    <button class="tool-btn" onclick="switchTool('text')" id="toolText">
+      <span class="tool-icon">Aa</span>
+      <span class="tool-label">Text</span>
+    </button>
+    <div class="tool-divider"></div>
+    <button class="tool-btn" onclick="switchTool('export')" id="toolExport">
+      <span class="tool-icon">↓</span>
+      <span class="tool-label">Export</span>
+    </button>
+  </nav>
+
+  <!-- SIDE PANEL -->
+  <div class="panel-tool" id="sidePanel">
+    <!-- STYLE PANEL -->
+    <div id="panelStyle" class="panel-content">
+      <div class="panel-header">
+        <div class="panel-title">Select Style</div>
+        <div class="panel-subtitle">Choose your garment model</div>
+      </div>
+      <div class="panel-body">
+        <div class="info-badge">
+          <strong>KA.SHA Golf & Sportswear</strong>
+          Premium performance apparel crafted for the course
+        </div>
+        <div class="sec-label">Mens — Printed Tees</div>
+        <div class="product-grid" id="productGrid"></div>
+        <div class="gold-line"></div>
+        <div class="sec-label">Mens — Combo Tees</div>
+        <div class="product-grid" id="productGridCombo"></div>
+        <div class="gold-line"></div>
+        <div class="sec-label">Womens</div>
+        <div class="product-grid" id="productGridWomens"></div>
+      </div>
+    </div>
+
+    <!-- COLOR PANEL -->
+    <div id="panelColor" class="panel-content" style="display:none">
+      <div class="panel-header">
+        <div class="panel-title">Base Colors</div>
+        <div class="panel-subtitle">Customize by garment section</div>
+      </div>
+      <div class="panel-body">
+        <div class="sec-label">Select Zone</div>
+        <div class="zone-tabs" id="zoneTabs">
+          <button class="zone-tab active" data-zone="all" onclick="selectZone('all',this)">Full Garment</button>
+          <button class="zone-tab" data-zone="front" onclick="selectZone('front',this)">Front</button>
+          <button class="zone-tab" data-zone="back" onclick="selectZone('back',this)">Back</button>
+          <button class="zone-tab" data-zone="sleeves" onclick="selectZone('sleeves',this)">Sleeves</button>
+          <button class="zone-tab" data-zone="collar" onclick="selectZone('collar',this)">Collar</button>
+        </div>
+
+        <div class="sec-label">Color Presets</div>
+        <div class="color-presets" id="colorPresets"></div>
+
+        <div class="sec-label">Custom Color</div>
+        <div class="custom-color-row">
+          <label>Pick any color</label>
+          <input type="color" id="customColorPicker" value="#ffffff" oninput="applyCustomColor(this.value)">
+        </div>
+
+        <div class="gold-line"></div>
+        <div class="sec-label">Current Zone Colors</div>
+        <div id="zoneColorSummary" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;"></div>
+      </div>
+    </div>
+
+    <!-- PATTERN PANEL -->
+    <div id="panelPattern" class="panel-content" style="display:none">
+      <div class="panel-header">
+        <div class="panel-title">Patterns & Prints</div>
+        <div class="panel-subtitle">Apply textures to your garment</div>
+      </div>
+      <div class="panel-body">
+        <div class="mode-tabs">
+          <button class="mode-tab active" onclick="setPatternMode('pattern',this)">Pattern</button>
+          <button class="mode-tab" onclick="setPatternMode('print',this)">Print Art</button>
+          <button class="mode-tab" onclick="setPatternMode('solid',this)">Solid</button>
+        </div>
+
+        <div id="patternModeContent">
+          <div class="sec-label">Select Zone</div>
+          <div class="zone-tabs">
+            <button class="zone-tab active" data-zone="all" onclick="selectZone('all',this)">All</button>
+            <button class="zone-tab" data-zone="front" onclick="selectZone('front',this)">Front</button>
+            <button class="zone-tab" data-zone="back" onclick="selectZone('back',this)">Back</button>
+            <button class="zone-tab" data-zone="sleeves" onclick="selectZone('sleeves',this)">Sleeves</button>
+          </div>
+          <div class="sec-label">Designs</div>
+          <div class="pattern-grid" id="patternGallery"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOGO PANEL -->
+    <div id="panelLogo" class="panel-content" style="display:none">
+      <div class="panel-header">
+        <div class="panel-title">Logo & Branding</div>
+        <div class="panel-subtitle">Upload and position your mark</div>
+      </div>
+      <div class="panel-body">
+        <div class="sec-label">Select Placement Zone</div>
+        <div class="zone-tabs">
+          <button class="zone-tab active" data-zone="front" onclick="selectZone('front',this)">Front</button>
+          <button class="zone-tab" data-zone="back" onclick="selectZone('back',this)">Back</button>
+          <button class="zone-tab" data-zone="sleeves" onclick="selectZone('sleeves',this)">Sleeve</button>
+        </div>
+
+        <div class="upload-zone" onclick="document.getElementById('logoUpload').click()">
+          <input type="file" id="logoUpload" accept="image/*" onchange="handleLogoUpload(event)">
+          <div class="upload-icon">⬡</div>
+          <div class="upload-text">
+            <strong>Upload Logo / Artwork</strong>
+            PNG, SVG, JPG — transparent backgrounds work best
+          </div>
+        </div>
+
+        <div class="gold-line"></div>
+        <div class="sec-label">Placed Logos</div>
+        <div class="logo-list" id="logoList">
+          <div style="font-size:11px;color:var(--warm-grey);text-align:center;padding:16px 0;">
+            No logos placed yet
+          </div>
+        </div>
+
+        <div class="gold-line"></div>
+        <div class="sec-label">Adjust Placement</div>
+        <div class="slider-row">
+          <div class="slider-label"><span>Scale</span><span id="scaleVal">100%</span></div>
+          <input type="range" min="20" max="200" value="100" oninput="adjustActiveLayer('scale',this.value);document.getElementById('scaleVal').textContent=this.value+'%'">
+        </div>
+        <div class="slider-row">
+          <div class="slider-label"><span>Rotation</span><span id="rotVal">0°</span></div>
+          <input type="range" min="-180" max="180" value="0" oninput="adjustActiveLayer('rotate',this.value);document.getElementById('rotVal').textContent=this.value+'°'">
+        </div>
+        <div class="slider-row">
+          <div class="slider-label"><span>Opacity</span><span id="opacVal">100%</span></div>
+          <input type="range" min="10" max="100" value="100" oninput="adjustActiveLayer('opacity',this.value);document.getElementById('opacVal').textContent=this.value+'%'">
+        </div>
+      </div>
+    </div>
+
+    <!-- TEXT PANEL -->
+    <div id="panelText" class="panel-content" style="display:none">
+      <div class="panel-header">
+        <div class="panel-title">Text & Numbers</div>
+        <div class="panel-subtitle">Names, numbers, slogans</div>
+      </div>
+      <div class="panel-body">
+        <div class="sec-label">Select Zone</div>
+        <div class="zone-tabs">
+          <button class="zone-tab active" data-zone="front" onclick="selectZone('front',this)">Front</button>
+          <button class="zone-tab" data-zone="back" onclick="selectZone('back',this)">Back</button>
+          <button class="zone-tab" data-zone="sleeves" onclick="selectZone('sleeves',this)">Sleeve</button>
+        </div>
+
+        <div class="sec-label">Text Content</div>
+        <input type="text" class="input-field" id="textInput" placeholder="Player name, number, slogan..." maxlength="40">
+        
+        <div class="sec-label">Font Style</div>
+        <div class="font-preview-row" id="fontPicker"></div>
+
+        <div class="input-row">
+          <input type="color" id="textColor" value="#1a1a18" style="width:44px;flex-shrink:0;">
+          <input type="number" class="input-field" id="fontSize" value="42" min="12" max="200" placeholder="Size">
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-label"><span>Letter Spacing</span><span id="spacingVal">0</span></div>
+          <input type="range" min="-5" max="20" value="0" oninput="document.getElementById('spacingVal').textContent=this.value">
+        </div>
+
+        <button class="btn-gold" onclick="addText()" style="width:100%;justify-content:center;margin-top:8px;">
+          ✦ Place Text on Garment
+        </button>
+
+        <div class="gold-line"></div>
+        <div class="sec-label">Quick Number</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <button class="font-chip" onclick="quickNumber(this)" data-num="7">7</button>
+          <button class="font-chip" onclick="quickNumber(this)" data-num="10">10</button>
+          <button class="font-chip" onclick="quickNumber(this)" data-num="23">23</button>
+          <button class="font-chip" onclick="quickNumber(this)" data-num="99">99</button>
+          <button class="font-chip" onclick="quickNumber(this)" data-num="00">00</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPORT PANEL -->
+    <div id="panelExport" class="panel-content" style="display:none">
+      <div class="panel-header">
+        <div class="panel-title">Save & Export</div>
+        <div class="panel-subtitle">Download your design</div>
+      </div>
+      <div class="panel-body">
+        <div class="info-badge">
+          <strong>⚠ Non-Returnable</strong>
+          Customized products cannot be returned. Review your design carefully before ordering.
+        </div>
+        <div class="sec-label">Export Options</div>
+        <div class="export-options">
+          <button class="export-btn" onclick="exportPNG()">
+            <span class="icon">🖼</span>
+            <div class="export-btn-info">
+              <div class="export-btn-title">Export PNG Preview</div>
+              <div class="export-btn-desc">High-resolution flat image with all layers</div>
+            </div>
+          </button>
+          <button class="export-btn" onclick="exportDesignJSON()">
+            <span class="icon">📄</span>
+            <div class="export-btn-info">
+              <div class="export-btn-title">Save Design File</div>
+              <div class="export-btn-desc">JSON file to reload your configuration</div>
+            </div>
+          </button>
+          <button class="export-btn" onclick="exportAllViews()">
+            <span class="icon">🗂</span>
+            <div class="export-btn-info">
+              <div class="export-btn-title">Export All Views</div>
+              <div class="export-btn-desc">Front, back, and sides as PNG pack</div>
+            </div>
+          </button>
+        </div>
+        <div class="gold-line"></div>
+        <div class="sec-label">Order</div>
+        <button class="btn-gold" onclick="placeOrder()" style="width:100%;justify-content:center;padding:14px;font-size:13px;border-radius:var(--radius-sm);">
+          ✦ Proceed to Order
+        </button>
+        <p style="font-size:10px;color:var(--warm-grey);text-align:center;margin-top:8px;line-height:1.6;">
+          By proceeding, you confirm your design is final.<br>Customized items are non-refundable.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CANVAS AREA -->
+  <div class="canvas-area">
+    <div class="canvas-top-bar">
+      <div class="garment-zone-selector">
+        <button class="gzone-btn active" data-zone="front-chest" onclick="highlightZone('front-chest',this)">Front Chest</button>
+        <button class="gzone-btn" data-zone="front-center" onclick="highlightZone('front-center',this)">Front Center</button>
+        <button class="gzone-btn" data-zone="back-top" onclick="highlightZone('back-top',this)">Back Top</button>
+        <button class="gzone-btn" data-zone="back-center" onclick="highlightZone('back-center',this)">Back Center</button>
+        <button class="gzone-btn" data-zone="sleeve-left" onclick="highlightZone('sleeve-left',this)">Left Sleeve</button>
+        <button class="gzone-btn" data-zone="sleeve-right" onclick="highlightZone('sleeve-right',this)">Right Sleeve</button>
+        <button class="gzone-btn" data-zone="collar" onclick="highlightZone('collar',this)">Collar</button>
+      </div>
+      <div class="preview-controls">
+        <button class="ctrl-btn" title="Zoom In" onclick="zoomIn()">+</button>
+        <button class="ctrl-btn" title="Zoom Out" onclick="zoomOut()">−</button>
+        <button class="ctrl-btn" title="Reset View" onclick="resetView()" style="font-size:10px;">⊙</button>
+        <button class="ctrl-btn" title="Toggle grid" onclick="toggleGrid()" id="gridBtn">⊞</button>
+      </div>
+    </div>
+
+    <div class="canvas-main" id="canvasMain">
+      <div class="garment-preview-wrap" id="garmentWrap">
+        <div class="garment-container" id="garmentContainer">
+          <div class="garment-img-wrap" id="garmentImgWrap">
+            <!-- Color tint overlay canvas -->
+            <canvas id="tintCanvas" style="position:absolute;top:0;left:0;pointer-events:none;mix-blend-mode:multiply;opacity:0;"></canvas>
+            <!-- Main garment image -->
+            <img id="garmentMainImg" class="garment-main-img" src="" alt="Garment Preview" onload="onGarmentLoaded()">
+            <!-- Design layers go here -->
+            <div id="layerContainer" style="position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;"></div>
+            <!-- Zone highlight overlay SVG -->
+            <svg id="zoneHighlight" class="zone-highlight-svg" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="opacity:0;transition:opacity 0.3s;"></svg>
+          </div>
+        </div>
+        <div class="canvas-watermark">KA.SHA · Design Studio</div>
+        <div class="loading-overlay" id="loadingOverlay">
+          <div class="loading-spinner"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT VIEW SELECTOR -->
+  <div class="panel-right" id="rightPanel">
+    <!-- Populated by JS -->
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// KASHA DESIGN STUDIO — CORE ENGINE
+// ═══════════════════════════════════════════════════
+
+const ASSETS_BASE = './kasha-assets/';
+
+// Product catalog
+const PRODUCTS = {
+  printed: [
+    { id: 'KS1000BGP001', label: 'GP001', views: ['01','02','03'], category: 'Printed', gender: 'Mens' },
+    { id: 'KS1000BGP004', label: 'GP004', views: ['01','02','03'], category: 'Printed', gender: 'Mens' },
+    { id: 'KS1000BGP015', label: 'GP015', views: ['01','02','03'], category: 'Printed', gender: 'Mens' },
+    { id: 'KS1000BGP022', label: 'GP022', views: ['01','02','03'], category: 'Printed', gender: 'Mens' },
+    { id: 'KS1000BGP028', label: 'GP028', views: ['01','02','03'], category: 'Printed', gender: 'Mens' },
+  ],
+  combo: [
+    { id: 'KS1001BBeige&Brown', label: 'Beige/Brown', views: [' 1',' 2',' 3'], category: 'Combo', gender: 'Mens' },
+    { id: 'KS1001BSKYBLUE&BROWN', label: 'Sky/Brown', views: ['01','02','03'], category: 'Combo', gender: 'Mens' },
+    { id: 'KS1002BOLIVEGREEN&BLACK', label: 'Olive/Black', views: ['01','02','03'], category: 'Combo', gender: 'Mens' },
+    { id: 'KS1002BRed&Black', label: 'Red/Black', views: [' 1',' 2',' 3'], category: 'Combo', gender: 'Mens' },
+    { id: 'KS1003BPINK&BLACK', label: 'Pink/Black', views: ['01','02','03'], category: 'Combo', gender: 'Mens' },
+    { id: 'KS1006BBLACK&PINK', label: 'Black/Pink', views: ['01','02','03'], category: 'Combo', gender: 'Mens' },
+  ],
+  womens: [
+    { id: 'KL5000BGP034', label: 'BGP034', views: [' 01',' 02',' 03'], category: 'Womens', gender: 'Womens' },
+    { id: 'KL5000BGP040', label: 'BGP040', views: [' 01',' 02',' 03'], category: 'Womens', gender: 'Womens' },
+    { id: 'KL5000BGP041', label: 'BGP041', views: [' 01',' 02',' 03'], category: 'Womens', gender: 'Womens' },
+  ]
+};
+
+// Map view indices to readable names
+const VIEW_NAMES = { '0': 'FRONT', '1': 'BACK', '2': 'SIDE' };
+
+// Color palettes
+const COLOR_PRESETS = [
+  { name: 'Ivory', hex: '#f5f0e8' },
+  { name: 'Cream White', hex: '#fafaf7' },
+  { name: 'Soft Sage', hex: '#9cad9b' },
+  { name: 'Golf Green', hex: '#2d5a3d' },
+  { name: 'Navy Blue', hex: '#1e2f5e' },
+  { name: 'Sky Blue', hex: '#6ab3d4' },
+  { name: 'Blush Pink', hex: '#e8a5b0' },
+  { name: 'Rose Gold', hex: '#c5a083' },
+  { name: 'Burgundy', hex: '#6b2d3e' },
+  { name: 'Charcoal', hex: '#2d2d2a' },
+  { name: 'Olive', hex: '#5c6645' },
+  { name: 'Sand', hex: '#c9b89a' },
+  { name: 'Camel', hex: '#b8925a' },
+  { name: 'Pure Black', hex: '#0a0a08' },
+  { name: 'Off White', hex: '#ede9e1' },
+  { name: 'Gold', hex: '#c9a84c' },
+];
+
+const FONTS = [
+  { name: 'Classic', css: "'Cormorant Garamond', serif" },
+  { name: 'Modern', css: "'Jost', sans-serif" },
+  { name: 'Sport', css: "'Arial Black', sans-serif" },
+  { name: 'Serif', css: "'Georgia', serif" },
+  { name: 'Mono', css: "'Courier New', monospace" },
+];
+
+// App state
+const state = {
+  activeTool: 'style',
+  activeProduct: null,
+  activeProductSet: 'printed',
+  currentViewIdx: 0,
+  activeZone: 'front-chest',
+  colorZone: 'all',
+  zoneColors: {
+    all: null, front: null, back: null, sleeves: null, collar: null
+  },
+  layers: [],
+  activeLayerId: null,
+  zoom: 1,
+  showGrid: false,
+  history: [],
+  patternMode: 'pattern',
+  activeFont: FONTS[0],
+};
+
+// ─── INIT ────────────────────────────────────────
+function init() {
+  buildProductGrids();
+  buildColorPresets();
+  buildFontPicker();
+  buildPatternGallery();
+  
+  // Select first product
+  const firstProduct = PRODUCTS.printed[0];
+  selectProduct(firstProduct, 'printed');
+  
+  setTimeout(() => {
+    document.getElementById('loadingOverlay').style.opacity = '0';
+    setTimeout(() => document.getElementById('loadingOverlay').style.display = 'none', 400);
+  }, 800);
+}
+
+// ─── PRODUCT GRID BUILD ──────────────────────────
+function buildProductGrids() {
+  buildGrid('productGrid', PRODUCTS.printed, 'printed');
+  buildGrid('productGridCombo', PRODUCTS.combo, 'combo');
+  buildGrid('productGridWomens', PRODUCTS.womens, 'womens');
+}
+
+function buildGrid(containerId, products, setKey) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  products.forEach((p, i) => {
+    const imgSrc = getImgSrc(p, 0);
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    card.id = `pcard_${p.id}`;
+    card.innerHTML = `
+      <div class="active-check">✓</div>
+      <img src="${imgSrc}" alt="${p.label}" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'200\' height=\'260\' fill=\'%23ede9e1\'><rect width=\'200\' height=\'260\'/><text x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' fill=\'%238a8780\' font-size=\'12\' dy=\'.3em\'>${p.label}</text></svg>'">
+      <div class="product-card-label">${p.label}</div>
+      <div class="product-card-badge">${p.gender}</div>
+    `;
+    card.onclick = () => selectProduct(p, setKey);
+    container.appendChild(card);
+  });
+}
+
+function getImgSrc(product, viewIdx) {
+  const view = product.views[viewIdx] || product.views[0];
+  return `${ASSETS_BASE}${product.id}${view}.png`;
+}
+
+// ─── PRODUCT SELECTION ───────────────────────────
+function selectProduct(product, setKey) {
+  // Remove old active
+  document.querySelectorAll('.product-card').forEach(c => c.classList.remove('active'));
+  const card = document.getElementById(`pcard_${product.id}`);
+  if (card) card.classList.add('active');
+
+  state.activeProduct = product;
+  state.activeProductSet = setKey;
+  state.currentViewIdx = 0;
+
+  loadGarmentView(0);
+  buildRightPanel();
+  pushHistory();
+  showToast(`${product.label} selected`);
+  
+  // Auto advance to color step after 400ms
+  setTimeout(() => { if (state.activeTool === 'style') switchTool('color'); }, 600);
+}
+
+function loadGarmentView(viewIdx) {
+  if (!state.activeProduct) return;
+  const img = document.getElementById('garmentMainImg');
+  img.style.opacity = '0';
+  const src = getImgSrc(state.activeProduct, viewIdx);
+  img.src = src;
+  state.currentViewIdx = viewIdx;
+  
+  // Update right panel active state
+  document.querySelectorAll('.view-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', i === viewIdx);
+  });
+}
+
+function onGarmentLoaded() {
+  const img = document.getElementById('garmentMainImg');
+  img.style.opacity = '1';
+}
+
+// ─── RIGHT PANEL ──────────────────────────────────
+function buildRightPanel() {
+  const panel = document.getElementById('rightPanel');
+  if (!state.activeProduct) return;
+  panel.innerHTML = '';
+  
+  const views = state.activeProduct.views;
+  const viewLabels = ['FRONT', 'BACK', 'SIDE'];
+  
+  views.forEach((v, i) => {
+    const imgSrc = getImgSrc(state.activeProduct, i);
+    const btn = document.createElement('div');
+    btn.className = `view-btn${i === 0 ? ' active' : ''}`;
+    btn.innerHTML = `
+      <div class="view-btn-img">
+        <img src="${imgSrc}" alt="${viewLabels[i] || 'VIEW'}" loading="lazy"
+          onerror="this.parentElement.innerHTML='<div style=font-size:20px>${['👕','🔄','📐'][i]}</div>'">
+      </div>
+      <div class="view-btn-label">${viewLabels[i] || 'VIEW ' + (i+1)}</div>
+    `;
+    btn.onclick = () => loadGarmentView(i);
+    panel.appendChild(btn);
+  });
+}
+
+// ─── COLOR SYSTEM ─────────────────────────────────
+function buildColorPresets() {
+  const container = document.getElementById('colorPresets');
+  COLOR_PRESETS.forEach(color => {
+    const swatch = document.createElement('div');
+    swatch.className = 'color-swatch';
+    swatch.style.background = color.hex;
+    swatch.title = color.name;
+    swatch.onclick = () => applyZoneColor(color.hex, swatch);
+    container.appendChild(swatch);
+  });
+}
+
+function selectZone(zone, el) {
+  state.colorZone = zone;
+  // Update all zone-tab groups
+  if (el) {
+    const parent = el.closest('.zone-tabs');
+    if (parent) parent.querySelectorAll('.zone-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+  updateZoneColorSummary();
+}
+
+function applyZoneColor(hex, swatchEl) {
+  state.zoneColors[state.colorZone] = hex;
+  applyColorOverlay();
+  
+  // Update swatch UI
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+  if (swatchEl) swatchEl.classList.add('active');
+  
+  updateZoneColorSummary();
+  pushHistory();
+  showToast(`Color applied to ${state.colorZone}`);
+}
+
+function applyCustomColor(hex) {
+  applyZoneColor(hex, null);
+}
+
+function applyColorOverlay() {
+  const img = document.getElementById('garmentMainImg');
+  const canvas = document.getElementById('tintCanvas');
+  if (!img.naturalWidth) return;
+
+  canvas.width = img.offsetWidth;
+  canvas.height = img.offsetHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Apply the dominant color (full garment if set)
+  const color = state.zoneColors.all || state.zoneColors.front;
+  if (color) {
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.45;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    canvas.style.opacity = '1';
+  } else {
+    canvas.style.opacity = '0';
+  }
+}
+
+function updateZoneColorSummary() {
+  const el = document.getElementById('zoneColorSummary');
+  if (!el) return;
+  el.innerHTML = '';
+  Object.entries(state.zoneColors).forEach(([zone, color]) => {
+    if (!color) return;
+    const chip = document.createElement('div');
+    chip.style.cssText = `display:flex;align-items:center;gap:5px;background:var(--cream-2);padding:4px 8px;border-radius:99px;`;
+    chip.innerHTML = `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:1px solid rgba(0,0,0,0.1)"></div><span style="font-size:10px;text-transform:capitalize;">${zone}</span>`;
+    el.appendChild(chip);
+  });
+}
+
+// ─── ZONE HIGHLIGHT ───────────────────────────────
+const ZONE_OVERLAYS = {
+  'front-chest':   { x: '15%', y: '18%', w: '70%', h: '22%' },
+  'front-center':  { x: '15%', y: '40%', w: '70%', h: '32%' },
+  'back-top':      { x: '15%', y: '18%', w: '70%', h: '22%' },
+  'back-center':   { x: '15%', y: '40%', w: '70%', h: '32%' },
+  'sleeve-left':   { x: '0%',  y: '18%', w: '18%', h: '35%' },
+  'sleeve-right':  { x: '82%', y: '18%', w: '18%', h: '35%' },
+  'collar':        { x: '30%', y: '4%',  w: '40%', h: '14%' },
+};
+
+function highlightZone(zone, el) {
+  state.activeZone = zone;
+  document.querySelectorAll('.gzone-btn').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  const svg = document.getElementById('zoneHighlight');
+  const overlay = ZONE_OVERLAYS[zone];
+  if (!overlay) return;
+
+  svg.innerHTML = `
+    <rect x="${overlay.x}" y="${overlay.y}" width="${overlay.w}" height="${overlay.h}"
+      rx="6%" fill="rgba(201,168,76,0.15)" stroke="rgba(201,168,76,0.7)" stroke-width="2"
+      stroke-dasharray="8 4">
+      <animate attributeName="stroke-dashoffset" from="0" to="-24" dur="1s" repeatCount="indefinite"/>
+    </rect>
+    <text x="${parseFloat(overlay.x) + parseFloat(overlay.w)/2}%" 
+          y="${parseFloat(overlay.y) + parseFloat(overlay.h)/2 + 0.5}%"
+      text-anchor="middle" dominant-baseline="middle"
+      font-family="Jost,sans-serif" font-size="11" font-weight="600"
+      letter-spacing="2" fill="rgba(201,168,76,0.9)" text-transform="uppercase">
+      ${zone.replace(/-/g,' ').toUpperCase()}
+    </text>
+  `;
+  svg.style.opacity = '1';
+
+  // Auto fade after 2s
+  clearTimeout(state._zoneTimer);
+  state._zoneTimer = setTimeout(() => { svg.style.opacity = '0'; }, 2500);
+}
+
+// ─── PATTERN SYSTEM ───────────────────────────────
+function buildPatternGallery() {
+  const container = document.getElementById('patternGallery');
+  if (!container) return;
+
+  // "No Pattern" option
+  const noneCard = document.createElement('div');
+  noneCard.className = 'pattern-card active';
+  noneCard.innerHTML = `<div class="pattern-none"><div class="icon">○</div>Original</div>`;
+  noneCard.onclick = () => {
+    document.querySelectorAll('.pattern-card').forEach(c => c.classList.remove('active'));
+    noneCard.classList.add('active');
+    clearPattern();
+  };
+  container.appendChild(noneCard);
+
+  // Use product thumbnails as "patterns" 
+  const allProducts = [...PRODUCTS.printed, ...PRODUCTS.combo, ...PRODUCTS.womens];
+  allProducts.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'pattern-card';
+    card.innerHTML = `<img src="${getImgSrc(p, 0)}" alt="${p.label}" loading="lazy">`;
+    card.onclick = () => {
+      document.querySelectorAll('.pattern-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      showToast(`Pattern from ${p.label} applied`);
+    };
+    container.appendChild(card);
+  });
+}
+
+function setPatternMode(mode, el) {
+  state.patternMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+
+function clearPattern() {
+  showToast('Pattern cleared');
+}
+
+// ─── FONT PICKER ──────────────────────────────────
+function buildFontPicker() {
+  const container = document.getElementById('fontPicker');
+  FONTS.forEach((font, i) => {
+    const chip = document.createElement('button');
+    chip.className = `font-chip${i === 0 ? ' active' : ''}`;
+    chip.style.fontFamily = font.css;
+    chip.textContent = font.name;
+    chip.onclick = () => {
+      document.querySelectorAll('.font-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      state.activeFont = font;
+    };
+    container.appendChild(chip);
+  });
+}
+
+// ─── TEXT LAYER ───────────────────────────────────
+function addText() {
+  const textVal = document.getElementById('textInput').value.trim();
+  if (!textVal) { showToast('Please enter some text'); return; }
+
+  const color = document.getElementById('textColor').value;
+  const size = parseInt(document.getElementById('fontSize').value) || 42;
+  const spacing = document.getElementById('spacingVal').textContent;
+
+  addDesignLayer({
+    type: 'text',
+    content: textVal,
+    color, size,
+    font: state.activeFont.css,
+    letterSpacing: spacing + 'px',
+    zone: state.activeZone,
+  });
+
+  document.getElementById('textInput').value = '';
+  showToast(`"${textVal}" added to garment`);
+  pushHistory();
+}
+
+function quickNumber(el) {
+  const num = el.dataset.num;
+  document.getElementById('textInput').value = num;
+  document.getElementById('fontSize').value = 72;
+  addText();
+}
+
+// ─── LOGO UPLOAD ──────────────────────────────────
+function handleLogoUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const src = e.target.result;
+    addDesignLayer({ type: 'image', src, name: file.name, zone: state.activeZone });
+    addLogoToList(file.name, src);
+    showToast('Logo placed on garment');
+    pushHistory();
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function addLogoToList(name, src) {
+  const list = document.getElementById('logoList');
+  // Remove empty state
+  const empty = list.querySelector('[style*="text-align:center"]');
+  if (empty) empty.remove();
+
+  const item = document.createElement('div');
+  item.className = 'logo-item active';
+  const id = 'logo_' + Date.now();
+  item.innerHTML = `
+    <img src="${src}" alt="${name}">
+    <div class="logo-item-info">
+      <div class="logo-item-name">${name.length > 20 ? name.substring(0,20)+'…' : name}</div>
+      <div class="logo-item-size">Tap to select</div>
+    </div>
+    <div class="logo-item-del" onclick="removeLayer('${id}');this.closest('.logo-item').remove()">✕</div>
+  `;
+  item.onclick = () => {
+    document.querySelectorAll('.logo-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    state.activeLayerId = id;
+  };
+  list.appendChild(item);
+}
+
+// ─── DESIGN LAYER SYSTEM ──────────────────────────
+let layerIdCounter = 0;
+
+function addDesignLayer(config) {
+  const id = 'layer_' + (++layerIdCounter);
+  const container = document.getElementById('layerContainer');
+  const wrap = document.getElementById('garmentImgWrap');
+  const wrapRect = wrap.getBoundingClientRect();
+
+  const layer = document.createElement('div');
+  layer.className = 'design-layer';
+  layer.id = id;
+  layer.dataset.layerId = id;
+
+  // Default position based on zone
+  const zonePos = getZoneDefaultPos(config.zone || state.activeZone);
+  layer.style.cssText = `
+    position: absolute;
+    left: ${zonePos.x}%;
+    top: ${zonePos.y}%;
+    transform: translate(-50%, -50%);
+    cursor: move;
+    user-select: none;
+    z-index: 10;
+  `;
+
+  if (config.type === 'text') {
+    const textEl = document.createElement('div');
+    textEl.style.cssText = `
+      font-family: ${config.font};
+      font-size: ${config.size}px;
+      color: ${config.color};
+      letter-spacing: ${config.letterSpacing};
+      white-space: nowrap;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+      pointer-events: none;
+    `;
+    textEl.textContent = config.content;
+    
+    const controls = createLayerControls(id);
+    layer.appendChild(controls);
+    layer.appendChild(textEl);
+  } else if (config.type === 'image') {
+    const img = document.createElement('img');
+    img.src = config.src;
+    img.style.cssText = `width: 120px; height: auto; display: block; pointer-events: none;`;
+    
+    const controls = createLayerControls(id);
+    layer.appendChild(controls);
+    layer.appendChild(img);
+  }
+
+  // Make draggable
+  makeDraggable(layer, container);
+  
+  container.appendChild(layer);
+  state.layers.push({ id, config });
+  state.activeLayerId = id;
+}
+
+function createLayerControls(id) {
+  const ctrl = document.createElement('div');
+  ctrl.className = 'layer-controls';
+  ctrl.innerHTML = `
+    <button class="layer-ctrl-btn" onclick="adjustLayerScale('${id}',1.2)">+</button>
+    <button class="layer-ctrl-btn" onclick="adjustLayerScale('${id}',0.8)">−</button>
+    <button class="layer-ctrl-btn" onclick="rotateLayer('${id}')">↻</button>
+    <button class="layer-ctrl-btn" onclick="removeLayer('${id}')">✕</button>
+  `;
+  return ctrl;
+}
+
+function makeDraggable(el, container) {
+  let startX, startY, startLeft, startTop;
+  
+  el.addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    e.preventDefault();
+    state.activeLayerId = el.id;
+    
+    const containerRect = container.getBoundingClientRect();
+    startX = e.clientX;
+    startY = e.clientY;
+    
+    const computed = getComputedStyle(el);
+    startLeft = parseFloat(el.style.left) || 50;
+    startTop = parseFloat(el.style.top) || 50;
+
+    function onMove(e) {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      const parentW = container.offsetWidth;
+      const parentH = container.offsetHeight;
+      el.style.left = (startLeft + (dx / parentW * 100)) + '%';
+      el.style.top = (startTop + (dy / parentH * 100)) + '%';
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  // Touch support
+  el.addEventListener('touchstart', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    const touch = e.touches[0];
+    startX = touch.clientX; startY = touch.clientY;
+    startLeft = parseFloat(el.style.left) || 50;
+    startTop = parseFloat(el.style.top) || 50;
+    
+    function onTouchMove(e) {
+      const t = e.touches[0];
+      const dx = t.clientX - startX, dy = t.clientY - startY;
+      const parentW = container.offsetWidth, parentH = container.offsetHeight;
+      el.style.left = (startLeft + (dx / parentW * 100)) + '%';
+      el.style.top = (startTop + (dy / parentH * 100)) + '%';
+    }
+    function onTouchEnd() {
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    }
+    el.addEventListener('touchmove', onTouchMove);
+    el.addEventListener('touchend', onTouchEnd);
+  });
+}
+
+function getZoneDefaultPos(zone) {
+  const positions = {
+    'front-chest': { x: 50, y: 28 },
+    'front-center': { x: 50, y: 55 },
+    'back-top': { x: 50, y: 28 },
+    'back-center': { x: 50, y: 55 },
+    'sleeve-left': { x: 12, y: 38 },
+    'sleeve-right': { x: 88, y: 38 },
+    'collar': { x: 50, y: 12 },
+  };
+  return positions[zone] || { x: 50, y: 50 };
+}
+
+function adjustActiveLayer(prop, val) {
+  if (!state.activeLayerId) return;
+  const layer = document.getElementById(state.activeLayerId);
+  if (!layer) return;
+  
+  const img = layer.querySelector('img');
+  const text = layer.querySelector('div:not(.layer-controls)');
+  
+  if (prop === 'scale') {
+    const scale = val / 100;
+    if (img) img.style.width = (120 * scale) + 'px';
+    if (text) text.style.fontSize = (parseInt(text.style.fontSize || 42) * scale / (state._lastScale || 1)) + 'px';
+    state._lastScale = scale;
+  } else if (prop === 'rotate') {
+    layer.style.transform = `translate(-50%, -50%) rotate(${val}deg)`;
+  } else if (prop === 'opacity') {
+    layer.style.opacity = val / 100;
+  }
+}
+
+function adjustLayerScale(id, factor) {
+  const layer = document.getElementById(id);
+  if (!layer) return;
+  const img = layer.querySelector('img');
+  if (img) img.style.width = (parseInt(img.style.width || 120) * factor) + 'px';
+  const text = layer.querySelector('div:not(.layer-controls)');
+  if (text) text.style.fontSize = (parseInt(text.style.fontSize || 42) * factor) + 'px';
+}
+
+function rotateLayer(id) {
+  const layer = document.getElementById(id);
+  if (!layer) return;
+  const current = layer.dataset.rotation ? parseInt(layer.dataset.rotation) : 0;
+  const next = current + 15;
+  layer.dataset.rotation = next;
+  layer.style.transform = `translate(-50%, -50%) rotate(${next}deg)`;
+}
+
+function removeLayer(id) {
+  const layer = document.getElementById(id);
+  if (layer) layer.remove();
+  state.layers = state.layers.filter(l => l.id !== id);
+  if (state.activeLayerId === id) state.activeLayerId = null;
+  pushHistory();
+}
+
+// ─── TOOL SWITCHING ───────────────────────────────
+function switchTool(tool) {
+  state.activeTool = tool;
+  
+  // Update left nav
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('tool' + tool.charAt(0).toUpperCase() + tool.slice(1));
+  if (btn) btn.classList.add('active');
+
+  // Show/hide panels
+  const panels = ['Style','Color','Pattern','Logo','Text','Export'];
+  panels.forEach(p => {
+    const el = document.getElementById('panel' + p);
+    if (el) el.style.display = 'none';
+  });
+  const activePanel = document.getElementById('panel' + tool.charAt(0).toUpperCase() + tool.slice(1));
+  if (activePanel) activePanel.style.display = 'flex';
+  activePanel && (activePanel.style.flexDirection = 'column');
+  activePanel && (activePanel.style.height = '100%');
+
+  // Update step progress
+  const stepMap = { style: 0, color: 1, pattern: 2, logo: 3, text: 4, export: 5 };
+  updateStepProgress(stepMap[tool] || 0);
+}
+
+function setStep(idx) {
+  const tools = ['style','color','pattern','logo','text','export'];
+  if (tools[idx]) switchTool(tools[idx]);
+}
+
+function updateStepProgress(activeIdx) {
+  document.querySelectorAll('.step-item').forEach((item, i) => {
+    item.classList.remove('active', 'done');
+    if (i < activeIdx) item.classList.add('done');
+    else if (i === activeIdx) item.classList.add('active');
+  });
+}
+
+// ─── ZOOM ─────────────────────────────────────────
+function zoomIn() {
+  state.zoom = Math.min(state.zoom + 0.15, 2.5);
+  applyZoom();
+}
+function zoomOut() {
+  state.zoom = Math.max(state.zoom - 0.15, 0.5);
+  applyZoom();
+}
+function resetView() {
+  state.zoom = 1;
+  applyZoom();
+}
+function applyZoom() {
+  const container = document.getElementById('garmentContainer');
+  container.style.transform = `scale(${state.zoom})`;
+  container.style.transformOrigin = 'center center';
+}
+
+// ─── GRID ─────────────────────────────────────────
+function toggleGrid() {
+  state.showGrid = !state.showGrid;
+  const wrap = document.getElementById('garmentImgWrap');
+  const btn = document.getElementById('gridBtn');
+  if (state.showGrid) {
+    wrap.style.backgroundImage = `
+      linear-gradient(rgba(201,168,76,0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201,168,76,0.08) 1px, transparent 1px)
+    `;
+    wrap.style.backgroundSize = '30px 30px';
+    btn.style.color = 'var(--gold)';
+  } else {
+    wrap.style.backgroundImage = 'none';
+    btn.style.color = '';
+  }
+}
+
+// ─── HISTORY ──────────────────────────────────────
+function pushHistory() {
+  const snapshot = {
+    productId: state.activeProduct?.id,
+    viewIdx: state.currentViewIdx,
+    zoneColors: { ...state.zoneColors },
+    layers: state.layers.map(l => ({ ...l })),
+  };
+  state.history.push(snapshot);
+  if (state.history.length > 30) state.history.shift();
+}
+
+function undoAction() {
+  if (state.history.length <= 1) { showToast('Nothing to undo'); return; }
+  state.history.pop();
+  const prev = state.history[state.history.length - 1];
+  // Restore colors
+  state.zoneColors = { ...prev.zoneColors };
+  applyColorOverlay();
+  showToast('Undone');
+}
+
+// ─── EXPORT ───────────────────────────────────────
+function openExport() { switchTool('export'); }
+
+function exportPNG() {
+  showToast('Generating PNG...');
+  const img = document.getElementById('garmentMainImg');
+  const container = document.getElementById('garmentImgWrap');
+  
+  // Create a canvas to composite everything
+  const canvas = document.createElement('canvas');
+  canvas.width = img.naturalWidth || 1200;
+  canvas.height = img.naturalHeight || 1500;
+  const ctx = canvas.getContext('2d');
+  
+  // Draw base garment
+  const baseImg = new Image();
+  baseImg.crossOrigin = 'anonymous';
+  baseImg.onload = () => {
+    ctx.drawImage(baseImg, 0, 0, canvas.width, canvas.height);
+    
+    // Apply color overlay
+    const color = state.zoneColors.all || state.zoneColors.front;
+    if (color) {
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.45;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    
+    // Draw text layers
+    const textLayers = container.querySelectorAll('.design-layer');
+    textLayers.forEach(layer => {
+      const textEl = layer.querySelector('div:not(.layer-controls)');
+      if (textEl) {
+        const containerW = container.offsetWidth;
+        const containerH = container.offsetHeight;
+        const leftPct = parseFloat(layer.style.left) / 100;
+        const topPct = parseFloat(layer.style.top) / 100;
+        const x = leftPct * canvas.width;
+        const y = topPct * canvas.height;
+        ctx.font = textEl.style.fontSize + ' ' + textEl.style.fontFamily;
+        ctx.fillStyle = textEl.style.color;
+        ctx.textAlign = 'center';
+        ctx.fillText(textEl.textContent, x, y);
+      }
+    });
+    
+    // Trigger download
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png', 0.95);
+    link.download = `kasha-design-${state.activeProduct?.id || 'custom'}-${Date.now()}.png`;
+    link.click();
+    showToast('PNG exported successfully!');
+  };
+  baseImg.onerror = () => {
+    // Fallback: just save the visible img
+    const link = document.createElement('a');
+    link.href = img.src;
+    link.download = `kasha-design-${Date.now()}.png`;
+    link.click();
+    showToast('Design saved!');
+  };
+  baseImg.src = img.src;
+}
+
+function exportDesignJSON() {
+  const design = {
+    version: '1.0',
+    brand: 'KA.SHA',
+    product: state.activeProduct,
+    colors: state.zoneColors,
+    layers: state.layers,
+    timestamp: new Date().toISOString(),
+  };
+  const blob = new Blob([JSON.stringify(design, null, 2)], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `kasha-design-${Date.now()}.json`;
+  link.click();
+  showToast('Design file saved!');
+}
+
+function exportAllViews() {
+  if (!state.activeProduct) return;
+  showToast('Preparing all views...');
+  // Download each view
+  state.activeProduct.views.forEach((v, i) => {
+    setTimeout(() => {
+      const src = getImgSrc(state.activeProduct, i);
+      const link = document.createElement('a');
+      link.href = src;
+      link.download = `kasha-view-${['front','back','side'][i]}-${Date.now()}.png`;
+      link.click();
+    }, i * 600);
+  });
+  setTimeout(() => showToast('All views exported!'), 2000);
+}
+
+function placeOrder() {
+  showToast('✦ Redirecting to checkout...');
+  setTimeout(() => alert('Order system integration — connect to your e-commerce backend'), 1000);
+}
+
+// ─── TOAST ────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+// ─── WINDOW RESIZE ────────────────────────────────
+window.addEventListener('resize', () => {
+  applyColorOverlay();
+});
+
+// ─── START ────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
