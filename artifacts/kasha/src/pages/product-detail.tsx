@@ -11,6 +11,7 @@ import { useUser } from "@clerk/react";
 import { useCart } from "@/contexts/CartContext";
 import { getAssetUrl } from "@/lib/api";
 import { SHOW_CUSTOMIZATION } from "@/lib/features";
+import { PersonalizeModal } from "@/components/layout/PersonalizeModal";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -26,6 +27,7 @@ export default function ProductDetailPage() {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [customSizeText, setCustomSizeText] = useState("");
+  const [personalizeOpen, setPersonalizeOpen] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const sizingAccordionRef = useRef<HTMLDivElement>(null);
 
@@ -432,50 +434,45 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Customise This Piece */}
-            {(()=>{
-              const lockedGtId = product?.name?.match(/\[gt:(GT\d+)\]/)?.[1] ?? null;
-              const customiseHref = lockedGtId
-                ? `/products/${product?.id}/customize?gt=${lockedGtId}`
-                : `/products/${product?.id}/customize`;
-              return (
-                <Link
-                  href={customiseHref}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "14px 16px",
-                    border: "1px solid rgba(184,146,90,0.3)",
-                    borderRadius: 4,
-                    background: "rgba(184,146,90,0.04)",
-                    textDecoration: "none",
-                    transition: "background 0.2s, border-color 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.09)";
-                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.55)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.04)";
-                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.3)";
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <Wand2 className="w-4 h-4" style={{ color: "#B8925A" }} />
-                    <div>
-                      <div className="text-[12px] font-bold tracking-[0.12em] uppercase" style={{ color: "#B8925A" }}>
-                        Customise This Piece
-                      </div>
-                      <div className="text-[11px] text-gray-400 mt-0.5">
-                        {lockedGtId ? `Style ${lockedGtId} pre-selected — add name, logo or artwork` : "Add name, logo, club crest or artwork"}
-                      </div>
+            {/* Personalise This T-Shirt */}
+            {SHOW_CUSTOMIZATION && (
+              <button
+                onClick={() => setPersonalizeOpen(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  width: "100%",
+                  padding: "14px 16px",
+                  border: "1px solid rgba(184,146,90,0.3)",
+                  borderRadius: 4,
+                  background: "rgba(184,146,90,0.04)",
+                  cursor: "pointer",
+                  transition: "background 0.2s, border-color 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.09)";
+                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.55)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.04)";
+                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.3)";
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <Wand2 className="w-4 h-4" style={{ color: "#B8925A" }} />
+                  <div style={{ textAlign: "left" }}>
+                    <div className="text-[12px] font-bold tracking-[0.12em] uppercase" style={{ color: "#B8925A" }}>
+                      Personalise This T-Shirt
+                    </div>
+                    <div className="text-[11px] text-gray-400 mt-0.5">
+                      Quick personalisation or full bespoke customisation
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "#B8925A" }} />
-                </Link>
-              );
-            })()}
+                </div>
+                <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "#B8925A" }} />
+              </button>
+            )}
 
             {/* Action Buttons */}
             <div className="space-y-3 pt-2">
@@ -496,14 +493,6 @@ export default function ProductDetailPage() {
                 BUY NOW
               </button>
 
-              {SHOW_CUSTOMIZATION && (
-                <Link href={`/products/${product.id}/customize`}>
-                  <button className="w-full border border-gray-300 text-black text-[12px] font-bold tracking-[0.12em] py-4 hover:border-black transition-all flex items-center justify-center gap-2 mt-1 hover:bg-gray-50">
-                    <Wand2 className="w-4 h-4" />
-                    CUSTOMISE THIS PIECE
-                  </button>
-                </Link>
-              )}
             </div>
 
             {/* Trust Badge */}
@@ -556,6 +545,12 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+      <PersonalizeModal
+        isOpen={personalizeOpen}
+        onClose={() => setPersonalizeOpen(false)}
+        productId={product.id}
+        productName={product.name}
+      />
     </Layout>
   );
 }

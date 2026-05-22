@@ -14,7 +14,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, Link, useLocation } from "wouter";
+import { useParams, Link, useLocation, useSearch } from "wouter";
 import { useUser, Show } from "@clerk/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -135,8 +135,12 @@ export default function CustomizePage() {
   const queryClient = useQueryClient();
 
 
+  // ── Quick personalisation mode (mode=quick in URL) ───────────────────────
+  const searchStr = useSearch();
+  const isQuickMode = new URLSearchParams(searchStr).get("mode") === "quick";
+
   // ── Wizard step (1–4) ────────────────────────────────────────────────────
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(() => isQuickMode ? 3 : 1);
 
   // ── 3D model-viewer ──────────────────────────────────────────────────────
   const [webglAvailable] = useState(() => {
@@ -536,17 +540,37 @@ export default function CustomizePage() {
   );
 
   // ── Step indicator ───────────────────────────────────────────────────────
-  const STEP_LABELS=["Style","Parts","Logo","Size"];
+  const ALL_STEPS = [
+    { n:1, label:"Style"  },
+    { n:2, label:"Parts"  },
+    { n:3, label:"Logo"   },
+    { n:4, label:"Size"   },
+  ];
+  const VISIBLE_STEPS = isQuickMode
+    ? ALL_STEPS.filter(s => s.n >= 3)
+    : ALL_STEPS;
+
   const stepIndicator=(
     <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:24,flexShrink:0,paddingBottom:20,borderBottom:`1px solid rgba(26,26,24,0.07)`}}>
-      {STEP_LABELS.map((label,i)=>{
-        const n=i+1; const active=step===n; const done=step>n;
-        return(<React.Fragment key={n}>
+      {isQuickMode && (
+        <div style={{
+          display:"flex",alignItems:"center",gap:6,marginRight:16,
+          padding:"4px 10px",borderRadius:99,
+          background:"rgba(201,168,76,0.12)",
+          border:`1px solid rgba(201,168,76,0.3)`,
+        }}>
+          <span style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".1em",textTransform:"uppercase",color:V.ac,fontWeight:700}}>✦ Quick</span>
+        </div>
+      )}
+      {VISIBLE_STEPS.map((s,i)=>{
+        const active=step===s.n; const done=step>s.n;
+        const canNav = isQuickMode ? s.n >= 3 : true;
+        return(<React.Fragment key={s.n}>
           {i>0&&<div style={{flex:1,height:"1px",background:done?V.ac:`rgba(26,26,24,0.12)`,minWidth:8,transition:"background 0.3s"}}/>}
-          <div onClick={()=>setStep(n)} style={{
+          <div onClick={()=>canNav&&setStep(s.n)} style={{
             display:"flex",alignItems:"center",gap:6,fontSize:11,
             color:active?V.tx:done?V.ac:V.mul,
-            cursor:"pointer",padding:"5px 8px",borderRadius:99,
+            cursor:canNav?"pointer":"default",padding:"5px 8px",borderRadius:99,
             background:active?V.aclt:"transparent",
             transition:"all 0.3s cubic-bezier(0.16,1,0.3,1)",
             letterSpacing:".03em",
@@ -558,8 +582,8 @@ export default function CustomizePage() {
               color:active?"#fff":done?"#fff":V.mu,
               border:`1.5px solid ${active||done?V.ac:V.bd}`,
               flexShrink:0,transition:"all 0.3s",
-            }}>{done?"✓":n}</div>
-            <span style={{fontWeight:active?600:400,fontSize:10,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase"}}>{label}</span>
+            }}>{done?"✓":s.n}</div>
+            <span style={{fontWeight:active?600:400,fontSize:10,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase"}}>{s.label}</span>
           </div>
         </React.Fragment>);
       })}
@@ -622,12 +646,21 @@ export default function CustomizePage() {
         </div>
 
         {/* Center: studio label */}
-        <span style={{
-          fontFamily:"'Jost',sans-serif",fontSize:10,letterSpacing:".18em",
-          textTransform:"uppercase",color:V.mu,fontWeight:500,
-        }}>
-          Bespoke Design Studio
-        </span>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+          <span style={{
+            fontFamily:"'Jost',sans-serif",fontSize:10,letterSpacing:".18em",
+            textTransform:"uppercase",color:V.mu,fontWeight:500,
+          }}>
+            {isQuickMode ? "Quick Personalisation" : "Bespoke Design Studio"}
+          </span>
+          {isQuickMode && (
+            <span style={{
+              fontFamily:"'Jost',sans-serif",fontSize:8,letterSpacing:".12em",
+              textTransform:"uppercase",color:V.ac,fontWeight:600,
+              background:"rgba(201,168,76,0.1)",padding:"2px 8px",borderRadius:99,
+            }}>Logo · Text · Placement</span>
+          )}
+        </div>
 
         {/* Right: name input + save + cart */}
         <div style={{display:"flex",alignItems:"center",gap:8,minWidth:160,justifyContent:"flex-end"}}>
@@ -1213,15 +1246,17 @@ export default function CustomizePage() {
               </div>
 
               <div style={{display:"flex",gap:6,marginTop:4}}>
-                <button onClick={()=>setStep(2)} style={{
-                  flex:1,padding:"10px 0",borderRadius:99,
-                  border:`1px solid ${V.bd}`,background:"transparent",
-                  color:V.mu,fontSize:10,fontWeight:500,cursor:"pointer",
-                  fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",
-                  transition:"all 0.2s",
-                }}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>← Back</button>
+                {!isQuickMode && (
+                  <button onClick={()=>setStep(2)} style={{
+                    flex:1,padding:"10px 0",borderRadius:99,
+                    border:`1px solid ${V.bd}`,background:"transparent",
+                    color:V.mu,fontSize:10,fontWeight:500,cursor:"pointer",
+                    fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",
+                    transition:"all 0.2s",
+                  }}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>← Back</button>
+                )}
                 <button onClick={()=>setStep(4)} style={{
                   flex:2,padding:"10px 0",borderRadius:99,border:"none",
                   background:V.tx,color:"#fff",fontSize:10,fontWeight:600,cursor:"pointer",

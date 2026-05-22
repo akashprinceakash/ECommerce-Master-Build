@@ -397,18 +397,19 @@ export function Navbar() {
               Connect with Us
             </Link>
             {SHOW_CUSTOMIZATION && (
-              <Link
-                href="/products/1/customize"
-                onClick={() => setMobileOpen(false)}
+              <button
+                onClick={() => { setMobileOpen(false); setCustomizeModalOpen(true); }}
                 className="mt-3 text-[12px] uppercase text-white text-center py-3"
                 style={{
                   fontFamily: "'Josefin Sans', sans-serif",
                   letterSpacing: "0.2em",
                   background: GOLD,
+                  border: "none",
+                  cursor: "pointer",
                 }}
               >
                 Custom Studio
-              </Link>
+              </button>
             )}
             <Show when="signed-out">
               <Link
@@ -430,6 +431,7 @@ export function Navbar() {
       )}
 
       <CartDrawer open={isCartOpen} onClose={closeCart} cart={cart} />
+      <CustomizeEntryModal isOpen={customizeModalOpen} onClose={() => setCustomizeModalOpen(false)} />
     </>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
+import { CustomizeEntryModal } from "@/components/layout/CustomizeEntryModal";
 import { useQuery } from "@tanstack/react-query";
 import { getApiUrl } from "@/lib/api";
 
@@ -248,14 +249,17 @@ const BULK = [
 ];
 
 // ─── CategoryCard ─────────────────────────────────────────────────────────────
-function CategoryCard({ c }: { c: Card }) {
+function CategoryCard({ c, onBespokeClick }: { c: Card; onBespokeClick?: () => void }) {
   if (c.bespoke) {
     // Dark navy card — exactly as wireframe: #0F1622, gold border
     return (
-      <Link
-        href={c.href}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onBespokeClick}
+        onKeyDown={(e) => e.key === "Enter" && onBespokeClick?.()}
         className="block"
-        style={{ background: BG_DARK, border: `0.5px solid ${GOLD}`, borderRadius: 8, overflow: "hidden", transition: "transform 0.3s, box-shadow 0.3s" }}
+        style={{ background: BG_DARK, border: `0.5px solid ${GOLD}`, borderRadius: 8, overflow: "hidden", transition: "transform 0.3s, box-shadow 0.3s", cursor: "pointer" }}
         onMouseEnter={(e) => {
           (e.currentTarget as HTMLElement).style.transform  = "translateY(-2px)";
           (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 28px rgba(184,146,90,0.22)";
@@ -279,7 +283,7 @@ function CategoryCard({ c }: { c: Card }) {
           <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 14, color: "rgba(255,255,255,0.65)", letterSpacing: "0.04em", lineHeight: 1.7, marginBottom: 10 }}>{c.desc}</div>
           <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: GOLD, borderBottom: "0.5px solid rgba(184,146,90,0.4)", paddingBottom: 1 }}>Design yours →</span>
         </div>
-      </Link>
+      </div>
     );
   }
 
@@ -331,6 +335,7 @@ export default function Home() {
   const [progress, setProgress] = useState(0);
   const [tab,      setTab]      = useState<"men" | "women" | "kids">("men");
   const [chips,    setChips]    = useState<string[]>(["Colour"]);
+  const [customizeModalOpen, setCustomizeModalOpen] = useState(false);
 
   // Fetch hero banner overrides from CMS (set via admin → Site tab)
   const { data: siteSettings } = useQuery<Record<string, unknown>>({
@@ -490,8 +495,8 @@ export default function Home() {
                   </Link>
                   {/* Secondary outline CTA */}
                   {s.outline && (
-                    <Link
-                      href="#"
+                    <button
+                      onClick={() => setCustomizeModalOpen(true)}
                       style={{
                         background:    "rgba(255,255,255,0.08)",
                         backdropFilter:"blur(8px)",
@@ -502,14 +507,14 @@ export default function Home() {
                         textTransform: "uppercase",
                         padding:       "13px 32px",
                         border:        "0.5px solid rgba(255,255,255,0.32)",
-                        display:       "inline-block",
+                        cursor:        "pointer",
                         transition:    "border-color 0.2s, color 0.2s",
                       }}
                       onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.55)"; (e.currentTarget as HTMLElement).style.color = GOLD; }}
                       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.32)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.72)"; }}
                     >
                       {s.outline.label}
-                    </Link>
+                    </button>
                   )}
                 </div>
               </div>
@@ -600,7 +605,7 @@ export default function Home() {
             style={{ gap: 10, marginTop: 14 }}
           >
             {PANELS[tab].map((c) => (
-              <CategoryCard key={c.title + c.href} c={c} />
+              <CategoryCard key={c.title + c.href} c={c} onBespokeClick={() => setCustomizeModalOpen(true)} />
             ))}
           </div>
 
@@ -669,8 +674,8 @@ export default function Home() {
 
           {/* Right CTAs */}
           <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start", flexShrink: 0 }}>
-            <Link
-              href="/products/1/customize"
+            <button
+              onClick={() => setCustomizeModalOpen(true)}
               style={{
                 background:    GOLD,
                 color:         "#fff",
@@ -680,16 +685,17 @@ export default function Home() {
                 textTransform: "uppercase",
                 padding:       "13px 24px",
                 whiteSpace:    "nowrap",
-                display:       "inline-block",
+                border:        "none",
+                cursor:        "pointer",
                 transition:    "background 0.2s",
               }}
               onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = GOLD_LIGHT)}
               onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = GOLD)}
             >
               Start designing →
-            </Link>
+            </button>
             <Link
-              href="/products/1/customize"
+              href="/connect"
               style={{
                 fontFamily:    "'Josefin Sans', sans-serif",
                 fontSize:      12,
@@ -784,6 +790,7 @@ export default function Home() {
         </div>
       </section>
 
+      <CustomizeEntryModal isOpen={customizeModalOpen} onClose={() => setCustomizeModalOpen(false)} />
     </Layout>
   );
 }
