@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GT015 — 3D Shirt Color Customizer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0b0b14;font-family:'Segoe UI',sans-serif;color:#d8d4e8;overflow:hidden}
+#app{display:flex;height:100vh;width:100vw}
+
+/* ── Sidebar ─────────────────────────────────────────────────────── */
+#sidebar{
+  width:310px;min-width:310px;
+  background:#0e0e1c;
+  border-right:1px solid #1c1c2e;
+  display:flex;flex-direction:column;
+  overflow-y:auto;
+  scrollbar-width:thin;
+  scrollbar-color:#222238 transparent;
+}
+#sidebar::-webkit-scrollbar{width:4px}
+#sidebar::-webkit-scrollbar-thumb{background:#222238;border-radius:2px}
+
+.sb-head{padding:18px 18px 12px;border-bottom:1px solid #1c1c2e}
+.sb-head h1{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#a8a0c0}
+.sb-head .style-tag{
+  display:inline-block;margin-top:5px;
+  padding:2px 8px;background:#1e1e35;border-radius:10px;
+  font-size:10px;color:#6060cc;letter-spacing:.08em;
+}
+
+.section{padding:13px 18px;border-bottom:1px solid #181828}
+.sec-label{
+  font-size:9px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:#404058;margin-bottom:10px;
+  display:flex;align-items:center;gap:6px;
+}
+.sec-label i{
+  display:inline-block;width:14px;height:14px;border-radius:50%;
+  background:#1e1e35;border:1px solid #303050;
+  font-style:normal;font-size:8px;text-align:center;line-height:14px;
+  color:#6060aa;
+}
+
+/* ── Color swatch rows ─────────────────────────────────────────── */
+.color-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.color-label{font-size:10px;color:#555;width:68px;letter-spacing:.05em;flex-shrink:0}
+.swatch-strip{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.sw{
+  width:28px;height:28px;border-radius:50%;cursor:pointer;
+  border:2px solid transparent;transition:all .18s;flex-shrink:0;
+}
+.sw:hover{transform:scale(1.13)}
+.sw.active{border-color:#7c5cff;box-shadow:0 0 0 2px rgba(124,92,255,0.3);transform:scale(1.1)}
+.custom-sw{
+  width:28px;height:28px;border-radius:50%;border:1.5px dashed #444466;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:14px;color:#444466;transition:all .18s;flex-shrink:0;
+  background:none;overflow:hidden;position:relative;
+}
+.custom-sw:hover{border-color:#7c5cff;color:#9080ff;transform:scale(1.1)}
+.custom-sw input[type=color]{
+  position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;
+}
+
+/* Current color preview */
+.cur-preview{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;background:#13131f;border-radius:10px;
+  border:1px solid #222240;margin-bottom:8px;
+  transition:border-color .2s;
+}
+.cur-preview:hover{border-color:#333360}
+.cur-swatch{width:36px;height:36px;border-radius:8px;border:1px solid #2a2a45;flex-shrink:0;transition:all .2s}
+.cur-info{flex:1}
+.cur-name{font-size:11px;color:#aaa;margin-bottom:2px;font-weight:500}
+.cur-hex{font-size:10px;color:#666;letter-spacing:.10em;font-family:monospace}
+
+/* Color channel label */
+.color-channel-label{
+  font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:#404060;margin-bottom:6px;margin-top:2px;
+}
+
+/* ── Pattern card ──────────────────────────────────────────────── */
+.pat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pat-card{
+  border:1.5px solid #1e1e35;border-radius:10px;overflow:hidden;
+  cursor:pointer;background:#141428;position:relative;transition:all .15s;
+}
+.pat-card:hover{border-color:#5050cc;transform:translateY(-1px)}
+.pat-card.active{border-color:#7070ff;box-shadow:0 0 0 1.5px #7070ff33}
+.pat-card canvas{width:100%;aspect-ratio:1;display:block;background:#1a1a30}
+.pat-card .pname{font-size:9px;color:#666;text-align:center;padding:4px;letter-spacing:.04em}
+.pat-card.active .pname{color:#aaa}
+.pat-badge{
+  position:absolute;top:5px;left:5px;
+  padding:1px 6px;border-radius:8px;
+  background:#5050cc;color:#fff;font-size:8px;letter-spacing:.04em;
+  display:none;
+}
+.pat-card.active .pat-badge{display:block}
+
+/* Upload */
+.up-btn{
+  width:100%;padding:8px;background:#141428;
+  border:1.5px dashed #222240;border-radius:8px;
+  color:#505070;font-size:11px;cursor:pointer;text-align:center;
+  transition:all .2s;letter-spacing:.04em;margin-top:6px;display:block;
+}
+.up-btn:hover{border-color:#5050cc;color:#9090cc}
+
+/* ── Buttons ───────────────────────────────────────────────────── */
+.btn-row{display:flex;gap:8px;padding:12px 18px}
+.btn{
+  flex:1;padding:10px 8px;border:none;border-radius:10px;
+  font-size:11px;font-weight:700;cursor:pointer;
+  letter-spacing:.07em;transition:all .18s;
+}
+.btn-full{
+  background:linear-gradient(135deg,#c040c0,#7040ff);
+  color:#fff;
+}
+.btn-full:hover{opacity:.85;transform:translateY(-1px)}
+.btn-zone{
+  background:linear-gradient(135deg,#2040a0,#4060ff);
+  color:#fff;
+}
+.btn-zone:hover{opacity:.85;transform:translateY(-1px)}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+
+/* Zone tabs */
+.zone-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.ztab{
+  padding:4px 9px;font-size:10px;letter-spacing:.05em;
+  border:1px solid #222240;border-radius:20px;
+  cursor:pointer;background:#141428;color:#555;transition:all .15s;
+}
+.ztab:hover{border-color:#5050cc;color:#aaa}
+.ztab.active{background:#4040bb;border-color:#4040bb;color:#fff;font-weight:700}
+.ztab.has-pat{border-color:#336633;color:#4a944a}
+.ztab.active.has-pat{background:#2a5a2a;border-color:#4a944a;color:#7acc7a}
+
+/* Zone summary */
+.zone-table{width:100%;border-collapse:collapse;font-size:10px}
+.zone-table td{padding:3px 0;vertical-align:middle}
+.zone-table td:first-child{color:#444;width:78px;letter-spacing:.04em}
+.zb{
+  display:inline-block;padding:1px 7px;border-radius:8px;
+  font-size:9px;letter-spacing:.03em;white-space:nowrap;
+}
+.zb-ok{background:#1a2a1a;color:#5aaa5a}
+.zb-no{background:#1e1e28;color:#404055}
+
+/* ── Canvas area ──────────────────────────────────────────────── */
+#canvas-area{
+  flex:1;position:relative;
+  background:radial-gradient(ellipse at 38% 48%,#181830 0%,#0b0b14 72%);
+}
+#threeCanvas{width:100%;height:100%;display:block}
+
+#status{
+  position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+  background:#0d0d1ccc;backdrop-filter:blur(10px);
+  border:1px solid #1c1c2e;border-radius:20px;
+  padding:6px 16px;font-size:11px;color:#666;
+  letter-spacing:.06em;pointer-events:none;white-space:nowrap;
+  transition:color .3s;
+}
+#status.ok{color:#5aaa5a}
+
+#hint{
+  position:absolute;top:14px;right:14px;
+  font-size:10px;color:#282838;text-align:right;
+  letter-spacing:.04em;line-height:2.2;pointer-events:none;
+}
+
+/* UV preview */
+#uv-prev{
+  position:absolute;bottom:50px;right:14px;
+  width:140px;background:#0d0d1c;
+  border:1px solid #1c1c2e;border-radius:10px;
+  overflow:hidden;display:none;cursor:pointer;
+}
+#uvCanvas{width:140px;height:140px;display:block}
+#uv-prev .uv-lbl{font-size:9px;color:#444;text-align:center;padding:4px;letter-spacing:.07em;text-transform:uppercase}
+
+/* Color recolor area */
+.recolor-block{margin-top:8px}
+
+/* ── Color Presets ─────────────────────────────────────────────── */
+.preset-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+  margin-top:10px;
+}
+.preset-chip{
+  border-radius:8px;overflow:hidden;cursor:pointer;
+  border:1.5px solid #1e1e35;transition:all .18s;
+  position:relative;
+}
+.preset-chip:hover{border-color:#7c5cff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(124,92,255,.2)}
+.preset-chip.active-preset{border-color:#7c5cff;box-shadow:0 0 0 1.5px rgba(124,92,255,.35)}
+.preset-swatch{height:28px;display:flex}
+.preset-swatch-a{flex:1}
+.preset-swatch-b{flex:1}
+.preset-name{
+  font-size:8px;color:#555;text-align:center;
+  padding:3px 2px;letter-spacing:.04em;
+  background:#0e0e1c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.preset-chip.active-preset .preset-name{color:#aaa}
+
+/* ── Randomize / Export buttons ────────────────────────────────── */
+.tool-row{
+  display:flex;gap:6px;margin-top:10px;
+}
+.tool-btn{
+  flex:1;padding:7px 6px;border:1px solid #222240;border-radius:8px;
+  background:#131320;color:#5050a0;font-size:10px;cursor:pointer;
+  letter-spacing:.05em;transition:all .18s;text-align:center;
+}
+.tool-btn:hover{border-color:#7c5cff;color:#9c8cff;background:#17172a}
+.tool-btn.export-btn{border-color:#1a3a1a;color:#405040}
+.tool-btn.export-btn:hover{border-color:#4a944a;color:#7acc7a;background:#121c12}
+
+/* ── Download toast ─────────────────────────────────────────────── */
+#dl-toast{
+  position:fixed;bottom:24px;right:24px;
+  background:#131a13;border:1px solid #2a5a2a;border-radius:10px;
+  padding:10px 16px;font-size:11px;color:#7acc7a;letter-spacing:.05em;
+  opacity:0;transform:translateY(8px);pointer-events:none;
+  transition:opacity .3s, transform .3s;z-index:999;
+}
+#dl-toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="sidebar">
+
+  <div class="sb-head">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <h1>Shirt Designer</h1>
+      <span class="style-tag">GT015</span>
+    </div>
+    <div style="font-size:10px;color:#404055;margin-top:5px;letter-spacing:.04em">
+      Recolor pattern · Apply per zone or full body
+    </div>
+  </div>
+
+  <!-- ── COLOR CUSTOMIZER ───────────────────────────────────────── -->
+  <div class="section">
+    <div class="sec-label"><i>1</i> Pattern Colors</div>
+
+    <!-- Color A (was Black #000000) -->
+    <div style="margin-bottom:14px">
+      <div class="color-channel-label">Channel A — Dark tones</div>
+      <div class="cur-preview">
+        <div class="cur-swatch" id="previewA" style="background:#000000"></div>
+        <div class="cur-info">
+          <div class="cur-name">Color A <span style="color:#555;font-size:9px">(was Black)</span></div>
+          <div class="cur-hex" id="hexA">#000000</div>
+        </div>
+      </div>
+      <div class="swatch-strip" id="swatchesA">
+        <div class="sw active" data-color="#000000" style="background:#000000" title="Black"></div>
+        <div class="sw" data-color="#1a1a2e" style="background:#1a1a2e" title="Deep Navy"></div>
+        <div class="sw" data-color="#2d1b00" style="background:#2d1b00" title="Dark Brown"></div>
+        <div class="sw" data-color="#0d2b0d" style="background:#0d2b0d" title="Dark Forest"></div>
+        <div class="sw" data-color="#1a0a2e" style="background:#1a0a2e" title="Deep Purple"></div>
+        <div class="sw" data-color="#2e0a0a" style="background:#2e0a0a" title="Dark Red"></div>
+        <div class="sw" data-color="#1a1a1a" style="background:#1a1a1a" title="Charcoal"></div>
+        <div class="sw" data-color="#003333" style="background:#003333" title="Deep Teal"></div>
+        <div class="sw" data-color="#1c1c00" style="background:#1c1c00" title="Dark Olive"></div>
+        <div class="sw" data-color="#2a0a18" style="background:#2a0a18" title="Dark Maroon"></div>
+        <div class="sw" data-color="#001a33" style="background:#001a33" title="Midnight Blue"></div>
+        <div class="sw" data-color="#ffffff" style="background:#ffffff;border:1px solid #333" title="White"></div>
+        <div class="custom-sw" title="Custom color A">+<input type="color" id="pickerA" value="#000000"></div>
+      </div>
+    </div>
+
+    <!-- Color B (was Pink #F0CED2) -->
+    <div>
+      <div class="color-channel-label">Channel B — Light tones</div>
+      <div class="cur-preview">
+        <div class="cur-swatch" id="previewB" style="background:#F0CED2"></div>
+        <div class="cur-info">
+          <div class="cur-name">Color B <span style="color:#555;font-size:9px">(was Pink)</span></div>
+          <div class="cur-hex" id="hexB">#F0CED2</div>
+        </div>
+      </div>
+      <div class="swatch-strip" id="swatchesB">
+        <div class="sw active" data-color="#F0CED2" style="background:#F0CED2" title="Pink (original)"></div>
+        <div class="sw" data-color="#ffffff" style="background:#ffffff;border:1px solid #333" title="White"></div>
+        <div class="sw" data-color="#d0e8ff" style="background:#d0e8ff" title="Sky Blue"></div>
+        <div class="sw" data-color="#b8f0c8" style="background:#b8f0c8" title="Mint"></div>
+        <div class="sw" data-color="#fff0cc" style="background:#fff0cc" title="Cream"></div>
+        <div class="sw" data-color="#e8d0f8" style="background:#e8d0f8" title="Lavender"></div>
+        <div class="sw" data-color="#ffd0d0" style="background:#ffd0d0" title="Blush"></div>
+        <div class="sw" data-color="#c0f0ee" style="background:#c0f0ee" title="Aqua"></div>
+        <div class="sw" data-color="#ffe8b0" style="background:#ffe8b0" title="Peach"></div>
+        <div class="sw" data-color="#f0f0a0" style="background:#f0f0a0" title="Lemon"></div>
+        <div class="sw" data-color="#ffc8e8" style="background:#ffc8e8" title="Rose"></div>
+        <div class="sw" data-color="#c8e0a0" style="background:#c8e0a0" title="Sage"></div>
+        <div class="sw" data-color="#d8c8f8" style="background:#d8c8f8" title="Periwinkle"></div>
+        <div class="custom-sw" title="Custom color B">+<input type="color" id="pickerB" value="#F0CED2"></div>
+      </div>
+    </div>
+
+    <!-- Live color mix preview bar -->
+    <div id="colorMixPreview" style="display:flex;align-items:center;gap:8px;margin-top:12px;padding:8px 10px;background:#0d0d1a;border-radius:8px;border:1px solid #1e1e35">
+      <div style="font-size:9px;color:#404058;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0">Mix</div>
+      <div id="mixSwatchA" style="width:20px;height:20px;border-radius:4px;background:#000000;border:1px solid #2a2a45;flex-shrink:0"></div>
+      <div style="font-size:10px;color:#303048">+</div>
+      <div id="mixSwatchB" style="width:20px;height:20px;border-radius:4px;background:#F0CED2;border:1px solid #2a2a45;flex-shrink:0"></div>
+      <div style="font-size:9px;color:#303048;flex:1;text-align:center;letter-spacing:.04em">→ recolor</div>
+      <div id="mixResult" style="width:40px;height:20px;border-radius:4px;border:1px solid #2a2a45;background:linear-gradient(90deg,#000000,#F0CED2);flex-shrink:0"></div>
+    </div>
+
+    <!-- Color Presets -->
+    <div style="margin-top:14px">
+      <div class="color-channel-label" style="margin-bottom:8px">Quick Presets</div>
+      <div class="preset-grid" id="presetGrid"></div>
+    </div>
+
+    <!-- Randomize + Reset Pair -->
+    <div class="tool-row">
+      <button class="tool-btn" id="btnRandomize">🎲 Randomize</button>
+      <button class="tool-btn" id="btnSwapAB">⇄ Swap A↔B</button>
+    </div>
+  </div>
+
+  <!-- ── EXPORT ────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="sec-label"><i>↓</i> Export</div>
+    <div style="display:flex;gap:6px">
+      <button class="tool-btn export-btn" id="btnExportAtlas" style="flex:2">⬇ Download UV Atlas PNG</button>
+      <button class="tool-btn export-btn" id="btnCopyHex" style="flex:1">📋 Copy Hex</button>
+    </div>
+  </div>
+
+  <!-- ── PATTERN LIBRARY ───────────────────────────────────────── -->
+  <div class="section">
+    <div class="sec-label"><i>2</i> Pattern</div>
+    <div class="pat-grid" id="patGrid"></div>
+    <label class="up-btn" for="customUpload">+ Upload your own pattern</label>
+    <input type="file" id="customUpload" accept="image/*" style="display:none">
+  </div>
+
+  <!-- ── ZONE SELECTOR ─────────────────────────────────────────── -->
+  <div class="section">
+    <div class="sec-label"><i>3</i> Target Zone <span style="color:#333;font-weight:400;letter-spacing:.04em;font-size:9px;text-transform:none;margin-left:4px">for zone apply</span></div>
+    <div class="zone-tabs" id="zoneTabs">
+      <div class="ztab active" data-zone="front">Front</div>
+      <div class="ztab" data-zone="back">Back</div>
+      <div class="ztab" data-zone="collar">Collar</div>
+      <div class="ztab" data-zone="leftSleeve">L.Sleeve</div>
+      <div class="ztab" data-zone="rightSleeve">R.Sleeve</div>
+    </div>
+  </div>
+
+  <!-- ── APPLY BUTTONS ─────────────────────────────────────────── -->
+  <div class="btn-row">
+    <button class="btn btn-full" id="btnFull">⬡ Apply Full Body</button>
+    <button class="btn btn-zone" id="btnZone">◈ Apply Zone</button>
+  </div>
+
+  <!-- ── ZONE SUMMARY ──────────────────────────────────────────── -->
+  <div class="section">
+    <div class="sec-label"><i>✓</i> Zone Status</div>
+    <table class="zone-table" id="zoneSummary"></table>
+    <div style="margin-top:10px">
+      <button class="up-btn" id="btnReset" style="border-style:solid;border-color:#2e1a1a;color:#553333">
+        ↺ Reset all zones
+      </button>
+    </div>
+  </div>
+
+</div><!-- /sidebar -->
+
+<!-- ── 3D Viewport ─────────────────────────────────────────────── -->
+<div id="canvas-area">
+  <canvas id="threeCanvas"></canvas>
+  <div id="status">Loading 3D model…</div>
+  <div id="hint">Drag · Rotate &nbsp;|&nbsp; Scroll · Zoom<br>Right-drag · Pan</div>
+  <div id="uv-prev">
+    <canvas id="uvCanvas"></canvas>
+    <div class="uv-lbl">UV Atlas · click to hide</div>
+  </div>
+</div>
+</div><!-- /app -->
+<div id="dl-toast">✓ Downloaded!</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ── Zone presets (pixel coords on 1024×1024 UV atlas) ───────────────────────
+const ATLAS_W = 1024, ATLAS_H = 1024;
+const RAW_ZONES = {
+  front:       { left:  10, top: 341, w: 490, h: 678 },
+  back:        { left: 524, top: 188, w: 483, h: 833 },
+  collar:      { left:  12, top: 183, w: 507, h: 166 },
+  leftSleeve:  { left: 210, top:   4, w: 398, h: 170 },
+  rightSleeve: { left: 617, top:   2, w: 398, h: 171 },
+};
+const ZONE_KEYS   = ['front','back','collar','leftSleeve','rightSleeve'];
+const ZONE_LABELS = {front:'Front',back:'Back',collar:'Collar',leftSleeve:'L. Sleeve',rightSleeve:'R. Sleeve'};
+
+// ── App state ────────────────────────────────────────────────────────────────
+// Colors to remap: A = dark (black), B = light (pink)
+let colorA = '#000000';   // replaces source black  (#000000)
+let colorB = '#F0CED2';   // replaces source pink   (#F0CED2)
+
+// Source pattern colors (what we search for in the image)
+const SRC_A = { r:0,   g:0,   b:0   };   // black
+const SRC_B = { r:240, g:206, b:210 };   // #F0CED2 pink
+
+const TOLERANCE = 60; // color distance threshold for matching
+
+// Pattern library: each entry = { id, name, srcUrl, previewCanvas? }
+const patterns = [
+  { id:'gt015', name:'GT015', srcUrl:'kasha.png' }
+];
+
+// Per-zone state: { patternId, colorA, colorB }
+const zoneState = {};
+for (const k of ZONE_KEYS) zoneState[k] = { patternId: null, colorA: '#000000', colorB: '#F0CED2' };
+
+let activeZone     = 'front';
+let selectedPat    = null;     // currently highlighted pattern id
+let compositeTexture = null;
+let scene, camera, renderer, controls, model;
+
+// Baked zone images: zone → ImageData (recolored)
+const bakedZones = {};  // zone → HTMLCanvasElement
+
+// ── Bootstrap ────────────────────────────────────────────────────────────────
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+
+async function boot(){
+  await loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js');
+  await loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js');
+  initThree();
+  initUI();
+  loadModel();
+  buildPatternGrid();
+  buildPresetGrid();
+  renderLoop();
+}
+boot();
+
+// ── Three.js ─────────────────────────────────────────────────────────────────
+function initThree(){
+  const area = document.getElementById('canvas-area');
+  renderer = new THREE.WebGLRenderer({ canvas:document.getElementById('threeCanvas'), antialias:true, alpha:true });
+  renderer.setPixelRatio(devicePixelRatio);
+  renderer.setSize(area.clientWidth, area.clientHeight);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.25;
+  renderer.shadowMap.enabled = true;
+
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(42, area.clientWidth/area.clientHeight, 0.01, 100);
+  camera.position.set(0, 0.15, 3.2);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true; controls.dampingFactor = 0.07;
+  controls.minDistance = 0.8; controls.maxDistance = 10;
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  const d1 = new THREE.DirectionalLight(0xffffff, 1.3); d1.position.set(2,4,3); d1.castShadow=true; scene.add(d1);
+  const d2 = new THREE.DirectionalLight(0xd8e0ff, 0.45); d2.position.set(-3,1,-2); scene.add(d2);
+  const d3 = new THREE.DirectionalLight(0xfff4e0, 0.2); d3.position.set(0,-3,1); scene.add(d3);
+
+  window.addEventListener('resize',()=>{
+    renderer.setSize(area.clientWidth, area.clientHeight);
+    camera.aspect = area.clientWidth/area.clientHeight;
+    camera.updateProjectionMatrix();
+  });
+}
+function renderLoop(){ requestAnimationFrame(renderLoop); controls.update(); renderer.render(scene,camera); }
+9741242815
+function loadModel(){
+  setStatus('Loading 3D model…');
+  const loader = new THREE.GLTFLoader();
+  loader.load('collar_t-shirt_model.glb',
+    gltf=>{
+      if(model) scene.remove(model);
+      model = gltf.scene;
+      const box = new THREE.Box3().setFromObject(model);
+      const cen = box.getCenter(new THREE.Vector3());
+      const siz = box.getSize(new THREE.Vector3());
+      const sc  = 2.4 / Math.max(siz.x, siz.y, siz.z);
+      model.scale.setScalar(sc);
+      model.position.sub(cen.multiplyScalar(sc));
+      scene.add(model);
+      setStatus('Model ready — pick colors then Apply', true);
+    },
+    p=>{ if(p.total>0) setStatus(`Loading model ${Math.round(p.loaded/p.total*100)}%`); },
+    e=>{ console.error(e); setStatus('⚠ Model load error'); }
+  );
+}
+
+// ── Color recoloring ─────────────────────────────────────────────────────────
+function hexToRgb(hex){
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return {r,g,b};
+}
+function colorDist(r1,g1,b1,r2,g2,b2){
+  return Math.sqrt((r1-r2)**2+(g1-g2)**2+(b1-b2)**2);
+}
+
+// Load an image and return a canvas with the image drawn on it
+function loadImageData(url){
+  return new Promise((res,rej)=>{
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = ()=>{
+      const w = img.naturalWidth  || img.width;
+      const h = img.naturalHeight || img.height;
+      if(!w || !h){ rej(new Error('Image has zero dimensions: '+url)); return; }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0);
+      res(c);
+    };
+    img.onerror = ()=>rej(new Error('Failed to load image: '+url));
+    img.src = url;
+  });
+}
+
+// Recolor image: replace SRC_A → cA_hex, SRC_B → cB_hex
+// srcCanvas must be an HTMLCanvasElement with non-zero width/height
+function recolorImage(srcCanvas, cA_hex, cB_hex){
+  const w = srcCanvas.width  | 0;   // bitwise-or 0 converts to integer (guards NaN/undefined)
+  const h = srcCanvas.height | 0;
+  if(!w || !h) throw new Error('recolorImage: source canvas has zero dimensions');
+
+  const out = document.createElement('canvas');
+  out.width = w; out.height = h;
+  const ctx = out.getContext('2d');
+  ctx.drawImage(srcCanvas, 0, 0);
+
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const pix = imgData.data;
+  const nA = hexToRgb(cA_hex);
+  const nB = hexToRgb(cB_hex);
+
+  for(let i = 0; i < pix.length; i += 4){
+    const r = pix[i], g = pix[i+1], b = pix[i+2];
+    const dA = colorDist(r, g, b, SRC_A.r, SRC_A.g, SRC_A.b);
+    const dB = colorDist(r, g, b, SRC_B.r, SRC_B.g, SRC_B.b);
+    if(dA <= dB && dA < TOLERANCE){
+      const t = Math.max(0, 1 - dA / TOLERANCE);
+      pix[i]   = Math.round(r*(1-t) + nA.r*t) | 0;
+      pix[i+1] = Math.round(g*(1-t) + nA.g*t) | 0;
+      pix[i+2] = Math.round(b*(1-t) + nA.b*t) | 0;
+    } else if(dB < TOLERANCE){
+      const t = Math.max(0, 1 - dB / TOLERANCE);
+      pix[i]   = Math.round(r*(1-t) + nB.r*t) | 0;
+      pix[i+1] = Math.round(g*(1-t) + nB.g*t) | 0;
+      pix[i+2] = Math.round(b*(1-t) + nB.b*t) | 0;
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return out;
+}
+
+// Cache of loaded source canvases by URL
+const srcCache = {};
+
+async function getSrcCanvas(url){
+  if(srcCache[url]) return srcCache[url];
+  const canvas = await loadImageData(url);   // now returns HTMLCanvasElement directly
+  srcCache[url] = canvas;
+  return canvas;
+}
+
+// ── Baking & applying to 3D model ────────────────────────────────────────────
+async function bakeAtlas(){
+  // Create the 1024×1024 atlas canvas
+  const atlas = document.createElement('canvas');
+  atlas.width = ATLAS_W; atlas.height = ATLAS_H;
+  const ctx = atlas.getContext('2d');
+
+  // Default background (gray fabric)
+  ctx.fillStyle = '#cccccc';
+  ctx.fillRect(0,0,ATLAS_W,ATLAS_H);
+
+  // Draw each zone that has been assigned
+  for(const zk of ZONE_KEYS){
+    const zs  = zoneState[zk];
+    if(!zs.patternId) continue;
+    const pat = patterns.find(p=>p.id===zs.patternId);
+    if(!pat) continue;
+
+    const z = RAW_ZONES[zk];
+    let src;
+    try{ src = await getSrcCanvas(pat.srcUrl); } catch(e){ console.warn(zk,'src load fail',e); continue; }
+    if(!src || !src.width || !src.height){ console.warn(zk,'src canvas zero dims'); continue; }
+
+    // Recolor with the zone's chosen colors
+    const recolored = recolorImage(src, zs.colorA, zs.colorB);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(z.left, z.top, z.w, z.h);
+    ctx.clip();
+    ctx.drawImage(recolored, z.left, z.top, z.w, z.h);
+    ctx.restore();
+  }
+
+  // Show UV preview
+  const pvC = document.getElementById('uvCanvas');
+  pvC.width = 140; pvC.height = 140;
+  pvC.getContext('2d').drawImage(atlas,0,0,140,140);
+  document.getElementById('uv-prev').style.display = 'block';
+
+  return atlas;
+}
+
+async function applyAtlasToModel(atlas){
+  if(!model){ setStatus('⚠ Model not loaded yet'); return; }
+  if(compositeTexture) compositeTexture.dispose();
+  compositeTexture = new THREE.CanvasTexture(atlas);
+  compositeTexture.encoding = THREE.sRGBEncoding;
+  compositeTexture.flipY = false;
+  compositeTexture.needsUpdate = true;
+
+  model.traverse(node=>{
+    if(!node.isMesh) return;
+    const mats = Array.isArray(node.material) ? node.material : [node.material];
+    mats.forEach(m=>{
+      m.map = compositeTexture;
+      m.roughness = 0.85;
+      m.metalness = 0;
+      m.color.set(0xffffff);
+      m.needsUpdate = true;
+    });
+  });
+}
+
+async function applyFullBody(){
+  const btn = document.getElementById('btnFull');
+  btn.disabled = true;
+  setStatus('Applying to full body…');
+  // Assign current pattern + colors to ALL zones
+  if(!selectedPat){ setStatus('⚠ Select a pattern first'); btn.disabled=false; return; }
+  for(const zk of ZONE_KEYS){
+    zoneState[zk] = { patternId: selectedPat, colorA, colorB };
+  }
+  updateZoneTabs();
+  updateZoneSummary();
+  const atlas = await bakeAtlas();
+  await applyAtlasToModel(atlas);
+  btn.disabled = false;
+  setStatus('Full body applied ✓', true);
+}
+
+async function applyZone(){
+  const btn = document.getElementById('btnZone');
+  btn.disabled = true;
+  setStatus(`Applying to ${ZONE_LABELS[activeZone]}…`);
+  if(!selectedPat){ setStatus('⚠ Select a pattern first'); btn.disabled=false; return; }
+  zoneState[activeZone] = { patternId: selectedPat, colorA, colorB };
+  updateZoneTabs();
+  updateZoneSummary();
+  const atlas = await bakeAtlas();
+  await applyAtlasToModel(atlas);
+  btn.disabled = false;
+  setStatus(`${ZONE_LABELS[activeZone]} applied ✓`, true);
+}
+
+// ── Pattern grid ──────────────────────────────────────────────────────────────
+async function buildPatternGrid(){
+  const grid = document.getElementById('patGrid');
+  grid.innerHTML = '';
+  for(const p of patterns){
+    const card = document.createElement('div');
+    card.className = 'pat-card';
+    card.dataset.id = p.id;
+
+    // Use <img> for preview — avoids canvas zero-dimension issues
+    const prevImg = document.createElement('img');
+    prevImg.style.cssText = 'width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#1a1a30';
+    prevImg.alt = p.name;
+    card.appendChild(prevImg);
+
+    const badge = document.createElement('div');
+    badge.className = 'pat-badge';
+    badge.textContent = 'selected';
+    card.appendChild(badge);
+
+    const nm = document.createElement('div');
+    nm.className = 'pname';
+    nm.textContent = p.name;
+    card.appendChild(nm);
+
+    card.addEventListener('click', ()=>{ selectPat(p.id); });
+    grid.appendChild(card);
+
+    // Render recolored preview asynchronously → data URL → img.src
+    renderPreview(p, prevImg);
+  }
+  // Auto-select first
+  if(patterns.length) selectPat(patterns[0].id);
+}
+
+// Render a recolored thumbnail into an <img> element via data URL
+async function renderPreview(p, imgEl){
+  try{
+    const src = await getSrcCanvas(p.srcUrl);
+    if(!src || !src.width || !src.height) return;
+    const recolored = recolorImage(src, colorA, colorB);
+    imgEl.src = recolored.toDataURL('image/jpeg', 0.85);
+  } catch(e){ console.warn('preview fail:', e.message); }
+}
+
+function selectPat(id){
+  selectedPat = id;
+  document.querySelectorAll('.pat-card').forEach(c=>{
+    c.classList.toggle('active', c.dataset.id===id);
+  });
+}
+
+async function refreshPatternPreviews(){
+  for(const p of patterns){
+    const card = document.querySelector(`.pat-card[data-id="${p.id}"]`);
+    if(!card) continue;
+    const imgEl = card.querySelector('img');
+    if(imgEl) renderPreview(p, imgEl);
+  }
+}
+
+// ── Color Presets ─────────────────────────────────────────────────────────────
+const COLOR_PRESETS = [
+  { name:'Original',  a:'#000000', b:'#F0CED2' },
+  { name:'Ocean',     a:'#001a33', b:'#b8eeff' },
+  { name:'Ember',     a:'#2e0a0a', b:'#ffd090' },
+  { name:'Forest',    a:'#0d2b0d', b:'#c8f0a0' },
+  { name:'Dusk',      a:'#1a0a2e', b:'#f0c8e8' },
+  { name:'Slate',     a:'#1a1a2e', b:'#d0e8ff' },
+  { name:'Cinder',    a:'#1a1a1a', b:'#f0f0d8' },
+  { name:'Reef',      a:'#003333', b:'#c0f0ee' },
+  { name:'Bordeaux',  a:'#2a0a18', b:'#ffc8c8' },
+  { name:'Moss',      a:'#1c1c00', b:'#d8f0b0' },
+  { name:'Midnight',  a:'#000814', b:'#e8e0ff' },
+  { name:'Copper',    a:'#2d1b00', b:'#ffd8a0' },
+];
+
+function buildPresetGrid(){
+  const grid = document.getElementById('presetGrid');
+  grid.innerHTML = '';
+  COLOR_PRESETS.forEach((p, idx) => {
+    const chip = document.createElement('div');
+    chip.className = 'preset-chip' + (idx === 0 ? ' active-preset' : '');
+    chip.dataset.idx = idx;
+    chip.title = `${p.name}: A=${p.a} B=${p.b}`;
+    chip.innerHTML = `
+      <div class="preset-swatch">
+        <div class="preset-swatch-a" style="background:${p.a}"></div>
+        <div class="preset-swatch-b" style="background:${p.b}"></div>
+      </div>
+      <div class="preset-name">${p.name}</div>`;
+    chip.addEventListener('click', () => applyPreset(idx));
+    grid.appendChild(chip);
+  });
+}
+
+function applyPreset(idx){
+  const p = COLOR_PRESETS[idx];
+  setColorA(p.a);
+  setColorB(p.b);
+  // clear swatch actives and mark preset
+  document.querySelectorAll('#swatchesA .sw').forEach(s => s.classList.toggle('active', s.dataset.color === p.a));
+  document.querySelectorAll('#swatchesB .sw').forEach(s => s.classList.toggle('active', s.dataset.color === p.b));
+  document.querySelectorAll('.preset-chip').forEach(c => c.classList.toggle('active-preset', +c.dataset.idx === idx));
+}
+
+function clearPresetActive(){
+  document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active-preset'));
+}
+
+// ── Export helpers ─────────────────────────────────────────────────────────────
+function showToast(msg){
+  const t = document.getElementById('dl-toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+async function exportAtlas(){
+  // Bake atlas first if zones are set, else create a preview canvas
+  let canvas;
+  const hasZones = ZONE_KEYS.some(k => zoneState[k].patternId);
+  if(hasZones){
+    canvas = await bakeAtlas();
+  } else {
+    // Export just a color swatch preview
+    canvas = document.createElement('canvas');
+    canvas.width = 400; canvas.height = 100;
+    const ctx = canvas.getContext('2d');
+    const grd = ctx.createLinearGradient(0,0,400,0);
+    grd.addColorStop(0, colorA);
+    grd.addColorStop(1, colorB);
+    ctx.fillStyle = grd;
+    ctx.fillRect(0,0,400,100);
+  }
+  const link = document.createElement('a');
+  link.download = `gt015_design_${Date.now()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  showToast('✓ Atlas exported as PNG');
+}
+
+function copyHexPair(){
+  const text = `Color A: ${colorA.toUpperCase()}  |  Color B: ${colorB.toUpperCase()}`;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('✓ Hex values copied!');
+  }).catch(() => {
+    showToast(`A: ${colorA.toUpperCase()} · B: ${colorB.toUpperCase()}`);
+  });
+}
+
+const RANDOM_DARK = ['#000000','#1a1a2e','#2d1b00','#0d2b0d','#1a0a2e','#2e0a0a','#1a1a1a','#003333','#1c1c00','#2a0a18','#001a33','#000814'];
+const RANDOM_LIGHT = ['#F0CED2','#ffffff','#d0e8ff','#b8f0c8','#fff0cc','#e8d0f8','#ffd0d0','#c0f0ee','#ffe8b0','#f0f0a0','#ffc8e8','#c8e0a0','#d8c8f8','#ffd8a0'];
+
+function randomizeColors(){
+  const a = RANDOM_DARK[Math.floor(Math.random() * RANDOM_DARK.length)];
+  const b = RANDOM_LIGHT[Math.floor(Math.random() * RANDOM_LIGHT.length)];
+  setColorA(a); setColorB(b);
+  document.querySelectorAll('#swatchesA .sw').forEach(s => s.classList.toggle('active', s.dataset.color === a));
+  document.querySelectorAll('#swatchesB .sw').forEach(s => s.classList.toggle('active', s.dataset.color === b));
+  clearPresetActive();
+  showToast(`🎲 ${a.toUpperCase()} + ${b.toUpperCase()}`);
+}
+
+function swapColors(){
+  const tmpA = colorA, tmpB = colorB;
+  setColorA(tmpB); setColorB(tmpA);
+  document.querySelectorAll('#swatchesA .sw').forEach(s => s.classList.toggle('active', s.dataset.color === tmpB));
+  document.querySelectorAll('#swatchesB .sw').forEach(s => s.classList.toggle('active', s.dataset.color === tmpA));
+  clearPresetActive();
+}
+
+
+function initUI(){
+  // Color A swatches
+  document.getElementById('swatchesA').addEventListener('click', e=>{
+    const sw = e.target.closest('.sw');
+    if(!sw) return;
+    setColorA(sw.dataset.color);
+    document.querySelectorAll('#swatchesA .sw').forEach(s=>s.classList.toggle('active',s===sw));
+    clearPresetActive();
+  });
+  document.getElementById('pickerA').addEventListener('input', e=>{
+    setColorA(e.target.value);
+    document.querySelectorAll('#swatchesA .sw').forEach(s=>s.classList.remove('active'));
+    clearPresetActive();
+  });
+
+  // Color B swatches
+  document.getElementById('swatchesB').addEventListener('click', e=>{
+    const sw = e.target.closest('.sw');
+    if(!sw) return;
+    setColorB(sw.dataset.color);
+    document.querySelectorAll('#swatchesB .sw').forEach(s=>s.classList.toggle('active',s===sw));
+    clearPresetActive();
+  });
+  document.getElementById('pickerB').addEventListener('input', e=>{
+    setColorB(e.target.value);
+    document.querySelectorAll('#swatchesB .sw').forEach(s=>s.classList.remove('active'));
+    clearPresetActive();
+  });
+
+  // Zone tabs
+  document.getElementById('zoneTabs').addEventListener('click', e=>{
+    const t = e.target.closest('.ztab');
+    if(!t) return;
+    activeZone = t.dataset.zone;
+    document.querySelectorAll('.ztab').forEach(x=>{
+      x.classList.toggle('active', x===t);
+    });
+  });
+
+  // Buttons
+  document.getElementById('btnFull').addEventListener('click', applyFullBody);
+  document.getElementById('btnZone').addEventListener('click', applyZone);
+
+  document.getElementById('btnRandomize').addEventListener('click', randomizeColors);
+  document.getElementById('btnSwapAB').addEventListener('click', swapColors);
+  document.getElementById('btnExportAtlas').addEventListener('click', exportAtlas);
+  document.getElementById('btnCopyHex').addEventListener('click', copyHexPair);
+
+  document.getElementById('btnReset').addEventListener('click', ()=>{
+    for(const k of ZONE_KEYS) zoneState[k] = { patternId:null, colorA:'#000000', colorB:'#F0CED2' };
+    updateZoneTabs();
+    updateZoneSummary();
+    // Reset to gray model
+    if(model) model.traverse(n=>{ if(n.isMesh){ const m=n.material; m.map=null; m.color.set(0xaaaaaa); m.needsUpdate=true; }});
+    setStatus('Reset — all zones cleared');
+  });
+
+  // Upload
+  document.getElementById('customUpload').addEventListener('change', async e=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    const url = URL.createObjectURL(f);
+    const id = 'custom_'+Date.now();
+    patterns.push({ id, name: f.name.split('.')[0].slice(0,12), srcUrl:url });
+    await buildPatternGrid();
+    selectPat(id);
+  });
+
+  // UV preview hide
+  document.getElementById('uv-prev').addEventListener('click', ()=>{
+    document.getElementById('uv-prev').style.display = 'none';
+  });
+
+  updateZoneSummary();
+}
+
+function setColorA(hex){
+  colorA = hex;
+  document.getElementById('previewA').style.background = hex;
+  document.getElementById('hexA').textContent = hex.toUpperCase();
+  document.getElementById('pickerA').value = hex;
+  document.getElementById('mixSwatchA').style.background = hex;
+  document.getElementById('mixResult').style.background = `linear-gradient(90deg,${hex},${colorB})`;
+  refreshPatternPreviews();
+}
+function setColorB(hex){
+  colorB = hex;
+  document.getElementById('previewB').style.background = hex;
+  document.getElementById('hexB').textContent = hex.toUpperCase();
+  document.getElementById('pickerB').value = hex;
+  document.getElementById('mixSwatchB').style.background = hex;
+  document.getElementById('mixResult').style.background = `linear-gradient(90deg,${colorA},${hex})`;
+  refreshPatternPreviews();
+}
+
+function updateZoneTabs(){
+  document.querySelectorAll('.ztab').forEach(t=>{
+    const zk = t.dataset.zone;
+    const has = !!zoneState[zk].patternId;
+    t.classList.toggle('has-pat', has);
+  });
+}
+function updateZoneSummary(){
+  const tbl = document.getElementById('zoneSummary');
+  tbl.innerHTML = '';
+  for(const zk of ZONE_KEYS){
+    const zs = zoneState[zk];
+    const name = zs.patternId ? (patterns.find(p=>p.id===zs.patternId)?.name||'custom') : '—';
+    const cls  = zs.patternId ? 'zb zb-ok' : 'zb zb-no';
+    const swA  = zs.patternId ? `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${zs.colorA};vertical-align:middle;margin:0 2px;border:1px solid #333"></span>` : '';
+    const swB  = zs.patternId ? `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${zs.colorB};vertical-align:middle;margin:0 2px;border:1px solid #333"></span>` : '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${ZONE_LABELS[zk]}</td><td><span class="${cls}">${name}</span>${swA}${swB}</td>`;
+    tbl.appendChild(tr);
+  }
+}
+
+function setStatus(msg, ok=false){
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.classList.toggle('ok', ok);
+}
+</script>
+</body>
+</html>

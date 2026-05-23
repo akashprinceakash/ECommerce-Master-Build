@@ -108,6 +108,81 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
 // ── Engine ───────────────────────────────────────────────────────────────────
 const KD_TAG = "__kashaKdBg__";
 
+// ── Pattern recolour engine ────────────────────────────────────────────────────
+// Mirrors the GT015 recolorImage algorithm from the pasted reference code.
+// Channel A replaces dark / near-black pixels (#000000).
+// Channel B replaces light / near-pink pixels  (#F0CED2).
+
+export interface RecolorOptions {
+  /** Hex colour that replaces Channel A — dark/black pixels (default #000000) */
+  colorA: string;
+  /** Hex colour that replaces Channel B — light/pink pixels (default #F0CED2) */
+  colorB: string;
+}
+
+/** Source colours baked into the KA.SHA design PNGs */
+const SRC_A = { r: 0,   g: 0,   b: 0   };       // #000000 — black
+const SRC_B = { r: 240, g: 206, b: 210 };        // #F0CED2 — pink
+const TOLERANCE = 60;
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  return {
+    r: parseInt(hex.slice(1, 3), 16),
+    g: parseInt(hex.slice(3, 5), 16),
+    b: parseInt(hex.slice(5, 7), 16),
+  };
+}
+function colorDist(r1: number, g1: number, b1: number, r2: number, g2: number, b2: number): number {
+  return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2);
+}
+
+/** Recolor a canvas: near-black → colorA, near-pink → colorB. Returns a new canvas. */
+function recolorCanvas(src: HTMLCanvasElement, cA_hex: string, cB_hex: string): HTMLCanvasElement {
+  const w = src.width, h = src.height;
+  const out = document.createElement("canvas");
+  out.width = w; out.height = h;
+  const ctx = out.getContext("2d")!;
+  ctx.drawImage(src, 0, 0);
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const pix = imgData.data;
+  const nA = hexToRgb(cA_hex);
+  const nB = hexToRgb(cB_hex);
+  for (let i = 0; i < pix.length; i += 4) {
+    const r = pix[i], g = pix[i + 1], b = pix[i + 2];
+    const dA = colorDist(r, g, b, SRC_A.r, SRC_A.g, SRC_A.b);
+    const dB = colorDist(r, g, b, SRC_B.r, SRC_B.g, SRC_B.b);
+    if (dA <= dB && dA < TOLERANCE) {
+      const t = Math.max(0, 1 - dA / TOLERANCE);
+      pix[i]     = Math.round(r * (1 - t) + nA.r * t);
+      pix[i + 1] = Math.round(g * (1 - t) + nA.g * t);
+      pix[i + 2] = Math.round(b * (1 - t) + nA.b * t);
+    } else if (dB < TOLERANCE) {
+      const t = Math.max(0, 1 - dB / TOLERANCE);
+      pix[i]     = Math.round(r * (1 - t) + nB.r * t);
+      pix[i + 1] = Math.round(g * (1 - t) + nB.g * t);
+      pix[i + 2] = Math.round(b * (1 - t) + nB.b * t);
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return out;
+}
+
+/** Load a base64/data URL into an offscreen HTMLCanvasElement */
+function dataUrlToCanvas(dataUrl: string): Promise<HTMLCanvasElement> {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width  = img.naturalWidth  || img.width;
+      c.height = img.naturalHeight || img.height;
+      c.getContext("2d")!.drawImage(img, 0, 0);
+      res(c);
+    };
+    img.onerror = rej;
+    img.src = dataUrl;
+  });
+}
+
 /** Remove the KA.SHA design layer from the fabric canvas */
 export function clearKashaDesign(fc: fabric.Canvas): void {
   fc.getObjects()
@@ -115,12 +190,16 @@ export function clearKashaDesign(fc: fabric.Canvas): void {
     .forEach((o) => fc.remove(o));
 }
 
-/** Place zone textures at their UV positions on the fabric canvas */
+/** Place zone textures at their UV positions on the fabric canvas.
+ *  Pass `recolor` to channel-replace colours in the design PNGs before placing. */
 export async function applyKashaDesign(
-  fc:     fabric.Canvas,
-  design: KashaDesignDef,
+  fc:      fabric.Canvas,
+  design:  KashaDesignDef,
+  recolor?: RecolorOptions,
 ): Promise<void> {
   clearKashaDesign(fc);
+
+  const needsRecolor = recolor && (recolor.colorA !== "#000000" || recolor.colorB !== "#F0CED2");
 
   const zoneMap: Array<{ key: keyof KashaDesignDef['zones']; zone: keyof typeof ZONE_PRESETS }> = [
     { key: 'front',       zone: 'front'       },
@@ -133,8 +212,17 @@ export async function applyKashaDesign(
   const imgs: fabric.FabricImage[] = [];
 
   for (const { key, zone } of zoneMap) {
-    const dataUrl = design.zones[key];
+    let dataUrl = design.zones[key];
     if (!dataUrl) continue;
+
+    if (needsRecolor) {
+      try {
+        const srcCanvas  = await dataUrlToCanvas(dataUrl);
+        const recolored  = recolorCanvas(srcCanvas, recolor!.colorA, recolor!.colorB);
+        dataUrl = recolored.toDataURL("image/png");
+      } catch { /* fall through — use original dataUrl */ }
+    }
+
     const preset = ZONE_PRESETS[zone];
     const img = await fabric.FabricImage.fromURL(dataUrl, { crossOrigin: 'anonymous' });
     img.set({

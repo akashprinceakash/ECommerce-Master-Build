@@ -27,8 +27,31 @@ import {
 } from "@/components/3d/patterns";
 import {
   KASHA_DESIGNS, applyKashaDesign, clearKashaDesign, SKU_KASHA_DESIGN_MAP,
-  type KashaDesignDef,
+  type KashaDesignDef, type RecolorOptions,
 } from "@/components/3d/kasha-designs";
+
+// ── Pattern colour recolor constants ─────────────────────────────────────────
+const PAT_COLOR_A_DEFAULT = "#000000";   // Channel A source (dark / black)
+const PAT_COLOR_B_DEFAULT = "#F0CED2";   // Channel B source (light / pink)
+
+const PATTERN_PRESETS: { name: string; a: string; b: string }[] = [
+  { name: "Original",  a: "#000000", b: "#F0CED2" },
+  { name: "Ocean",     a: "#001a33", b: "#b8eeff" },
+  { name: "Ember",     a: "#2e0a0a", b: "#ffd090" },
+  { name: "Forest",    a: "#0d2b0d", b: "#c8f0a0" },
+  { name: "Dusk",      a: "#1a0a2e", b: "#f0c8e8" },
+  { name: "Slate",     a: "#1a1a2e", b: "#d0e8ff" },
+  { name: "Cinder",    a: "#1a1a1a", b: "#f0f0d8" },
+  { name: "Reef",      a: "#003333", b: "#c0f0ee" },
+  { name: "Bordeaux",  a: "#2a0a18", b: "#ffc8c8" },
+  { name: "Copper",    a: "#2d1b00", b: "#ffd8a0" },
+  { name: "Midnight",  a: "#000814", b: "#e8e0ff" },
+  { name: "Moss",      a: "#1c1c00", b: "#d8f0b0" },
+];
+const DARK_SWATCHES  = ["#000000","#1a1a2e","#2d1b00","#0d2b0d","#1a0a2e","#2e0a0a","#1a1a1a","#003333","#1c1c00","#2a0a18","#001a33","#ffffff"];
+const LIGHT_SWATCHES = ["#F0CED2","#ffffff","#d0e8ff","#b8f0c8","#fff0cc","#e8d0f8","#ffd0d0","#c0f0ee","#ffe8b0","#ffc8e8","#c8e0a0","#d8c8f8"];
+const RANDOM_DARK_PAT  = ["#000000","#1a1a2e","#2d1b00","#0d2b0d","#1a0a2e","#2e0a0a","#1a1a1a","#003333","#1c1c00","#2a0a18","#001a33","#000814"];
+const RANDOM_LIGHT_PAT = ["#F0CED2","#ffffff","#d0e8ff","#b8f0c8","#fff0cc","#e8d0f8","#ffd0d0","#c0f0ee","#ffe8b0","#f0f0a0","#ffc8e8","#c8e0a0","#d8c8f8","#ffd8a0"];
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 const V = {
@@ -284,6 +307,10 @@ export default function CustomizePage() {
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [colorTarget, setColorTarget] = useState<"all"|"front"|"back"|"leftSleeve"|"rightSleeve">("all");
+  // ── Pattern colour channels ───────────────────────────────────────────────
+  const [patColorA, setPatColorA] = useState(PAT_COLOR_A_DEFAULT);   // Channel A — dark tones
+  const [patColorB, setPatColorB] = useState(PAT_COLOR_B_DEFAULT);   // Channel B — light tones
+  const [patRecoloring, setPatRecoloring] = useState(false);         // spinner while recoloring
   const historyStack = useRef<string[]>([]);
   const historyIdx = useRef(-1);
 
@@ -418,11 +445,25 @@ export default function CustomizePage() {
     setActiveKashaDesign(design);
     // When a print is active it acts as the base colour — keep it; design renders on top
     try{mats[0]?.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]);}catch{}
-    await applyKashaDesign(fc, design);
+    const recolor: RecolorOptions = { colorA: patColorA, colorB: patColorB };
+    await applyKashaDesign(fc, design, recolor);
     if (myReq!==kdRequestIdRef.current) return;
     syncTexture();
     toast({title:`${design.id} applied`, description:design.label});
-  }, [mats, syncTexture, toast]);
+  }, [mats, patColorA, patColorB, syncTexture, toast]);
+
+  // ── Pattern colour recolor ────────────────────────────────────────────────
+  const applyPatternColors = useCallback(async (cA: string, cB: string) => {
+    if (!activeKashaDesign) return;
+    const fc=fcRef.current; if(!fc) return;
+    setPatColorA(cA); setPatColorB(cB);
+    setPatRecoloring(true);
+    try {
+      const recolor: RecolorOptions = { colorA: cA, colorB: cB };
+      await applyKashaDesign(fc, activeKashaDesign, recolor);
+      syncTexture();
+    } finally { setPatRecoloring(false); }
+  }, [activeKashaDesign, syncTexture]);
 
   // ── Primary colour (fabric/solid) ────────────────────────────────────────
   const applyPrimary = (hex: string) => {
@@ -1408,6 +1449,135 @@ export default function CustomizePage() {
                         onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>
                         Clear
                       </button>
+                    </div>
+                  )}
+
+                  {/* ── Pattern Colours — only shown when a design is active ── */}
+                  {activeKashaDesign&&(
+                    <div style={{display:"flex",flexDirection:"column",gap:12,background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:12,padding:"12px 12px 14px"}}>
+                      {/* Header */}
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                        <div>
+                          <div style={{fontSize:10,fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",color:V.tx,fontFamily:"'Jost',sans-serif"}}>Pattern Colours</div>
+                          <div style={{fontSize:10,color:V.mu,fontFamily:"'Jost',sans-serif",marginTop:1}}>Recolor the design's two colour channels</div>
+                        </div>
+                        {patRecoloring&&<div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${V.bd}`,borderTopColor:V.ac,animation:"spin .8s linear infinite",flexShrink:0}}/>}
+                      </div>
+
+                      {/* Channel A — Dark tones */}
+                      <div>
+                        <div style={{fontSize:9,fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",color:"#555540",fontFamily:"'Jost',sans-serif",marginBottom:6}}>Channel A — Dark tones</div>
+                        {/* Current preview */}
+                        <div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:V.bg,borderRadius:8,border:`1px solid ${V.bd}`,marginBottom:8}}>
+                          <div style={{width:28,height:28,borderRadius:6,background:patColorA,border:`1px solid ${V.bd2}`,flexShrink:0,transition:"background .2s"}}/>
+                          <div style={{flex:1}}>
+                            <div style={{fontSize:10,color:V.mu,fontFamily:"'Jost',sans-serif",fontWeight:500}}>Color A</div>
+                            <div style={{fontSize:10,color:"#888",fontFamily:"monospace",letterSpacing:".08em"}}>{patColorA.toUpperCase()}</div>
+                          </div>
+                        </div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center"}}>
+                          {DARK_SWATCHES.map(hex=>(
+                            <div key={hex} onClick={()=>{applyPatternColors(hex, patColorB);saveHistory();}} style={{
+                              width:22,height:22,borderRadius:"50%",cursor:"pointer",flexShrink:0,
+                              background:hex,
+                              border:patColorA===hex?`2.5px solid ${V.ac}`:`1.5px solid ${hex==="#ffffff"?V.bd2:"transparent"}`,
+                              boxShadow:patColorA===hex?`0 0 0 2px rgba(201,168,76,0.25)`:"none",
+                              transform:patColorA===hex?"scale(1.15)":"scale(1)",
+                              transition:"all .18s",
+                            }} title={hex}/>
+                          ))}
+                          <label title="Custom dark colour" style={{width:22,height:22,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:V.mu,flexShrink:0}}>
+                            +<input type="color" value={patColorA} onChange={e=>applyPatternColors(e.target.value, patColorB)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Channel B — Light tones */}
+                      <div>
+                        <div style={{fontSize:9,fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",color:"#555540",fontFamily:"'Jost',sans-serif",marginBottom:6}}>Channel B — Light tones</div>
+                        {/* Current preview */}
+                        <div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:V.bg,borderRadius:8,border:`1px solid ${V.bd}`,marginBottom:8}}>
+                          <div style={{width:28,height:28,borderRadius:6,background:patColorB,border:`1px solid ${V.bd2}`,flexShrink:0,transition:"background .2s"}}/>
+                          <div style={{flex:1}}>
+                            <div style={{fontSize:10,color:V.mu,fontFamily:"'Jost',sans-serif",fontWeight:500}}>Color B</div>
+                            <div style={{fontSize:10,color:"#888",fontFamily:"monospace",letterSpacing:".08em"}}>{patColorB.toUpperCase()}</div>
+                          </div>
+                        </div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center"}}>
+                          {LIGHT_SWATCHES.map(hex=>(
+                            <div key={hex} onClick={()=>{applyPatternColors(patColorA, hex);saveHistory();}} style={{
+                              width:22,height:22,borderRadius:"50%",cursor:"pointer",flexShrink:0,
+                              background:hex,
+                              border:patColorB===hex?`2.5px solid ${V.ac}`:`1.5px solid ${hex==="#ffffff"?V.bd2:"transparent"}`,
+                              boxShadow:patColorB===hex?`0 0 0 2px rgba(201,168,76,0.25)`:"none",
+                              transform:patColorB===hex?"scale(1.15)":"scale(1)",
+                              transition:"all .18s",
+                            }} title={hex}/>
+                          ))}
+                          <label title="Custom light colour" style={{width:22,height:22,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:V.mu,flexShrink:0}}>
+                            +<input type="color" value={patColorB} onChange={e=>applyPatternColors(patColorA, e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Mix preview */}
+                      <div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:V.bg,borderRadius:8,border:`1px solid ${V.bd}`}}>
+                        <div style={{fontSize:9,color:V.mu,letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",flexShrink:0}}>Mix</div>
+                        <div style={{width:18,height:18,borderRadius:4,background:patColorA,border:`1px solid ${V.bd2}`,flexShrink:0}}/>
+                        <div style={{fontSize:10,color:V.mu}}>+</div>
+                        <div style={{width:18,height:18,borderRadius:4,background:patColorB,border:`1px solid ${V.bd2}`,flexShrink:0}}/>
+                        <div style={{fontSize:9,color:V.mu,flex:1,textAlign:"center",letterSpacing:".04em",fontFamily:"'Jost',sans-serif"}}>→</div>
+                        <div style={{width:48,height:18,borderRadius:4,border:`1px solid ${V.bd2}`,flexShrink:0,background:`linear-gradient(90deg,${patColorA},${patColorB})`}}/>
+                      </div>
+
+                      {/* Quick Presets */}
+                      <div>
+                        <div style={{fontSize:9,fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",color:"#555540",fontFamily:"'Jost',sans-serif",marginBottom:7}}>Quick Presets</div>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+                          {PATTERN_PRESETS.map(p=>{
+                            const isA=p.a===patColorA&&p.b===patColorB;
+                            return(
+                              <div key={p.name} onClick={()=>{applyPatternColors(p.a,p.b);saveHistory();}} title={`${p.name}: A=${p.a} B=${p.b}`} style={{
+                                borderRadius:7,overflow:"hidden",cursor:"pointer",
+                                border:`1.5px solid ${isA?V.ac:V.bd}`,
+                                boxShadow:isA?`0 0 0 1.5px rgba(201,168,76,0.25)`:"none",
+                                transition:"all .18s",
+                              }}
+                              onMouseEnter={e=>{if(!isA)e.currentTarget.style.borderColor="rgba(201,168,76,0.5)";}}
+                              onMouseLeave={e=>{if(!isA)e.currentTarget.style.borderColor=V.bd;}}>
+                                <div style={{display:"flex",height:22}}>
+                                  <div style={{flex:1,background:p.a}}/>
+                                  <div style={{flex:1,background:p.b}}/>
+                                </div>
+                                <div style={{fontSize:8,color:isA?V.tx:"#888",textAlign:"center",padding:"3px 2px",background:V.bg,fontFamily:"'Jost',sans-serif",letterSpacing:".04em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Randomize / Swap / Reset row */}
+                      <div style={{display:"flex",gap:5}}>
+                        <button onClick={()=>{
+                          const a=RANDOM_DARK_PAT[Math.floor(Math.random()*RANDOM_DARK_PAT.length)];
+                          const b=RANDOM_LIGHT_PAT[Math.floor(Math.random()*RANDOM_LIGHT_PAT.length)];
+                          applyPatternColors(a,b);saveHistory();
+                        }} style={{flex:1,padding:"6px 0",fontSize:9,fontWeight:600,cursor:"pointer",borderRadius:99,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",border:`1px solid ${V.bd}`,background:"transparent",color:V.mu,transition:"all .2s"}}
+                        onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
+                        onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>
+                          🎲 Random
+                        </button>
+                        <button onClick={()=>{applyPatternColors(patColorB,patColorA);saveHistory();}} style={{flex:1,padding:"6px 0",fontSize:9,fontWeight:600,cursor:"pointer",borderRadius:99,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",border:`1px solid ${V.bd}`,background:"transparent",color:V.mu,transition:"all .2s"}}
+                        onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
+                        onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>
+                          ⇄ Swap A↔B
+                        </button>
+                        <button onClick={()=>{applyPatternColors(PAT_COLOR_A_DEFAULT,PAT_COLOR_B_DEFAULT);saveHistory();}} style={{flex:1,padding:"6px 0",fontSize:9,fontWeight:600,cursor:"pointer",borderRadius:99,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",border:`1px solid rgba(196,92,92,.3)`,background:"transparent",color:"#c45c5c",transition:"all .2s"}}
+                        onMouseEnter={e=>{e.currentTarget.style.background="rgba(196,92,92,.07)";}}
+                        onMouseLeave={e=>{e.currentTarget.style.background="transparent";}}>
+                          ↺ Reset
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
