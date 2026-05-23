@@ -686,20 +686,6 @@ export default function CustomizePage() {
     </div>
   );
 
-  // ── Loading ───────────────────────────────────────────────────────────────
-  if (isLoading && !isTypeMode) return (
-    <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:V.bg,gap:16}}>
-      <div style={{
-        width:40,height:40,borderRadius:"50%",
-        border:`2px solid ${V.bd}`,
-        borderTopColor:V.ac,
-        animation:"spin .9s linear infinite",
-      }}/>
-      <p style={{fontFamily:"'Jost',sans-serif",fontSize:11,color:V.mu,letterSpacing:".1em",textTransform:"uppercase"}}>Loading Studio…</p>
-    </div>
-  );
-  if (!product && !isTypeMode) return null;
-
 
   // ── History helpers ───────────────────────────────────────────────────────
   const saveHistory = useCallback(() => {
@@ -775,10 +761,10 @@ export default function CustomizePage() {
         animation:"spin .9s linear infinite",
       }}/>
       <p style={{fontFamily:"'Jost',sans-serif",fontSize:11,color:V.mu,letterSpacing:".1em",textTransform:"uppercase"}}>Loading Studio…</p>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
   if (!product && !isTypeMode) return null;
+
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
