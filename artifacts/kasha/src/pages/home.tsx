@@ -673,9 +673,10 @@ export default function Home() {
           </div>
 
           {/* Right CTAs */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start", flexShrink: 0 }}>
+          <div className="cs-cta" style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start", flexShrink: 0 }}>
             <button
               onClick={() => setCustomizeModalOpen(true)}
+              className="cs-start-btn"
               style={{
                 background:    GOLD,
                 color:         "#fff",
@@ -715,6 +716,12 @@ export default function Home() {
           </div>
         </div>
       </section>}
+      <style>{`
+        @media (max-width: 600px) {
+          .cs-cta { width: 100% !important; flex-shrink: 1 !important; }
+          .cs-start-btn { width: 100% !important; text-align: center !important; }
+        }
+      `}</style>
 
       {/* Gold rule divider */}
       <div style={{ height: 1, background: "linear-gradient(to right, transparent, rgba(184,146,90,0.18), transparent)", margin: `0 ${PAD}` }} />

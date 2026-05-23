@@ -75,7 +75,7 @@ export function PersonalizeModal({ isOpen, onClose, productId, productName }: Pr
       }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div style={{
+      <div className="pm-sheet" style={{
         background: "#fafaf7",
         borderRadius: 20,
         maxWidth: 720,
@@ -139,7 +139,7 @@ export function PersonalizeModal({ isOpen, onClose, productId, productName }: Pr
         </p>
 
         {/* Option cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div className="pm-options-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           {OPTIONS.map(opt => {
             const isSelected = selectedMode === opt.key;
             const isOther = selectedMode !== null && selectedMode !== opt.key;
@@ -268,6 +268,10 @@ export function PersonalizeModal({ isOpen, onClose, productId, productName }: Pr
       <style>{`
         @keyframes pmFadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes pmSlideUp { from { opacity: 0; transform: translateY(20px) } to { opacity: 1; transform: translateY(0) } }
+        @media (max-width: 600px) {
+          .pm-sheet { padding: 24px 16px 28px !important; border-radius: 16px !important; width: calc(100vw - 20px) !important; }
+          .pm-options-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
     </div>
   );

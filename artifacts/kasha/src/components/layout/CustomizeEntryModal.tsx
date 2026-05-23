@@ -92,7 +92,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
       }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div style={{
+      <div className="cem-sheet" style={{
         background: "#fafaf7",
         borderRadius: 20,
         maxWidth: 900,
@@ -147,7 +147,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         }} />
 
         {/* Category cards */}
-        <div style={{
+        <div className="cem-grid" style={{
           display: "grid",
           gridTemplateColumns: "repeat(3, 1fr)",
           gap: 16,
@@ -241,6 +241,10 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
       <style>{`
         @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px) } to { opacity: 1; transform: translateY(0) } }
+        @media (max-width: 600px) {
+          .cem-sheet { padding: 24px 16px 28px !important; border-radius: 16px !important; width: calc(100vw - 20px) !important; }
+          .cem-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
     </div>
   );
