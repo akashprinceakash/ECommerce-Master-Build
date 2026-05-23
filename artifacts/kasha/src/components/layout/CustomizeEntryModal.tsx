@@ -20,7 +20,7 @@ const CATEGORIES = [
     href: "/customize?type=solid",
     accent: "#c9a84c",
     bg: "linear-gradient(135deg, #fafaf7 60%, #f5e9c8 100%)",
-    thumbnail: "/api/public/thumbnails/KS1008NBLACK01.png",
+    thumbnail: "/images/designs/KD004.png",
   },
   {
     key: "pattern",
@@ -31,7 +31,7 @@ const CATEGORIES = [
     href: "/customize?type=pattern",
     accent: "#c9a84c",
     bg: "linear-gradient(135deg, #fafaf7 60%, #ede9e1 100%)",
-    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1779449004280-642782439.webp",
+    thumbnail: "/images/designs/KD001.png",
   },
   {
     key: "printed",
@@ -42,7 +42,7 @@ const CATEGORIES = [
     href: "/customize?type=printed",
     accent: "#c9a84c",
     bg: "linear-gradient(135deg, #fafaf7 60%, #e8e5df 100%)",
-    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/models/model-1779512989916-963196428.glb",
+    thumbnail: "/images/designs/KD003.png",
   },
 ];
 

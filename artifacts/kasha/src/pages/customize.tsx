@@ -416,13 +416,13 @@ export default function CustomizePage() {
     const fc=fcRef.current; if(!fc) return;
     const myReq=++kdRequestIdRef.current;
     setActiveKashaDesign(design);
-    if (allOverPrintId){setFabricBg(fc,"#ffffff");setAllOverPrintId(null);}
+    // When a print is active it acts as the base colour — keep it; design renders on top
     try{mats[0]?.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]);}catch{}
     await applyKashaDesign(fc, design);
     if (myReq!==kdRequestIdRef.current) return;
     syncTexture();
     toast({title:`${design.id} applied`, description:design.label});
-  }, [allOverPrintId, mats, syncTexture, toast]);
+  }, [mats, syncTexture, toast]);
 
   // ── Primary colour (fabric/solid) ────────────────────────────────────────
   const applyPrimary = (hex: string) => {
@@ -461,18 +461,24 @@ export default function CustomizePage() {
   const applyAllOverPrint = useCallback(async (p: PatternDef) => {
     const fc=fcRef.current; if(!fc) return;
     kdRequestIdRef.current++;
+    const hasDesign = !!activeKashaDesign;
     try {
       const img=await loadHTMLImage(patternUrl(p.file));
       const off=document.createElement("canvas");off.width=ALL_OVER_TILE_PX;off.height=ALL_OVER_TILE_PX;
       const ctx=off.getContext("2d"); if(ctx){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";ctx.drawImage(img,0,0,ALL_OVER_TILE_PX,ALL_OVER_TILE_PX);}
-      if (activeKashaDesign){clearKashaDesign(fc);setActiveKashaDesign(null);}
+      // When a KA.SHA design is active, the print becomes the BASE texture — the design stays on top.
+      // Only clear the design when there is no active pattern (standalone all-over print).
+      if (!hasDesign) { /* no design active — print takes full canvas */ }
       const pattern=new fabric.Pattern({source:off,repeat:"repeat"});
       (fc as any).backgroundColor=pattern;
       fc.renderAll();
       setAllOverPrintId(p.id); setActivePrintId(p.id);
       try{mats[0]?.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]);}catch{}
       syncTexture();
-      toast({title:"Print applied",description:`${p.label} mapped across the whole garment.`});
+      toast({
+        title: hasDesign ? "Print applied as base texture" : "Print applied",
+        description: hasDesign ? `${p.label} — pattern design remains on top.` : `${p.label} mapped across the whole garment.`,
+      });
     } catch { toast({title:"Could not load print",variant:"destructive"}); }
   }, [activeKashaDesign, mats, syncTexture, toast]);
 
@@ -1144,10 +1150,17 @@ export default function CustomizePage() {
               {/* ── COLORS panel ──────────────────────────────────────── */}
               {activeTool==="colors"&&(
                 <div style={{display:"flex",flexDirection:"column",gap:16}}>
-                  {/* Zone thumbnail selector */}
+                  {/* When a KA.SHA pattern design is active, only base colour is relevant.
+                      Zone-part selectors are hidden — the design controls per-zone colouring. */}
+                  {activeKashaDesign&&(
+                    <div style={{background:"rgba(201,168,76,0.07)",border:"1px solid rgba(201,168,76,0.18)",borderRadius:10,padding:"9px 12px",fontSize:11,color:V.mu,fontStyle:"italic",fontFamily:"'Jost',sans-serif",lineHeight:1.6}}>
+                      Pattern design active — set the base colour below. Zone parts are controlled by the design.
+                    </div>
+                  )}
+                  {/* Zone thumbnail selector — hide per-zone selectors when pattern is active */}
                   {(()=>{
-                    const zones:[string,string,string,string][]=[
-                      ["all","All Parts",
+                    const allZones:[string,string,string,string][]=[
+                      ["all","Base Colour",
                         `<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="__COL__" stroke="#1a1a18" stroke-width="1.5"/></svg>`,
                         primaryColor],
                       ["front","Front",
@@ -1163,10 +1176,13 @@ export default function CustomizePage() {
                         `<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/><path d="M50 12L56 32L46 34L42 14Z" fill="__COL__" opacity="0.9"/></svg>`,
                         zoneColors["rightSleeve"]||primaryColor],
                     ];
+                    // When a KA.SHA pattern is active, hide per-zone selectors
+                    const zones = activeKashaDesign ? allZones.slice(0,1) : allZones;
+                    const cols = activeKashaDesign ? 1 : 5;
                     return(
-                      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6}}>
+                      <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:6}}>
                         {zones.map(([id,label,svgTpl,col])=>{
-                          const isA=colorTarget===id;
+                          const isA=colorTarget===id||(activeKashaDesign&&id==="all");
                           const svg=svgTpl.replace(/__COL__/g,col);
                           return(
                             <div key={id} onClick={()=>setColorTarget(id as any)} style={{
@@ -1186,33 +1202,35 @@ export default function CustomizePage() {
                   {/* Colour picker for selected target */}
                   <div style={{background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:10,padding:12}}>
                     <div style={{fontSize:10,color:"#4a4a42",marginBottom:10,letterSpacing:".07em",textTransform:"uppercase",fontWeight:600,fontFamily:"'Jost',sans-serif"}}>
-                      {colorTarget==="all" ? "Colour — All Parts" : `Colour — ${["front","back","leftSleeve","rightSleeve"].includes(colorTarget)?{front:"Front",back:"Back",leftSleeve:"Left Sleeve",rightSleeve:"Right Sleeve"}[colorTarget]:"Part"}`}
+                      {activeKashaDesign ? "Base Colour" : colorTarget==="all" ? "Colour — All Parts" : `Colour — ${["front","back","leftSleeve","rightSleeve"].includes(colorTarget)?{front:"Front",back:"Back",leftSleeve:"Left Sleeve",rightSleeve:"Right Sleeve"}[colorTarget as string]:"Part"}`}
                     </div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
-                      {colorTarget==="all"
+                      {(activeKashaDesign||colorTarget==="all")
                         ? MAIN_PALETTE.map(hex=>swatch(hex,primaryColor===hex,()=>applyPrimary(hex)))
                         : MAIN_PALETTE.map(hex=>swatch(hex,zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]===hex,()=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,hex)))}
                       <label title="Custom" style={{width:30,height:30,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:V.tx,flexShrink:0}}>
-                        +{colorTarget==="all"
+                        +{(activeKashaDesign||colorTarget==="all")
                           ?<input type="color" value={primaryColor} onChange={e=>applyPrimary(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
                           :<input type="color" value={zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]||primaryColor} onChange={e=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>}
                       </label>
                     </div>
-                    {colorTarget!=="all"&&zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]&&(
+                    {!activeKashaDesign&&colorTarget!=="all"&&zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]&&(
                       <button onClick={()=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,"")} style={{fontSize:10,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Reset this zone</button>
                     )}
                   </div>
-                  {/* Reset All Zones */}
-                  <button onClick={()=>{PART_ZONES.forEach(z=>applyZoneColor(z.id,""));setColorTarget("all");}} style={{
-                    width:"100%",padding:"9px 0",borderRadius:99,
-                    border:`1px solid rgba(196,92,92,.35)`,background:"transparent",
-                    color:"#c45c5c",fontSize:10,fontWeight:600,cursor:"pointer",
-                    fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",transition:"all 0.2s",
-                  }}
-                  onMouseEnter={e=>{e.currentTarget.style.background="rgba(196,92,92,.07)";e.currentTarget.style.borderColor="rgba(196,92,92,.6)";}}
-                  onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.borderColor="rgba(196,92,92,.35)";}}>
-                    ↺ Reset All Zones
-                  </button>
+                  {/* Reset All Zones — only shown when no pattern design is active */}
+                  {!activeKashaDesign&&(
+                    <button onClick={()=>{PART_ZONES.forEach(z=>applyZoneColor(z.id,""));setColorTarget("all");}} style={{
+                      width:"100%",padding:"9px 0",borderRadius:99,
+                      border:`1px solid rgba(196,92,92,.35)`,background:"transparent",
+                      color:"#c45c5c",fontSize:10,fontWeight:600,cursor:"pointer",
+                      fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",transition:"all 0.2s",
+                    }}
+                    onMouseEnter={e=>{e.currentTarget.style.background="rgba(196,92,92,.07)";e.currentTarget.style.borderColor="rgba(196,92,92,.6)";}}
+                    onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.borderColor="rgba(196,92,92,.35)";}}>
+                      ↺ Reset All Zones
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -1255,7 +1273,14 @@ export default function CustomizePage() {
                           <div style={{width:36,height:36,borderRadius:7,background:`url(${patternUrl(p.file)}) center/cover`,border:`1px solid ${V.bd}`,flexShrink:0}}/>
                           <div style={{fontSize:13,fontWeight:600,color:V.tx,fontFamily:"'Cormorant Garamond',serif",letterSpacing:".02em"}}>{p.label}</div>
                         </div>
-                        {productType!=="print"&&(
+                        {/* When a KA.SHA pattern design is active, print acts as base texture.
+                            Hide By Part toggle — full body only applies beneath the design. */}
+                        {activeKashaDesign&&(
+                          <div style={{background:"rgba(201,168,76,0.07)",border:"1px solid rgba(201,168,76,0.18)",borderRadius:8,padding:"8px 10px",fontSize:10,color:V.mu,fontStyle:"italic",fontFamily:"'Jost',sans-serif",lineHeight:1.55}}>
+                            Pattern design active — print is applied as the base texture beneath the design.
+                          </div>
+                        )}
+                        {productType!=="print"&&!activeKashaDesign&&(
                           <div style={{display:"flex",gap:4}}>
                             {(["fullBody","parts"] as const).map(m=>(
                               <button key={m} onClick={()=>setPrintMode(m)} style={{
@@ -1268,7 +1293,7 @@ export default function CustomizePage() {
                             ))}
                           </div>
                         )}
-                        {(productType==="print"||printMode==="fullBody")&&(
+                        {(productType==="print"||activeKashaDesign||printMode==="fullBody")&&(
                           <div style={{display:"flex",flexDirection:"column",gap:6}}>
                             <button onClick={()=>{applyAllOverPrint(p);saveHistory();}} style={{
                               padding:"9px 0",borderRadius:99,border:"none",
@@ -1277,9 +1302,11 @@ export default function CustomizePage() {
                               fontSize:11,fontWeight:600,cursor:"pointer",
                               fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",transition:"all 0.2s",
                             }}>
-                              {allOverPrintId===p.id?(productType==="print"?"✓ Selected":"✓ Applied"):(productType==="print"?"Select Print":"Apply All-Over")}
+                              {allOverPrintId===p.id
+                                ? (productType==="print"?"✓ Selected": activeKashaDesign?"✓ Applied as Base":"✓ Applied")
+                                : (productType==="print"?"Select Print": activeKashaDesign?"Apply as Base Texture":"Apply All-Over")}
                             </button>
-                            {allOverPrintId&&productType!=="print"&&(
+                            {allOverPrintId&&productType!=="print"&&!activeKashaDesign&&(
                               <button onClick={()=>{clearAllOverPrint();saveHistory();}} style={{
                                 padding:"7px 0",borderRadius:99,
                                 border:`1px solid rgba(196,92,92,.35)`,background:"transparent",
@@ -1289,7 +1316,7 @@ export default function CustomizePage() {
                             )}
                           </div>
                         )}
-                        {productType!=="print"&&printMode==="parts"&&(()=>{
+                        {productType!=="print"&&!activeKashaDesign&&printMode==="parts"&&(()=>{
                           const zones: {id:Exclude<typeof activePartZone,"collar">;label:string}[]=[];
                           const pzones: {id:Exclude<PatternZone,"all">;label:string}[]=[
                             {id:"front",label:"Front"},{id:"back",label:"Back"},
