@@ -241,7 +241,7 @@ export default function CustomizePage() {
   const [qty, setQty] = useState(1);
 
   // ── Studio UI state ───────────────────────────────────────────────────────
-  const [activeTool, setActiveTool] = useState<"products"|"text"|"image"|"art"|"name"|"order"|null>("products");
+  const [activeTool, setActiveTool] = useState<"products"|"colors"|"prints"|"patterns"|"text"|"image"|"order"|null>("products");
   const [cameraView, setCameraView] = useState<"front"|"back"|"right"|"left">("front");
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -700,6 +700,86 @@ export default function CustomizePage() {
   );
   if (!product && !isTypeMode) return null;
 
+
+  // ── History helpers ───────────────────────────────────────────────────────
+  const saveHistory = useCallback(() => {
+    const fc = fcRef.current; if (!fc) return;
+    const json = JSON.stringify((fc as any).toJSON(["data"]));
+    historyStack.current = historyStack.current.slice(0, historyIdx.current + 1);
+    historyStack.current.push(json);
+    historyIdx.current = historyStack.current.length - 1;
+    setCanUndo(historyIdx.current > 0);
+    setCanRedo(false);
+  }, []);
+
+  const undoCanvas = useCallback(async () => {
+    const fc = fcRef.current; if (!fc || historyIdx.current <= 0) return;
+    historyIdx.current--;
+    const json = historyStack.current[historyIdx.current];
+    if (!json) return;
+    await (fc as any).loadFromJSON(JSON.parse(json));
+    fc.renderAll(); syncTexture();
+    setCanUndo(historyIdx.current > 0);
+    setCanRedo(true);
+  }, [syncTexture]);
+
+  const redoCanvas = useCallback(async () => {
+    const fc = fcRef.current;
+    if (!fc || historyIdx.current >= historyStack.current.length - 1) return;
+    historyIdx.current++;
+    const json = historyStack.current[historyIdx.current];
+    if (!json) return;
+    await (fc as any).loadFromJSON(JSON.parse(json));
+    fc.renderAll(); syncTexture();
+    setCanUndo(true);
+    setCanRedo(historyIdx.current < historyStack.current.length - 1);
+  }, [syncTexture]);
+
+  // Camera view effect
+  useEffect(() => {
+    const mv: any = mvRef.current; if (!mv) return;
+    const orbits: Record<string, string> = {
+      front: "0deg 75deg 2.5m",
+      back:  "180deg 75deg 2.5m",
+      right: "90deg 75deg 2.5m",
+      left:  "-90deg 75deg 2.5m",
+    };
+    mv.cameraOrbit = orbits[cameraView] || "0deg 75deg 2.5m";
+  }, [cameraView, modelLoaded]);
+
+  // ── Tool definitions ──────────────────────────────────────────────────────
+  const TOOLS = [
+    { id: "products",  icon: "👕", label: "Products"  },
+    { id: "colors",    icon: "🎨", label: "Colors"    },
+    { id: "prints",    icon: "◈",  label: "Prints"    },
+    { id: "patterns",  icon: "✦",  label: "Patterns"  },
+    { id: "text",      icon: "Aa", label: "Text"      },
+    { id: "image",     icon: "🖼",  label: "Logo"      },
+    { id: "order",     icon: "🛒", label: "Order"     },
+  ] as const;
+
+  const CAMERA_VIEWS = [
+    { id: "front", label: "Front" },
+    { id: "back",  label: "Back"  },
+    { id: "right", label: "Right" },
+    { id: "left",  label: "Left"  },
+  ] as const;
+
+  // ── Loading ───────────────────────────────────────────────────────────────
+  if (isLoading && !isTypeMode) return (
+    <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:V.bg,gap:16}}>
+      <div style={{
+        width:40,height:40,borderRadius:"50%",
+        border:`2px solid ${V.bd}`,
+        borderTopColor:V.ac,
+        animation:"spin .9s linear infinite",
+      }}/>
+      <p style={{fontFamily:"'Jost',sans-serif",fontSize:11,color:V.mu,letterSpacing:".1em",textTransform:"uppercase"}}>Loading Studio…</p>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+  if (!product && !isTypeMode) return null;
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={{
@@ -708,75 +788,85 @@ export default function CustomizePage() {
       fontFamily:"'Jost', sans-serif",overflow:"hidden",
     }}>
 
-      {/* HEADER ─────────────────────────────────────────────────────────── */}
+      {/* ── TOP ACTION BAR ─────────────────────────────────────────────── */}
       <header style={{
         display:"flex",alignItems:"center",justifyContent:"space-between",
-        padding:"0 24px",height:60,flexShrink:0,zIndex:50,
-        background:"rgba(250,250,247,0.92)",
+        padding:"0 20px",height:56,flexShrink:0,zIndex:50,
+        background:"rgba(250,250,247,0.97)",
         backdropFilter:"blur(20px)",
         WebkitBackdropFilter:"blur(20px)",
         borderBottom:`1px solid rgba(201,168,76,0.15)`,
         boxShadow:"0 2px 20px rgba(26,26,24,0.05)",
       }}>
         {/* Left: back + logo */}
-        <div style={{display:"flex",alignItems:"center",gap:16,minWidth:160}}>
+        <div style={{display:"flex",alignItems:"center",gap:14,minWidth:180}}>
           <Link href={isTypeMode ? "/" : `/products/${id}`} style={{
-            color:V.mu,fontSize:12,textDecoration:"none",
+            color:V.mu,fontSize:11,textDecoration:"none",
             display:"flex",alignItems:"center",gap:5,
             padding:"5px 12px",borderRadius:40,
             border:`1px solid rgba(201,168,76,0.25)`,
-            transition:"all 0.3s",fontWeight:500,letterSpacing:".05em",
+            transition:"all 0.25s",fontWeight:500,letterSpacing:".05em",
             fontFamily:"'Jost',sans-serif",
           }}
           onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.background=V.aclt;}}
           onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(201,168,76,0.25)";e.currentTarget.style.background="transparent";}}>
             ← Back
           </Link>
-          <div style={{width:1,height:20,background:`rgba(26,26,24,0.1)`}}/>
-          <span style={{
-            fontFamily:"'Cormorant Garamond', serif",
-            fontSize:20,fontWeight:600,letterSpacing:".08em",color:V.tx,
-          }}>
+          <div style={{width:1,height:18,background:`rgba(26,26,24,0.1)`}}/>
+          <span style={{fontFamily:"'Cormorant Garamond', serif",fontSize:18,fontWeight:600,letterSpacing:".1em",color:V.tx}}>
             KA.<span style={{color:V.ac}}>SHA</span>
           </span>
         </div>
 
-        {/* Center: studio label */}
-        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+        {/* Center: undo / redo / save / studio name */}
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <button onClick={undoCanvas} disabled={!canUndo} title="Undo" style={{
+            display:"flex",flexDirection:"column",alignItems:"center",gap:2,
+            padding:"5px 10px",borderRadius:10,border:"none",
+            background:"transparent",cursor:canUndo?"pointer":"default",
+            opacity:canUndo?1:0.35,transition:"all 0.2s",color:V.mu,
+          }}
+          onMouseEnter={e=>{if(canUndo)e.currentTarget.style.background=V.sf2;}}
+          onMouseLeave={e=>{e.currentTarget.style.background="transparent";}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M3 13C5.333 7.333 9.6 4.4 16 5a9 9 0 0 1 5.4 14.3"/></svg>
+            <span style={{fontSize:9,letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif"}}>Undo</span>
+          </button>
+          <button onClick={redoCanvas} disabled={!canRedo} title="Redo" style={{
+            display:"flex",flexDirection:"column",alignItems:"center",gap:2,
+            padding:"5px 10px",borderRadius:10,border:"none",
+            background:"transparent",cursor:canRedo?"pointer":"default",
+            opacity:canRedo?1:0.35,transition:"all 0.2s",color:V.mu,
+          }}
+          onMouseEnter={e=>{if(canRedo)e.currentTarget.style.background=V.sf2;}}
+          onMouseLeave={e=>{e.currentTarget.style.background="transparent";}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"/><path d="M21 13c-2.333-5.667-6.6-8.6-13-8a9 9 0 0 0-5.4 14.3"/></svg>
+            <span style={{fontSize:9,letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif"}}>Redo</span>
+          </button>
+          <div style={{width:1,height:28,background:`rgba(26,26,24,0.1)`,margin:"0 4px"}}/>
           <span style={{
-            fontFamily:"'Jost',sans-serif",fontSize:10,letterSpacing:".18em",
+            fontFamily:"'Jost',sans-serif",fontSize:10,letterSpacing:".14em",
             textTransform:"uppercase",color:V.mu,fontWeight:500,
           }}>
             {isTypeMode
-              ? (garmentType === "solid" ? "Solid T-Shirt Studio"
-                 : garmentType === "pattern" ? "Pattern T-Shirt Studio"
-                 : "Printed T-Shirt Studio")
+              ? (garmentType === "solid" ? "Solid Studio"
+                 : garmentType === "pattern" ? "Pattern Studio"
+                 : "Print Studio")
               : isQuickMode ? "Quick Personalisation" : "Bespoke Design Studio"}
           </span>
-          {isQuickMode && (
-            <span style={{
-              fontFamily:"'Jost',sans-serif",fontSize:8,letterSpacing:".12em",
-              textTransform:"uppercase",color:V.ac,fontWeight:600,
-              background:"rgba(201,168,76,0.1)",padding:"2px 8px",borderRadius:99,
-            }}>Logo · Text · Placement</span>
-          )}
         </div>
 
-        {/* Right: name input + save + cart */}
-        <div style={{display:"flex",alignItems:"center",gap:8,minWidth:160,justifyContent:"flex-end"}}>
+        {/* Right: design name + save + order */}
+        <div style={{display:"flex",alignItems:"center",gap:8,minWidth:180,justifyContent:"flex-end"}}>
           <input
             value={designName}
             onChange={e=>setDesignName(e.target.value)}
             placeholder="Name your design…"
             style={{
               padding:"6px 12px",
-              background:V.sf2,
-              border:`1.5px solid ${V.bd}`,
-              borderRadius:40,
-              color:V.tx,fontSize:11,
-              outline:"none",width:150,
-              fontFamily:"'Jost',sans-serif",
-              letterSpacing:".02em",
+              background:V.sf2,border:`1.5px solid ${V.bd}`,
+              borderRadius:40,color:V.tx,fontSize:11,
+              outline:"none",width:140,
+              fontFamily:"'Jost',sans-serif",letterSpacing:".02em",
               transition:"border-color 0.2s",
             }}
             onFocus={e=>e.target.style.borderColor=V.ac}
@@ -786,12 +876,12 @@ export default function CustomizePage() {
             <Show when="signed-in">
               <button onClick={()=>saveMut.mutate()} disabled={saveMut.isPending}
                 style={{
-                  padding:"7px 18px",borderRadius:40,
+                  padding:"7px 16px",borderRadius:40,
                   border:`1px solid rgba(201,168,76,0.35)`,
                   background:"transparent",cursor:"pointer",
                   fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:500,
                   letterSpacing:".06em",textTransform:"uppercase",
-                  color:V.tx,transition:"all 0.3s",
+                  color:V.tx,transition:"all 0.25s",
                   opacity:saveMut.isPending?.6:1,
                 }}
                 onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.background=V.aclt;}}
@@ -802,1100 +892,759 @@ export default function CustomizePage() {
           )}
           {isTypeMode ? (
             <Link href="/products" style={{
-              padding:"8px 22px",borderRadius:40,
+              padding:"8px 20px",borderRadius:40,
               border:`1px solid ${V.ac}`,background:"transparent",
               fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:500,
               letterSpacing:".06em",textTransform:"uppercase",
               color:V.tx,textDecoration:"none",
-              transition:"all 0.3s",display:"flex",alignItems:"center",gap:6,
+              transition:"all 0.25s",display:"flex",alignItems:"center",gap:6,
             }}
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=V.aclt;}}
             onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
-              Browse Products →
+              Browse →
             </Link>
           ) : (
             <button onClick={()=>cartMut.mutate()} disabled={cartMut.isPending||saveMut.isPending}
               style={{
-                padding:"8px 22px",borderRadius:40,
+                padding:"8px 20px",borderRadius:40,
                 border:"none",background:V.tx,
                 cursor:"pointer",
                 fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:500,
                 letterSpacing:".06em",textTransform:"uppercase",
-                color:"#fff",
-                transition:"all 0.3s",
+                color:"#fff",transition:"all 0.25s",
                 display:"flex",alignItems:"center",gap:6,
                 opacity:cartMut.isPending?.6:1,
               }}
               onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}
               onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
-              {cartMut.isPending?"Adding…":"✦ Add to Cart"}
+              {cartMut.isPending?"Adding…":"✦ Order Now"}
             </button>
           )}
         </div>
       </header>
 
-      {/* WORKSPACE ───────────────────────────────────────────────────────── */}
+      {/* ── WORKSPACE ──────────────────────────────────────────────────────── */}
       <div style={{display:"flex",flex:1,overflow:"hidden"}}>
 
-        {/* LEFT PANEL: Wizard ─────────────────────────────────────────── */}
+        {/* ── ICON SIDEBAR ────────────────────────────────────────────────── */}
         <div style={{
-          width:380,minWidth:320,
+          width:70,flexShrink:0,
+          display:"flex",flexDirection:"column",alignItems:"center",
+          paddingTop:12,paddingBottom:12,gap:2,
           borderRight:`1px solid rgba(26,26,24,0.07)`,
-          overflowY:"auto",padding:"24px 22px",
-          display:"flex",flexDirection:"column",
           background:V.bg,
-          scrollbarWidth:"thin",
+          overflowY:"auto",
+          scrollbarWidth:"none",
         }}>
-          {stepIndicator}
-
-          {/* ── STEP 1 (TYPE MODE): Solid — Colour + Parts ────────────── */}
-          {step===1&&isTypeMode&&garmentType==="solid"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:18}}>
-              <div>
-                <div style={sbT}>Base colour</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
-                  {MAIN_PALETTE.map(hex=>swatch(hex,primaryColor===hex,()=>applyPrimary(hex)))}
-                  <label title="Custom colour" style={{width:32,height:32,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",flexShrink:0,border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:V.tx}}>
-                    +<input type="color" value={primaryColor} onChange={e=>applyPrimary(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <div style={sbT}>Customise individual parts</div>
-                <p style={{fontSize:12,color:"#3a3a36",marginBottom:12,lineHeight:1.65}}>Select a zone, then pick a colour to override it.</p>
-                <button onClick={()=>{if(zoneColors[activePartZone])COLOUR_ZONES.forEach(z=>applyZoneColor(z.id,zoneColors[activePartZone]));}} style={{fontSize:12,padding:"7px 16px",border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",background:"transparent",color:"#4a4a42",marginBottom:12,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color="#4a4a42";}}>Apply colour to all parts</button>
-                {COLOUR_ZONES.map(z=>{
-                  const active=activePartZone===z.id; const col=zoneColors[z.id];
-                  return(<div key={z.id} onClick={()=>setActivePartZone(z.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:`1.5px solid ${active?V.ac:V.bd}`,background:active?V.aclt:"transparent",cursor:"pointer",marginBottom:5,transition:"all 0.2s"}}>
-                    <div style={{width:20,height:20,borderRadius:"50%",background:col||primaryColor,border:`1.5px solid ${active?V.ac:V.bd2}`,flexShrink:0}}/>
-                    <span style={{flex:1,fontSize:12,fontWeight:active?600:400,fontFamily:"'Jost',sans-serif"}}>{z.label}</span>
-                    <span style={{fontSize:9,color:active?V.tx:V.mu,padding:"3px 10px",border:`1px solid ${active?V.ac:V.bd}`,borderRadius:99,letterSpacing:".04em",background:active?V.sf:"transparent"}}>{col?col.toUpperCase():"Base"}</span>
-                  </div>);
-                })}
-                <div style={{marginTop:12,background:V.sf,border:`1px solid ${V.bd}`,borderRadius:10,padding:12,boxShadow:"0 2px 12px rgba(26,26,24,0.04)"}}>
-                  <div style={{fontSize:12,color:"#4a4a42",marginBottom:10,letterSpacing:".06em",textTransform:"uppercase",fontWeight:600}}>Colour for <strong style={{color:V.tx,fontFamily:"'Cormorant Garamond',serif",fontSize:14,fontWeight:600,textTransform:"none",letterSpacing:".02em"}}>{PART_ZONES.find(z=>z.id===activePartZone)?.label}</strong></div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
-                    {MAIN_PALETTE.map(hex=>swatch(hex,zoneColors[activePartZone]===hex,()=>applyZoneColor(activePartZone,hex)))}
-                    <label title="Custom" style={{width:32,height:32,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:V.tx,flexShrink:0}}>
-                      +<input type="color" value={zoneColors[activePartZone]||primaryColor} onChange={e=>applyZoneColor(activePartZone,e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
-                    </label>
-                  </div>
-                  {zoneColors[activePartZone]&&(<button onClick={()=>applyZoneColor(activePartZone,"")} style={{fontSize:11,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Clear zone colour</button>)}
-                </div>
-              </div>
-
-              <button onClick={()=>setStep(2)} style={{marginTop:4,padding:"12px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
-                Next: Add Prints →
+          {TOOLS.map(t => {
+            const isA = activeTool === t.id;
+            return (
+              <button key={t.id}
+                onClick={() => setActiveTool(isA ? null : (t.id as any))}
+                style={{
+                  width:54,padding:"10px 0 8px",
+                  display:"flex",flexDirection:"column",alignItems:"center",gap:4,
+                  borderRadius:12,border:"none",cursor:"pointer",
+                  background:isA ? V.aclt : "transparent",
+                  boxShadow:isA ? `0 2px 14px rgba(201,168,76,0.18), inset 0 0 0 1.5px ${V.ac}` : "none",
+                  transition:"all 0.25s cubic-bezier(0.16,1,0.3,1)",
+                  color:isA?V.tx:V.mu,
+                }}
+                onMouseEnter={e=>{if(!isA){e.currentTarget.style.background=V.sf2;e.currentTarget.style.color=V.tx;}}}
+                onMouseLeave={e=>{if(!isA){e.currentTarget.style.background="transparent";e.currentTarget.style.color=V.mu;}}}>
+                <span style={{fontSize:20,lineHeight:1}}>{t.icon}</span>
+                <span style={{
+                  fontSize:9,letterSpacing:".06em",textTransform:"uppercase",
+                  fontFamily:"'Jost',sans-serif",fontWeight:isA?700:500,
+                  lineHeight:1,
+                }}>{t.label}</span>
               </button>
-            </div>
-          )}
+            );
+          })}
+        </div>
 
-          {/* ── STEP 1 (TYPE MODE): Pattern — KA.SHA Design Selection ── */}
-          {step===1&&isTypeMode&&garmentType==="pattern"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:18}}>
-              <div>
-                <div style={{background:`rgba(201,168,76,0.08)`,border:`1px solid rgba(201,168,76,0.2)`,borderRadius:10,padding:"10px 12px",marginBottom:14}}>
-                  <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:14,fontWeight:600,color:V.ac,letterSpacing:".02em",marginBottom:2}}>KA.SHA Bespoke Designs</div>
-                  <div style={{fontSize:12,color:"#3a3a36",lineHeight:1.65}}>Select a signature pattern — colours customised in the next step</div>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:12}}>
-                  {KASHA_DESIGNS.map(d=>{
-                    const isA=activeKashaDesign?.id===d.id; const zones=Object.keys(d.zones).length;
-                    return(<button key={d.id} onClick={()=>handleSelectKashaDesign(d)} title={d.label} style={{padding:"10px 8px",borderRadius:10,border:isA?`2px solid ${V.ac}`:`1.5px solid ${V.bd}`,background:isA?V.aclt:V.sf,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,fontFamily:"'Jost',sans-serif",transition:"all 0.3s cubic-bezier(0.16,1,0.3,1)",position:"relative",boxShadow:isA?`0 4px 20px rgba(201,168,76,0.2)`:"0 1px 6px rgba(26,26,24,0.05)"}} onMouseEnter={e=>{if(!isA){e.currentTarget.style.borderColor="rgba(201,168,76,0.5)";e.currentTarget.style.transform="translateY(-2px)";}}} onMouseLeave={e=>{if(!isA){e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.transform="none";}}}>
-                      {isA&&<div style={{position:"absolute",top:7,right:7,width:16,height:16,borderRadius:"50%",background:V.ac,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:V.tx,fontWeight:800}}>✓</div>}
-                      <div style={{width:"100%",height:48,borderRadius:6,overflow:"hidden",background:V.sf2,border:`1px solid ${V.bd}`,flexShrink:0}}>
-                        {d.zones.front&&<img src={d.zones.front} alt={d.label} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>}
-                      </div>
-                      <span style={{fontSize:10,color:isA?V.tx:V.mu,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase"}}>{d.id}</span>
-                      <span style={{fontSize:11,color:V.mul,textAlign:"center",lineHeight:1.4,fontStyle:"italic",fontFamily:"'Cormorant Garamond',serif"}}>{zones} zone{zones!==1?"s":""}</span>
-                    </button>);
-                  })}
-                </div>
-                {activeKashaDesign&&(
-                  <div style={{background:V.sf,border:`1px solid ${V.bd}`,borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,boxShadow:"0 2px 12px rgba(26,26,24,0.05)"}}>
-                    <div>
-                      <div style={{fontSize:12,fontWeight:600,color:V.tx,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>{activeKashaDesign.id}</div>
-                      <div style={{fontSize:12,color:V.mu,fontStyle:"italic",fontFamily:"'Cormorant Garamond',serif"}}>{activeKashaDesign.label}</div>
-                    </div>
-                    <button onClick={()=>{const fc=fcRef.current;if(fc){clearKashaDesign(fc);syncTexture();}setActiveKashaDesign(null);}} style={{fontSize:9,color:V.mu,background:"transparent",border:`1px solid ${V.bd}`,borderRadius:99,padding:"4px 10px",cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".05em",flexShrink:0,transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>Clear</button>
+        {/* ── TOOL PANEL ──────────────────────────────────────────────────── */}
+        {activeTool && (
+          <div style={{
+            width:300,flexShrink:0,
+            borderRight:`1px solid rgba(26,26,24,0.07)`,
+            overflowY:"auto",
+            background:V.sf,
+            display:"flex",flexDirection:"column",
+            scrollbarWidth:"thin",
+            scrollbarColor:`${V.cream3} transparent`,
+            boxShadow:"4px 0 24px rgba(26,26,24,0.06)",
+          }}>
+            {/* Panel header */}
+            <div style={{
+              padding:"18px 20px 14px",
+              borderBottom:`1px solid rgba(26,26,24,0.07)`,
+              flexShrink:0,
+              background:V.sf,
+              position:"sticky",top:0,zIndex:5,
+            }}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div>
+                  <div style={{
+                    fontFamily:"'Cormorant Garamond',serif",
+                    fontSize:18,fontWeight:600,color:V.tx,letterSpacing:".02em",
+                  }}>
+                    {TOOLS.find(t=>t.id===activeTool)?.label}
                   </div>
-                )}
-                {!activeKashaDesign&&<p style={{fontSize:12,color:"#3a3a36",marginTop:2,lineHeight:1.65}}>Select a bespoke design above to begin.</p>}
-              </div>
-
-              <button onClick={()=>setStep(2)} style={{marginTop:4,padding:"12px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
-                Next: Customise Colours →
-              </button>
-            </div>
-          )}
-
-          {/* ── STEP 1 (TYPE MODE): Printed — Print Selection ────────── */}
-          {step===1&&isTypeMode&&garmentType==="printed"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:18}}>
-              <div>
-                <div style={sbT}>Choose your print</div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:12}}>
-                  {PATTERNS.filter(p=>p.id!=="kasha-gt015").map(p=>{
-                    const sel=activePrintId===p.id; const allApplied=allOverPrintId===p.id;
-                    return(<button key={p.id} onClick={()=>{setActivePrintId(p.id);applyAllOverPrint(p);}} title={p.label} style={{position:"relative",padding:0,aspectRatio:"1/1",borderRadius:8,overflow:"hidden",cursor:"pointer",background:`url(${patternUrl(p.file)}) center/cover`,border:sel?`2px solid ${V.ac}`:`1.5px solid transparent`,outline:sel?`2px solid rgba(201,168,76,0.25)`:undefined,outlineOffset:sel?"1px":undefined,transition:"all 0.2s",boxShadow:sel?`0 0 0 1px ${V.ac},0 2px 8px rgba(201,168,76,0.2)`:"none"}}>
-                      {allApplied&&<span style={{position:"absolute",top:2,right:2,fontSize:6,fontWeight:800,background:V.ac,color:V.tx,padding:"1px 4px",borderRadius:3,letterSpacing:".04em"}}>✓</span>}
-                    </button>);
-                  })}
-                </div>
-                {activePrintId&&(()=>{
-                  const p=PATTERNS.find(x=>x.id===activePrintId); if(!p) return null;
-                  return(<div style={{background:V.sf,border:`1px solid ${V.bd}`,borderRadius:10,padding:12,boxShadow:"0 2px 12px rgba(26,26,24,0.05)"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-                      <div style={{width:36,height:36,borderRadius:7,background:`url(${patternUrl(p.file)}) center/cover`,border:`1px solid ${V.bd}`,flexShrink:0}}/>
-                      <div style={{fontSize:13,fontWeight:600,color:V.tx,fontFamily:"'Cormorant Garamond',serif",letterSpacing:".02em"}}>{p.label}</div>
-                    </div>
-                    {allOverPrintId&&<button onClick={clearAllOverPrint} style={{padding:"7px 0",width:"100%",borderRadius:99,border:`1px solid rgba(196,92,92,.35)`,background:"transparent",color:"#c45c5c",fontSize:11,fontWeight:500,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Remove print</button>}
-                  </div>);
-                })()}
-                {!activePrintId&&<p style={{fontSize:12,color:"#3a3a36",lineHeight:1.65}}>Select a print above — it will be applied across the whole garment.</p>}
-              </div>
-
-              <button onClick={()=>setStep(2)} style={{marginTop:4,padding:"12px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
-                Next: Add Patterns →
-              </button>
-            </div>
-          )}
-
-          {/* ── STEP 1: Style (product mode) ───────────────────────────── */}
-          {step===1&&!isTypeMode&&(
-            <div style={{display:"flex",flexDirection:"column",gap:18}}>
-              <div>
-                <div style={sb}>Choose base style</div>
-
-                {/* Tab bar */}
-                <div style={{
-                  display:"flex",gap:3,
-                  background:V.sf2,padding:4,
-                  borderRadius:10,overflow:"hidden",marginBottom:18,
-                }}>
-                  {productType!=="pattern"&&(
-                    <button onClick={()=>setStyleTab("solid")} style={{
-                      flex:1,padding:"7px 4px",borderRadius:7,cursor:"pointer",
-                      border:"none",
-                      background:styleTab==="solid"?"#fff":"transparent",
-                      color:styleTab==="solid"?V.tx:V.mu,
-                      fontWeight:styleTab==="solid"?600:400,
-                      letterSpacing:".07em",fontFamily:"'Jost',sans-serif",
-                      fontSize:10,textTransform:"uppercase",
-                      transition:"all 0.25s",
-                      boxShadow:styleTab==="solid"?"0 2px 8px rgba(26,26,24,0.08)":"none",
-                    }}>Solid</button>
-                  )}
-                  {productType!=="pattern"&&(
-                    <button onClick={()=>setStyleTab("print")} style={{
-                      flex:1,padding:"7px 4px",borderRadius:7,cursor:"pointer",
-                      border:"none",
-                      background:styleTab==="print"?"#fff":"transparent",
-                      color:styleTab==="print"?V.tx:V.mu,
-                      fontWeight:styleTab==="print"?600:400,
-                      letterSpacing:".07em",fontFamily:"'Jost',sans-serif",
-                      fontSize:10,textTransform:"uppercase",
-                      transition:"all 0.25s",
-                      boxShadow:styleTab==="print"?"0 2px 8px rgba(26,26,24,0.08)":"none",
-                    }}>Print</button>
-                  )}
-                  {productType!=="print"&&(
-                    <button onClick={()=>setStyleTab("pattern")} style={{
-                      flex:1,padding:"7px 4px",borderRadius:7,cursor:"pointer",
-                      border:"none",
-                      background:styleTab==="pattern"?"#fff":"transparent",
-                      color:styleTab==="pattern"?V.tx:V.mu,
-                      fontWeight:styleTab==="pattern"?600:400,
-                      letterSpacing:".07em",fontFamily:"'Jost',sans-serif",
-                      fontSize:10,textTransform:"uppercase",
-                      transition:"all 0.25s",
-                      boxShadow:styleTab==="pattern"?"0 2px 8px rgba(26,26,24,0.08)":"none",
-                    }}>Pattern</button>
-                  )}
-                </div>
-
-                {/* ── SOLID pane ── */}
-                {styleTab==="solid"&&(
-                  <div>
-                    <div style={{...sb,marginBottom:10}}>Pick a colour</div>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
-                      {MAIN_PALETTE.map(hex=>swatch(hex,primaryColor===hex,()=>applyPrimary(hex)))}
-                      <label title="Custom colour" style={{
-                        width:30,height:30,borderRadius:"50%",cursor:"pointer",
-                        overflow:"hidden",position:"relative",flexShrink:0,
-                        border:`1.5px dashed ${V.bd2}`,
-                        display:"flex",alignItems:"center",justifyContent:"center",
-                        fontSize:14,color:V.mu,
-                      }}>
-                        +<input type="color" value={primaryColor} onChange={e=>applyPrimary(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
-                      </label>
-                    </div>
-                    <p style={{fontSize:10,color:V.mul,fontStyle:"italic"}}>Override individual parts in Step 2</p>
+                  <div style={{fontSize:9,color:V.mu,letterSpacing:".1em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",marginTop:2}}>
+                    {activeTool==="products"  && "Select your garment"}
+                    {activeTool==="colors"    && "Base & zone colours"}
+                    {activeTool==="prints"    && "Apply prints to garment"}
+                    {activeTool==="patterns"  && "KA.SHA signature designs"}
+                    {activeTool==="text"      && "Add custom text"}
+                    {activeTool==="image"     && "Upload & place logo"}
+                    {activeTool==="order"     && "Size, quantity & checkout"}
                   </div>
-                )}
-
-                {/* ── PRINT pane ── */}
-                {styleTab==="print"&&(
-                  <div>
-                    <div style={{...sb,marginBottom:10}}>Print library</div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:12}}>
-                      {PATTERNS.filter(p=>p.id!=="kasha-gt015").map(p=>{
-                        const sel=activePrintId===p.id;
-                        const allApplied=allOverPrintId===p.id;
-                        const inZone=Object.values(zonePrintIds).includes(p.id);
-                        return(
-                          <button key={p.id} onClick={()=>setActivePrintId(p.id)} title={p.label}
-                            style={{
-                              position:"relative",padding:0,aspectRatio:"1/1",
-                              borderRadius:8,overflow:"hidden",cursor:"pointer",
-                              background:`url(${patternUrl(p.file)}) center/cover`,
-                              border:sel?`2px solid ${V.ac}`:`1.5px solid transparent`,
-                              outline:sel?`2px solid rgba(201,168,76,0.25)`:undefined,
-                              outlineOffset:sel?"1px":undefined,
-                              transition:"all 0.2s",
-                              boxShadow:sel?`0 0 0 1px ${V.ac},0 2px 8px rgba(201,168,76,0.2)`:"none",
-                            }}>
-                            {allApplied&&<span style={{position:"absolute",top:2,right:2,fontSize:6,fontWeight:800,background:V.ac,color:V.tx,padding:"1px 4px",borderRadius:3,letterSpacing:".04em"}}>ALL</span>}
-                            {!allApplied&&inZone&&<span style={{position:"absolute",top:2,right:2,fontSize:6,fontWeight:800,background:V.ac,color:V.tx,padding:"1px 4px",borderRadius:3,letterSpacing:".04em"}}>ZONE</span>}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Selected print actions */}
-                    {activePrintId&&(()=>{
-                      const p=PATTERNS.find(x=>x.id===activePrintId); if(!p) return null;
-                      return(
-                        <div style={{
-                          background:V.sf,border:`1px solid ${V.bd}`,
-                          borderRadius:10,padding:12,
-                          display:"flex",flexDirection:"column",gap:10,
-                          boxShadow:"0 2px 12px rgba(26,26,24,0.05)",
-                        }}>
-                          <div style={{display:"flex",alignItems:"center",gap:10}}>
-                            <div style={{width:36,height:36,borderRadius:7,background:`url(${patternUrl(p.file)}) center/cover`,border:`1px solid ${V.bd}`,flexShrink:0}}/>
-                            <div style={{fontSize:12,fontWeight:600,color:V.tx,fontFamily:"'Cormorant Garamond',serif",letterSpacing:".02em"}}>{p.label}</div>
-                          </div>
-
-                          {productType!=="print"&&(
-                            <div style={{display:"flex",gap:4}}>
-                              {(["fullBody","parts"] as const).map(m=>(
-                                <button key={m} onClick={()=>setPrintMode(m)} style={{
-                                  flex:1,padding:"6px 0",fontSize:10,fontWeight:600,cursor:"pointer",
-                                  borderRadius:99,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",
-                                  border:printMode===m?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,
-                                  background:printMode===m?V.aclt:"transparent",
-                                  color:printMode===m?V.tx:V.mu,transition:"all .2s",
-                                }}>
-                                  {m==="fullBody"?"Full Body":"By Part"}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-
-                          {(productType==="print"||printMode==="fullBody")&&(
-                            <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                              <button onClick={()=>applyAllOverPrint(p)} style={{
-                                padding:"9px 0",borderRadius:99,border:"none",
-                                background:allOverPrintId===p.id?V.tx:V.ac,
-                                color:allOverPrintId===p.id?"#fff":V.tx,
-                                fontSize:11,fontWeight:600,cursor:"pointer",
-                                fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",
-                                transition:"all 0.2s",
-                              }}>
-                                {allOverPrintId===p.id?(productType==="print"?"✓ Selected":"✓ Applied All-Over"):(productType==="print"?"Select this Print":"Apply to whole T-shirt")}
-                              </button>
-                              {allOverPrintId&&productType!=="print"&&(
-                                <button onClick={clearAllOverPrint} style={{
-                                  padding:"7px 0",borderRadius:99,
-                                  border:`1px solid rgba(196,92,92,.35)`,
-                                  background:"transparent",color:"#c45c5c",
-                                  fontSize:10,fontWeight:500,cursor:"pointer",
-                                  fontFamily:"'Jost',sans-serif",letterSpacing:".04em",
-                                }}>
-                                  ✕ Remove full-body print
-                                </button>
-                              )}
-                            </div>
-                          )}
-
-                          {productType!=="print"&&printMode==="parts"&&(()=>{
-                            const zones: {id:Exclude<PatternZone,"all">;label:string}[]=[
-                              {id:"front",label:"Front"},{id:"back",label:"Back"},
-                              {id:"collar",label:"Collar"},{id:"leftSleeve",label:"L.Sleeve"},{id:"rightSleeve",label:"R.Sleeve"},
-                            ];
-                            return(
-                              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                                <div style={{fontSize:10,color:V.mu,marginBottom:2,fontStyle:"italic"}}>Click a part to apply / remove:</div>
-                                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                                  {zones.map(z=>{
-                                    const applied=zonePrintIds[z.id]===p.id;
-                                    const otherPrint=zonePrintIds[z.id]&&zonePrintIds[z.id]!==p.id;
-                                    return(
-                                      <button key={z.id}
-                                        onClick={()=>applied?clearZonePrint(z.id):applyZonePrint(z.id,p)}
-                                        title={otherPrint?`Currently: ${PATTERNS.find(x=>x.id===zonePrintIds[z.id])?.label}`:""}
-                                        style={{
-                                          padding:"5px 12px",fontSize:10,fontWeight:applied?600:400,cursor:"pointer",
-                                          borderRadius:99,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",
-                                          border:applied?`1.5px solid ${V.ac}`:otherPrint?`1px solid ${V.ac}`:`1px solid ${V.bd}`,
-                                          background:applied?V.aclt:otherPrint?"rgba(201,168,76,0.07)":"transparent",
-                                          color:applied?V.tx:otherPrint?V.ac:V.mu,transition:"all .2s",
-                                        }}>
-                                        {applied?"✓ ":""}{z.label}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                                {Object.values(zonePrintIds).some(Boolean)&&(
-                                  <button onClick={clearAllZonePrints} style={{
-                                    padding:"7px 0",borderRadius:99,
-                                    border:`1px solid rgba(196,92,92,.35)`,background:"transparent",
-                                    color:"#c45c5c",fontSize:10,fontWeight:500,cursor:"pointer",marginTop:2,
-                                    fontFamily:"'Jost',sans-serif",letterSpacing:".04em",
-                                  }}>
-                                    ✕ Clear all zone prints
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      );
-                    })()}
-                    {productType==="print"&&<p style={{fontSize:10,color:V.mu,marginTop:6,lineHeight:1.6,fontStyle:"italic"}}>Pre-printed garment. Select a print above — colour changes not available.</p>}
-                  </div>
-                )}
-
-                {/* ── PATTERN pane (KA.SHA Bespoke Designs KD001–KD005) ── */}
-                {styleTab==="pattern"&&(
-                  <div>
-                    <div style={{
-                      background:`rgba(201,168,76,0.08)`,
-                      border:`1px solid rgba(201,168,76,0.2)`,
-                      borderRadius:10,padding:"10px 12px",marginBottom:14,
-                    }}>
-                      <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:14,fontWeight:600,color:V.ac,letterSpacing:".02em",marginBottom:2}}>KA.SHA Bespoke Designs</div>
-                      <div style={{fontSize:10,color:V.mu,lineHeight:1.6}}>Premium zone-mapped designs crafted for the course</div>
-                    </div>
-
-                    {/* 5-card design grid */}
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:12}}>
-                      {KASHA_DESIGNS.map(d=>{
-                        const isA=activeKashaDesign?.id===d.id;
-                        const zones=Object.keys(d.zones).length;
-                        return(
-                          <button key={d.id} onClick={()=>handleSelectKashaDesign(d)} title={d.label}
-                            style={{
-                              padding:"10px 8px 10px",borderRadius:10,
-                              border:isA?`2px solid ${V.ac}`:`1.5px solid ${V.bd}`,
-                              background:isA?V.aclt:V.sf,
-                              cursor:"pointer",display:"flex",flexDirection:"column",
-                              alignItems:"center",gap:6,fontFamily:"'Jost',sans-serif",
-                              transition:"all 0.3s cubic-bezier(0.16,1,0.3,1)",
-                              position:"relative",
-                              boxShadow:isA?`0 4px 20px rgba(201,168,76,0.2)`:"0 1px 6px rgba(26,26,24,0.05)",
-                            }}
-                            onMouseEnter={e=>{if(!isA){e.currentTarget.style.borderColor="rgba(201,168,76,0.5)";e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 4px 16px rgba(26,26,24,0.08)";}}}
-                            onMouseLeave={e=>{if(!isA){e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 1px 6px rgba(26,26,24,0.05)";}}}>
-                            {isA&&(
-                              <div style={{
-                                position:"absolute",top:7,right:7,
-                                width:16,height:16,borderRadius:"50%",
-                                background:V.ac,display:"flex",alignItems:"center",justifyContent:"center",
-                                fontSize:8,color:V.tx,fontWeight:800,
-                              }}>✓</div>
-                            )}
-                            <div style={{
-                              width:"100%",height:48,borderRadius:6,overflow:"hidden",
-                              background:V.sf2,border:`1px solid ${V.bd}`,flexShrink:0,
-                            }}>
-                              {d.zones.front&&(
-                                <img src={d.zones.front} alt={d.label}
-                                  style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
-                              )}
-                            </div>
-                            <span style={{
-                              fontSize:10,color:isA?V.tx:V.mu,fontWeight:700,
-                              letterSpacing:".06em",fontFamily:"'Jost',sans-serif",textTransform:"uppercase",
-                            }}>{d.id}</span>
-                            <span style={{
-                              fontSize:11,color:V.mul,textAlign:"center",lineHeight:1.4,
-                              fontStyle:"italic",fontFamily:"'Cormorant Garamond',serif",
-                            }}>{zones} zone{zones!==1?"s":""}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {activeKashaDesign&&(
-                      <div style={{
-                        background:V.sf,border:`1px solid ${V.bd}`,borderRadius:10,
-                        padding:"10px 12px",display:"flex",alignItems:"center",
-                        justifyContent:"space-between",gap:10,
-                        boxShadow:"0 2px 12px rgba(26,26,24,0.05)",
-                      }}>
-                        <div>
-                          <div style={{fontSize:12,fontWeight:600,color:V.tx,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>{activeKashaDesign.id}</div>
-                          <div style={{fontSize:12,color:V.mu,fontStyle:"italic",fontFamily:"'Cormorant Garamond',serif"}}>{activeKashaDesign.label}</div>
-                        </div>
-                        <button onClick={()=>{const fc=fcRef.current;if(fc){clearKashaDesign(fc);syncTexture();}setActiveKashaDesign(null);}}
-                          style={{
-                            fontSize:9,color:V.mu,background:"transparent",
-                            border:`1px solid ${V.bd}`,borderRadius:99,
-                            padding:"4px 10px",cursor:"pointer",
-                            fontFamily:"'Jost',sans-serif",letterSpacing:".05em",flexShrink:0,
-                            transition:"all 0.2s",
-                          }}
-                          onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
-                          onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>
-                          Clear
-                        </button>
-                      </div>
-                    )}
-
-                    {!activeKashaDesign&&(
-                      <p style={{fontSize:10,color:V.mu,marginTop:2,fontStyle:"italic",lineHeight:1.6}}>Select a bespoke design above to apply it to the garment.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-
-              <button onClick={()=>setStep(2)} style={{
-                marginTop:4,padding:"12px 0",borderRadius:99,border:"none",
-                background:V.tx,color:"#fff",
-                fontSize:11,fontWeight:600,cursor:"pointer",
-                letterSpacing:".08em",textTransform:"uppercase",
-                fontFamily:"'Jost',sans-serif",
-                transition:"all 0.3s",
-              }}
-              onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}
-              onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
-                Next: Customise parts →
-              </button>
-            </div>
-          )}
-
-          {/* ── STEP 2 (TYPE MODE): Solid — Prints (optional) ───────────── */}
-          {step===2&&isTypeMode&&garmentType==="solid"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:14}}>
-              <div>
-                <div style={sbT}>Add prints <span style={{opacity:.5,fontWeight:400,letterSpacing:0,textTransform:"none",fontStyle:"italic"}}>(optional)</span></div>
-                <p style={{fontSize:12,color:"#3a3a36",marginBottom:12,lineHeight:1.65}}>Apply a repeating print to the whole garment or select individual parts.</p>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:12}}>
-                  {PATTERNS.filter(p=>p.id!=="kasha-gt015").map(p=>{
-                    const sel=activePrintId===p.id; const allApplied=allOverPrintId===p.id; const inZone=Object.values(zonePrintIds).includes(p.id);
-                    return(<button key={p.id} onClick={()=>setActivePrintId(p.id)} title={p.label} style={{position:"relative",padding:0,aspectRatio:"1/1",borderRadius:8,overflow:"hidden",cursor:"pointer",background:`url(${patternUrl(p.file)}) center/cover`,border:sel?`2px solid ${V.ac}`:`1.5px solid transparent`,outline:sel?`2px solid rgba(201,168,76,0.25)`:undefined,outlineOffset:sel?"1px":undefined,transition:"all 0.2s",boxShadow:sel?`0 0 0 1px ${V.ac},0 2px 8px rgba(201,168,76,0.2)`:"none"}}>
-                      {allApplied&&<span style={{position:"absolute",top:2,right:2,fontSize:6,fontWeight:800,background:V.ac,color:V.tx,padding:"1px 4px",borderRadius:3,letterSpacing:".04em"}}>ALL</span>}
-                      {!allApplied&&inZone&&<span style={{position:"absolute",top:2,right:2,fontSize:6,fontWeight:800,background:V.ac,color:V.tx,padding:"1px 4px",borderRadius:3,letterSpacing:".04em"}}>ZONE</span>}
-                    </button>);
-                  })}
                 </div>
-                {activePrintId&&(()=>{
-                  const p=PATTERNS.find(x=>x.id===activePrintId); if(!p) return null;
-                  return(<div style={{background:V.sf,border:`1px solid ${V.bd}`,borderRadius:10,padding:12,display:"flex",flexDirection:"column",gap:10,boxShadow:"0 2px 12px rgba(26,26,24,0.05)"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10}}>
-                      <div style={{width:36,height:36,borderRadius:7,background:`url(${patternUrl(p.file)}) center/cover`,border:`1px solid ${V.bd}`,flexShrink:0}}/>
-                      <div style={{fontSize:12,fontWeight:600,color:V.tx,fontFamily:"'Cormorant Garamond',serif",letterSpacing:".02em"}}>{p.label}</div>
-                    </div>
-                    <div style={{display:"flex",gap:4}}>
-                      {(["fullBody","parts"] as const).map(m=>(<button key={m} onClick={()=>setPrintMode(m)} style={{flex:1,padding:"6px 0",fontSize:10,fontWeight:600,cursor:"pointer",borderRadius:99,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",border:printMode===m?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,background:printMode===m?V.aclt:"transparent",color:printMode===m?V.tx:V.mu,transition:"all .2s"}}>{m==="fullBody"?"Full Body":"By Part"}</button>))}
-                    </div>
-                    {printMode==="fullBody"&&(<div style={{display:"flex",flexDirection:"column",gap:6}}>
-                      <button onClick={()=>applyAllOverPrint(p)} style={{padding:"9px 0",borderRadius:99,border:"none",background:allOverPrintId===p.id?V.tx:V.ac,color:allOverPrintId===p.id?"#fff":V.tx,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",transition:"all 0.2s"}}>{allOverPrintId===p.id?"✓ Applied All-Over":"Apply to whole T-shirt"}</button>
-                      {allOverPrintId&&<button onClick={clearAllOverPrint} style={{padding:"7px 0",borderRadius:99,border:`1px solid rgba(196,92,92,.35)`,background:"transparent",color:"#c45c5c",fontSize:10,fontWeight:500,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Remove print</button>}
-                    </div>)}
-                    {printMode==="parts"&&(<div style={{display:"flex",flexDirection:"column",gap:8}}>
-                      <div style={{fontSize:10,color:V.mu,marginBottom:2,fontStyle:"italic"}}>Click a part to apply / remove:</div>
-                      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                        {PART_ZONES.map(z=>{const applied=zonePrintIds[z.id]===p.id; return(<button key={z.id} onClick={()=>applied?clearZonePrint(z.id):applyZonePrint(z.id,p)} style={{padding:"5px 12px",fontSize:10,fontWeight:applied?600:400,cursor:"pointer",borderRadius:99,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",border:applied?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,background:applied?V.aclt:"transparent",color:applied?V.tx:V.mu,transition:"all .2s"}}>{applied?"✓ ":""}{z.label}</button>);})}
-                      </div>
-                      {Object.values(zonePrintIds).some(Boolean)&&<button onClick={clearAllZonePrints} style={{padding:"7px 0",borderRadius:99,border:`1px solid rgba(196,92,92,.35)`,background:"transparent",color:"#c45c5c",fontSize:10,fontWeight:500,cursor:"pointer",marginTop:2,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Clear all zone prints</button>}
-                    </div>)}
-                  </div>);
-                })()}
-              </div>
-              <div style={{display:"flex",gap:6,marginTop:4}}>
-                <button onClick={()=>setStep(1)} style={{flex:1,padding:"10px 0",borderRadius:99,border:`1px solid ${V.bd}`,background:"transparent",color:V.mu,fontSize:10,fontWeight:500,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>← Back</button>
-                <button onClick={()=>setStep(3)} style={{flex:2,padding:"10px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>Next: Add Logo →</button>
-              </div>
-            </div>
-          )}
-
-          {/* ── STEP 2 (TYPE MODE): Pattern — Colour Combination ─────────── */}
-          {step===2&&isTypeMode&&garmentType==="pattern"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:14}}>
-              <div>
-                <div style={sbT}>Body colour</div>
-                <p style={{fontSize:12,color:"#3a3a36",marginBottom:10,lineHeight:1.65}}>Choose a base colour to complement your pattern.</p>
-                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
-                  {MAIN_PALETTE.map(hex=>swatch(hex,primaryColor===hex,()=>applyPrimary(hex)))}
-                  <label title="Custom colour" style={{width:32,height:32,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",flexShrink:0,border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:V.tx}}>
-                    +<input type="color" value={primaryColor} onChange={e=>applyPrimary(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
-                  </label>
-                </div>
-              </div>
-              <div>
-                <div style={sbT}>Zone colour overrides</div>
-                <p style={{fontSize:12,color:"#3a3a36",marginBottom:12,lineHeight:1.65}}>Override colour for specific parts to complement your pattern.</p>
-                <button onClick={()=>{if(zoneColors[activePartZone])COLOUR_ZONES.forEach(z=>applyZoneColor(z.id,zoneColors[activePartZone]));}} style={{fontSize:12,padding:"7px 16px",border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",background:"transparent",color:"#4a4a42",marginBottom:12,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color="#4a4a42";}}>Apply colour to all parts</button>
-                {COLOUR_ZONES.map(z=>{
-                  const active=activePartZone===z.id; const col=zoneColors[z.id];
-                  return(<div key={z.id} onClick={()=>setActivePartZone(z.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:`1.5px solid ${active?V.ac:V.bd}`,background:active?V.aclt:"transparent",cursor:"pointer",marginBottom:5,transition:"all 0.2s"}}>
-                    <div style={{width:20,height:20,borderRadius:"50%",background:col||primaryColor,border:`1.5px solid ${active?V.ac:V.bd2}`,flexShrink:0}}/>
-                    <span style={{flex:1,fontSize:12,fontWeight:active?600:400,fontFamily:"'Jost',sans-serif"}}>{z.label}</span>
-                    <span style={{fontSize:9,color:active?V.tx:V.mu,padding:"3px 10px",border:`1px solid ${active?V.ac:V.bd}`,borderRadius:99,letterSpacing:".04em",background:active?V.sf:"transparent"}}>{col?col.toUpperCase():"Base"}</span>
-                  </div>);
-                })}
-                <div style={{marginTop:12,background:V.sf,border:`1px solid ${V.bd}`,borderRadius:10,padding:12,boxShadow:"0 2px 12px rgba(26,26,24,0.04)"}}>
-                  <div style={{fontSize:12,color:"#4a4a42",marginBottom:10,letterSpacing:".06em",textTransform:"uppercase",fontWeight:600}}>Colour for <strong style={{color:V.tx,fontFamily:"'Cormorant Garamond',serif",fontSize:14,fontWeight:600,textTransform:"none",letterSpacing:".02em"}}>{PART_ZONES.find(z=>z.id===activePartZone)?.label}</strong></div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
-                    {MAIN_PALETTE.map(hex=>swatch(hex,zoneColors[activePartZone]===hex,()=>applyZoneColor(activePartZone,hex)))}
-                    <label title="Custom" style={{width:32,height:32,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:V.tx,flexShrink:0}}>
-                      +<input type="color" value={zoneColors[activePartZone]||primaryColor} onChange={e=>applyZoneColor(activePartZone,e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
-                    </label>
-                  </div>
-                  {zoneColors[activePartZone]&&<button onClick={()=>applyZoneColor(activePartZone,"")} style={{fontSize:11,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Clear zone colour</button>}
-                </div>
-              </div>
-              <div style={{display:"flex",gap:6,marginTop:4}}>
-                <button onClick={()=>setStep(1)} style={{flex:1,padding:"10px 0",borderRadius:99,border:`1px solid ${V.bd}`,background:"transparent",color:"#4a4a42",fontSize:12,fontWeight:500,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color="#4a4a42";}}>← Back</button>
-                <button onClick={()=>setStep(3)} style={{flex:2,padding:"10px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>Next: Add Logo →</button>
-              </div>
-            </div>
-          )}
-
-          {/* ── STEP 2 (TYPE MODE): Printed — Optional Pattern Overlay ────── */}
-          {step===2&&isTypeMode&&garmentType==="printed"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:14}}>
-              <div>
-                <div style={sbT}>Add a pattern overlay <span style={{opacity:.5,fontWeight:400,letterSpacing:0,textTransform:"none",fontStyle:"italic"}}>(optional)</span></div>
-                <p style={{fontSize:12,color:"#3a3a36",marginBottom:12,lineHeight:1.65}}>Layer a KA.SHA bespoke pattern on top of your print.</p>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:12}}>
-                  {KASHA_DESIGNS.map(d=>{
-                    const isA=activeKashaDesign?.id===d.id;
-                    return(<button key={d.id} onClick={()=>isA?undefined:handleSelectKashaDesign(d)} title={d.label} style={{padding:"10px 8px",borderRadius:10,border:isA?`2px solid ${V.ac}`:`1.5px solid ${V.bd}`,background:isA?V.aclt:V.sf,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,fontFamily:"'Jost',sans-serif",transition:"all 0.3s",position:"relative",boxShadow:isA?`0 4px 20px rgba(201,168,76,0.2)`:"0 1px 6px rgba(26,26,24,0.05)"}} onMouseEnter={e=>{if(!isA){e.currentTarget.style.borderColor="rgba(201,168,76,0.5)";e.currentTarget.style.transform="translateY(-2px)";}}} onMouseLeave={e=>{if(!isA){e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.transform="none";}}}>
-                      {isA&&<div style={{position:"absolute",top:7,right:7,width:16,height:16,borderRadius:"50%",background:V.ac,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:V.tx,fontWeight:800}}>✓</div>}
-                      <div style={{width:"100%",height:40,borderRadius:6,overflow:"hidden",background:V.sf2,border:`1px solid ${V.bd}`,flexShrink:0}}>
-                        {d.zones.front&&<img src={d.zones.front} alt={d.label} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>}
-                      </div>
-                      <span style={{fontSize:10,color:isA?V.tx:V.mu,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase"}}>{d.id}</span>
-                    </button>);
-                  })}
-                </div>
-                {activeKashaDesign&&(
-                  <div style={{background:V.sf,border:`1px solid ${V.bd}`,borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
-                    <div>
-                      <div style={{fontSize:12,fontWeight:600,color:V.tx,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>{activeKashaDesign.id} overlay</div>
-                      <div style={{fontSize:11,color:V.mu,fontStyle:"italic",fontFamily:"'Cormorant Garamond',serif"}}>{activeKashaDesign.label}</div>
-                    </div>
-                    <button onClick={()=>{const fc=fcRef.current;if(fc){clearKashaDesign(fc);syncTexture();}setActiveKashaDesign(null);}} style={{fontSize:9,color:V.mu,background:"transparent",border:`1px solid ${V.bd}`,borderRadius:99,padding:"4px 10px",cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".05em",flexShrink:0,transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>Remove</button>
-                  </div>
-                )}
-                {!activeKashaDesign&&<p style={{fontSize:10,color:V.mu,marginTop:2,fontStyle:"italic",lineHeight:1.6}}>Skip this step if you prefer your print without an overlay.</p>}
-              </div>
-              <div style={{display:"flex",gap:6,marginTop:4}}>
-                <button onClick={()=>setStep(1)} style={{flex:1,padding:"10px 0",borderRadius:99,border:`1px solid ${V.bd}`,background:"transparent",color:V.mu,fontSize:10,fontWeight:500,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>← Back</button>
-                <button onClick={()=>setStep(3)} style={{flex:2,padding:"10px 0",borderRadius:99,border:"none",background:V.tx,color:"#fff",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",transition:"all 0.3s"}} onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}} onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>Next: Add Logo →</button>
-              </div>
-            </div>
-          )}
-
-          {/* ── STEP 2: Parts (product mode) ─────────────────────────────── */}
-          {step===2&&!isTypeMode&&(
-            <div style={{display:"flex",flexDirection:"column",gap:14}}>
-              <div>
-                <div style={sb}>Customise individual parts</div>
-                <p style={{fontSize:10,color:V.mu,marginBottom:12,lineHeight:1.6,fontStyle:"italic"}}>Select a zone, then choose a colour. These override the base style per section.</p>
-
-                <button onClick={()=>{if(zoneColors[activePartZone])COLOUR_ZONES.forEach(z=>applyZoneColor(z.id,zoneColors[activePartZone]));}}
-                  style={{
-                    fontSize:10,padding:"6px 14px",
-                    border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",
-                    background:"transparent",color:V.mu,marginBottom:12,
-                    fontFamily:"'Jost',sans-serif",letterSpacing:".05em",
-                    transition:"all 0.2s",
-                  }}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>
-                  Apply colour to all parts
-                </button>
-
-                {/* Part rows */}
-                {PART_ZONES.map(z=>{
-                  const active=activePartZone===z.id; const col=zoneColors[z.id];
-                  return(
-                    <div key={z.id} onClick={()=>setActivePartZone(z.id)} style={{
-                      display:"flex",alignItems:"center",gap:10,
-                      padding:"10px 12px",borderRadius:10,
-                      border:`1.5px solid ${active?V.ac:V.bd}`,
-                      background:active?V.aclt:"transparent",
-                      cursor:"pointer",marginBottom:5,
-                      transition:"all 0.2s",
-                    }}>
-                      <div style={{
-                        width:20,height:20,borderRadius:"50%",
-                        background:col||primaryColor,
-                        border:`1.5px solid ${active?V.ac:V.bd2}`,
-                        flexShrink:0,
-                      }}/>
-                      <span style={{flex:1,fontSize:12,fontWeight:active?600:400,fontFamily:"'Jost',sans-serif"}}>{z.label}</span>
-                      <span style={{
-                        fontSize:9,color:active?V.tx:V.mu,
-                        padding:"3px 10px",
-                        border:`1px solid ${active?V.ac:V.bd}`,
-                        borderRadius:99,letterSpacing:".04em",background:active?V.sf:"transparent",
-                      }}>{col?col.toUpperCase():"Base"}</span>
-                    </div>
-                  );
-                })}
-
-                {/* Colour picker for active zone */}
-                <div style={{marginTop:12,background:V.sf,border:`1px solid ${V.bd}`,borderRadius:10,padding:12,boxShadow:"0 2px 12px rgba(26,26,24,0.04)"}}>
-                  <div style={{fontSize:10,color:V.mu,marginBottom:10,letterSpacing:".06em",textTransform:"uppercase",fontWeight:500}}>
-                    Colour for <strong style={{color:V.tx,fontFamily:"'Cormorant Garamond',serif",fontSize:13,fontWeight:600,textTransform:"none",letterSpacing:".02em"}}>{PART_ZONES.find(z=>z.id===activePartZone)?.label}</strong>
-                  </div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
-                    {MAIN_PALETTE.map(hex=>swatch(hex,zoneColors[activePartZone]===hex,()=>applyZoneColor(activePartZone,hex)))}
-                    <label title="Custom" style={{
-                      width:30,height:30,borderRadius:"50%",cursor:"pointer",
-                      overflow:"hidden",position:"relative",
-                      border:`1.5px dashed ${V.bd2}`,
-                      display:"flex",alignItems:"center",justifyContent:"center",
-                      fontSize:14,color:V.mu,flexShrink:0,
-                    }}>
-                      +<input type="color" value={zoneColors[activePartZone]||primaryColor} onChange={e=>applyZoneColor(activePartZone,e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
-                    </label>
-                  </div>
-                  {zoneColors[activePartZone]&&(
-                    <button onClick={()=>applyZoneColor(activePartZone,"")} style={{
-                      fontSize:10,color:"#c45c5c",background:"none",
-                      border:"none",cursor:"pointer",padding:0,
-                      fontFamily:"'Jost',sans-serif",letterSpacing:".04em",
-                    }}>✕ Clear zone colour</button>
-                  )}
-                </div>
-              </div>
-
-              <div style={{display:"flex",gap:6,marginTop:4}}>
-                <button onClick={()=>setStep(1)} style={{
-                  flex:1,padding:"10px 0",borderRadius:99,
-                  border:`1px solid ${V.bd}`,background:"transparent",
-                  color:V.mu,fontSize:10,fontWeight:500,cursor:"pointer",
-                  fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",
-                  transition:"all 0.2s",
+                <button onClick={()=>setActiveTool(null)} style={{
+                  width:28,height:28,borderRadius:8,border:`1px solid ${V.bd}`,
+                  background:"transparent",cursor:"pointer",color:V.mu,
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  fontSize:14,transition:"all 0.2s",flexShrink:0,
                 }}
                 onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>← Back</button>
-                <button onClick={()=>setStep(3)} style={{
-                  flex:2,padding:"10px 0",borderRadius:99,border:"none",
-                  background:V.tx,color:"#fff",fontSize:10,fontWeight:600,cursor:"pointer",
-                  fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",
-                  transition:"all 0.3s",
-                }}
-                onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}
-                onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>Next: Add logo →</button>
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>
+                  ×
+                </button>
               </div>
             </div>
-          )}
 
-          {/* ── STEP 3: Logo ─────────────────────────────────────────────── */}
-          {step===3&&(
-            <div style={{display:"flex",flexDirection:"column",gap:14}}>
-              <div>
-                <div style={sb}>
-                  Upload your logo <span style={{opacity:.5,fontWeight:400,letterSpacing:0,textTransform:"none",fontStyle:"italic"}}>(optional)</span>
-                </div>
-                <label style={{
-                  display:"block",
-                  border:`2px dashed rgba(201,168,76,0.3)`,
-                  borderRadius:12,padding:"20px 16px",textAlign:"center",cursor:"pointer",
-                  transition:"all 0.3s",marginBottom:12,
-                  background:"rgba(201,168,76,0.02)",
-                }}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.background=V.aclt;}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(201,168,76,0.3)";e.currentTarget.style.background="rgba(201,168,76,0.02)";}}>
-                  <div style={{fontSize:24,marginBottom:8}}>⬆</div>
-                  <div style={{fontSize:12,color:V.mu}}>
-                    <strong style={{color:V.ac,display:"block",fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>Click to upload</strong>
-                  </div>
-                  <div style={{fontSize:10,color:V.mul,marginTop:4,fontStyle:"italic"}}>PNG, SVG, JPG · transparent bg recommended</div>
-                  <input type="file" accept="image/*" onChange={handleLogoUpload} style={{display:"none"}}/>
-                </label>
-                {logoPreview&&(
-                  <div style={{marginBottom:12}}>
+            {/* Panel body */}
+            <div style={{padding:"20px",flex:1,display:"flex",flexDirection:"column",gap:20}}>
+
+              {/* ── PRODUCTS panel ─────────────────────────────────────── */}
+              {activeTool==="products"&&(
+                <div style={{display:"flex",flexDirection:"column",gap:16}}>
+                  {product && (
                     <div style={{
-                      width:"100%",aspectRatio:"2",
-                      background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:10,
-                      display:"flex",alignItems:"center",justifyContent:"center",
-                      overflow:"hidden",position:"relative",marginBottom:6,
+                      background:V.sf2,border:`1px solid ${V.bd}`,
+                      borderRadius:12,overflow:"hidden",
                     }}>
-                      <img src={logoPreview} alt="Logo" style={{maxWidth:"80%",maxHeight:"80%",objectFit:"contain"}}/>
+                      {product.thumbnailUrl && (
+                        <img src={product.thumbnailUrl} alt={product.name}
+                          style={{width:"100%",height:160,objectFit:"cover",display:"block"}}/>
+                      )}
+                      <div style={{padding:"14px"}}>
+                        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:16,fontWeight:600,color:V.tx,letterSpacing:".02em",marginBottom:4}}>
+                          {product.name.replace(/\s*\[gt:GT\d+\]\s*$/,"")}
+                        </div>
+                        <div style={{fontSize:15,color:V.ac,fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".04em"}}>
+                          {formatPrice(product.priceInPaise)}
+                        </div>
+                        {product.description && (
+                          <div style={{fontSize:11,color:V.mu,lineHeight:1.65,marginTop:8,fontFamily:"'Jost',sans-serif"}}>
+                            {product.description.slice(0,120)}{product.description.length>120?"…":""}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <button onClick={removeLogo} style={{
-                      fontSize:10,color:"#c45c5c",background:"none",border:"none",
-                      cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em",
-                    }}>✕ Remove logo</button>
-                  </div>
-                )}
-              </div>
-
-              {/* Named placement groups — logo */}
-              <div>
-                <div style={sb}>Logo placement</div>
-                {PLACEMENT_GROUPS.map(grp=>(
-                  <div key={grp.label} style={{marginBottom:10}}>
-                    <div style={{fontSize:9,color:V.mu,letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:600,marginBottom:5}}>{grp.label}</div>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                      {grp.items.map(item=>(
-                        <button key={item.key} onClick={()=>setLogoPosition(item.key)} style={{
-                          padding:"6px 12px",borderRadius:99,fontSize:11,
-                          fontFamily:"'Jost',sans-serif",letterSpacing:".05em",cursor:"pointer",
-                          border:`1.5px solid ${logoPosition===item.key?V.ac:V.bd}`,
-                          background:logoPosition===item.key?V.aclt:"transparent",
-                          color:logoPosition===item.key?V.tx:V.mu,
-                          fontWeight:logoPosition===item.key?600:400,
-                          transition:"all 0.2s",
+                  )}
+                  {isTypeMode && (
+                    <div>
+                      <div style={{...sb,marginBottom:10}}>Garment type</div>
+                      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                        {([
+                          {id:"solid",   label:"Solid Colour",    desc:"Clean base colour + custom parts"},
+                          {id:"pattern", label:"KA.SHA Pattern",  desc:"Signature bespoke designs"},
+                          {id:"printed", label:"All-Over Print",  desc:"Full garment print library"},
+                        ] as const).map(g=>(
+                          <div key={g.id} style={{
+                            padding:"12px 14px",borderRadius:10,
+                            border:`1.5px solid ${garmentType===g.id?V.ac:V.bd}`,
+                            background:garmentType===g.id?V.aclt:"transparent",
+                            cursor:"default",transition:"all 0.2s",
+                          }}>
+                            <div style={{fontSize:12,fontWeight:600,color:garmentType===g.id?V.tx:V.mu,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>{g.label}</div>
+                            <div style={{fontSize:10,color:V.mul,marginTop:2,fontFamily:"'Jost',sans-serif"}}>{g.desc}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div style={{borderTop:`1px solid ${V.bd}`,paddingTop:14}}>
+                    <div style={{...sb,marginBottom:8}}>Sleeve length</div>
+                    <div style={{display:"flex",gap:6}}>
+                      {(["half","full"] as const).map(sl=>(
+                        <button key={sl} onClick={()=>setSleeveLength(sl)} style={{
+                          flex:1,padding:"9px 0",borderRadius:99,fontSize:11,fontWeight:600,
+                          cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".06em",
+                          textTransform:"uppercase" as const,
+                          border:sleeveLength===sl?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,
+                          background:sleeveLength===sl?V.aclt:"transparent",
+                          color:sleeveLength===sl?V.tx:V.mu,transition:"all .2s",
                         }}>
-                          {item.label}
+                          {sl==="half"?"Half":"Full"}
                         </button>
                       ))}
                     </div>
                   </div>
-                ))}
-                {logoPreview&&(
-                  <button onClick={repositionLogo} style={{
-                    fontSize:10,padding:"6px 14px",marginTop:2,
-                    border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",
-                    background:"transparent",color:V.mu,fontFamily:"'Jost',sans-serif",
-                    letterSpacing:".05em",transition:"all 0.2s",
-                  }}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>Apply placement</button>
-                )}
-              </div>
-
-              {/* Logo size slider */}
-              <div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                  <div style={sb}>Logo size</div>
-                  <span style={{fontSize:11,color:V.tx,fontWeight:600,fontFamily:"'Jost',sans-serif"}}>{logoSize}%</span>
                 </div>
-                <input type="range" min={10} max={100} step={5} value={logoSize}
-                  onChange={e=>{setLogoSize(+e.target.value);if(logoObjRef.current){logoObjRef.current.scaleToWidth(Math.round(+e.target.value*(1024/100)));fcRef.current?.renderAll();syncTexture();}}}
-                  style={{width:"100%",height:4,background:V.bd2,borderRadius:2,outline:"none",WebkitAppearance:"none",appearance:"none",accentColor:V.ac}}/>
-              </div>
+              )}
 
-              {/* ── Text section ─────────────────────────────────────────── */}
-              <div style={{borderTop:`1px solid ${V.bd}`,paddingTop:16}}>
-                <div style={sb}>Add text <span style={{opacity:.5,fontWeight:400,letterSpacing:0,textTransform:"none",fontStyle:"italic"}}>(optional)</span></div>
-
-                {/* Input */}
-                <input
-                  value={textInput}
-                  onChange={e=>{
-                    setTextInput(e.target.value);
-                    if(textObjRef.current){textObjRef.current.set({text:e.target.value});fcRef.current?.renderAll();syncTexture();}
-                  }}
-                  placeholder="Enter text…"
-                  style={{
-                    width:"100%",padding:"9px 12px",boxSizing:"border-box",
-                    background:V.sf2,border:`1.5px solid ${V.bd}`,borderRadius:10,
-                    color:V.tx,fontSize:13,fontFamily:"'Jost',sans-serif",
-                    outline:"none",marginBottom:10,transition:"border-color 0.2s",
-                  }}
-                  onFocus={e=>e.target.style.borderColor=V.ac}
-                  onBlur={e=>e.target.style.borderColor=V.bd}
-                />
-
-                {/* Text placement */}
-                <div style={{marginBottom:10}}>
-                  <div style={{fontSize:10,color:V.mu,letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:600,marginBottom:6}}>Placement</div>
-                  {PLACEMENT_GROUPS.map(grp=>(
-                    <div key={grp.label} style={{marginBottom:8}}>
-                      <div style={{fontSize:9,color:V.mul,letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",marginBottom:4}}>{grp.label}</div>
-                      <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                        {grp.items.map(item=>(
-                          <button key={item.key} onClick={()=>setTextPosition(item.key)} style={{
-                            padding:"5px 10px",borderRadius:99,fontSize:10,
-                            fontFamily:"'Jost',sans-serif",letterSpacing:".05em",cursor:"pointer",
-                            border:`1.5px solid ${textPosition===item.key?V.ac:V.bd}`,
-                            background:textPosition===item.key?V.aclt:"transparent",
-                            color:textPosition===item.key?V.tx:V.mu,
-                            fontWeight:textPosition===item.key?600:400,
-                            transition:"all 0.2s",
-                          }}>
-                            {item.label}
-                          </button>
-                        ))}
+              {/* ── COLORS panel ──────────────────────────────────────── */}
+              {activeTool==="colors"&&(
+                <div style={{display:"flex",flexDirection:"column",gap:18}}>
+                  {/* Base colour */}
+                  {productType!=="print"&&(
+                    <div>
+                      <div style={sb}>Base colour</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+                        {MAIN_PALETTE.map(hex=>swatch(hex,primaryColor===hex,()=>applyPrimary(hex)))}
+                        <label title="Custom colour" style={{width:30,height:30,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",flexShrink:0,border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:V.tx}}>
+                          +<input type="color" value={primaryColor} onChange={e=>applyPrimary(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
+                        </label>
                       </div>
                     </div>
-                  ))}
-                </div>
-
-                {/* Font size */}
-                <div style={{marginBottom:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                    <div style={{fontSize:10,color:V.mu,letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:600}}>Size</div>
-                    <span style={{fontSize:11,color:V.tx,fontWeight:600,fontFamily:"'Jost',sans-serif"}}>{textFontSize}px</span>
-                  </div>
-                  <input type="range" min={14} max={120} step={2} value={textFontSize}
-                    onChange={e=>{setTextFontSize(+e.target.value);if(textObjRef.current){textObjRef.current.set({fontSize:+e.target.value});fcRef.current?.renderAll();syncTexture();}}}
-                    style={{width:"100%",height:4,background:V.bd2,borderRadius:2,outline:"none",WebkitAppearance:"none",appearance:"none",accentColor:V.ac}}/>
-                </div>
-
-                {/* Text colour */}
-                <div style={{marginBottom:12}}>
-                  <div style={{fontSize:10,color:V.mu,letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:600,marginBottom:6}}>Colour</div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center"}}>
-                    {["#1a1a18","#FFFFFF","#c9a84c","#E24B4A","#185FA5","#4a7c59","#D4537E","#7F77DD"].map(hex=>(
-                      <div key={hex} onClick={()=>{setTextColor(hex);if(textObjRef.current){textObjRef.current.set({fill:hex});fcRef.current?.renderAll();syncTexture();}}} style={{
-                        width:22,height:22,borderRadius:"50%",background:hex,cursor:"pointer",flexShrink:0,
-                        border:`2px solid ${textColor===hex?V.ac:"transparent"}`,
-                        boxShadow:textColor===hex?`0 0 0 1.5px ${V.ac}`:"0 1px 3px rgba(0,0,0,.12)",
-                        transition:"all 0.2s",
-                      }}/>
-                    ))}
-                    <label title="Custom" style={{width:22,height:22,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:V.mu,flexShrink:0}}>
-                      +<input type="color" value={textColor} onChange={e=>{setTextColor(e.target.value);if(textObjRef.current){textObjRef.current.set({fill:e.target.value});fcRef.current?.renderAll();syncTexture();}}} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div style={{display:"flex",gap:6}}>
-                  <button
-                    onClick={applyText}
-                    disabled={!textInput.trim()}
-                    style={{
-                      flex:2,padding:"9px 0",borderRadius:99,border:"none",
-                      background:textInput.trim()?V.tx:"#ccc",
-                      color:"#fff",fontSize:10,fontWeight:600,cursor:textInput.trim()?"pointer":"default",
-                      fontFamily:"'Jost',sans-serif",letterSpacing:".07em",textTransform:"uppercase",
-                      transition:"all 0.2s",
-                    }}
-                    onMouseEnter={e=>{if(textInput.trim()){e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}}
-                    onMouseLeave={e=>{e.currentTarget.style.background=textInput.trim()?V.tx:"#ccc";e.currentTarget.style.color="#fff";}}>
-                    {textObjRef.current?"Replace text":"Add text"}
-                  </button>
-                  {textObjRef.current&&(
-                    <button onClick={()=>{repositionText();}} style={{
-                      flex:1,padding:"9px 0",borderRadius:99,
-                      border:`1px solid ${V.bd}`,background:"transparent",
-                      color:V.mu,fontSize:10,fontWeight:500,cursor:"pointer",
-                      fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",
-                      transition:"all 0.2s",
+                  )}
+                  {/* Zone colour overrides */}
+                  <div>
+                    <div style={sb}>Zone colour overrides</div>
+                    <p style={{fontSize:11,color:V.mu,marginBottom:12,lineHeight:1.65,fontFamily:"'Jost',sans-serif"}}>Select a zone, then pick a colour override.</p>
+                    <button onClick={()=>{if(zoneColors[activePartZone])COLOUR_ZONES.forEach(z=>applyZoneColor(z.id,zoneColors[activePartZone]));}} style={{
+                      fontSize:11,padding:"6px 14px",border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",
+                      background:"transparent",color:"#4a4a42",marginBottom:12,fontFamily:"'Jost',sans-serif",letterSpacing:".04em",transition:"all 0.2s",
                     }}
                     onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
-                    onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>Reposition</button>
-                  )}
-                  {textObjRef.current&&(
-                    <button onClick={removeText} style={{
-                      padding:"9px 12px",borderRadius:99,
-                      border:`1px solid rgba(196,92,92,.35)`,background:"transparent",
-                      color:"#c45c5c",fontSize:10,fontWeight:500,cursor:"pointer",
-                      fontFamily:"'Jost',sans-serif",letterSpacing:".05em",
-                      transition:"all 0.2s",
-                    }}>✕</button>
-                  )}
+                    onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color="#4a4a42";}}>Apply to all parts</button>
+                    {COLOUR_ZONES.map(z=>{
+                      const active=activePartZone===z.id; const col=zoneColors[z.id];
+                      return(<div key={z.id} onClick={()=>setActivePartZone(z.id)} style={{
+                        display:"flex",alignItems:"center",gap:10,padding:"10px 12px",
+                        borderRadius:10,border:`1.5px solid ${active?V.ac:V.bd}`,
+                        background:active?V.aclt:"transparent",cursor:"pointer",marginBottom:5,transition:"all 0.2s",
+                      }}>
+                        <div style={{width:20,height:20,borderRadius:"50%",background:col||primaryColor,border:`1.5px solid ${active?V.ac:V.bd2}`,flexShrink:0}}/>
+                        <span style={{flex:1,fontSize:12,fontWeight:active?600:400,fontFamily:"'Jost',sans-serif"}}>{z.label}</span>
+                        <span style={{fontSize:9,color:active?V.tx:V.mu,padding:"3px 8px",border:`1px solid ${active?V.ac:V.bd}`,borderRadius:99,letterSpacing:".04em",background:active?V.sf:"transparent"}}>{col?col.toUpperCase():"Base"}</span>
+                      </div>);
+                    })}
+                    <div style={{marginTop:12,background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:10,padding:12}}>
+                      <div style={{fontSize:11,color:"#4a4a42",marginBottom:10,letterSpacing:".05em",textTransform:"uppercase",fontWeight:600,fontFamily:"'Jost',sans-serif"}}>
+                        Colour for <strong style={{color:V.tx,fontFamily:"'Cormorant Garamond',serif",fontSize:14,fontWeight:600,textTransform:"none",letterSpacing:".02em"}}>{PART_ZONES.find(z=>z.id===activePartZone)?.label}</strong>
+                      </div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
+                        {MAIN_PALETTE.map(hex=>swatch(hex,zoneColors[activePartZone]===hex,()=>applyZoneColor(activePartZone,hex)))}
+                        <label title="Custom" style={{width:30,height:30,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:V.tx,flexShrink:0}}>
+                          +<input type="color" value={zoneColors[activePartZone]||primaryColor} onChange={e=>applyZoneColor(activePartZone,e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
+                        </label>
+                      </div>
+                      {zoneColors[activePartZone]&&(
+                        <button onClick={()=>applyZoneColor(activePartZone,"")} style={{fontSize:10,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Clear zone</button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div style={{display:"flex",gap:6,marginTop:4}}>
-                {!isQuickMode && (
-                  <button onClick={()=>setStep(2)} style={{
-                    flex:1,padding:"10px 0",borderRadius:99,
-                    border:`1px solid ${V.bd}`,background:"transparent",
-                    color:V.mu,fontSize:10,fontWeight:500,cursor:"pointer",
-                    fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",
-                    transition:"all 0.2s",
-                  }}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>← Back</button>
-                )}
-                <button onClick={()=>setStep(4)} style={{
-                  flex:2,padding:"10px 0",borderRadius:99,border:"none",
-                  background:V.tx,color:"#fff",fontSize:10,fontWeight:600,cursor:"pointer",
-                  fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",
-                  transition:"all 0.3s",
-                }}
-                onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}
-                onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>Next: Size →</button>
-              </div>
-            </div>
-          )}
-
-          {/* ── STEP 4: Size ─────────────────────────────────────────────── */}
-          {step===4&&(
-            <div style={{display:"flex",flexDirection:"column",gap:14}}>
-              <div>
-                <div style={sb}>Choose your size</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
-                  {SIZES.map(s=>(
-                    <button key={s} onClick={()=>setSize(s)} style={{
-                      width:46,height:46,
-                      border:`1.5px solid ${size===s?V.ac:V.bd}`,
-                      borderRadius:10,fontSize:12,cursor:"pointer",
-                      background:size===s?V.ac:"transparent",
-                      color:size===s?V.tx:V.mu,
-                      fontFamily:"'Jost',sans-serif",fontWeight:600,
-                      letterSpacing:".04em",transition:"all 0.2s",
-                      boxShadow:size===s?`0 2px 10px rgba(201,168,76,0.25)`:"none",
-                    }}>
-                      {s}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Custom measurements */}
-                <details style={{marginBottom:12}}>
-                  <summary style={{
-                    fontSize:10,color:V.mu,cursor:"pointer",marginBottom:6,
-                    fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",fontWeight:500,
-                  }}>Custom measurements (optional)</summary>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:10}}>
-                    {(["chest","shoulder","length","sleeve"] as const).map(key=>(
-                      <div key={key}>
-                        <label style={{
-                          fontSize:9,color:V.mu,display:"block",marginBottom:4,
-                          textTransform:"capitalize",letterSpacing:".08em",fontWeight:500,
-                        }}>{key}</label>
-                        <input value={customMeasurements[key]} onChange={e=>setCustomMeasurements(p=>({...p,[key]:e.target.value}))}
-                          placeholder={'e.g. 38"'}
+              {/* ── PRINTS panel ──────────────────────────────────────── */}
+              {activeTool==="prints"&&(
+                <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                  {productType==="print"&&(
+                    <div style={{background:"rgba(201,168,76,0.07)",border:`1px solid rgba(201,168,76,0.18)`,borderRadius:10,padding:"10px 12px",fontSize:11,color:V.mu,fontStyle:"italic",fontFamily:"'Jost',sans-serif",lineHeight:1.6}}>
+                      Pre-printed garment — select a print to change the design.
+                    </div>
+                  )}
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+                    {PATTERNS.filter(p=>p.id!=="kasha-gt015").map(p=>{
+                      const sel=activePrintId===p.id;
+                      const allApplied=allOverPrintId===p.id;
+                      const inZone=Object.values(zonePrintIds).includes(p.id);
+                      return(
+                        <button key={p.id} onClick={()=>{setActivePrintId(p.id);}} title={p.label}
                           style={{
-                            width:"100%",padding:"7px 10px",
-                            background:V.sf2,border:`1.5px solid ${V.bd}`,
-                            borderRadius:8,color:V.tx,fontSize:11,
-                            fontFamily:"'Jost',sans-serif",outline:"none",boxSizing:"border-box",
-                            transition:"border-color 0.2s",
+                            position:"relative",padding:0,aspectRatio:"1/1",
+                            borderRadius:8,overflow:"hidden",cursor:"pointer",
+                            background:`url(${patternUrl(p.file)}) center/cover`,
+                            border:sel?`2px solid ${V.ac}`:`1.5px solid transparent`,
+                            outline:sel?`2px solid rgba(201,168,76,0.25)`:undefined,
+                            outlineOffset:sel?"1px":undefined,
+                            transition:"all 0.2s",
+                            boxShadow:sel?`0 0 0 1px ${V.ac},0 2px 8px rgba(201,168,76,0.2)`:"none",
+                          }}>
+                          {allApplied&&<span style={{position:"absolute",top:2,right:2,fontSize:6,fontWeight:800,background:V.ac,color:V.tx,padding:"1px 4px",borderRadius:3}}>ALL</span>}
+                          {!allApplied&&inZone&&<span style={{position:"absolute",top:2,right:2,fontSize:6,fontWeight:800,background:V.ac,color:V.tx,padding:"1px 4px",borderRadius:3}}>ZONE</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {activePrintId&&(()=>{
+                    const p=PATTERNS.find(x=>x.id===activePrintId); if(!p) return null;
+                    return(
+                      <div style={{background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:10,padding:12,display:"flex",flexDirection:"column",gap:10}}>
+                        <div style={{display:"flex",alignItems:"center",gap:10}}>
+                          <div style={{width:36,height:36,borderRadius:7,background:`url(${patternUrl(p.file)}) center/cover`,border:`1px solid ${V.bd}`,flexShrink:0}}/>
+                          <div style={{fontSize:13,fontWeight:600,color:V.tx,fontFamily:"'Cormorant Garamond',serif",letterSpacing:".02em"}}>{p.label}</div>
+                        </div>
+                        {productType!=="print"&&(
+                          <div style={{display:"flex",gap:4}}>
+                            {(["fullBody","parts"] as const).map(m=>(
+                              <button key={m} onClick={()=>setPrintMode(m)} style={{
+                                flex:1,padding:"6px 0",fontSize:10,fontWeight:600,cursor:"pointer",
+                                borderRadius:99,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",
+                                border:printMode===m?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,
+                                background:printMode===m?V.aclt:"transparent",
+                                color:printMode===m?V.tx:V.mu,transition:"all .2s",
+                              }}>{m==="fullBody"?"Full Body":"By Part"}</button>
+                            ))}
+                          </div>
+                        )}
+                        {(productType==="print"||printMode==="fullBody")&&(
+                          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                            <button onClick={()=>{applyAllOverPrint(p);saveHistory();}} style={{
+                              padding:"9px 0",borderRadius:99,border:"none",
+                              background:allOverPrintId===p.id?V.tx:V.ac,
+                              color:allOverPrintId===p.id?"#fff":V.tx,
+                              fontSize:11,fontWeight:600,cursor:"pointer",
+                              fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",transition:"all 0.2s",
+                            }}>
+                              {allOverPrintId===p.id?(productType==="print"?"✓ Selected":"✓ Applied"):(productType==="print"?"Select Print":"Apply All-Over")}
+                            </button>
+                            {allOverPrintId&&productType!=="print"&&(
+                              <button onClick={()=>{clearAllOverPrint();saveHistory();}} style={{
+                                padding:"7px 0",borderRadius:99,
+                                border:`1px solid rgba(196,92,92,.35)`,background:"transparent",
+                                color:"#c45c5c",fontSize:10,fontWeight:500,cursor:"pointer",
+                                fontFamily:"'Jost',sans-serif",letterSpacing:".04em",
+                              }}>✕ Remove print</button>
+                            )}
+                          </div>
+                        )}
+                        {productType!=="print"&&printMode==="parts"&&(()=>{
+                          const zones: {id:Exclude<typeof activePartZone,"collar">;label:string}[]=[];
+                          const pzones: {id:Exclude<PatternZone,"all">;label:string}[]=[
+                            {id:"front",label:"Front"},{id:"back",label:"Back"},
+                            {id:"collar",label:"Collar"},{id:"leftSleeve",label:"L.Sleeve"},{id:"rightSleeve",label:"R.Sleeve"},
+                          ];
+                          return(
+                            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                              <div style={{fontSize:10,color:V.mu,marginBottom:2,fontStyle:"italic",fontFamily:"'Jost',sans-serif"}}>Click part to apply / remove:</div>
+                              <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                                {pzones.map(z=>{
+                                  const applied=zonePrintIds[z.id]===p.id;
+                                  const otherPrint=zonePrintIds[z.id]&&zonePrintIds[z.id]!==p.id;
+                                  return(
+                                    <button key={z.id}
+                                      onClick={()=>{applied?clearZonePrint(z.id):applyZonePrint(z.id,p);saveHistory();}}
+                                      style={{
+                                        padding:"5px 10px",fontSize:10,fontWeight:applied?600:400,cursor:"pointer",
+                                        borderRadius:99,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",
+                                        border:applied?`1.5px solid ${V.ac}`:otherPrint?`1px solid ${V.ac}`:`1px solid ${V.bd}`,
+                                        background:applied?V.aclt:otherPrint?"rgba(201,168,76,0.07)":"transparent",
+                                        color:applied?V.tx:otherPrint?V.ac:V.mu,transition:"all .2s",
+                                      }}>
+                                      {applied?"✓ ":""}{z.label}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              {Object.values(zonePrintIds).some(Boolean)&&(
+                                <button onClick={()=>{clearAllZonePrints();saveHistory();}} style={{
+                                  padding:"7px 0",borderRadius:99,
+                                  border:`1px solid rgba(196,92,92,.35)`,background:"transparent",
+                                  color:"#c45c5c",fontSize:10,fontWeight:500,cursor:"pointer",
+                                  fontFamily:"'Jost',sans-serif",letterSpacing:".04em",
+                                }}>✕ Clear all zone prints</button>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* ── PATTERNS panel ────────────────────────────────────── */}
+              {activeTool==="patterns"&&(
+                <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                  <div style={{background:`rgba(201,168,76,0.07)`,border:`1px solid rgba(201,168,76,0.2)`,borderRadius:10,padding:"10px 12px"}}>
+                    <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:14,fontWeight:600,color:V.ac,letterSpacing:".02em",marginBottom:2}}>KA.SHA Bespoke Designs</div>
+                    <div style={{fontSize:11,color:V.mu,lineHeight:1.6,fontFamily:"'Jost',sans-serif"}}>Premium zone-mapped designs crafted for the course</div>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
+                    {KASHA_DESIGNS.map(d=>{
+                      const isA=activeKashaDesign?.id===d.id;
+                      const zones=Object.keys(d.zones).length;
+                      return(
+                        <button key={d.id} onClick={()=>handleSelectKashaDesign(d)} title={d.label}
+                          style={{
+                            padding:"10px 8px",borderRadius:10,
+                            border:isA?`2px solid ${V.ac}`:`1.5px solid ${V.bd}`,
+                            background:isA?V.aclt:V.sf2,
+                            cursor:"pointer",display:"flex",flexDirection:"column",
+                            alignItems:"center",gap:6,fontFamily:"'Jost',sans-serif",
+                            transition:"all 0.3s cubic-bezier(0.16,1,0.3,1)",
+                            position:"relative",
+                            boxShadow:isA?`0 4px 20px rgba(201,168,76,0.2)`:"0 1px 4px rgba(26,26,24,0.05)",
                           }}
-                          onFocus={e=>e.target.style.borderColor=V.ac}
-                          onBlur={e=>e.target.style.borderColor=V.bd}/>
+                          onMouseEnter={e=>{if(!isA){e.currentTarget.style.borderColor="rgba(201,168,76,0.5)";e.currentTarget.style.transform="translateY(-2px)";}}}
+                          onMouseLeave={e=>{if(!isA){e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.transform="none";}}}>
+                          {isA&&<div style={{position:"absolute",top:7,right:7,width:16,height:16,borderRadius:"50%",background:V.ac,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:V.tx,fontWeight:800}}>✓</div>}
+                          <div style={{width:"100%",height:48,borderRadius:6,overflow:"hidden",background:V.sf,border:`1px solid ${V.bd}`,flexShrink:0}}>
+                            {d.zones.front&&<img src={d.zones.front} alt={d.label} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>}
+                          </div>
+                          <span style={{fontSize:10,color:isA?V.tx:V.mu,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase"}}>{d.id}</span>
+                          <span style={{fontSize:11,color:V.mul,textAlign:"center",lineHeight:1.4,fontStyle:"italic",fontFamily:"'Cormorant Garamond',serif"}}>{zones} zone{zones!==1?"s":""}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {activeKashaDesign&&(
+                    <div style={{background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+                      <div>
+                        <div style={{fontSize:12,fontWeight:600,color:V.tx,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>{activeKashaDesign.id}</div>
+                        <div style={{fontSize:12,color:V.mu,fontStyle:"italic",fontFamily:"'Cormorant Garamond',serif"}}>{activeKashaDesign.label}</div>
+                      </div>
+                      <button onClick={()=>{const fc=fcRef.current;if(fc){clearKashaDesign(fc);syncTexture();}setActiveKashaDesign(null);saveHistory();}}
+                        style={{fontSize:9,color:V.mu,background:"transparent",border:`1px solid ${V.bd}`,borderRadius:99,padding:"4px 10px",cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".05em",flexShrink:0,transition:"all 0.2s"}}
+                        onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
+                        onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>
+                        Clear
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── TEXT panel ────────────────────────────────────────── */}
+              {activeTool==="text"&&(
+                <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                  <input
+                    value={textInput}
+                    onChange={e=>{
+                      setTextInput(e.target.value);
+                      if(textObjRef.current){textObjRef.current.set({text:e.target.value});fcRef.current?.renderAll();syncTexture();}
+                    }}
+                    placeholder="Enter your text…"
+                    style={{
+                      width:"100%",padding:"10px 14px",boxSizing:"border-box",
+                      background:V.sf2,border:`1.5px solid ${V.bd}`,borderRadius:10,
+                      color:V.tx,fontSize:14,fontFamily:"'Jost',sans-serif",
+                      outline:"none",transition:"border-color 0.2s",
+                    }}
+                    onFocus={e=>e.target.style.borderColor=V.ac}
+                    onBlur={e=>e.target.style.borderColor=V.bd}
+                  />
+                  {/* Placement */}
+                  <div>
+                    <div style={sb}>Placement</div>
+                    {PLACEMENT_GROUPS.map(grp=>(
+                      <div key={grp.label} style={{marginBottom:8}}>
+                        <div style={{fontSize:9,color:V.mul,letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",marginBottom:4}}>{grp.label}</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                          {grp.items.map(item=>(
+                            <button key={item.key} onClick={()=>setTextPosition(item.key)} style={{
+                              padding:"5px 10px",borderRadius:99,fontSize:10,
+                              fontFamily:"'Jost',sans-serif",letterSpacing:".05em",cursor:"pointer",
+                              border:`1.5px solid ${textPosition===item.key?V.ac:V.bd}`,
+                              background:textPosition===item.key?V.aclt:"transparent",
+                              color:textPosition===item.key?V.tx:V.mu,
+                              fontWeight:textPosition===item.key?600:400,transition:"all 0.2s",
+                            }}>{item.label}</button>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
-                </details>
-
-                {/* Quantity */}
-                <div>
-                  <div style={sb}>Quantity</div>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{
-                      width:32,height:32,background:"transparent",
-                      border:`1.5px solid ${V.bd}`,borderRadius:8,
-                      color:V.tx,fontSize:16,cursor:"pointer",
-                      display:"flex",alignItems:"center",justifyContent:"center",
-                      transition:"all 0.2s",
-                    }}
-                    onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;}}
-                    onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;}}>−</button>
-                    <span style={{fontSize:16,fontWeight:600,minWidth:28,textAlign:"center",fontFamily:"'Jost',sans-serif"}}>{qty}</span>
-                    <button onClick={()=>setQty(q=>q+1)} style={{
-                      width:32,height:32,background:"transparent",
-                      border:`1.5px solid ${V.bd}`,borderRadius:8,
-                      color:V.tx,fontSize:16,cursor:"pointer",
-                      display:"flex",alignItems:"center",justifyContent:"center",
-                      transition:"all 0.2s",
-                    }}
-                    onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;}}
-                    onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;}}>+</button>
+                  {/* Font size */}
+                  <div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                      <div style={sb}>Size</div>
+                      <span style={{fontSize:11,color:V.tx,fontWeight:600,fontFamily:"'Jost',sans-serif"}}>{textFontSize}px</span>
+                    </div>
+                    <input type="range" min={14} max={120} step={2} value={textFontSize}
+                      onChange={e=>{setTextFontSize(+e.target.value);if(textObjRef.current){textObjRef.current.set({fontSize:+e.target.value});fcRef.current?.renderAll();syncTexture();}}}
+                      style={{width:"100%",height:4,background:V.bd2,borderRadius:2,outline:"none",WebkitAppearance:"none",appearance:"none",accentColor:V.ac}}/>
+                  </div>
+                  {/* Font style */}
+                  <div>
+                    <div style={sb}>Style</div>
+                    <div style={{display:"flex",gap:6}}>
+                      <button onClick={()=>{const nb=!textBold;setTextBold(nb);if(textObjRef.current){textObjRef.current.set({fontWeight:nb?"700":"400"});fcRef.current?.renderAll();syncTexture();}}} style={{
+                        padding:"6px 14px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
+                        border:`1.5px solid ${textBold?V.ac:V.bd}`,background:textBold?V.aclt:"transparent",
+                        color:textBold?V.tx:V.mu,transition:"all 0.2s",fontFamily:"'Jost',sans-serif",
+                      }}>B</button>
+                      <button onClick={()=>{const ni=!textItalic;setTextItalic(ni);if(textObjRef.current){textObjRef.current.set({fontStyle:ni?"italic":"normal"});fcRef.current?.renderAll();syncTexture();}}} style={{
+                        padding:"6px 14px",borderRadius:8,fontSize:12,fontStyle:"italic",cursor:"pointer",
+                        border:`1.5px solid ${textItalic?V.ac:V.bd}`,background:textItalic?V.aclt:"transparent",
+                        color:textItalic?V.tx:V.mu,transition:"all 0.2s",fontFamily:"'Jost',sans-serif",
+                      }}>I</button>
+                    </div>
+                  </div>
+                  {/* Colour */}
+                  <div>
+                    <div style={sb}>Colour</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center"}}>
+                      {["#1a1a18","#FFFFFF","#c9a84c","#E24B4A","#185FA5","#4a7c59","#D4537E","#7F77DD"].map(hex=>(
+                        <div key={hex} onClick={()=>{setTextColor(hex);if(textObjRef.current){textObjRef.current.set({fill:hex});fcRef.current?.renderAll();syncTexture();}}} style={{
+                          width:22,height:22,borderRadius:"50%",background:hex,cursor:"pointer",flexShrink:0,
+                          border:`2px solid ${textColor===hex?V.ac:"transparent"}`,
+                          boxShadow:textColor===hex?`0 0 0 1.5px ${V.ac}`:"0 1px 3px rgba(0,0,0,.12)",
+                          transition:"all 0.2s",
+                        }}/>
+                      ))}
+                      <label title="Custom" style={{width:22,height:22,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:V.mu,flexShrink:0}}>
+                        +<input type="color" value={textColor} onChange={e=>{setTextColor(e.target.value);if(textObjRef.current){textObjRef.current.set({fill:e.target.value});fcRef.current?.renderAll();syncTexture();}}} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
+                      </label>
+                    </div>
+                  </div>
+                  {/* Actions */}
+                  <div style={{display:"flex",gap:6}}>
+                    <button
+                      onClick={()=>{applyText();saveHistory();}}
+                      disabled={!textInput.trim()}
+                      style={{
+                        flex:2,padding:"10px 0",borderRadius:99,border:"none",
+                        background:textInput.trim()?V.tx:"#ccc",
+                        color:"#fff",fontSize:11,fontWeight:600,cursor:textInput.trim()?"pointer":"default",
+                        fontFamily:"'Jost',sans-serif",letterSpacing:".07em",textTransform:"uppercase",transition:"all 0.2s",
+                      }}
+                      onMouseEnter={e=>{if(textInput.trim()){e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}}
+                      onMouseLeave={e=>{e.currentTarget.style.background=textInput.trim()?V.tx:"#ccc";e.currentTarget.style.color="#fff";}}>
+                      {textObjRef.current?"Replace":"Add Text"}
+                    </button>
+                    {textObjRef.current&&(
+                      <button onClick={()=>{repositionText();}} style={{
+                        flex:1,padding:"10px 0",borderRadius:99,
+                        border:`1px solid ${V.bd}`,background:"transparent",
+                        color:V.mu,fontSize:10,fontWeight:500,cursor:"pointer",
+                        fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",transition:"all 0.2s",
+                      }}
+                      onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
+                      onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>Move</button>
+                    )}
+                    {textObjRef.current&&(
+                      <button onClick={()=>{removeText();saveHistory();}} style={{
+                        padding:"10px 12px",borderRadius:99,
+                        border:`1px solid rgba(196,92,92,.35)`,background:"transparent",
+                        color:"#c45c5c",fontSize:10,fontWeight:500,cursor:"pointer",
+                        fontFamily:"'Jost',sans-serif",letterSpacing:".05em",transition:"all 0.2s",
+                      }}>✕</button>
+                    )}
                   </div>
                 </div>
-              </div>
-
-              {/* Design summary */}
-              <div style={{
-                background:V.sf,border:`1px solid ${V.bd}`,borderRadius:12,
-                padding:"14px 14px 10px",
-                boxShadow:"0 2px 16px rgba(26,26,24,0.05)",
-              }}>
-                <div style={{
-                  fontFamily:"'Cormorant Garamond',serif",
-                  fontSize:16,fontWeight:500,color:V.tx,
-                  letterSpacing:".02em",marginBottom:10,
-                }}>Your Design</div>
-                {[
-                  ["Garment",   isTypeMode ? `${garmentType.charAt(0).toUpperCase()+garmentType.slice(1)} T-Shirt` : product!.name.replace(/\s*\[gt:GT\d+\]\s*$/,"")],
-                  ["Style",     activeKashaDesign?`${activeKashaDesign.id} — ${activeKashaDesign.label}`:activePrintId?PATTERNS.find(p=>p.id===activePrintId)?.label||"—":primaryColor],
-                  ["Size",      size],
-                  ["Qty",       String(qty)],
-                  ...(!isTypeMode ? [["Price", formatPrice(product!.priceInPaise)]] : []),
-                ].map(([label,val])=>(
-                  <div key={label} style={{
-                    display:"flex",justifyContent:"space-between",alignItems:"center",
-                    padding:"6px 0",borderBottom:`1px solid rgba(26,26,24,0.06)`,
-                  }}>
-                    <span style={{fontSize:9,color:V.mu,fontFamily:"'Jost',sans-serif",letterSpacing:".1em",textTransform:"uppercase",fontWeight:500}}>{label}</span>
-                    <span style={{fontSize:11,color:V.tx,fontWeight:500,maxWidth:180,textAlign:"right",wordBreak:"break-all",fontFamily:"'Jost',sans-serif"}}>{val}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{display:"flex",gap:6,marginTop:4}}>
-                <button onClick={()=>setStep(3)} style={{
-                  flex:1,padding:"10px 0",borderRadius:99,
-                  border:`1px solid ${V.bd}`,background:"transparent",
-                  color:V.mu,fontSize:10,fontWeight:500,cursor:"pointer",
-                  fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",
-                  transition:"all 0.2s",
-                }}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>← Back</button>
-                {isTypeMode ? (
-                  <Link href="/products" style={{
-                    flex:2,padding:"10px 0",borderRadius:99,
-                    border:`1.5px solid ${V.ac}`,
-                    background:V.aclt,color:V.tx,
-                    fontSize:10,fontWeight:600,cursor:"pointer",
-                    fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",
-                    textDecoration:"none",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",
-                    transition:"all 0.3s",
-                  }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=V.ac;}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=V.aclt;}}>
-                    Browse Products →
-                  </Link>
-                ) : (
-                  <button onClick={()=>cartMut.mutate()} disabled={cartMut.isPending} style={{
-                    flex:2,padding:"10px 0",borderRadius:99,border:"none",
-                    background:V.tx,color:"white",
-                    fontSize:10,fontWeight:600,cursor:"pointer",
-                    fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",
-                    opacity:cartMut.isPending?.6:1,transition:"all 0.3s",
-                  }}
-                  onMouseEnter={e=>{if(!cartMut.isPending){e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}}
-                  onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="white";}}>
-                    {cartMut.isPending?"Adding…":"Add to Cart"}
-                  </button>
-                )}
-              </div>
-              {!isTypeMode && (
-                <Show when="signed-in">
-                  <button onClick={()=>saveMut.mutate()} disabled={saveMut.isPending} style={{
-                    padding:"10px 0",borderRadius:99,
-                    border:`1.5px solid rgba(201,168,76,0.4)`,
-                    background:"transparent",
-                    color:V.tx,fontSize:10,fontWeight:500,cursor:"pointer",
-                    fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",
-                    opacity:saveMut.isPending?.6:1,transition:"all 0.3s",
-                  }}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.background=V.aclt;}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(201,168,76,0.4)";e.currentTarget.style.background="transparent";}}>
-                    {saveMut.isPending?"Saving…":"✦ Save this design"}
-                  </button>
-                </Show>
               )}
-            </div>
-          )}
-        </div>
 
-        {/* CENTER: 3D Viewer ──────────────────────────────────────────────── */}
+              {/* ── IMAGE / LOGO panel ────────────────────────────────── */}
+              {activeTool==="image"&&(
+                <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                  {/* Upload */}
+                  <div>
+                    <div style={sb}>Upload logo</div>
+                    <label style={{
+                      display:"flex",flexDirection:"column",alignItems:"center",gap:8,
+                      padding:"20px",border:`2px dashed ${V.bd}`,borderRadius:12,
+                      cursor:"pointer",transition:"all 0.2s",
+                      background:V.sf2,
+                    }}
+                    onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.background=V.aclt;}}
+                    onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.background=V.sf2;}}>
+                      <span style={{fontSize:28,lineHeight:1}}>🖼</span>
+                      <span style={{fontSize:11,color:V.mu,fontFamily:"'Jost',sans-serif",letterSpacing:".04em",textAlign:"center"}}>Click to upload<br/><span style={{fontSize:10,opacity:.7}}>PNG, JPG, SVG</span></span>
+                      <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{handleLogoUpload(e);saveHistory();}}/>
+                    </label>
+                    {logoPreview&&(
+                      <div style={{marginTop:10}}>
+                        <div style={{width:"100%",aspectRatio:"2",background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",marginBottom:6}}>
+                          <img src={logoPreview} alt="Logo" style={{maxWidth:"80%",maxHeight:"80%",objectFit:"contain"}}/>
+                        </div>
+                        <button onClick={()=>{removeLogo();saveHistory();}} style={{fontSize:10,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Remove logo</button>
+                      </div>
+                    )}
+                  </div>
+                  {/* Placement */}
+                  <div>
+                    <div style={sb}>Placement</div>
+                    {PLACEMENT_GROUPS.map(grp=>(
+                      <div key={grp.label} style={{marginBottom:10}}>
+                        <div style={{fontSize:9,color:V.mu,letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:600,marginBottom:5}}>{grp.label}</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                          {grp.items.map(item=>(
+                            <button key={item.key} onClick={()=>setLogoPosition(item.key)} style={{
+                              padding:"6px 10px",borderRadius:99,fontSize:10,
+                              fontFamily:"'Jost',sans-serif",letterSpacing:".05em",cursor:"pointer",
+                              border:`1.5px solid ${logoPosition===item.key?V.ac:V.bd}`,
+                              background:logoPosition===item.key?V.aclt:"transparent",
+                              color:logoPosition===item.key?V.tx:V.mu,
+                              fontWeight:logoPosition===item.key?600:400,transition:"all 0.2s",
+                            }}>{item.label}</button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    {logoPreview&&(
+                      <button onClick={repositionLogo} style={{
+                        fontSize:10,padding:"6px 14px",marginTop:2,
+                        border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",
+                        background:"transparent",color:V.mu,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",transition:"all 0.2s",
+                      }}
+                      onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
+                      onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>Apply placement</button>
+                    )}
+                  </div>
+                  {/* Size */}
+                  <div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                      <div style={sb}>Logo size</div>
+                      <span style={{fontSize:11,color:V.tx,fontWeight:600,fontFamily:"'Jost',sans-serif"}}>{logoSize}%</span>
+                    </div>
+                    <input type="range" min={10} max={100} step={5} value={logoSize}
+                      onChange={e=>{setLogoSize(+e.target.value);if(logoObjRef.current){logoObjRef.current.scaleToWidth(Math.round(+e.target.value*(1024/100)));fcRef.current?.renderAll();syncTexture();}}}
+                      style={{width:"100%",height:4,background:V.bd2,borderRadius:2,outline:"none",WebkitAppearance:"none",appearance:"none",accentColor:V.ac}}/>
+                  </div>
+                </div>
+              )}
+
+              {/* ── ORDER panel ───────────────────────────────────────── */}
+              {activeTool==="order"&&(
+                <div style={{display:"flex",flexDirection:"column",gap:16}}>
+                  {/* Size */}
+                  <div>
+                    <div style={sb}>Choose your size</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                      {SIZES.map(s=>(
+                        <button key={s} onClick={()=>setSize(s)} style={{
+                          width:46,height:46,
+                          border:`1.5px solid ${size===s?V.ac:V.bd}`,
+                          borderRadius:10,fontSize:12,cursor:"pointer",
+                          background:size===s?V.ac:"transparent",
+                          color:size===s?V.tx:V.mu,
+                          fontFamily:"'Jost',sans-serif",fontWeight:600,
+                          letterSpacing:".04em",transition:"all 0.2s",
+                          boxShadow:size===s?`0 2px 10px rgba(201,168,76,0.25)`:"none",
+                        }}>{s}</button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Custom measurements */}
+                  <details>
+                    <summary style={{
+                      fontSize:10,color:V.mu,cursor:"pointer",marginBottom:6,
+                      fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",fontWeight:500,
+                    }}>Custom measurements (optional)</summary>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:10}}>
+                      {(["chest","shoulder","length","sleeve"] as const).map(key=>(
+                        <div key={key}>
+                          <label style={{fontSize:9,color:V.mu,display:"block",marginBottom:4,textTransform:"capitalize",letterSpacing:".08em",fontWeight:500}}>{key}</label>
+                          <input value={customMeasurements[key]} onChange={e=>setCustomMeasurements(p=>({...p,[key]:e.target.value}))}
+                            placeholder={'e.g. 38"'}
+                            style={{
+                              width:"100%",padding:"7px 10px",
+                              background:V.sf2,border:`1.5px solid ${V.bd}`,borderRadius:8,
+                              color:V.tx,fontSize:11,fontFamily:"'Jost',sans-serif",
+                              outline:"none",boxSizing:"border-box",transition:"border-color 0.2s",
+                            }}
+                            onFocus={e=>e.target.style.borderColor=V.ac}
+                            onBlur={e=>e.target.style.borderColor=V.bd}/>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                  {/* Quantity */}
+                  <div>
+                    <div style={sb}>Quantity</div>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{
+                        width:32,height:32,background:"transparent",
+                        border:`1.5px solid ${V.bd}`,borderRadius:8,
+                        color:V.tx,fontSize:16,cursor:"pointer",
+                        display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s",
+                      }}
+                      onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;}}
+                      onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;}}>−</button>
+                      <span style={{fontSize:16,fontWeight:600,minWidth:28,textAlign:"center",fontFamily:"'Jost',sans-serif"}}>{qty}</span>
+                      <button onClick={()=>setQty(q=>q+1)} style={{
+                        width:32,height:32,background:"transparent",
+                        border:`1.5px solid ${V.bd}`,borderRadius:8,
+                        color:V.tx,fontSize:16,cursor:"pointer",
+                        display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s",
+                      }}
+                      onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;}}
+                      onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;}}>+</button>
+                    </div>
+                  </div>
+                  {/* Design summary */}
+                  <div style={{
+                    background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:12,
+                    padding:"14px 14px 10px",
+                  }}>
+                    <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:15,fontWeight:500,color:V.tx,letterSpacing:".02em",marginBottom:10}}>Your Design</div>
+                    {[
+                      ["Garment", isTypeMode ? `${garmentType.charAt(0).toUpperCase()+garmentType.slice(1)} T-Shirt` : product!.name.replace(/\s*\[gt:GT\d+\]\s*$/,"")],
+                      ["Style",   activeKashaDesign?`${activeKashaDesign.id} — ${activeKashaDesign.label}`:activePrintId?PATTERNS.find(p=>p.id===activePrintId)?.label||"—":primaryColor],
+                      ["Size",    size],
+                      ["Qty",     String(qty)],
+                      ...(!isTypeMode ? [["Price", formatPrice(product!.priceInPaise)]] : []),
+                    ].map(([label,val])=>(
+                      <div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:`1px solid rgba(26,26,24,0.06)`}}>
+                        <span style={{fontSize:9,color:V.mu,fontFamily:"'Jost',sans-serif",letterSpacing:".1em",textTransform:"uppercase",fontWeight:500}}>{label}</span>
+                        <span style={{fontSize:11,color:V.tx,fontWeight:500,maxWidth:160,textAlign:"right",wordBreak:"break-all",fontFamily:"'Jost',sans-serif"}}>{val}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* CTA */}
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {isTypeMode ? (
+                      <Link href="/products" style={{
+                        padding:"12px 0",borderRadius:99,
+                        border:`1.5px solid ${V.ac}`,background:V.aclt,color:V.tx,
+                        fontSize:12,fontWeight:600,cursor:"pointer",
+                        fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",
+                        textDecoration:"none",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",
+                        transition:"all 0.3s",
+                      }}
+                      onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=V.ac;}}
+                      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=V.aclt;}}>
+                        Browse Products →
+                      </Link>
+                    ) : (
+                      <button onClick={()=>cartMut.mutate()} disabled={cartMut.isPending} style={{
+                        padding:"12px 0",borderRadius:99,border:"none",
+                        background:V.tx,color:"white",
+                        fontSize:12,fontWeight:600,cursor:"pointer",
+                        fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",
+                        opacity:cartMut.isPending?.6:1,transition:"all 0.3s",
+                      }}
+                      onMouseEnter={e=>{if(!cartMut.isPending){e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}}
+                      onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="white";}}>
+                        {cartMut.isPending?"Adding…":"✦ Add to Cart"}
+                      </button>
+                    )}
+                    {!isTypeMode && (
+                      <Show when="signed-in">
+                        <button onClick={()=>saveMut.mutate()} disabled={saveMut.isPending} style={{
+                          padding:"10px 0",borderRadius:99,
+                          border:`1.5px solid rgba(201,168,76,0.4)`,background:"transparent",
+                          color:V.tx,fontSize:11,fontWeight:500,cursor:"pointer",
+                          fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",
+                          opacity:saveMut.isPending?.6:1,transition:"all 0.3s",
+                        }}
+                        onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.background=V.aclt;}}
+                        onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(201,168,76,0.4)";e.currentTarget.style.background="transparent";}}>
+                          {saveMut.isPending?"Saving…":"✦ Save Design"}
+                        </button>
+                      </Show>
+                    )}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+        )}
+
+        {/* ── CENTER: 3D CANVAS ─────────────────────────────────────────────── */}
         <div style={{
           flex:1,position:"relative",
-          background:"radial-gradient(ellipse at 60% 40%, #f0ede6 0%, #e6e1d8 60%, #dbd5c8 100%)",
+          background:"radial-gradient(ellipse at 55% 40%, #f2efe8 0%, #e8e2d9 60%, #ddd7ca 100%)",
           display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",
+          minWidth:0,
         }}>
           {/* Loading overlay */}
           {!modelDisplayed&&webglAvailable&&product?.modelUrl&&(
@@ -1935,62 +1684,135 @@ export default function CustomizePage() {
             </div>
           )}
 
-          {/* Product / type badge */}
+          {/* Product badge */}
           <div style={{
-            position:"absolute",top:16,left:16,
-            background:"rgba(250,250,247,0.92)",
+            position:"absolute",bottom:20,left:20,
+            background:"rgba(250,250,247,0.94)",
             border:`1px solid rgba(201,168,76,0.2)`,
-            borderRadius:10,padding:"10px 14px",
+            borderRadius:10,padding:"8px 14px",
             backdropFilter:"blur(12px)",
             boxShadow:"0 2px 16px rgba(26,26,24,0.08)",
           }}>
-            <div style={{
-              fontFamily:"'Cormorant Garamond',serif",
-              fontSize:14,fontWeight:600,color:V.tx,letterSpacing:".02em",
-            }}>
-              {isTypeMode
-                ? `${garmentType.charAt(0).toUpperCase()+garmentType.slice(1)} T-Shirt`
-                : product!.name.replace(/\s*\[gt:GT\d+\]\s*$/,"")}
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:13,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
+              {isTypeMode ? `${garmentType.charAt(0).toUpperCase()+garmentType.slice(1)} T-Shirt` : product!.name.replace(/\s*\[gt:GT\d+\]\s*$/,"")}
             </div>
-            {!isTypeMode && (
-              <div style={{fontSize:11,color:V.ac,fontFamily:"'Jost',sans-serif",letterSpacing:".04em",marginTop:2}}>{formatPrice(product!.priceInPaise)}</div>
-            )}
-            {isTypeMode && (
-              <div style={{fontSize:10,color:V.mu,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",marginTop:2,fontStyle:"italic"}}>Design concept</div>
-            )}
+            {!isTypeMode && <div style={{fontSize:11,color:V.ac,fontFamily:"'Jost',sans-serif",letterSpacing:".04em",marginTop:1}}>{formatPrice(product!.priceInPaise)}</div>}
           </div>
 
           {/* Active design badge */}
           {(activeKashaDesign||activePrintId)&&(
             <div style={{
-              position:"absolute",top:16,right:16,
-              background:"rgba(250,250,247,0.92)",
+              position:"absolute",bottom:20,right:20,
+              background:"rgba(250,250,247,0.94)",
               border:`1px solid rgba(201,168,76,0.25)`,
-              borderRadius:10,padding:"8px 12px",
+              borderRadius:10,padding:"6px 12px",
               backdropFilter:"blur(12px)",
               boxShadow:"0 2px 16px rgba(26,26,24,0.08)",
             }}>
-              <div style={{fontSize:8,color:V.mu,letterSpacing:".12em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",marginBottom:2}}>Active Design</div>
-              <div style={{fontSize:12,fontWeight:600,color:V.ac,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>
+              <div style={{fontSize:8,color:V.mu,letterSpacing:".12em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",marginBottom:1}}>Active Design</div>
+              <div style={{fontSize:11,fontWeight:600,color:V.ac,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>
                 {activeKashaDesign?`${activeKashaDesign.id} · ${activeKashaDesign.label}`:PATTERNS.find(p=>p.id===activePrintId)?.label}
               </div>
             </div>
           )}
 
-          {/* Watermark */}
+          {/* Drag hint */}
           <div style={{
-            position:"absolute",bottom:16,left:"50%",transform:"translateX(-50%)",
+            position:"absolute",top:16,left:"50%",transform:"translateX(-50%)",
             fontFamily:"'Cormorant Garamond', serif",
-            fontSize:10,letterSpacing:".2em",
-            color:"rgba(26,26,24,0.2)",textTransform:"uppercase",
+            fontSize:11,letterSpacing:".16em",
+            color:"rgba(26,26,24,0.22)",textTransform:"uppercase",
             pointerEvents:"none",whiteSpace:"nowrap",
           }}>
             Drag to rotate · Scroll to zoom
           </div>
         </div>
+
+        {/* ── RIGHT: VIEW SELECTOR ─────────────────────────────────────────── */}
+        <div style={{
+          width:86,flexShrink:0,
+          display:"flex",flexDirection:"column",alignItems:"center",
+          paddingTop:16,paddingBottom:16,gap:8,
+          borderLeft:`1px solid rgba(26,26,24,0.07)`,
+          background:V.bg,
+          overflowY:"auto",
+          scrollbarWidth:"none",
+        }}>
+          {CAMERA_VIEWS.map(v=>{
+            const isA=cameraView===v.id;
+            return(
+              <button key={v.id}
+                onClick={()=>setCameraView(v.id as any)}
+                style={{
+                  width:62,display:"flex",flexDirection:"column",alignItems:"center",gap:6,
+                  padding:"10px 0 8px",borderRadius:12,border:"none",cursor:"pointer",
+                  background:isA?V.aclt:"transparent",
+                  boxShadow:isA?`0 2px 14px rgba(201,168,76,0.18),inset 0 0 0 1.5px ${V.ac}`:"none",
+                  transition:"all 0.25s cubic-bezier(0.16,1,0.3,1)",
+                }}
+                onMouseEnter={e=>{if(!isA){e.currentTarget.style.background=V.sf2;}}}
+                onMouseLeave={e=>{if(!isA){e.currentTarget.style.background="transparent";}}}>
+                {/* Mini garment silhouette */}
+                <div style={{
+                  width:38,height:38,borderRadius:8,
+                  background:isA?`rgba(201,168,76,0.15)`:V.sf2,
+                  border:`1.5px solid ${isA?V.ac:V.bd}`,
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  transition:"all 0.25s",
+                  boxShadow:isA?`0 2px 8px rgba(201,168,76,0.2)`:"none",
+                  overflow:"hidden",
+                }}>
+                  {product?.thumbnailUrl
+                    ? <img src={product.thumbnailUrl} alt={v.label}
+                        style={{
+                          width:"100%",height:"100%",objectFit:"cover",
+                          opacity:isA?1:0.5,transition:"opacity 0.2s",
+                          transform:v.id==="back"?"scaleX(-1)":v.id==="right"?"none":v.id==="left"?"none":"none",
+                          filter:v.id==="back"?"brightness(0.7)":v.id==="right"||v.id==="left"?"brightness(0.85)":"none",
+                        }}/>
+                    : <span style={{fontSize:16,opacity:isA?1:0.35}}>👕</span>
+                  }
+                </div>
+                <span style={{
+                  fontSize:9,letterSpacing:".08em",textTransform:"uppercase",
+                  fontFamily:"'Jost',sans-serif",fontWeight:isA?700:500,
+                  color:isA?V.tx:V.mu,lineHeight:1,transition:"color 0.2s",
+                }}>{v.label}</span>
+              </button>
+            );
+          })}
+
+          {/* Divider */}
+          <div style={{width:40,height:1,background:V.bd,margin:"4px 0"}}/>
+
+          {/* TRY 360° button */}
+          <button
+            onClick={()=>{
+              const mv:any=mvRef.current; if(!mv) return;
+              mv.setAttribute("auto-rotate",""); mv.setAttribute("rotation-per-second","20deg");
+              setTimeout(()=>{mv.removeAttribute("auto-rotate");mv.setAttribute("rotation-per-second","8deg");},3000);
+            }}
+            style={{
+              width:62,padding:"10px 0",borderRadius:12,
+              border:`1.5px solid ${V.ac}`,
+              background:`rgba(201,168,76,0.1)`,
+              cursor:"pointer",
+              display:"flex",flexDirection:"column",alignItems:"center",gap:4,
+              transition:"all 0.25s",
+            }}
+            onMouseEnter={e=>{e.currentTarget.style.background=V.aclt;e.currentTarget.style.boxShadow=`0 4px 14px rgba(201,168,76,0.25)`;}}
+            onMouseLeave={e=>{e.currentTarget.style.background=`rgba(201,168,76,0.1)`;e.currentTarget.style.boxShadow="none";}}>
+            <span style={{fontSize:14,lineHeight:1}}>↻</span>
+            <span style={{
+              fontSize:8,letterSpacing:".06em",textTransform:"uppercase",
+              fontFamily:"'Jost',sans-serif",fontWeight:700,
+              color:V.ac,lineHeight:1,
+            }}>360°</span>
+          </button>
+        </div>
       </div>
 
-      {/* Always-mounted invisible Fabric canvas (keeps texture pipeline live on all steps) */}
+      {/* Hidden Fabric canvas (texture pipeline) */}
       <div id="fc-wrapper" style={{position:"fixed",left:"-9999px",top:0,width:"1024px",height:"1024px",pointerEvents:"none",opacity:0.01,zIndex:-1}}>
         <div id="fc-scale-host" style={{position:"absolute",left:0,top:0,width:"1024px",height:"1024px",transformOrigin:"top left"}}>
           <canvas ref={canvasElRef}/>

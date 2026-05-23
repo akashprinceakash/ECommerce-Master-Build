@@ -1,0 +1,261 @@
+Redesign the current KA.SHA customization page UI/UX using the attached reference layout and interaction style as inspiration, while keeping all the current KA.SHA customization content, features, workflows, and business logic intact.
+
+The new interface should feel premium, minimal, luxury-focused, and highly product-centric — similar to the clean customization experience shown in the reference images.
+
+────────────────────────────
+OVERALL UI/UX DIRECTION
+────────────────────────────
+
+The customization experience should follow a clean three-panel layout:
+
+1. LEFT SIDEBAR
+2. CENTER LIVE PRODUCT PREVIEW
+3. RIGHT VIEW SWITCHER / ACTION PANEL
+
+The overall interface should feel:
+
+* modern
+* minimal
+* smooth
+* luxury sportswear focused
+* uncluttered
+* highly interactive
+* production-ready
+
+Use:
+
+* soft light backgrounds
+* darker readable typography
+* premium spacing
+* subtle borders
+* modern hover animations
+* smooth transitions
+* floating cards/panels
+* elegant iconography
+
+────────────────────────────
+LEFT SIDEBAR — TOOL NAVIGATION
+────────────────────────────
+
+Create a vertical floating sidebar similar to the reference UI.
+
+The sidebar should contain premium icon-based navigation items for:
+
+* Products
+* Patterns
+* Colors
+* Prints
+* Text
+* Logos
+* Personalisation
+* Artwork
+* Order
+
+Each navigation item should:
+
+* contain icon + label
+* have hover animations
+* have active-state highlighting
+* use darker typography
+* use slightly larger font sizes
+* maintain premium spacing
+
+The active tool should:
+
+* show darker background
+* have elevated shadow
+* show highlighted border/accent
+* animate smoothly when selected
+
+────────────────────────────
+LEFT EXPANDABLE CONTENT PANEL
+────────────────────────────
+
+When clicking a sidebar item, open an expandable premium content panel beside the sidebar (like shown in the reference image).
+
+Example:
+If user clicks “Products”:
+Show:
+
+* current selected product
+* selected pattern/design
+* selected colors
+* change/edit buttons
+
+If user clicks “Patterns”:
+Show:
+
+* pattern thumbnails
+* pattern categories
+* live selection state
+* search/filter options
+
+If user clicks “Colors”:
+Show:
+
+* body color picker
+* texture/pattern color picker
+* live preview updates
+
+If user clicks “Text” or “Logos”:
+Show:
+
+* upload/add controls
+* placement selection
+* resize controls
+* typography settings
+
+The panel should:
+
+* slide smoothly
+* feel lightweight
+* not block the product preview
+* support responsive/mobile behavior
+
+────────────────────────────
+CENTER AREA — LIVE 3D PRODUCT PREVIEW
+────────────────────────────
+
+The center of the page should focus entirely on the live t-shirt preview.
+
+Requirements:
+
+* Large centered t-shirt model
+* Clean uncluttered background
+* Real-time customization updates
+* Smooth transitions between changes
+* Premium rendering appearance
+* Dynamic lighting/shadow feel
+* Large editable print zone overlays
+
+IMPORTANT:
+When user selects a pattern/product before navigation:
+
+* the selected pattern MUST already be applied automatically on page load
+* the selected pattern should remain active in the UI
+* no reset should happen during navigation
+
+The experience should behave exactly like the attached reference flow.
+
+────────────────────────────
+RIGHT SIDE — VIEW SWITCHER
+────────────────────────────
+
+Create a floating vertical garment-view switcher similar to the reference UI.
+
+Include:
+
+* Front View
+* Back View
+* Left Sleeve
+* Right Sleeve
+* Optional 360° View
+
+Each view selector should:
+
+* show mini garment preview
+* highlight active view
+* animate smoothly
+* instantly rotate/change the product preview
+
+Add:
+
+* premium glow/shadow for active state
+* luxury minimal styling
+
+At the bottom:
+Add a premium:
+“TRY 360°”
+button.
+
+────────────────────────────
+TOP ACTION BAR
+────────────────────────────
+
+Create a floating top-center action toolbar.
+
+Include:
+
+* Undo
+* Redo
+* Save Design
+* Share
+* Tutorials
+* Contact Support
+
+On the right side:
+Add premium CTA buttons:
+
+* Personalise
+* Order Now
+
+Buttons should:
+
+* have rounded premium styling
+* use smooth hover animations
+* contain luxury sportswear aesthetics
+
+────────────────────────────
+TYPOGRAPHY IMPROVEMENTS
+────────────────────────────
+
+All newly added content should have:
+
+* darker font colors
+* slightly larger font sizes
+* stronger font weights
+* improved readability
+* better visual hierarchy
+
+Section titles should feel:
+
+* bold
+* premium
+* modern
+* easy to scan
+
+────────────────────────────
+ACTIVE STATE & SELECTION MANAGEMENT
+────────────────────────────
+
+Fix all selection state issues.
+
+Only one option should remain active at a time.
+
+Example:
+
+* if “Quick Personalisation” is selected → only that option remains active
+* if “Full Customisation” is selected → deactivate others
+
+Apply premium active-state visuals:
+
+* darker background
+* highlighted border
+* elevated shadow
+* smooth transition
+* glow/accent animation
+
+────────────────────────────
+MOBILE RESPONSIVENESS
+────────────────────────────
+
+The entire interface must be fully responsive.
+
+On mobile/tablet:
+
+* sidebar should collapse elegantly
+* floating panels should become drawers
+* controls should remain accessible
+* 3D preview should remain the primary focus
+
+────────────────────────────
+FINAL EXPERIENCE GOAL
+────────────────────────────
+
+The final experience should feel like a world-class premium apparel configurator similar to:
+
+* Nike By You
+* YDS
+* high-end sportswear customization platforms
+
+while fully preserving the existing KA.SHA customization functionality, logic, and workflows.

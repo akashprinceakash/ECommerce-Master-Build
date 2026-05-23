@@ -175,7 +175,7 @@ export function Navbar() {
           })}
           <Link
             href="/connect"
-            className="relative text-[12px] uppercase transition-colors hover:text-neutral-900 "
+            className="group relative text-[12px] uppercase transition-colors hover:text-neutral-900"
             style={{
               fontFamily: "'Josefin Sans', sans-serif",
               letterSpacing: "0.25em",
@@ -183,8 +183,11 @@ export function Navbar() {
               textDecoration: "none",
             }}
           >
-            
             Connect with Us
+            <span
+              className="absolute -bottom-1 left-0 h-px w-0 group-hover:w-full transition-all duration-300"
+              style={{ background: GOLD }}
+            />
           </Link>
           {SHOW_CUSTOMIZATION && (
             <button
