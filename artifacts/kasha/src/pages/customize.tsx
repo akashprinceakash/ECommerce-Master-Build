@@ -64,15 +64,20 @@ const PART_ZONES: { id: Exclude<PatternZone,"all">; label: string }[] = [
 ];
 
 // Named placement positions → fabric canvas coordinates (1024×1024 UV space)
+// UV positions derived from ZONE_PRESETS (1024×1024 texture space):
+//   front:       { left:10, top:341, w:490, h:678 }
+//   back:        { left:524, top:188, w:483, h:833 }
+//   leftSleeve:  { left:210, top:4,   w:398, h:170 }
+//   rightSleeve: { left:617, top:2,   w:398, h:171 }
 const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
-  "front-chest": { left: 512, top: 390 },
-  "front-left":  { left: 300, top: 390 },
-  "front-right": { left: 724, top: 390 },
-  "back-center": { left: 512, top: 500 },
-  "back-left":   { left: 300, top: 500 },
-  "back-right":  { left: 724, top: 500 },
-  "left-sleeve": { left: 175, top: 560 },
-  "right-sleeve":{ left: 849, top: 560 },
+  "front-chest": { left: 255, top: 490 },  // center-x of front zone, ~22% down
+  "front-left":  { left: 147, top: 490 },  // left quarter of front zone
+  "front-right": { left: 363, top: 490 },  // right quarter of front zone
+  "back-center": { left: 765, top: 371 },  // center-x of back zone, ~22% down
+  "back-left":   { left: 645, top: 371 },  // left quarter of back zone
+  "back-right":  { left: 886, top: 371 },  // right quarter of back zone
+  "left-sleeve": { left: 409, top:  89 },  // center of leftSleeve zone
+  "right-sleeve":{ left: 816, top:  88 },  // center of rightSleeve zone
 };
 const PLACEMENT_GROUPS = [
   { label:"FRONT",  items:[{key:"front-chest",label:"Chest"},{key:"front-left",label:"Left"},{key:"front-right",label:"Right"}] },
@@ -185,6 +190,24 @@ export default function CustomizePage() {
     queryFn:  () => apiFetch(`/api/products/${id}`),
     enabled:  !!id,
   });
+
+  // In type-mode (arriving from home with ?type=), auto-load the first product of
+  // that type so the 3D model shows even before the user selects a specific product.
+  const { data: allProducts } = useQuery<Product[]>({
+    queryKey: ["products-list"],
+    queryFn:  () => apiFetch("/api/products"),
+    enabled:  isTypeMode,
+  });
+  const defaultTypeProduct: Product | undefined = isTypeMode
+    ? (allProducts?.find(p =>
+        garmentType === "pattern" ? p.subType === "pattern" :
+        garmentType === "printed" ? p.subType === "printed" :
+        (p.subType === "solid" || !p.subType)
+      ) ?? allProducts?.[0])
+    : undefined;
+  // displayProduct: the product whose modelUrl/materials drive the 3D viewer
+  const displayProduct = product ?? defaultTypeProduct;
+
   const productType: ProductType =
     product?.subType === "pattern" ? "pattern" :
     product?.subType === "printed" ? "print"   : "fabric";
@@ -329,7 +352,7 @@ export default function CustomizePage() {
   // ── model-viewer load ────────────────────────────────────────────────────
   useEffect(() => {
     // No model URL or WebGL unavailable → nothing to load, show fallback immediately
-    if (!product?.modelUrl || !webglAvailable) { setModelDisplayed(true); return; }
+    if (!displayProduct?.modelUrl || !webglAvailable) { setModelDisplayed(true); return; }
     if (!mvReady) return;
 
     const mv = mvRef.current;
@@ -1058,23 +1081,6 @@ export default function CustomizePage() {
                       </div>
                     </div>
                   )}
-                  <div style={{borderTop:`1px solid ${V.bd}`,paddingTop:14}}>
-                    <div style={{...sb,marginBottom:8}}>Sleeve length</div>
-                    <div style={{display:"flex",gap:6}}>
-                      {(["half","full"] as const).map(sl=>(
-                        <button key={sl} onClick={()=>setSleeveLength(sl)} style={{
-                          flex:1,padding:"9px 0",borderRadius:99,fontSize:11,fontWeight:600,
-                          cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".06em",
-                          textTransform:"uppercase" as const,
-                          border:sleeveLength===sl?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,
-                          background:sleeveLength===sl?V.aclt:"transparent",
-                          color:sleeveLength===sl?V.tx:V.mu,transition:"all .2s",
-                        }}>
-                          {sl==="half"?"Half":"Full"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 </div>
               )}
 
@@ -1701,7 +1707,7 @@ export default function CustomizePage() {
           minWidth:0,
         }}>
           {/* Loading overlay */}
-          {!modelDisplayed&&webglAvailable&&product?.modelUrl&&(
+          {!modelDisplayed&&webglAvailable&&displayProduct?.modelUrl&&(
             <div style={{
               position:"absolute",inset:0,
               background:"rgba(250,250,247,0.92)",backdropFilter:"blur(8px)",
@@ -1716,8 +1722,8 @@ export default function CustomizePage() {
             </div>
           )}
 
-          {mvReady&&product?.modelUrl&&webglAvailable&&(
-            <model-viewer ref={mvRef} src={toProxiedUrl(product?.modelUrl)}
+          {mvReady&&displayProduct?.modelUrl&&webglAvailable&&(
+            <model-viewer ref={mvRef} src={toProxiedUrl(displayProduct.modelUrl)}
               camera-controls auto-rotate rotation-per-second="8deg"
               shadow-intensity="1" environment-image="neutral" exposure="1.0"
               camera-orbit="0deg 75deg 2.5m" min-camera-orbit="auto auto 1.5m" max-camera-orbit="auto auto 5m"
@@ -1725,10 +1731,10 @@ export default function CustomizePage() {
               style={{width:"100%",height:"100%","--poster-color":"transparent",opacity:modelDisplayed?1:0,transition:"opacity .4s"} as any}/>
           )}
 
-          {(!product?.modelUrl||!webglAvailable)&&(
+          {(!displayProduct?.modelUrl||!webglAvailable)&&(
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16,color:V.mu,padding:24,maxWidth:320,textAlign:"center"}}>
-              {product?.thumbnailUrl
-                ? <img src={product.thumbnailUrl} alt={product.name} style={{maxHeight:380,objectFit:"contain",borderRadius:14,boxShadow:"0 12px 48px rgba(26,26,24,0.12)",opacity:.95}}/>
+              {displayProduct?.thumbnailUrl
+                ? <img src={displayProduct.thumbnailUrl} alt={displayProduct.name} style={{maxHeight:380,objectFit:"contain",borderRadius:14,boxShadow:"0 12px 48px rgba(26,26,24,0.12)",opacity:.95}}/>
                 : <div style={{fontSize:64,opacity:.12}}>👕</div>}
               <p style={{fontSize:14,lineHeight:1.7,fontStyle:"italic",fontFamily:"'Cormorant Garamond',serif"}}>
                 {isTypeMode
