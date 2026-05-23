@@ -124,7 +124,8 @@ const raf = () => new Promise<void>(r => requestAnimationFrame(() => r()));
 function toProxiedUrl(url: string | null | undefined): string {
   if (!url) return "";
   if (url.includes(".r2.dev/") || url.includes("r2.cloudflarestorage.com/")) {
-    return `/api/r2-proxy?url=${encodeURIComponent(url)}`;
+    const base = getApiUrl();
+    return `${base}/api/r2-proxy?url=${encodeURIComponent(url)}`;
   }
   return url;
 }

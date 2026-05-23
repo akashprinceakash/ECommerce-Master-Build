@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHand
 import * as fabric from "fabric";
 import { ZONE_PRESETS, ZONE_LABEL, patternUrl, type PatternZone, type PatternDef } from "./patterns";
 import { GT_STYLES, type GtStyleDef, type GtColors } from "./gt-styles";
+import { getApiUrl } from "@/lib/api";
 const GT_BASE_TEXTURES: Record<string, string> = {};
 
 export interface CustomizerHandle {
@@ -156,10 +157,12 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
   }), [syncTexture, updateLayerSelector]);
 
   const rawModelUrl = uploadedModelUrl || modelUrl;
-  // Proxy R2 URLs through the API server to avoid browser CORS restrictions
+  // Proxy R2 URLs through the API server to avoid browser CORS restrictions.
+  // Uses an absolute URL (via VITE_API_URL) so this works when the frontend and
+  // API are on different origins (e.g. custom domain deployments).
   const effectiveModelUrl = rawModelUrl
     ? (rawModelUrl.includes(".r2.dev/") || rawModelUrl.includes("r2.cloudflarestorage.com/"))
-      ? `/api/r2-proxy?url=${encodeURIComponent(rawModelUrl)}`
+      ? `${getApiUrl()}/api/r2-proxy?url=${encodeURIComponent(rawModelUrl)}`
       : rawModelUrl
     : null;
   const showModelViewer = !!(effectiveModelUrl && webglAvailable && mvScriptLoaded && !modelError);
