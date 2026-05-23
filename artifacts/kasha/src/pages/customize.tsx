@@ -633,16 +633,47 @@ export default function CustomizePage() {
     throw new Error("Nothing to snapshot");
   }, [syncTexture]);
 
+  /** Capture front, back and side snapshots by briefly rotating the model-viewer */
+  const snapshotViews = useCallback(async (): Promise<{front:string;back:string;side:string}> => {
+    const mv: any = mvRef.current;
+    const fc = fcRef.current;
+    try { await syncTexture(); } catch {}
+
+    const captureAngle = async (orbit: string): Promise<string> => {
+      if (mv && typeof mv.toDataURL === "function") {
+        mv.cameraOrbit = orbit;
+        // Wait two animation frames so model-viewer re-renders at the new angle
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
+        await new Promise(r => setTimeout(r, 120));
+        try { return mv.toDataURL("image/png", 1.0); } catch {}
+      }
+      if (fc) return fc.toDataURL({ format: "png", quality: 0.95, multiplier: 1 });
+      return "";
+    };
+
+    const front = await captureAngle("0deg 75deg 2.5m");
+    const back  = await captureAngle("180deg 75deg 2.5m");
+    const side  = await captureAngle("90deg 75deg 2.5m");
+
+    // Restore default front view
+    if (mv) mv.cameraOrbit = "0deg 75deg 2.5m";
+
+    return { front, back, side };
+  }, [syncTexture]);
+
   // ── Save / Cart mutations ────────────────────────────────────────────────
   const buildPayload=async()=>{
     const fc=fcRef.current; if(!fc) throw new Error("Canvas not ready");
-    const snap=await snapshotModel();
+    const views = await snapshotViews();
     return {
       productId:id, name:designName||`${product?.name} Custom`,
       color:primaryColor, size,
       partsEnabled:{qty,zoneColors,primaryColor,kdDesignId:activeKashaDesign?.id||"",activePrintId,sleeveLength},
       canvasData:JSON.stringify({canvasJSON:JSON.stringify((fc as any).toJSON(["data"])),textureUrl:lastTextureUrlRef.current,primaryColor,kdDesignId:activeKashaDesign?.id||"",zoneColors,activePrintId,allOverPrintId,sleeveLength}),
-      previewImageUrl:snap,
+      previewImageUrl: views.front,
+      frontImageUrl:   views.front,
+      backImageUrl:    views.back,
+      sideImageUrl:    views.side,
     };
   };
   const saveMut=useMutation({

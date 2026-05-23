@@ -48,6 +48,9 @@ interface UserDesign {
   partsEnabled: Record<string, any> | null;
   canvasData: string | null;
   previewImageUrl: string | null;
+  frontImageUrl: string | null;
+  backImageUrl: string | null;
+  sideImageUrl: string | null;
   updatedAt: string;
 }
 
@@ -370,8 +373,40 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
             </div>
           )}
 
-          {/* Canvas Preview thumbnails */}
-          {(design.previewImageUrl || parsedDesign.textureUrl) && (
+          {/* 3-view snapshot strip */}
+          {(design.frontImageUrl || design.backImageUrl || design.sideImageUrl) && (
+            <div className="mt-5">
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-2">Design Snapshots</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { label: "Front", url: design.frontImageUrl },
+                  { label: "Back",  url: design.backImageUrl  },
+                  { label: "Side",  url: design.sideImageUrl  },
+                ].map(({ label, url }) => (
+                  <div key={label}>
+                    <p className="text-white/30 text-[9px] text-center mb-1 uppercase tracking-widest">{label}</p>
+                    <div className="rounded overflow-hidden border border-white/10 bg-black/40 aspect-square flex items-center justify-center">
+                      {url
+                        ? <img src={url} alt={`${label} view`} className="w-full h-full object-contain" />
+                        : <span className="text-white/20 text-[10px]">—</span>
+                      }
+                    </div>
+                    {url && (
+                      <a
+                        href={url}
+                        download={`${design.name}-${label.toLowerCase()}.png`}
+                        className="block text-center text-[9px] text-white/30 hover:text-white/60 mt-1 transition-colors"
+                        title={`Download ${label} view`}
+                      >↓ save</a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Fallback: legacy single preview + flat texture */}
+          {!design.frontImageUrl && (design.previewImageUrl || parsedDesign.textureUrl) && (
             <div className="mt-5 grid grid-cols-2 gap-2">
               {design.previewImageUrl && (
                 <div>
@@ -392,7 +427,17 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
             </div>
           )}
 
-          {!design.previewImageUrl && !parsedDesign.textureUrl && (
+          {/* Flat Texture always shown when 3-view is available */}
+          {design.frontImageUrl && parsedDesign.textureUrl && (
+            <div className="mt-3">
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Flat Texture</p>
+              <div className="rounded-lg overflow-hidden border border-white/10" style={{ background: parsedDesign.canvasBg ?? "#222" }}>
+                <img src={parsedDesign.textureUrl} alt="Flat Texture" className="w-full aspect-square object-contain" />
+              </div>
+            </div>
+          )}
+
+          {!design.frontImageUrl && !design.previewImageUrl && !parsedDesign.textureUrl && (
             <div className="mt-5 p-4 rounded-lg border border-white/10 text-center">
               <p className="text-white/40 text-xs">No canvas design saved yet</p>
             </div>
@@ -961,17 +1006,21 @@ export default function AdminPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {designs.map(d => (
                   <div key={d.id} className="border border-border bg-card flex flex-col overflow-hidden hover:border-primary transition-colors group">
-                    {/* Preview */}
+                    {/* Preview — prefer front-view snapshot, fall back to legacy preview, then product thumb */}
                     <div className="aspect-square bg-muted relative overflow-hidden">
-                      {d.previewImageUrl ? (
-                        <img src={d.previewImageUrl} alt={d.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      {(d.frontImageUrl || d.previewImageUrl) ? (
+                        <img src={d.frontImageUrl ?? d.previewImageUrl!} alt={d.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       ) : d.productThumbnailUrl ? (
                         <img src={d.productThumbnailUrl} alt={d.name} className="w-full h-full object-cover opacity-50" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-muted-foreground/30 text-xs font-bold">NO PREVIEW</div>
                       )}
-                      {d.previewImageUrl && (
+                      {(d.frontImageUrl || d.previewImageUrl) && (
                         <span className="absolute top-2 left-2 bg-emerald-600 text-white text-[9px] px-2 py-0.5 tracking-wider font-semibold">CUSTOMIZED</span>
+                      )}
+                      {/* 3-view indicator badge */}
+                      {d.frontImageUrl && d.backImageUrl && d.sideImageUrl && (
+                        <span className="absolute top-2 right-2 bg-black/60 text-white/70 text-[8px] px-1.5 py-0.5 rounded tracking-wider">3-VIEW</span>
                       )}
                     </div>
 

@@ -13,6 +13,9 @@ export const customizationsTable = pgTable("customizations", {
   partsEnabled: jsonb("parts_enabled").notNull().default({ collar: true, leftSleeve: true, rightSleeve: true }),
   canvasData: text("canvas_data"),
   previewImageUrl: text("preview_image_url"),
+  frontImageUrl: text("front_image_url"),
+  backImageUrl: text("back_image_url"),
+  sideImageUrl: text("side_image_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

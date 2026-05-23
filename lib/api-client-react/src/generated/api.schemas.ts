@@ -51,6 +51,12 @@ export interface Customization {
   canvasData?: string | null;
   /** @nullable */
   previewImageUrl?: string | null;
+  /** @nullable */
+  frontImageUrl?: string | null;
+  /** @nullable */
+  backImageUrl?: string | null;
+  /** @nullable */
+  sideImageUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -69,6 +75,12 @@ export interface CreateCustomizationBody {
   canvasData?: string | null;
   /** @nullable */
   previewImageUrl?: string | null;
+  /** @nullable */
+  frontImageUrl?: string | null;
+  /** @nullable */
+  backImageUrl?: string | null;
+  /** @nullable */
+  sideImageUrl?: string | null;
 }
 
 export type UpdateCustomizationBodyPartsEnabled = { [key: string]: boolean };
@@ -82,6 +94,12 @@ export interface UpdateCustomizationBody {
   canvasData?: string | null;
   /** @nullable */
   previewImageUrl?: string | null;
+  /** @nullable */
+  frontImageUrl?: string | null;
+  /** @nullable */
+  backImageUrl?: string | null;
+  /** @nullable */
+  sideImageUrl?: string | null;
 }
 
 export interface CartItem {

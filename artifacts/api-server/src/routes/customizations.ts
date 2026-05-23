@@ -18,7 +18,7 @@ router.get("/customizations", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/customizations", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
-  const { productId, name, color, size, partsEnabled, canvasData, previewImageUrl } = req.body;
+  const { productId, name, color, size, partsEnabled, canvasData, previewImageUrl, frontImageUrl, backImageUrl, sideImageUrl } = req.body;
   if (!productId || !color || !size) {
     res.status(400).json({ error: "Missing required fields" });
     return;
@@ -34,6 +34,9 @@ router.post("/customizations", requireAuth, async (req, res): Promise<void> => {
       partsEnabled: partsEnabled ?? { collar: true, leftSleeve: true, rightSleeve: true },
       canvasData: canvasData ?? null,
       previewImageUrl: previewImageUrl ?? null,
+      frontImageUrl: frontImageUrl ?? null,
+      backImageUrl: backImageUrl ?? null,
+      sideImageUrl: sideImageUrl ?? null,
     })
     .returning();
   res.status(201).json(customization);
@@ -83,7 +86,7 @@ router.put("/customizations/:id", requireAuth, async (req, res): Promise<void> =
     res.status(400).json({ error: "Invalid ID" });
     return;
   }
-  const { name, color, size, partsEnabled, canvasData, previewImageUrl } = req.body;
+  const { name, color, size, partsEnabled, canvasData, previewImageUrl, frontImageUrl, backImageUrl, sideImageUrl } = req.body;
   const updateData: Record<string, unknown> = {};
   if (name !== undefined) updateData.name = name;
   if (color !== undefined) updateData.color = color;
@@ -91,6 +94,9 @@ router.put("/customizations/:id", requireAuth, async (req, res): Promise<void> =
   if (partsEnabled !== undefined) updateData.partsEnabled = partsEnabled;
   if (canvasData !== undefined) updateData.canvasData = canvasData;
   if (previewImageUrl !== undefined) updateData.previewImageUrl = previewImageUrl;
+  if (frontImageUrl !== undefined) updateData.frontImageUrl = frontImageUrl;
+  if (backImageUrl !== undefined) updateData.backImageUrl = backImageUrl;
+  if (sideImageUrl !== undefined) updateData.sideImageUrl = sideImageUrl;
 
   const [updated] = await db
     .update(customizationsTable)

@@ -573,6 +573,12 @@ components:
           type: ["string", "null"]
         previewImageUrl:
           type: ["string", "null"]
+        frontImageUrl:
+          type: ["string", "null"]
+        backImageUrl:
+          type: ["string", "null"]
+        sideImageUrl:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
@@ -614,6 +620,12 @@ components:
           type: ["string", "null"]
         previewImageUrl:
           type: ["string", "null"]
+        frontImageUrl:
+          type: ["string", "null"]
+        backImageUrl:
+          type: ["string", "null"]
+        sideImageUrl:
+          type: ["string", "null"]
       required:
         - productId
         - name
@@ -637,6 +649,12 @@ components:
         canvasData:
           type: ["string", "null"]
         previewImageUrl:
+          type: ["string", "null"]
+        frontImageUrl:
+          type: ["string", "null"]
+        backImageUrl:
+          type: ["string", "null"]
+        sideImageUrl:
           type: ["string", "null"]
 
     CartItem:
