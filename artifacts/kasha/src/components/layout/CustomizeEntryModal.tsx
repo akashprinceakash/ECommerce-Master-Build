@@ -20,15 +20,7 @@ const CATEGORIES = [
     href: "/customize?type=solid",
     accent: "#c9a84c",
     bg: "linear-gradient(135deg, #fafaf7 60%, #f5e9c8 100%)",
-    preview: (
-      <div style={{
-        width: "100%", height: "100%",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        background: "linear-gradient(160deg, #ede9e1 0%, #d4c5a9 100%)",
-      }}>
-        <div style={{ fontSize: 56, opacity: 0.35 }}>👕</div>
-      </div>
-    ),
+    thumbnail: "/api/public/thumbnails/KS1008NBLACK01.png",
   },
   {
     key: "pattern",
@@ -39,15 +31,7 @@ const CATEGORIES = [
     href: "/customize?type=pattern",
     accent: "#c9a84c",
     bg: "linear-gradient(135deg, #fafaf7 60%, #ede9e1 100%)",
-    preview: (
-      <div style={{
-        width: "100%", height: "100%",
-        background: "repeating-linear-gradient(45deg, rgba(201,168,76,0.18) 0px, rgba(201,168,76,0.18) 8px, transparent 8px, transparent 20px), linear-gradient(135deg, #ede9e1, #c9b89e)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>
-        <div style={{ fontSize: 56, opacity: 0.3 }}>👕</div>
-      </div>
-    ),
+    thumbnail: "/api/public/thumbnails/KS1001BSKYBLUE-BROWN01.png",
   },
   {
     key: "printed",
@@ -58,15 +42,7 @@ const CATEGORIES = [
     href: "/customize?type=printed",
     accent: "#c9a84c",
     bg: "linear-gradient(135deg, #fafaf7 60%, #e8e5df 100%)",
-    preview: (
-      <div style={{
-        width: "100%", height: "100%",
-        background: "repeating-linear-gradient(30deg, rgba(26,26,24,0.06) 0px, rgba(26,26,24,0.06) 4px, transparent 4px, transparent 16px), repeating-linear-gradient(-30deg, rgba(201,168,76,0.1) 0px, rgba(201,168,76,0.1) 4px, transparent 4px, transparent 16px), linear-gradient(135deg, #e8e5df, #ccc9c2)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>
-        <div style={{ fontSize: 56, opacity: 0.3 }}>👕</div>
-      </div>
-    ),
+    thumbnail: "/api/public/thumbnails/KS1000BGP004-01.png",
   },
 ];
 
@@ -178,8 +154,12 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
               }}
             >
               {/* Preview area */}
-              <div style={{ width: "100%", aspectRatio: "4/3", overflow: "hidden", flexShrink: 0 }}>
-                {cat.preview}
+              <div style={{ width: "100%", aspectRatio: "4/3", overflow: "hidden", flexShrink: 0, background: "#ede9e1", position: "relative" }}>
+                <img
+                  src={cat.thumbnail}
+                  alt={cat.title}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }}
+                />
               </div>
 
               {/* Text content */}

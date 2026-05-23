@@ -14,8 +14,9 @@ import * as fabric from "fabric";
 import { ZONE_PRESETS } from "./patterns";
 
 export interface KashaDesignDef {
-  id:    string;
-  label: string;
+  id:        string;
+  label:     string;
+  thumbnail?: string;
   zones: {
     front?:       string;
     back?:        string;
@@ -54,6 +55,7 @@ const KD_ZONES: Record<string, string> = {
 export const KASHA_DESIGNS: KashaDesignDef[] = [
   {
     id: "KD001", label: "Bespoke Design 1",
+    thumbnail: "/images/designs/KD001.png",
     zones: {
       front: KD_ZONES["F1"],
       back: KD_ZONES["B1"],
@@ -64,6 +66,7 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
   },
   {
     id: "KD002", label: "Bespoke Design 2",
+    thumbnail: "/images/designs/KD002.png",
     zones: {
       front: KD_ZONES["F2"],
       back: KD_ZONES["B2"],
@@ -74,6 +77,7 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
   },
   {
     id: "KD003", label: "Bespoke Design 3",
+    thumbnail: "/images/designs/KD003.png",
     zones: {
       front: KD_ZONES["F3"],
       back: KD_ZONES["B3"],
@@ -84,6 +88,7 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
   },
   {
     id: "KD004", label: "Bespoke Design 4",
+    thumbnail: "/images/designs/KD004.png",
     zones: {
       front: KD_ZONES["F4"],
       collar: KD_ZONES["COL4"],

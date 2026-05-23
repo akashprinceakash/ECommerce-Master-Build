@@ -1329,8 +1329,8 @@ export default function CustomizePage() {
                           onMouseEnter={e=>{if(!isA){e.currentTarget.style.borderColor="rgba(201,168,76,0.5)";e.currentTarget.style.transform="translateY(-2px)";}}}
                           onMouseLeave={e=>{if(!isA){e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.transform="none";}}}>
                           {isA&&<div style={{position:"absolute",top:7,right:7,width:16,height:16,borderRadius:"50%",background:V.ac,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:V.tx,fontWeight:800}}>✓</div>}
-                          <div style={{width:"100%",height:48,borderRadius:6,overflow:"hidden",background:V.sf,border:`1px solid ${V.bd}`,flexShrink:0}}>
-                            {d.zones.front&&<img src={d.zones.front} alt={d.label} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>}
+                          <div style={{width:"100%",height:72,borderRadius:6,overflow:"hidden",background:V.sf,border:`1px solid ${V.bd}`,flexShrink:0}}>
+                            {(d.thumbnail||d.zones.front)&&<img src={d.thumbnail||d.zones.front} alt={d.label} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"top",display:"block"}}/>}
                           </div>
                           <span style={{fontSize:10,color:isA?V.tx:V.mu,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase"}}>{d.id}</span>
                           <span style={{fontSize:11,color:V.mul,textAlign:"center",lineHeight:1.4,fontStyle:"italic",fontFamily:"'Cormorant Garamond',serif"}}>{zones} zone{zones!==1?"s":""}</span>

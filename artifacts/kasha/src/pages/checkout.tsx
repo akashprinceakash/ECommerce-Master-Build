@@ -95,6 +95,7 @@ export default function CheckoutPage() {
   const [pincodeLoading, setPincodeLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [pincodeResolved, setPincodeResolved] = useState(false);
+  const [pincodeResolvedState, setPincodeResolvedState] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function validateForm(): Record<string, string> {
@@ -109,6 +110,8 @@ export default function CheckoutPage() {
       errs.shippingCity = "City is required";
     if (!formData.shippingState)
       errs.shippingState = "Please select a state";
+    else if (pincodeResolvedState && formData.shippingState !== pincodeResolvedState)
+      errs.shippingState = `State doesn't match PIN code — expected: ${pincodeResolvedState}`;
     if (!/^\d{6}$/.test(formData.shippingPostalCode))
       errs.shippingPostalCode = "Enter a valid 6-digit PIN code";
     return errs;
@@ -136,6 +139,7 @@ export default function CheckoutPage() {
             shippingCity:  district || prev.shippingCity,
             shippingState: resolvedState || prev.shippingState,
           }));
+          if (resolvedState) setPincodeResolvedState(resolvedState);
           if (district || resolvedState) setPincodeResolved(true);
         }
       } catch { /* silently ignore */ } finally {
@@ -466,6 +470,7 @@ export default function CheckoutPage() {
                         const val = e.target.value.replace(/\D/g, "").slice(0, 6);
                         handleChange("shippingPostalCode", val);
                         setPincodeResolved(false);
+                        setPincodeResolvedState("");
                         if (errors.shippingPostalCode) setErrors(prev => ({ ...prev, shippingPostalCode: "" }));
                       }}
                       className={`rounded-none bg-secondary/10 ${errors.shippingPostalCode ? "border-destructive" : "border-border/50"}`}
