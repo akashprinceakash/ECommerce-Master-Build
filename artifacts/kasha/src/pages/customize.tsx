@@ -1136,12 +1136,20 @@ export default function CustomizePage() {
                       </label>
                     </div>
                     {colorTarget!=="all"&&zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]&&(
-                      <button onClick={()=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,"")} style={{fontSize:10,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Reset to base</button>
-                    )}
-                    {colorTarget==="all"&&(
-                      <button onClick={()=>{PART_ZONES.forEach(z=>applyZoneColor(z.id,primaryColor));}} style={{fontSize:10,color:V.mu,background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em",marginTop:4}}>Apply base colour to all zones</button>
+                      <button onClick={()=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,"")} style={{fontSize:10,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Reset this zone</button>
                     )}
                   </div>
+                  {/* Reset All Zones */}
+                  <button onClick={()=>{PART_ZONES.forEach(z=>applyZoneColor(z.id,""));setColorTarget("all");}} style={{
+                    width:"100%",padding:"9px 0",borderRadius:99,
+                    border:`1px solid rgba(196,92,92,.35)`,background:"transparent",
+                    color:"#c45c5c",fontSize:10,fontWeight:600,cursor:"pointer",
+                    fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",transition:"all 0.2s",
+                  }}
+                  onMouseEnter={e=>{e.currentTarget.style.background="rgba(196,92,92,.07)";e.currentTarget.style.borderColor="rgba(196,92,92,.6)";}}
+                  onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.borderColor="rgba(196,92,92,.35)";}}>
+                    ↺ Reset All Zones
+                  </button>
                 </div>
               )}
 
@@ -1421,25 +1429,39 @@ export default function CustomizePage() {
                     </div>
                   </div>
 
-                  {/* Placement */}
+                  {/* Placement thumbnails */}
                   <div style={{marginBottom:14}}>
-                    <div style={{fontSize:9,letterSpacing:".12em",textTransform:"uppercase",color:V.mu,fontFamily:"'Jost',sans-serif",marginBottom:6}}>Placement</div>
-                    {PLACEMENT_GROUPS.map(grp=>(
-                      <div key={grp.label} style={{marginBottom:8}}>
-                        <div style={{fontSize:8,color:V.mul,letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",marginBottom:4}}>{grp.label}</div>
-                        <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                          {grp.items.map(item=>(
-                            <button key={item.key} onClick={()=>setTextPosition(item.key)} style={{
-                              padding:"5px 10px",borderRadius:99,fontSize:10,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",cursor:"pointer",
-                              border:`1.5px solid ${textPosition===item.key?V.ac:V.bd}`,
-                              background:textPosition===item.key?V.aclt:"transparent",
-                              color:textPosition===item.key?V.tx:V.mu,
-                              fontWeight:textPosition===item.key?600:400,transition:"all 0.2s",
-                            }}>{item.label}</button>
-                          ))}
+                    <div style={{fontSize:9,letterSpacing:".12em",textTransform:"uppercase",color:V.mu,fontFamily:"'Jost',sans-serif",marginBottom:8}}>Placement</div>
+                    {(()=>{
+                      const cards=[
+                        {key:"front-chest", label:"F. Chest",  cx:30,cy:40},
+                        {key:"front-left",  label:"F. Left",   cx:21,cy:40},
+                        {key:"front-right", label:"F. Right",  cx:39,cy:40},
+                        {key:"back-center", label:"B. Center", cx:30,cy:48,back:true},
+                        {key:"back-left",   label:"B. Left",   cx:21,cy:48,back:true},
+                        {key:"back-right",  label:"B. Right",  cx:39,cy:48,back:true},
+                        {key:"left-sleeve", label:"L. Sleeve", cx:7, cy:23},
+                        {key:"right-sleeve",label:"R. Sleeve", cx:53,cy:23},
+                      ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
+                      return(
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+                          {cards.map(c=>{
+                            const isA=textPosition===c.key;
+                            const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
+                            return(
+                              <div key={c.key} onClick={()=>{setTextPosition(c.key);if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});fcRef.current?.renderAll();syncTexture();}}} style={{
+                                display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
+                                padding:"7px 3px",borderRadius:9,transition:"all .18s",
+                                border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
+                              }}>
+                                <div style={{width:36,height:41}} dangerouslySetInnerHTML={{__html:svg}}/>
+                                <span style={{fontSize:7,textTransform:"uppercase",letterSpacing:".05em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:V.mu,fontWeight:isA?700:400,textAlign:"center",lineHeight:1.2}}>{c.label}</span>
+                              </div>
+                            );
+                          })}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })()}
                   </div>
 
                   {/* Actions */}
@@ -1486,35 +1508,39 @@ export default function CustomizePage() {
                       </div>
                     )}
                   </div>
-                  {/* Placement */}
+                  {/* Placement thumbnails */}
                   <div>
-                    <div style={sb}>Placement</div>
-                    {PLACEMENT_GROUPS.map(grp=>(
-                      <div key={grp.label} style={{marginBottom:10}}>
-                        <div style={{fontSize:9,color:V.mu,letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:600,marginBottom:5}}>{grp.label}</div>
-                        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                          {grp.items.map(item=>(
-                            <button key={item.key} onClick={()=>setLogoPosition(item.key)} style={{
-                              padding:"6px 10px",borderRadius:99,fontSize:10,
-                              fontFamily:"'Jost',sans-serif",letterSpacing:".05em",cursor:"pointer",
-                              border:`1.5px solid ${logoPosition===item.key?V.ac:V.bd}`,
-                              background:logoPosition===item.key?V.aclt:"transparent",
-                              color:logoPosition===item.key?V.tx:V.mu,
-                              fontWeight:logoPosition===item.key?600:400,transition:"all 0.2s",
-                            }}>{item.label}</button>
-                          ))}
+                    <div style={{fontSize:9,letterSpacing:".12em",textTransform:"uppercase",color:V.mu,fontFamily:"'Jost',sans-serif",marginBottom:8,...sb}}>Placement</div>
+                    {(()=>{
+                      const cards=[
+                        {key:"front-chest", label:"F. Chest",  cx:30,cy:40},
+                        {key:"front-left",  label:"F. Left",   cx:21,cy:40},
+                        {key:"front-right", label:"F. Right",  cx:39,cy:40},
+                        {key:"back-center", label:"B. Center", cx:30,cy:48,back:true},
+                        {key:"back-left",   label:"B. Left",   cx:21,cy:48,back:true},
+                        {key:"back-right",  label:"B. Right",  cx:39,cy:48,back:true},
+                        {key:"left-sleeve", label:"L. Sleeve", cx:7, cy:23},
+                        {key:"right-sleeve",label:"R. Sleeve", cx:53,cy:23},
+                      ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
+                      return(
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+                          {cards.map(c=>{
+                            const isA=logoPosition===c.key;
+                            const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
+                            return(
+                              <div key={c.key} onClick={()=>{setLogoPosition(c.key);if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});fcRef.current?.renderAll();syncTexture();}}} style={{
+                                display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
+                                padding:"7px 3px",borderRadius:9,transition:"all .18s",
+                                border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
+                              }}>
+                                <div style={{width:36,height:41}} dangerouslySetInnerHTML={{__html:svg}}/>
+                                <span style={{fontSize:7,textTransform:"uppercase",letterSpacing:".05em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:V.mu,fontWeight:isA?700:400,textAlign:"center",lineHeight:1.2}}>{c.label}</span>
+                              </div>
+                            );
+                          })}
                         </div>
-                      </div>
-                    ))}
-                    {logoPreview&&(
-                      <button onClick={repositionLogo} style={{
-                        fontSize:10,padding:"6px 14px",marginTop:2,
-                        border:`1px solid ${V.bd}`,borderRadius:99,cursor:"pointer",
-                        background:"transparent",color:V.mu,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",transition:"all 0.2s",
-                      }}
-                      onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.tx;}}
-                      onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.mu;}}>Apply placement</button>
-                    )}
+                      );
+                    })()}
                   </div>
                   {/* Size */}
                   <div>

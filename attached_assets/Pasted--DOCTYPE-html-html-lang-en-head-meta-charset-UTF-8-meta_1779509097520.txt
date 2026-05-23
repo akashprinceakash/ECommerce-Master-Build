@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KaSha Studio — Bespoke T-Shirt Design</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0c0a08;--sf:rgba(255,255,255,0.04);--sf2:rgba(255,255,255,0.08);--sf3:rgba(255,255,255,0.12);
+  --bd:rgba(255,255,255,0.09);--bd2:rgba(255,255,255,0.15);
+  --tx:#f0ece4;--mu:#7a7470;--ac:#c9a87c;--ac2:#e8cfa0;--danger:#c45c5c;
+}
+body{background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--tx);overflow:hidden;height:100vh}
+.serif{font-family:'Cormorant Garamond',serif}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+
+/* ── PRODUCT PAGE ─────────────────────────────────────── */
+#page-products{height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.p-header{display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:64px;border-bottom:1px solid var(--bd);background:rgba(12,10,8,0.95);backdrop-filter:blur(12px);flex-shrink:0;z-index:20}
+.brand-logo{font-family:'Cormorant Garamond',serif;font-size:22px;letter-spacing:0.18em;color:var(--ac);font-weight:600}
+.brand-tagline{font-size:10px;color:var(--mu);letter-spacing:0.14em;text-transform:uppercase;margin-top:1px}
+.cart-count{background:var(--ac);color:var(--bg);border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:4px}
+
+.filter-bar{display:flex;align-items:center;gap:0;padding:0 40px;height:48px;border-bottom:1px solid var(--bd);flex-shrink:0;background:rgba(12,10,8,0.7)}
+.filter-btn{padding:0 20px;height:100%;background:none;border:none;color:var(--mu);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.filter-btn.active{color:var(--ac);border-bottom-color:var(--ac)}
+.filter-btn:hover:not(.active){color:var(--tx)}
+
+.product-grid-wrap{flex:1;overflow-y:auto;padding:40px}
+.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px;max-width:1400px;margin:0 auto}
+
+.product-card{background:var(--sf);border:1px solid var(--bd);border-radius:16px;overflow:hidden;cursor:pointer;transition:all .25s;position:relative}
+.product-card:hover{border-color:var(--ac);transform:translateY(-3px);box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+.product-thumb{width:100%;aspect-ratio:3/4;position:relative;overflow:hidden;background:linear-gradient(135deg,#1a1612 0%,#0e0c0a 100%)}
+.product-thumb svg,.product-thumb canvas{width:100%;height:100%;object-fit:contain}
+.product-badge{position:absolute;top:12px;left:12px;background:rgba(12,10,8,0.85);backdrop-filter:blur(8px);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--mu)}
+.product-badge.printed{border-color:rgba(100,149,237,0.4);color:#6495ed}
+.product-badge.pattern{border-color:rgba(201,168,124,0.4);color:var(--ac)}
+.product-badge.solid{border-color:rgba(173,216,173,0.4);color:#aadcaa}
+.product-info{padding:18px}
+.product-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--tx);letter-spacing:0.02em}
+.product-desc{font-size:11px;color:var(--mu);margin-top:4px;line-height:1.5}
+.product-price{font-size:14px;font-weight:600;color:var(--ac);margin-top:8px}
+.product-actions{display:flex;gap:8px;margin-top:14px}
+.btn-customize{flex:1;padding:10px;border:none;border-radius:9px;background:linear-gradient(135deg,rgba(201,168,124,0.2),rgba(201,168,124,0.1));border:1px solid var(--ac);color:var(--ac);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:0.05em;transition:all .2s}
+.btn-customize:hover{background:var(--ac);color:var(--bg)}
+.product-swatches{display:flex;gap:5px;margin-top:8px}
+.swatch{width:18px;height:18px;border-radius:50%;border:1.5px solid transparent;cursor:pointer;transition:all .15s}
+.swatch:hover,.swatch.active{border-color:var(--ac);transform:scale(1.15)}
+
+/* ── CUSTOMIZER PAGE ──────────────────────────────────── */
+#page-customizer{height:100vh;display:flex;flex-direction:column;display:none}
+.c-header{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:52px;border-bottom:1px solid var(--bd);background:rgba(8,6,4,0.95);backdrop-filter:blur(12px);flex-shrink:0;z-index:50}
+.c-header-left{display:flex;align-items:center;gap:12px}
+.back-btn{color:var(--mu);font-size:12px;background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;transition:color .15s;padding:6px 10px;border-radius:6px}
+.back-btn:hover{color:var(--ac);background:var(--sf2)}
+.c-brand{font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--ac);letter-spacing:0.06em}
+.c-header-right{display:flex;align-items:center;gap:8px}
+.h-input{padding:7px 10px;background:rgba(0,0,0,0.5);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:11px;outline:none;width:150px}
+.h-input:focus{border-color:var(--ac)}
+.h-btn{padding:7px 14px;border-radius:8px;border:none;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:0.03em}
+.h-btn.save{background:var(--ac);color:var(--bg)}
+.h-btn.save:hover{background:var(--ac2)}
+.h-btn.export{background:var(--sf2);color:var(--tx);border:1px solid var(--bd)}
+.h-btn.export:hover{border-color:var(--ac);color:var(--ac)}
+.h-btn.cart{background:#2d5a45;color:#fff}
+.h-btn.cart:hover{background:#3a7a5c}
+
+.workspace{display:flex;flex:1;overflow:hidden}
+
+/* LEFT PANEL */
+.left-panel{width:256px;min-width:256px;border-right:1px solid var(--bd);overflow-y:auto;padding:0;display:flex;flex-direction:column;background:var(--bg);scrollbar-width:thin}
+.lp-section{padding:14px 14px;border-bottom:1px solid var(--bd)}
+.lp-label{font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--mu);margin-bottom:10px}
+.zone-item{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:9px;border:1px solid var(--bd);background:rgba(0,0,0,0.2);cursor:pointer;margin-bottom:6px;transition:all .15s}
+.zone-item:last-child{margin-bottom:0}
+.zone-item:hover{border-color:var(--bd2)}
+.zone-item.active{border-color:var(--ac);background:rgba(201,168,124,0.08)}
+.zone-name{font-size:11px;font-weight:500}
+.zone-color{font-size:10px;color:var(--ac);margin-top:1px}
+.zone-controls{display:flex;align-items:center;gap:5px}
+.zone-clear{background:none;border:1px solid var(--bd);color:var(--mu);cursor:pointer;font-size:11px;border-radius:5px;width:20px;height:22px;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0}
+.zone-clear:hover{border-color:var(--danger);color:var(--danger)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-label{font-size:11px;font-weight:500}
+.toggle-sub{font-size:10px;color:var(--mu)}
+.toggle{width:34px;height:18px;border-radius:9px;border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.toggle-dot{position:absolute;top:2px;width:14px;height:14px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,0.3)}
+.size-grid{display:flex;flex-wrap:wrap;gap:5px}
+.size-btn{flex:1;min-width:30px;padding:7px 4px;background:rgba(0,0,0,0.3);border:1px solid var(--bd);border-radius:8px;color:var(--mu);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s}
+.size-btn.active{background:var(--ac);border-color:var(--ac);color:var(--bg)}
+.custom-size-input{margin-top:8px;width:100%;padding:7px 10px;background:rgba(0,0,0,0.3);border:1px solid var(--ac);border-radius:7px;color:var(--tx);font-size:11px;font-family:'DM Sans',sans-serif;outline:none}
+.qty-row{display:flex;align-items:center;gap:10px}
+.qty-btn{width:28px;height:28px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--tx);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;transition:all .15s}
+.qty-btn:hover{border-color:var(--ac);color:var(--ac)}
+.qty-num{font-size:15px;font-weight:600;min-width:26px;text-align:center}
+.lp-btn{width:100%;padding:9px;border-radius:9px;border:none;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:0.03em;margin-bottom:6px}
+.lp-btn:last-child{margin-bottom:0}
+.lp-btn.primary{background:var(--ac);color:var(--bg)}
+.lp-btn.primary:hover{background:var(--ac2)}
+.lp-btn.secondary{background:var(--sf2);color:var(--tx);border:1px solid var(--bd)}
+.lp-btn.secondary:hover{border-color:var(--ac);color:var(--ac)}
+
+/* CENTER VIEWER */
+.center-viewer{flex:1;position:relative;background:radial-gradient(ellipse at 50% 40%,#1c1812 0%,#0c0a08 70%);display:flex;align-items:center;justify-content:center;overflow:hidden}
+model-viewer{width:100%;height:100%;--poster-color:transparent}
+.mv-overlay{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:10;transition:opacity .5s}
+.spinner{width:36px;height:36px;border:2px solid var(--bd2);border-top-color:var(--ac);border-radius:50%;animation:spin .9s linear infinite}
+.viewer-badge{position:absolute;padding:8px 12px;border:1px solid var(--bd);border-radius:9px;backdrop-filter:blur(8px);background:rgba(8,6,4,0.85)}
+.viewer-badge.tl{top:16px;left:16px}
+.viewer-badge.tr{top:16px;right:16px}
+.sku-code{font-size:12px;font-weight:600;color:var(--ac);font-family:'Courier New',monospace;letter-spacing:0.06em}
+.viewer-hint{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--mu);background:rgba(0,0,0,0.6);padding:5px 14px;border-radius:20px;pointer-events:none;letter-spacing:0.04em;white-space:nowrap}
+
+/* RIGHT PANEL */
+.right-panel{width:296px;min-width:296px;border-left:1px solid var(--bd);overflow-y:auto;display:flex;flex-direction:column;background:var(--bg);scrollbar-width:thin}
+.tab-bar{display:flex;border-bottom:1px solid var(--bd);flex-shrink:0}
+.tab{flex:1;padding:10px 4px;background:none;border:none;color:var(--mu);font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:var(--ac);border-bottom-color:var(--ac)}
+.tab:hover:not(.active){color:var(--tx)}
+.tab-content{padding:14px 13px;display:flex;flex-direction:column;gap:14px;display:none}
+.tab-content.active{display:flex}
+.rp-label{font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--mu);margin-bottom:8px}
+.rp-input{width:100%;padding:8px 10px;background:rgba(0,0,0,0.4);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:12px;outline:none;transition:border-color .15s}
+.rp-input:focus{border-color:var(--ac)}
+.rp-row{display:flex;align-items:center;gap:8px}
+.rp-btn{padding:8px 0;border-radius:8px;border:none;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:0.03em}
+.rp-btn.primary{background:var(--ac);color:var(--bg);flex:1}
+.rp-btn.primary:hover{background:var(--ac2)}
+.rp-btn.ghost{background:var(--sf2);color:var(--tx);border:1px solid var(--bd);flex:1}
+.rp-btn.ghost:hover{border-color:var(--ac);color:var(--ac)}
+.rp-btn.danger{background:rgba(196,92,92,0.1);color:var(--danger);border:1px solid rgba(196,92,92,0.25);flex:1}
+.rp-btn.danger:hover{background:rgba(196,92,92,0.2)}
+.place-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}
+.place-btn{padding:6px;font-size:10px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;text-align:center;border-radius:7px;border:1.5px solid var(--bd);background:var(--sf);color:var(--mu);transition:all .15s}
+.place-btn.active{border-color:var(--ac);background:rgba(201,168,124,0.12);color:var(--ac)}
+.range-row{display:flex;align-items:center;gap:8px;margin-top:5px}
+.range-label{font-size:10px;color:var(--mu);width:42px;flex-shrink:0}
+input[type=range]{flex:1;height:3px;-webkit-appearance:none;appearance:none;background:var(--bd2);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;background:var(--ac);border-radius:50%;cursor:pointer;border:2px solid #fff}
+.range-val{font-size:10px;color:var(--mu);width:32px;text-align:right;flex-shrink:0}
+select.rp-input{cursor:pointer}
+
+/* Patterns grid */
+.print-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.print-thumb{aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:pointer;border:1.5px solid var(--bd);transition:all .15s;position:relative}
+.print-thumb:hover{border-color:var(--bd2)}
+.print-thumb.active{border-color:var(--ac);box-shadow:0 0 0 2px rgba(201,168,124,0.25)}
+.print-thumb canvas,.print-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.print-all-badge{position:absolute;top:3px;right:3px;background:var(--ac);color:var(--bg);font-size:7px;font-weight:800;padding:1px 4px;border-radius:3px;letter-spacing:0.5px}
+
+/* GT styles */
+.gt-group{border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin-bottom:6px}
+.gt-group-header{width:100%;display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--sf);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--mu);font-size:11px;font-weight:600;letter-spacing:0.04em;transition:all .15s}
+.gt-group-header.open{color:var(--ac);background:rgba(201,168,124,0.06)}
+.gt-swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px;background:var(--sf)}
+.gt-swatch-btn{padding:0;border-radius:6px;overflow:hidden;cursor:pointer;border:1.5px solid var(--bd);transition:all .15s;background:none}
+.gt-swatch-btn:hover{border-color:var(--bd2)}
+.gt-swatch-btn.active{border-color:var(--ac);box-shadow:0 0 0 2px rgba(201,168,124,0.25)}
+.gt-swatch-canvas{width:100%;aspect-ratio:1;display:block}
+.gt-code{background:rgba(0,0,0,0.55);font-size:8px;font-weight:700;padding:2px 0;text-align:center;letter-spacing:0.5px;color:#f8f4e9}
+.gt-active-panel{background:var(--sf);border:1px solid var(--bd);border-radius:9px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.gt-color-row{display:flex;align-items:center;gap:10px}
+.color-inp{width:34px;height:34px;border:none;cursor:pointer;border-radius:6px;padding:0;background:none}
+
+/* Palette */
+.palette{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.pal-dot{width:20px;height:20px;border-radius:50%;cursor:pointer;border:1.5px solid transparent;transition:all .15s;flex-shrink:0}
+.pal-dot:hover,.pal-dot.active{border-color:var(--ac);transform:scale(1.15)}
+
+/* Logo upload */
+.upload-zone{border:1.5px dashed var(--bd2);border-radius:9px;padding:18px;text-align:center;cursor:pointer;transition:all .2s}
+.upload-zone:hover{border-color:var(--ac)}
+.logo-preview{max-width:100%;border-radius:8px;border:1px solid var(--bd);margin-top:8px}
+
+/* Info box */
+.info-box{background:rgba(201,168,124,0.06);border:1px solid rgba(201,168,124,0.18);border-radius:8px;padding:10px}
+.info-box p{font-size:10px;color:var(--ac);line-height:1.6}
+
+/* Design summary */
+.summary-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--bd)}
+.summary-row:last-child{border-bottom:none}
+.summary-label{font-size:11px;color:var(--mu)}
+.summary-val{font-size:11px;font-weight:500}
+
+/* GT locked notice */
+.locked-pattern{background:var(--sf);border:1px solid var(--ac);border-radius:8px;padding:10px;margin-bottom:10px}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.product-card{animation:fadeIn .3s ease both}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE 1 — PRODUCT CATALOG
+═══════════════════════════════════════════════════════════════ -->
+<div id="page-products">
+  <header class="p-header">
+    <div>
+      <div class="brand-logo">KaSha</div>
+      <div class="brand-tagline">Bespoke Garment Studio</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:20px">
+      <span style="font-size:11px;color:var(--mu);letter-spacing:0.06em">Custom-crafted, every stitch</span>
+      <button onclick="showCart()" style="background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:7px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px">
+        🛒 Cart <span class="cart-count" id="cart-count">0</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" data-filter="all" onclick="filterProducts(this,'all')">All</button>
+    <button class="filter-btn" data-filter="printed" onclick="filterProducts(this,'printed')">Printed</button>
+    <button class="filter-btn" data-filter="pattern" onclick="filterProducts(this,'pattern')">Pattern</button>
+    <button class="filter-btn" data-filter="solid" onclick="filterProducts(this,'solid')">Solid</button>
+  </div>
+
+  <div class="product-grid-wrap">
+    <div class="product-grid" id="product-grid">
+      <!-- Injected by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PAGE 2 — 3D CUSTOMIZER
+═══════════════════════════════════════════════════════════════ -->
+<div id="page-customizer">
+
+  <!-- HEADER -->
+  <header class="c-header">
+    <div class="c-header-left">
+      <button class="back-btn" onclick="goBack()">← Products</button>
+      <div style="width:1px;height:16px;background:var(--bd)"></div>
+      <span class="c-brand">KaSha ✦ Studio</span>
+      <span id="c-product-name" style="font-size:12px;color:var(--mu);margin-left:4px"></span>
+    </div>
+    <div class="c-header-right">
+      <input class="h-input" id="design-name-input" placeholder="Name your design…">
+      <button class="h-btn save" onclick="saveDesign()">💾 Save</button>
+      <button class="h-btn export" onclick="exportDesign()">📷 Export PNG</button>
+      <button class="h-btn cart" onclick="addToCart()">🛒 Add to Cart</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+
+    <!-- ── LEFT PANEL ── -->
+    <div class="left-panel" id="left-panel">
+
+      <!-- GARMENT PARTS -->
+      <div class="lp-section">
+        <div class="lp-label">Garment Parts</div>
+        <p style="font-size:10px;color:var(--mu);line-height:1.5;margin-bottom:10px">Select a part and choose a colour. Use the canvas picker inline.</p>
+        <div id="zone-list"><!-- injected --></div>
+      </div>
+
+      <!-- OPTIONS -->
+      <div class="lp-section">
+        <div class="lp-label">Options</div>
+        <div class="toggle-row">
+          <div><div class="toggle-label">Full Body Design</div><div class="toggle-sub">Paint all 5 zones at once</div></div>
+          <button class="toggle" id="toggle-fullbody" onclick="toggleFullBody()" style="background:var(--bd2)"><div class="toggle-dot" style="left:2px"></div></button>
+        </div>
+        <div class="toggle-row">
+          <div><div class="toggle-label">Auto Rotate</div><div class="toggle-sub">Spin 3D preview</div></div>
+          <button class="toggle" id="toggle-rotate" onclick="toggleAutoRotate()" style="background:var(--ac)"><div class="toggle-dot" style="left:18px"></div></button>
+        </div>
+      </div>
+
+      <!-- SIZE -->
+      <div class="lp-section">
+        <div class="lp-label">Size</div>
+        <div class="size-grid" id="size-grid"></div>
+        <input class="custom-size-input" id="custom-size" placeholder="e.g. Chest 42, Length 28" style="display:none">
+      </div>
+
+      <!-- QUANTITY -->
+      <div class="lp-section">
+        <div class="lp-label">Quantity</div>
+        <div class="qty-row">
+          <button class="qty-btn" onclick="changeQty(-1)">−</button>
+          <span class="qty-num" id="qty-display">1</span>
+          <button class="qty-btn" onclick="changeQty(1)">+</button>
+          <span style="font-size:11px;color:var(--mu);margin-left:4px">units</span>
+        </div>
+      </div>
+
+      <!-- SAVE / EXPORT (bottom shortcut) -->
+      <div class="lp-section" style="border-bottom:none">
+        <button class="lp-btn primary" onclick="saveDesign()">💾 Save Design</button>
+        <button class="lp-btn secondary" onclick="exportDesign()">📷 Export PNG</button>
+        <button class="lp-btn secondary" onclick="addToCart()" style="background:#2d5a45;color:#fff;border-color:#2d5a45">🛒 Add to Cart</button>
+      </div>
+    </div>
+
+    <!-- ── CENTER: 3D VIEWER ── -->
+    <div class="center-viewer">
+      <div class="mv-overlay" id="mv-overlay">
+        <div class="spinner"></div>
+        <p style="font-size:12px;color:var(--mu)">Loading 3D Model…</p>
+      </div>
+
+      <!-- model-viewer is injected here -->
+      <div id="viewer-host" style="width:100%;height:100%"></div>
+
+      <div class="viewer-badge tl" id="product-badge">
+        <div style="font-size:11px;font-weight:600;color:var(--ac)" id="badge-name">—</div>
+        <div style="font-size:10px;color:var(--mu)" id="badge-price">—</div>
+      </div>
+
+      <div class="viewer-badge tr">
+        <div style="font-size:9px;color:var(--mu);letter-spacing:0.08em;text-transform:uppercase">Style No.</div>
+        <div class="sku-code" id="sku-display">—</div>
+      </div>
+
+      <div class="viewer-hint">Drag to rotate · Scroll to zoom</div>
+    </div>
+
+    <!-- ── RIGHT PANEL ── -->
+    <div class="right-panel">
+      <div class="tab-bar" id="tab-bar"><!-- tabs injected --></div>
+
+      <!-- TEXT TAB -->
+      <div class="tab-content" id="tab-text">
+        <div>
+          <div class="rp-label">Text Content</div>
+          <input class="rp-input" id="txt-content" placeholder="e.g. GOLF CLUB 2024" maxlength="50">
+        </div>
+        <div class="rp-row" style="gap:8px">
+          <input type="color" value="#ffffff" id="txt-color" class="color-inp" title="Text colour">
+          <span style="font-size:11px;color:var(--mu)">Colour</span>
+          <select class="rp-input" id="txt-font" style="flex:1">
+            <option value="'DM Sans'">DM Sans</option>
+            <option value="Arial">Arial</option>
+            <option value="'Times New Roman'">Serif Classic</option>
+            <option value="'Courier New'">Monospace</option>
+            <option value="Impact">Impact Bold</option>
+          </select>
+        </div>
+        <div>
+          <div class="rp-label">Font Size</div>
+          <div class="range-row">
+            <span class="range-label">Size</span>
+            <input type="range" min="20" max="220" value="80" id="txt-size" oninput="document.getElementById('txt-size-val').textContent=this.value">
+            <span class="range-val" id="txt-size-val">80</span>
+          </div>
+        </div>
+        <div>
+          <div class="rp-label">Placement</div>
+          <div class="place-grid" id="txt-placement"></div>
+        </div>
+        <div class="rp-row">
+          <button class="rp-btn primary" onclick="addText()">Apply Text</button>
+          <button class="rp-btn danger" onclick="removeSelected()">Remove</button>
+        </div>
+        <div class="info-box"><p>💡 Switch to Canvas tab after adding text to drag it to the exact position.</p></div>
+      </div>
+
+      <!-- LOGO TAB -->
+      <div class="tab-content" id="tab-logo">
+        <div>
+          <div class="rp-label">Upload Logo / Graphic</div>
+          <label class="upload-zone" id="logo-drop">
+            <div style="font-size:24px">⬆</div>
+            <p style="font-size:11px;color:var(--mu);margin-top:4px"><strong style="color:var(--ac)">Click to upload</strong></p>
+            <p style="font-size:10px;color:var(--mu)">PNG, SVG, JPG · PNG with transparency recommended</p>
+            <input type="file" accept="image/*" id="logo-file" style="display:none" onchange="handleLogoUpload(event)">
+          </label>
+          <img id="logo-preview" class="logo-preview" style="display:none">
+        </div>
+        <div>
+          <div class="rp-label">Placement</div>
+          <div class="place-grid" id="logo-placement"></div>
+        </div>
+        <div>
+          <div class="rp-label">Logo Size</div>
+          <div class="range-row">
+            <span class="range-label">Size</span>
+            <input type="range" min="40" max="500" step="10" value="200" id="logo-size" oninput="updateLogoSize(this.value)">
+            <span class="range-val" id="logo-size-val">200</span>
+          </div>
+        </div>
+        <div class="rp-row">
+          <button class="rp-btn primary" onclick="applyLogo()">Apply Logo</button>
+          <button class="rp-btn danger" onclick="removeLogo()">Remove</button>
+        </div>
+      </div>
+
+      <!-- PRINTS TAB (for printed + solid) -->
+      <div class="tab-content" id="tab-prints">
+        <div>
+          <div class="rp-label">Print Library</div>
+          <p style="font-size:10px;color:var(--mu);line-height:1.5;margin-bottom:8px">Apply a print to the whole shirt or drop it onto a specific zone.</p>
+          <div class="print-grid" id="print-grid"></div>
+        </div>
+        <div id="print-actions" style="display:none">
+          <div class="rp-label">Apply <span id="active-print-label" style="color:var(--ac)"></span></div>
+          <button class="rp-btn primary" style="width:100%;margin-bottom:6px" onclick="applyAllOverPrint()">Apply to Whole Shirt</button>
+          <div class="rp-label" style="margin-top:6px">Or place on a zone</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+            <button class="rp-btn ghost" onclick="applyPrintToZone('front')">Front</button>
+            <button class="rp-btn ghost" onclick="applyPrintToZone('back')">Back</button>
+            <button class="rp-btn ghost" onclick="applyPrintToZone('leftSleeve')">L. Sleeve</button>
+            <button class="rp-btn ghost" onclick="applyPrintToZone('rightSleeve')">R. Sleeve</button>
+            <button class="rp-btn ghost" onclick="applyPrintToZone('collar')" style="grid-column:span 2">Collar</button>
+          </div>
+          <button class="rp-btn danger" style="width:100%;margin-top:6px" id="clear-all-over-btn" onclick="clearAllOverPrint()" style="display:none">✕ Remove All-Over Print</button>
+        </div>
+        <div>
+          <div class="rp-label" style="margin-top:4px">Upload Custom Print</div>
+          <label class="upload-zone" style="padding:12px">
+            <p style="font-size:11px;color:var(--mu)"><strong style="color:var(--ac)">+ Upload image</strong> as print</p>
+            <input type="file" accept="image/*" style="display:none" onchange="handleCustomPrint(event)">
+          </label>
+        </div>
+      </div>
+
+      <!-- COLORS TAB (GT styles — for pattern + solid) -->
+      <div class="tab-content" id="tab-colors">
+        <!-- GT styles section — hidden for pure solid -->
+        <div id="gt-styles-section">
+          <div class="rp-label">Design Styles</div>
+          <p style="font-size:10px;color:var(--mu);line-height:1.5;margin-bottom:8px">Pick a predefined style, then recolour to taste.</p>
+          <div id="gt-style-groups"></div>
+          <div id="gt-active-panel" style="display:none"><!-- injected --></div>
+        </div>
+
+        <!-- Solid color section — for all types -->
+        <div>
+          <div class="rp-label">Colour Palette</div>
+          <div class="palette" id="palette-row"></div>
+        </div>
+
+        <!-- Design summary -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-radius:9px;padding:12px">
+          <div class="rp-label">Design Summary</div>
+          <div id="design-summary"></div>
+        </div>
+      </div>
+
+      <!-- CANVAS TAB -->
+      <div class="tab-content" id="tab-canvas">
+        <div>
+          <div class="rp-label">Canvas Background</div>
+          <div class="rp-row" style="gap:8px">
+            <input type="color" value="#C5D3DE" id="canvas-bg-color" class="color-inp" oninput="setCanvasBg(this.value)">
+            <span style="font-size:11px;color:var(--mu)">Background = primary shirt colour</span>
+          </div>
+        </div>
+        <div>
+          <div class="rp-label">Adjust Selected Element</div>
+          <div class="range-row">
+            <span class="range-label">Scale</span>
+            <input type="range" min="0.1" max="5" step="0.05" value="1" id="el-scale" oninput="setElScale(parseFloat(this.value))">
+            <span class="range-val" id="el-scale-val">1.0×</span>
+          </div>
+          <div class="range-row">
+            <span class="range-label">Pos X</span>
+            <input type="range" min="0" max="1024" step="4" value="512" id="el-x" oninput="setElPos('left',parseInt(this.value))">
+            <span class="range-val" id="el-x-val">512</span>
+          </div>
+          <div class="range-row">
+            <span class="range-label">Pos Y</span>
+            <input type="range" min="0" max="1024" step="4" value="512" id="el-y" oninput="setElPos('top',parseInt(this.value))">
+            <span class="range-val" id="el-y-val">512</span>
+          </div>
+        </div>
+        <div class="rp-row">
+          <button class="rp-btn ghost" onclick="clearAllObjects()">Clear All</button>
+          <button class="rp-btn danger" onclick="removeSelected()">Remove Sel.</button>
+        </div>
+        <div>
+          <div class="rp-label">Live Canvas</div>
+          <!-- The fabric canvas preview wrapper -->
+          <div id="fc-preview-wrapper" style="background:#fff;border-radius:8px;overflow:hidden;border:1px solid var(--bd2);width:100%;aspect-ratio:1;position:relative">
+            <div id="fc-scale-host" style="position:absolute;left:0;top:0;width:1024px;height:1024px;transform-origin:top left">
+              <!-- fabric canvas goes here -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right-panel -->
+  </div><!-- /workspace -->
+</div><!-- /page-customizer -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     FABRIC CANVAS (always mounted, even off-screen)
+═══════════════════════════════════════════════════════════════ -->
+<div id="fc-offscreen" style="position:fixed;left:-9999px;top:0;width:1024px;height:1024px;pointer-events:none;opacity:0.001;z-index:-1">
+  <canvas id="fabric-canvas"></canvas>
+</div>
+
+<!-- SCRIPTS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════════════
+
+// Place your GLB model URL here (relative or absolute)
+const MODEL_URL = 'collar_t-shirt_model.glb';
+
+const ZONE_PRESETS = {
+  front:       { left: 10,  top: 341, w: 490, h: 678 },
+  back:        { left: 524, top: 188, w: 483, h: 833 },
+  collar:      { left: 12,  top: 183, w: 507, h: 166 },
+  leftSleeve:  { left: 210, top:   4, w: 398, h: 170 },
+  rightSleeve: { left: 617, top:   2, w: 398, h: 171 },
+};
+const ZONE_LABEL = { front:'Front', back:'Back', leftSleeve:'Left Sleeve', rightSleeve:'Right Sleeve', collar:'Collar' };
+const ALL_ZONES = ['front','back','leftSleeve','rightSleeve','collar'];
+
+const PLACEMENTS = {
+  'front-chest':  { left: ZONE_PRESETS.front.left + ZONE_PRESETS.front.w/2, top: ZONE_PRESETS.front.top + ZONE_PRESETS.front.h*0.22 },
+  'front-center': { left: ZONE_PRESETS.front.left + ZONE_PRESETS.front.w/2, top: ZONE_PRESETS.front.top + ZONE_PRESETS.front.h*0.50 },
+  'back-top':     { left: ZONE_PRESETS.back.left  + ZONE_PRESETS.back.w/2,  top: ZONE_PRESETS.back.top  + ZONE_PRESETS.back.h*0.18  },
+  'back-center':  { left: ZONE_PRESETS.back.left  + ZONE_PRESETS.back.w/2,  top: ZONE_PRESETS.back.top  + ZONE_PRESETS.back.h*0.50  },
+  'sleeve-left':  { left: ZONE_PRESETS.leftSleeve.left  + ZONE_PRESETS.leftSleeve.w/2,  top: ZONE_PRESETS.leftSleeve.top  + ZONE_PRESETS.leftSleeve.h/2  },
+  'sleeve-right': { left: ZONE_PRESETS.rightSleeve.left + ZONE_PRESETS.rightSleeve.w/2, top: ZONE_PRESETS.rightSleeve.top + ZONE_PRESETS.rightSleeve.h/2 },
+};
+
+const SIZES = ['S','M','L','XL','Custom'];
+const PALETTE = ['#C5D3DE','#F8F4E9','#ACB1A1','#F0CED2','#E9DAC3','#FFFFFF','#585858','#576043','#DA1F26','#273878','#243C2F','#362223','#000000'];
+
+const GT_GROUPS_DEF = [
+  { id:'classic',    label:'Classic'    },
+  { id:'sport-side', label:'Sport Side' },
+  { id:'triple',     label:'Triple Tone'},
+  { id:'wave',       label:'Wave Panel' },
+  { id:'hourglass',  label:'Hourglass'  },
+  { id:'pinstripe',  label:'Pinstripe'  },
+  { id:'raglan',     label:'Raglan'     },
+];
+
+const GT_STYLES = [
+  { id:'GT001', label:'Sky & Oxblood',   group:'classic',    primary:'#C5D3DE', accent:'#362223' },
+  { id:'GT002', label:'Blush & Oxblood', group:'classic',    primary:'#F0CED2', accent:'#362223' },
+  { id:'GT003', label:'Sage & Oxblood',  group:'classic',    primary:'#ACB1A1', accent:'#362223' },
+  { id:'GT004', label:'Sand & Oxblood',  group:'classic',    primary:'#E9DAC3', accent:'#362223' },
+  { id:'GT005', label:'White & Navy',    group:'classic',    primary:'#FFFFFF',  accent:'#273878' },
+  { id:'GT006', label:'Olive & Black',   group:'sport-side', primary:'#576043', accent:'#000000' },
+  { id:'GT007', label:'Red & Black',     group:'sport-side', primary:'#DA1F26', accent:'#000000' },
+  { id:'GT008', label:'Navy & Black',    group:'sport-side', primary:'#273878', accent:'#000000' },
+  { id:'GT009', label:'Blush & Slate',   group:'sport-side', primary:'#F0CED2', accent:'#585858' },
+  { id:'GT010', label:'Pink/Black/Slate',group:'triple',     primary:'#000000', accent:'#585858', tertiary:'#F0CED2' },
+  { id:'GT011', label:'Black & Slate',   group:'wave',       primary:'#000000', accent:'#585858' },
+  { id:'GT012', label:'Mint & Forest',   group:'wave',       primary:'#ACB1A1', accent:'#576043' },
+  { id:'GT013', label:'Blush & Cream',   group:'wave',       primary:'#F0CED2', accent:'#F8F4E9' },
+  { id:'GT014', label:'Sky & Cream',     group:'wave',       primary:'#C5D3DE', accent:'#F8F4E9' },
+  { id:'GT015', label:'Black & Blush',   group:'hourglass',  primary:'#000000', accent:'#F0CED2' },
+  { id:'GT016', label:'Sand & Cream',    group:'hourglass',  primary:'#E9DAC3', accent:'#F8F4E9' },
+  { id:'GT017', label:'Black & Slate',   group:'hourglass',  primary:'#000000', accent:'#585858' },
+  { id:'GT018', label:'Mint & Forest',   group:'hourglass',  primary:'#ACB1A1', accent:'#576043' },
+  { id:'GT019', label:'Forest & White',  group:'pinstripe',  primary:'#243C2F', accent:'#FFFFFF' },
+  { id:'GT020', label:'Slate & White',   group:'pinstripe',  primary:'#585858', accent:'#FFFFFF' },
+  { id:'GT021', label:'Black & White',   group:'pinstripe',  primary:'#000000', accent:'#FFFFFF' },
+  { id:'GT022', label:'Red & White',     group:'pinstripe',  primary:'#DA1F26', accent:'#FFFFFF' },
+  { id:'GT023', label:'Navy & White',    group:'pinstripe',  primary:'#273878', accent:'#FFFFFF' },
+  { id:'GT024', label:'Black & Blush',   group:'raglan',     primary:'#000000', accent:'#F0CED2' },
+  { id:'GT025', label:'Forest & Blush',  group:'raglan',     primary:'#243C2F', accent:'#F0CED2' },
+  { id:'GT026', label:'Red & White',     group:'raglan',     primary:'#DA1F26', accent:'#FFFFFF' },
+  { id:'GT027', label:'Forest & Mint',   group:'raglan',     primary:'#576043', accent:'#ACB1A1' },
+  { id:'GT028', label:'Forest & White',  group:'raglan',     primary:'#243C2F', accent:'#FFFFFF' },
+  { id:'GT029', label:'Black & Red',     group:'raglan',     primary:'#000000', accent:'#DA1F26' },
+  { id:'GT030', label:'Black & Slate',   group:'raglan',     primary:'#000000', accent:'#585858' },
+  { id:'GT031', label:'Navy & White',    group:'raglan',     primary:'#273878', accent:'#FFFFFF' },
+  { id:'GT032', label:'Oxblood & Sand',  group:'raglan',     primary:'#362223', accent:'#E9DAC3' },
+];
+
+const PATTERNS = [
+  { id:'paisley',        label:'Paisley Bloom',    file:'patterns/paisley.jpg',        css:'radial-gradient(ellipse,#7a2030 30%,#f5c84a 70%,#39b6c7 100%)' },
+  { id:'vines-pink',     label:'Vines Blush',       file:'patterns/vines-pink.jpg',     css:'radial-gradient(ellipse,#f6dce0 20%,#a4626a 60%,#e88a9a 100%)' },
+  { id:'blue-floral',    label:'Indigo Daisy',       file:'patterns/blue-floral.jpg',    css:'radial-gradient(ellipse,#103a5a 20%,#cdb893 60%,#f0e8d2 100%)' },
+  { id:'green-flora',    label:'Verdant Flora',      file:'patterns/green-flora.jpg',    css:'radial-gradient(ellipse,#7fae3a 20%,#7a4a9b 55%,#e8633c 100%)' },
+  { id:'tropical-bloom', label:'Tropical Noir',      file:'patterns/tropical-bloom.jpg', css:'radial-gradient(ellipse,#152233 20%,#e87a48 55%,#7fae73 100%)' },
+  { id:'carnival',       label:'Carnival Brights',   file:'patterns/carnival.jpg',       css:'radial-gradient(ellipse,#152244 20%,#f4b400 55%,#e76b8a 100%)' },
+  { id:'ogee-warm',      label:'Ogee Warm',          file:'patterns/ogee-warm.jpg',      css:'radial-gradient(ellipse,#a04030 20%,#1f6e64 55%,#d8a878 100%)' },
+  { id:'smiley-pink',    label:'Acid Smile',         file:'patterns/smiley-pink.jpg',    css:'radial-gradient(ellipse,#e6188a 20%,#f5dc56 70%)' },
+  { id:'graffiti',       label:'Street Graffiti',    file:'patterns/graffiti.jpg',       css:'radial-gradient(ellipse,#dc1e4a 20%,#f4a000 55%,#ffffff 100%)' },
+  { id:'money-bw',       label:'Money B&W',          file:'patterns/money-bw.jpg',       css:'linear-gradient(135deg,#f4ecd7 0%,#1a1a1a 100%)' },
+  { id:'orange-abstract',label:'Sun & Cobalt',       file:'patterns/orange-abstract.jpg',css:'radial-gradient(ellipse,#ed7c2a 20%,#3552c0 100%)' },
+];
+
+const PRODUCTS = [
+  { id:1,  type:'printed', name:'Paisley Bloom Tee',   desc:'All-over paisley print in warm earth tones.', price:'₹2,199', defaultPrint:'paisley',   colors:['#C5D3DE','#F8F4E9','#ffffff'] },
+  { id:2,  type:'printed', name:'Tropical Noir Tee',   desc:'Dense tropical botanicals on a dark ground.', price:'₹2,499', defaultPrint:'tropical-bloom', colors:['#152233','#ffffff','#ACB1A1'] },
+  { id:3,  type:'printed', name:'Carnival Brights',    desc:'Bold graphic carnival motifs, full coverage.', price:'₹2,299', defaultPrint:'carnival',  colors:['#152244','#F0CED2','#000000'] },
+  { id:4,  type:'printed', name:'Graffiti Street',     desc:'Urban spray-paint artwork, street-ready.',    price:'₹1,999', defaultPrint:'graffiti',  colors:['#000000','#ffffff','#DA1F26'] },
+  { id:5,  type:'pattern', name:'Classic Sky GT001',   desc:'Clean sport collar silhouette in sky & oxblood.', price:'₹1,799', gtStyle:'GT001', colors:['#C5D3DE','#362223'] },
+  { id:6,  type:'pattern', name:'Sport Side GT007',    desc:'Tapered side panels for athletic definition.',    price:'₹1,899', gtStyle:'GT007', colors:['#DA1F26','#000000'] },
+  { id:7,  type:'pattern', name:'Raglan Forest GT025', desc:'Diagonal yoke construction in deep forest.',     price:'₹1,999', gtStyle:'GT025', colors:['#243C2F','#F0CED2'] },
+  { id:8,  type:'pattern', name:'Pinstripe Navy GT023',desc:'Precision vertical lines on navy ground.',       price:'₹2,099', gtStyle:'GT023', colors:['#273878','#FFFFFF'] },
+  { id:9,  type:'solid',   name:'Classic White Tee',   desc:'Premium cotton, tailored fit, pure white.',     price:'₹1,299', defaultColor:'#FFFFFF' },
+  { id:10, type:'solid',   name:'Midnight Navy',       desc:'Deep navy, structured silhouette.',             price:'₹1,299', defaultColor:'#273878' },
+  { id:11, type:'solid',   name:'Sage Green',          desc:'Muted sage, earthy and refined.',               price:'₹1,299', defaultColor:'#576043' },
+  { id:12, type:'solid',   name:'Oxblood Polo',        desc:'Rich oxblood, statement-making presence.',      price:'₹1,499', defaultColor:'#362223' },
+];
+
+// ═══════════════════════════════════════════════════════════════
+//  APP STATE
+// ═══════════════════════════════════════════════════════════════
+
+const S = {
+  product: null,
+  productType: 'printed', // 'printed' | 'pattern' | 'solid'
+  size: 'M',
+  qty: 1,
+  fullBody: false,
+  autoRotate: true,
+  activeZone: 'front',
+  zoneColors: { front:'', back:'', leftSleeve:'', rightSleeve:'', collar:'' },
+  activePrintId: null,
+  allOverPrintId: null,
+  activeGtStyleId: null,
+  gtColors: { primary:'#C5D3DE', accent:'#362223', tertiary: null },
+  gtGroupOpen: 'classic',
+  canvasBg: '#C5D3DE',
+  txtPlacement: 'front-chest',
+  logoPlacement: 'front-chest',
+  logoObj: null,
+  logoObjFc: null,
+  modelLoaded: false,
+  cartCount: 0,
+  fc: null,  // Fabric.Canvas
+  mv: null,  // model-viewer element
+  syncPending: false,
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  GT SWATCH DRAWING (canvas-based preview)
+// ═══════════════════════════════════════════════════════════════
+
+function drawGtSwatch(canvas, style, primary, accent, tertiary) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  const p = primary || style.primary;
+  const a = accent  || style.accent;
+  const t = tertiary|| style.tertiary || null;
+  switch(style.group) {
+    case 'classic':
+      ctx.fillStyle = p; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = a;
+      ctx.fillRect(0,0,W,Math.round(H*0.16));
+      ctx.fillRect(0,H-Math.round(H*0.12),W,Math.round(H*0.12));
+      ctx.fillRect(0,H-Math.round(H*0.22),W,Math.round(H*0.06));
+      break;
+    case 'sport-side':
+      ctx.fillStyle = p; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = a;
+      ctx.fillRect(0,0,Math.round(W*0.22),H);
+      ctx.fillRect(W-Math.round(W*0.22),0,Math.round(W*0.22),H);
+      if(t){ctx.fillStyle=t;ctx.fillRect(0,0,W,Math.round(H*0.12));}
+      break;
+    case 'triple':
+      ctx.fillStyle = p; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = a; ctx.fillRect(0,0,Math.round(W*0.22),H); ctx.fillRect(W-Math.round(W*0.22),0,Math.round(W*0.22),H);
+      if(t){ctx.fillStyle=t;ctx.fillRect(0,0,W,Math.round(H*0.14));}
+      break;
+    case 'wave':
+      ctx.fillStyle = p; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = a;
+      ctx.beginPath();
+      ctx.moveTo(0,H*0.6); ctx.quadraticCurveTo(W/2,H*0.35,W,H*0.6);
+      ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
+      break;
+    case 'hourglass':
+      ctx.fillStyle = p; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = a;
+      ctx.beginPath();
+      ctx.moveTo(W*0.22,0); ctx.lineTo(W*0.78,0);
+      ctx.lineTo(W*0.62,H*0.55); ctx.lineTo(W*0.78,H);
+      ctx.lineTo(W*0.22,H); ctx.lineTo(W*0.38,H*0.55);
+      ctx.closePath(); ctx.fill();
+      break;
+    case 'pinstripe':
+      ctx.fillStyle = p; ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle = a; ctx.lineWidth = 1.5;
+      for(let x=8;x<W;x+=Math.round(W/6)){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+      break;
+    case 'raglan':
+      ctx.fillStyle = p; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = a;
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(W*0.45,0);ctx.lineTo(W*0.18,H*0.4);ctx.lineTo(0,H*0.22);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(W,0);ctx.lineTo(W*0.55,0);ctx.lineTo(W*0.82,H*0.4);ctx.lineTo(W,H*0.22);ctx.closePath();ctx.fill();
+      ctx.fillRect(0,0,W,Math.round(H*0.1));
+      ctx.fillRect(0,H-Math.round(H*0.12),W,Math.round(H*0.12));
+      break;
+    default:
+      ctx.fillStyle = p; ctx.fillRect(0,0,W,H);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FABRIC CANVAS INIT
+// ═══════════════════════════════════════════════════════════════
+
+function initFabric() {
+  const el = document.getElementById('fabric-canvas');
+  S.fc = new fabric.Canvas(el, { width:1024, height:1024, preserveObjectStacking:true, backgroundColor:'#C5D3DE' });
+  S.fc.on('object:modified', () => scheduleSync());
+  S.fc.on('object:added',    () => scheduleSync());
+  S.fc.on('object:removed',  () => scheduleSync());
+  S.fc.on('selection:created', updateElControls);
+  S.fc.on('selection:updated', updateElControls);
+  console.log('[KaSha] Fabric canvas ready');
+}
+
+function updateElControls(e) {
+  const o = e.selected && e.selected[0]; if(!o) return;
+  const sv = document.getElementById('el-scale'); if(sv){sv.value=o.scaleX||1; document.getElementById('el-scale-val').textContent=(o.scaleX||1).toFixed(1)+'×';}
+  const xv = document.getElementById('el-x'); if(xv){xv.value=Math.round(o.left||0); document.getElementById('el-x-val').textContent=Math.round(o.left||0);}
+  const yv = document.getElementById('el-y'); if(yv){yv.value=Math.round(o.top||0); document.getElementById('el-y-val').textContent=Math.round(o.top||0);}
+}
+
+function scaleFabricPreview() {
+  const host = document.getElementById('fc-scale-host');
+  const wrapper = document.getElementById('fc-preview-wrapper');
+  if(!host||!wrapper) return;
+  const w = wrapper.clientWidth||270;
+  host.style.transform = `scale(${w/1024})`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MODEL-VIEWER INIT
+// ═══════════════════════════════════════════════════════════════
+
+function initModelViewer() {
+  const host = document.getElementById('viewer-host');
+  host.innerHTML = '';
+  const mv = document.createElement('model-viewer');
+  mv.id = 'mv-el';
+  mv.setAttribute('src', MODEL_URL);
+  mv.setAttribute('camera-controls', '');
+  mv.setAttribute('auto-rotate', '');
+  mv.setAttribute('rotation-per-second', '8deg');
+  mv.setAttribute('shadow-intensity', '1.5');
+  mv.setAttribute('environment-image', 'neutral');
+  mv.setAttribute('exposure', '1.1');
+  mv.setAttribute('camera-orbit', '0deg 75deg 2.5m');
+  mv.setAttribute('min-camera-orbit', 'auto auto 1.5m');
+  mv.setAttribute('max-camera-orbit', 'auto auto 5m');
+  mv.setAttribute('interaction-prompt', 'none');
+  mv.style.cssText = 'width:100%;height:100%;--poster-color:transparent';
+  host.appendChild(mv);
+  S.mv = mv;
+
+  mv.addEventListener('load', async () => {
+    const ov = document.getElementById('mv-overlay');
+    if(ov){ov.style.opacity='0'; setTimeout(()=>{ov.style.display='none'},500);}
+    S.modelLoaded = true;
+    console.log('[KaSha] model-viewer loaded');
+    await new Promise(r => setTimeout(r, 200));
+    syncTexture();
+  });
+
+  mv.addEventListener('error', () => {
+    const ov = document.getElementById('mv-overlay');
+    if(ov){ov.innerHTML='<p style="font-size:12px;color:var(--mu);text-align:center;padding:20px">⚠️ Could not load 3D model.<br><span style="font-size:10px">Put collar_t-shirt_model.glb in the same folder as this HTML file.</span></p>'; ov.style.background='none';}
+    S.modelLoaded = false;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TEXTURE SYNC
+// ═══════════════════════════════════════════════════════════════
+
+let _syncTimer = null;
+function scheduleSync() { clearTimeout(_syncTimer); _syncTimer = setTimeout(syncTexture, 120); }
+
+async function syncTexture() {
+  const mv = S.mv, fc = S.fc;
+  if(!mv||!fc) return;
+  try {
+    fc.renderAll();
+    await new Promise(r => requestAnimationFrame(r));
+    fc.renderAll();
+    await new Promise(r => requestAnimationFrame(r));
+    const rawEl = fc.getElement ? fc.getElement() : (fc.lowerCanvasEl);
+    const dataUrl = rawEl ? rawEl.toDataURL('image/png',1.0) : fc.toDataURL({format:'png',quality:1,multiplier:1});
+    if(!dataUrl||dataUrl.length<100) return;
+    const tex = await mv.createTexture(dataUrl);
+    const model = mv.model;
+    if(!model?.materials?.length) return;
+    for(const mat of model.materials){
+      const pbr = mat?.pbrMetallicRoughness; if(!pbr) continue;
+      const slot = pbr.baseColorTexture; if(!slot) continue;
+      try { slot.setTexture(tex); pbr.setBaseColorFactor([1,1,1,1]); break; }
+      catch { try { if(slot&&typeof slot.texture!=='undefined'){slot.texture=tex;pbr.setBaseColorFactor([1,1,1,1]);} break; } catch {} }
+    }
+  } catch(e) { console.warn('[KaSha] syncTexture:', e); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CANVAS HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+function setFabricBg(hex) {
+  if(!S.fc) return;
+  S.canvasBg = hex;
+  S.fc.backgroundColor = hex;
+  S.fc.renderAll();
+}
+
+function setCanvasBg(hex) {
+  setFabricBg(hex);
+  scheduleSync();
+  updateSummary();
+}
+
+function removeObjectsByTag(tag) {
+  if(!S.fc) return;
+  const objs = S.fc.getObjects().filter(o => o.data && o.data.tag === tag);
+  objs.forEach(o => S.fc.remove(o));
+}
+
+function removeObjectsByZoneTag(zone) {
+  if(!S.fc) return;
+  const objs = S.fc.getObjects().filter(o => o.data && (o.data.kashaZone === zone || o.data.kashaZoneColor === zone));
+  objs.forEach(o => S.fc.remove(o));
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ZONE COLOR SYSTEM
+// ═══════════════════════════════════════════════════════════════
+
+function applyZoneColor(zone, hex) {
+  if(!S.fc) return;
+  // Remove existing zone color rect
+  S.fc.getObjects().filter(o => o.data && o.data.kashaZoneColor === zone).forEach(o => S.fc.remove(o));
+  if(!hex) { S.zoneColors[zone] = ''; renderZoneList(); S.fc.renderAll(); scheduleSync(); return; }
+  const p = ZONE_PRESETS[zone];
+  const rect = new fabric.Rect({ left:p.left, top:p.top, width:p.w, height:p.h, fill:hex, selectable:false, evented:false, originX:'left', originY:'top' });
+  rect.data = { kashaZoneColor: zone };
+  S.fc.add(rect);
+  // send zone rects to back, keep GT base behind them
+  S.fc.sendToBack(rect);
+  const gtBase = S.fc.getObjects().find(o => o.data && o.data.tag === '__gtBase__');
+  if(gtBase) S.fc.sendToBack(gtBase);
+  S.zoneColors[zone] = hex;
+  renderZoneList();
+  S.fc.renderAll();
+  scheduleSync();
+  updateSummary();
+}
+
+function handleZoneColorChange(zone, hex) {
+  if(S.fullBody) { ALL_ZONES.forEach(z => applyZoneColor(z, hex)); }
+  else { applyZoneColor(zone, hex); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GT STYLE SYSTEM (draws zone rects on Fabric canvas)
+// ═══════════════════════════════════════════════════════════════
+
+function applyGtStyle(styleId, primary, accent, tertiary) {
+  if(!S.fc) return;
+  const style = GT_STYLES.find(s => s.id === styleId); if(!style) return;
+  primary   = primary   || style.primary;
+  accent    = accent    || style.accent;
+  tertiary  = tertiary  || style.tertiary || null;
+
+  // Clear existing GT base and zone color rects
+  S.fc.getObjects().filter(o => o.data && (o.data.tag === '__gtBase__' || o.data.kashaGt)).forEach(o => S.fc.remove(o));
+
+  // Helper: draw a colored rectangle on the canvas
+  const addRect = (z, color, selectable=false) => {
+    const p = ZONE_PRESETS[z];
+    const r = new fabric.Rect({ left:p.left, top:p.top, width:p.w, height:p.h, fill:color, selectable:false, evented:false, originX:'left', originY:'top' });
+    r.data = { tag:'__gtBase__', kashaGt:styleId };
+    return r;
+  };
+
+  let rects = [];
+  switch(style.group) {
+    case 'classic':
+      rects = ALL_ZONES.map(z => addRect(z, ['collar','leftSleeve','rightSleeve'].includes(z) ? accent : primary));
+      break;
+    case 'sport-side':
+      rects = ALL_ZONES.map(z => addRect(z, ['leftSleeve','rightSleeve','collar'].includes(z) ? accent : primary));
+      break;
+    case 'triple':
+      rects = ALL_ZONES.map(z => {
+        if(['leftSleeve','rightSleeve'].includes(z)) return addRect(z, accent);
+        if(z === 'collar') return addRect(z, tertiary||accent);
+        return addRect(z, primary);
+      });
+      break;
+    case 'wave':
+    case 'hourglass':
+      rects = ALL_ZONES.map(z => addRect(z, ['collar','leftSleeve','rightSleeve'].includes(z) ? accent : primary));
+      break;
+    case 'pinstripe':
+      rects = ALL_ZONES.map(z => addRect(z, primary));
+      // Add stripe lines on front zone
+      const fp = ZONE_PRESETS.front;
+      const stripCount = 6;
+      for(let i=1;i<stripCount;i++){
+        const x = fp.left + Math.round(fp.w * i/stripCount);
+        const line = new fabric.Line([x, fp.top, x, fp.top+fp.h], { stroke:accent, strokeWidth:3, selectable:false, evented:false });
+        line.data = { tag:'__gtBase__', kashaGt:styleId };
+        rects.push(line);
+      }
+      const bp = ZONE_PRESETS.back;
+      for(let i=1;i<stripCount;i++){
+        const x = bp.left + Math.round(bp.w * i/stripCount);
+        const line = new fabric.Line([x, bp.top, x, bp.top+bp.h], { stroke:accent, strokeWidth:3, selectable:false, evented:false });
+        line.data = { tag:'__gtBase__', kashaGt:styleId };
+        rects.push(line);
+      }
+      break;
+    case 'raglan':
+      rects = ALL_ZONES.map(z => addRect(z, ['leftSleeve','rightSleeve'].includes(z) ? accent : primary));
+      // Collar also accent
+      const collarRects = rects.filter(r => r.data && r.data.tag === '__gtBase__');
+      break;
+    default:
+      rects = ALL_ZONES.map(z => addRect(z, primary));
+  }
+
+  rects.forEach(r => { S.fc.add(r); S.fc.sendToBack(r); });
+
+  // Set canvas background to primary
+  S.fc.backgroundColor = primary;
+  S.activeGtStyleId = styleId;
+  S.gtColors = { primary, accent, tertiary };
+  S.canvasBg = primary;
+
+  // Sync the canvas bg color input
+  const bgInp = document.getElementById('canvas-bg-color');
+  if(bgInp) bgInp.value = primary;
+
+  S.fc.renderAll();
+  scheduleSync();
+  updateGtActivePanel();
+  updateSummary();
+}
+
+function updateGtStyle() {
+  if(!S.activeGtStyleId) return;
+  applyGtStyle(S.activeGtStyleId, S.gtColors.primary, S.gtColors.accent, S.gtColors.tertiary);
+}
+
+function clearGtStyle() {
+  if(!S.fc) return;
+  S.fc.getObjects().filter(o => o.data && o.data.tag === '__gtBase__').forEach(o => S.fc.remove(o));
+  S.activeGtStyleId = null;
+  setFabricBg(S.canvasBg||'#C5D3DE');
+  S.fc.renderAll();
+  scheduleSync();
+  updateGtActivePanel();
+  updateSummary();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PRINT LIBRARY
+// ═══════════════════════════════════════════════════════════════
+
+function applyAllOverPrint() {
+  const p = PATTERNS.find(x => x.id === S.activePrintId); if(!p||!S.fc) return;
+  const img = new Image(); img.crossOrigin='anonymous';
+  img.onload = () => {
+    const off = document.createElement('canvas'); off.width=off.height=384;
+    const ctx = off.getContext('2d');
+    ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+    ctx.drawImage(img,0,0,384,384);
+    const pat = new fabric.Pattern({ source:off, repeat:'repeat' });
+    S.fc.backgroundColor = pat;
+    S.fc.renderAll();
+    S.allOverPrintId = p.id;
+    scheduleSync();
+    renderPrintGrid();
+    document.getElementById('clear-all-over-btn').style.display='block';
+    updateSummary();
+  };
+  img.onerror = () => {
+    // Fallback: draw CSS gradient pattern on canvas background
+    const off = document.createElement('canvas'); off.width=off.height=256;
+    const ctx = off.getContext('2d');
+    const grd = ctx.createRadialGradient(128,128,10,128,128,128);
+    const [c1,c2] = p.css.includes('#') ? p.css.match(/#[0-9a-fA-F]{3,6}/g) : ['#7a2030','#f5c84a'];
+    grd.addColorStop(0, c1); grd.addColorStop(1, c2);
+    ctx.fillStyle = grd; ctx.fillRect(0,0,256,256);
+    const pat = new fabric.Pattern({ source:off, repeat:'repeat' });
+    S.fc.backgroundColor = pat;
+    S.fc.renderAll();
+    S.allOverPrintId = p.id;
+    scheduleSync();
+    renderPrintGrid();
+    updateSummary();
+  };
+  img.src = p.file;
+}
+
+function clearAllOverPrint() {
+  if(!S.fc) return;
+  S.allOverPrintId = null;
+  setFabricBg(S.canvasBg||'#C5D3DE');
+  S.fc.renderAll();
+  scheduleSync();
+  renderPrintGrid();
+  document.getElementById('clear-all-over-btn').style.display='none';
+  updateSummary();
+}
+
+function applyPrintToZone(zone) {
+  const p = PATTERNS.find(x => x.id === S.activePrintId); if(!p||!S.fc) return;
+  const pr = ZONE_PRESETS[zone];
+  const doPlace = (img) => {
+    removeObjectsByZoneTag(zone);
+    const nw = img.width||pr.w, nh = img.height||pr.h;
+    img.set({ left:pr.left, top:pr.top, originX:'left', originY:'top', scaleX:pr.w/nw, scaleY:pr.h/nh });
+    img.data = { kashaZone:zone, kashaPrintId:p.id };
+    S.fc.add(img);
+    S.fc.renderAll();
+    scheduleSync();
+  };
+  fabric.Image.fromURL(p.file, doPlace, { crossOrigin:'anonymous' });
+}
+
+function handleCustomPrint(e) {
+  const file = e.target.files[0]; if(!file) return;
+  const url = URL.createObjectURL(file);
+  const id = 'custom_'+Date.now();
+  const entry = { id, label:file.name.split('.')[0].slice(0,16), file:url, css:'linear-gradient(135deg,#888,#ccc)' };
+  PATTERNS.push(entry);
+  S.activePrintId = id;
+  renderPrintGrid();
+  e.target.value='';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TEXT TOOL
+// ═══════════════════════════════════════════════════════════════
+
+async function addText() {
+  const fc = S.fc; if(!fc) return;
+  try { await Promise.race([document.fonts.ready, new Promise(r=>setTimeout(r,400))]); } catch {}
+  const txt = document.getElementById('txt-content').value || 'Your Text';
+  const color = document.getElementById('txt-color').value;
+  const font  = document.getElementById('txt-font').value;
+  const size  = parseInt(document.getElementById('txt-size').value)||80;
+  const pos   = PLACEMENTS[S.txtPlacement] || {left:512,top:512};
+  const t = new fabric.Text(txt, { left:pos.left, top:pos.top, originX:'center', originY:'center', fontFamily:font, fontSize:size, fill:color, fontWeight:'bold', flipX:true });
+  fc.add(t); fc.setActiveObject(t); fc.renderAll(); scheduleSync();
+}
+
+function removeSelected() {
+  const fc = S.fc; if(!fc) return;
+  const o = fc.getActiveObject(); if(o){fc.remove(o);fc.renderAll();scheduleSync();}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LOGO TOOL
+// ═══════════════════════════════════════════════════════════════
+
+function handleLogoUpload(e) {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const src = ev.target.result;
+    const preview = document.getElementById('logo-preview');
+    preview.src = src; preview.style.display='block';
+    fabric.Image.fromURL(src, img => {
+      const pos = PLACEMENTS[S.logoPlacement]||{left:512,top:512};
+      const size = parseInt(document.getElementById('logo-size').value)||200;
+      if(img.width>size) img.scaleToWidth(size);
+      img.set({ left:pos.left, top:pos.top, originX:'center', originY:'center', flipX:true });
+      img.data = { kashaLogo:true };
+      S.fc.add(img); S.fc.setActiveObject(img);
+      S.logoObjFc = img;
+      S.fc.renderAll(); scheduleSync();
+    });
+  };
+  reader.readAsDataURL(file);
+  e.target.value='';
+}
+
+function applyLogo() {
+  const o = S.logoObjFc||S.fc?.getActiveObject(); if(!o) return;
+  const pos = PLACEMENTS[S.logoPlacement]||{left:512,top:512};
+  const size = parseInt(document.getElementById('logo-size').value)||200;
+  o.set({ left:pos.left, top:pos.top, originX:'center', originY:'center' });
+  o.scaleToWidth(size);
+  S.fc.renderAll(); scheduleSync();
+}
+
+function removeLogo() {
+  const fc = S.fc; if(!fc) return;
+  const o = S.logoObjFc||fc.getActiveObject();
+  if(o){fc.remove(o); S.logoObjFc=null; document.getElementById('logo-preview').style.display='none'; fc.renderAll(); scheduleSync();}
+}
+
+function updateLogoSize(v) {
+  document.getElementById('logo-size-val').textContent = v;
+  const o = S.logoObjFc||S.fc?.getActiveObject();
+  if(o){o.scaleToWidth(parseInt(v));S.fc.renderAll();scheduleSync();}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CANVAS CONTROLS
+// ═══════════════════════════════════════════════════════════════
+
+function clearAllObjects() {
+  if(!S.fc) return;
+  S.fc.getObjects().slice().forEach(o => S.fc.remove(o));
+  S.fc.renderAll(); scheduleSync();
+}
+
+function setElScale(v) {
+  const o = S.fc?.getActiveObject(); if(o){o.scale(v);S.fc.renderAll();scheduleSync();}
+  document.getElementById('el-scale-val').textContent=v.toFixed(1)+'×';
+}
+
+function setElPos(k,v) {
+  const o = S.fc?.getActiveObject(); if(o){o.set(k,v);S.fc.renderAll();scheduleSync();}
+  if(k==='left'){const el=document.getElementById('el-x-val');if(el)el.textContent=v;}
+  else{const el=document.getElementById('el-y-val');if(el)el.textContent=v;}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LEFT PANEL ACTIONS
+// ═══════════════════════════════════════════════════════════════
+
+function toggleFullBody() {
+  S.fullBody = !S.fullBody;
+  const btn = document.getElementById('toggle-fullbody');
+  const dot = btn.querySelector('.toggle-dot');
+  if(S.fullBody){btn.style.background='var(--ac)';dot.style.left='18px';}
+  else{btn.style.background='var(--bd2)';dot.style.left='2px';}
+}
+
+function toggleAutoRotate() {
+  S.autoRotate = !S.autoRotate;
+  const btn = document.getElementById('toggle-rotate');
+  const dot = btn.querySelector('.toggle-dot');
+  if(S.autoRotate){btn.style.background='var(--ac)';dot.style.left='18px';S.mv&&S.mv.setAttribute('auto-rotate','');}
+  else{btn.style.background='var(--bd2)';dot.style.left='2px';S.mv&&S.mv.removeAttribute('auto-rotate');}
+}
+
+function changeQty(d) {
+  S.qty = Math.max(1, S.qty + d);
+  document.getElementById('qty-display').textContent = S.qty;
+  updateSummary();
+}
+
+function selectSize(s) {
+  S.size = s;
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', b.dataset.size===s));
+  const ci = document.getElementById('custom-size');
+  if(ci) ci.style.display = s==='Custom'?'block':'none';
+  updateSummary();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SAVE / EXPORT / CART
+// ═══════════════════════════════════════════════════════════════
+
+async function snapshotModel() {
+  const mv = S.mv, fc = S.fc;
+  try { await syncTexture(); } catch {}
+  await new Promise(r => requestAnimationFrame(r));
+  if(mv && typeof mv.toDataURL === 'function') { try { return mv.toDataURL('image/png',1.0); } catch {} }
+  if(fc) return fc.toDataURL({format:'png',quality:0.95,multiplier:1});
+  throw new Error('Nothing to snapshot');
+}
+
+async function saveDesign() {
+  const name = document.getElementById('design-name-input').value||('Design_'+Date.now());
+  try {
+    const dataUrl = await snapshotModel();
+    const data = {
+      name, product:S.product?.name, type:S.productType,
+      size:S.size, qty:S.qty, zoneColors:S.zoneColors,
+      gtStyle:S.activeGtStyleId, gtColors:S.gtColors,
+      canvasBg:S.canvasBg, preview:dataUrl,
+      canvasJSON:S.fc ? JSON.stringify(S.fc.toJSON(['data'])) : null,
+    };
+    const key = 'kasha_design_'+Date.now();
+    localStorage.setItem(key, JSON.stringify({...data, preview:null})); // don't store huge data in LS
+    showToast('Design saved ✓');
+  } catch(e){ showToast('Save failed: '+e.message, true); }
+}
+
+async function exportDesign() {
+  try {
+    const dataUrl = await snapshotModel();
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `kasha-design-${Date.now()}.png`;
+    a.click();
+    showToast('PNG exported ✓');
+  } catch(e){ showToast('Export failed: '+e.message, true); }
+}
+
+async function addToCart() {
+  try {
+    const dataUrl = await snapshotModel();
+    S.cartCount++;
+    document.getElementById('cart-count').textContent = S.cartCount;
+    // Store in session
+    if(!window._kashaCart) window._kashaCart = [];
+    window._kashaCart.push({ product:S.product?.name, type:S.productType, size:S.size, qty:S.qty, preview:dataUrl, ts:Date.now() });
+    showToast(`✓ Added to cart (${S.cartCount} item${S.cartCount>1?'s':''})`);
+  } catch(e){ showToast('Could not add to cart: '+e.message, true); }
+}
+
+function showCart() {
+  if(!window._kashaCart||!window._kashaCart.length){showToast('Your cart is empty');return;}
+  const items = window._kashaCart;
+  alert(`Cart (${items.length} item${items.length>1?'s':''}):\n\n`+items.map((i,n)=>`${n+1}. ${i.product||'Design'} — ${i.size} × ${i.qty}`).join('\n'));
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SKU COMPUTATION
+// ═══════════════════════════════════════════════════════════════
+
+function getSku() {
+  const p = S.product;
+  if(!p) return '—';
+  const bodyCode = (p.name||'').replace(/\s+/g,'').toUpperCase().slice(0,8);
+  const sizeCode = S.size==='Custom'?'C':S.size;
+  let designCode = '';
+  if(S.activeGtStyleId) designCode = S.activeGtStyleId;
+  else if(S.activePrintId) {
+    const idx = PATTERNS.findIndex(x=>x.id===S.activePrintId);
+    designCode = idx>=0 ? `GP${String(idx+1).padStart(3,'0')}` : '';
+  } else { designCode = sizeCode; }
+  return [bodyCode, designCode, sizeCode].filter(Boolean).join(' ');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RENDERING HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+function renderZoneList() {
+  const el = document.getElementById('zone-list'); if(!el) return;
+  el.innerHTML = ALL_ZONES.map(z => {
+    const col = S.zoneColors[z]||'';
+    const isActive = S.activeZone===z;
+    return `<div class="zone-item${isActive?' active':''}" onclick="setActiveZone('${z}')">
+      <div>
+        <div class="zone-name">${ZONE_LABEL[z]}</div>
+        <div class="zone-color">${col||'No colour'}</div>
+      </div>
+      <div class="zone-controls">
+        <input type="color" value="${col||'#ffffff'}" onclick="event.stopPropagation()" onchange="handleZoneColorChange('${z}',this.value)"
+          style="width:28px;height:22px;border:none;cursor:pointer;background:none;border-radius:5px;padding:0">
+        ${col?`<button class="zone-clear" onclick="event.stopPropagation();handleZoneColorChange('${z}','')" title="Clear">×</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setActiveZone(zone) {
+  S.activeZone = zone;
+  renderZoneList();
+}
+
+function renderSizeGrid() {
+  const el = document.getElementById('size-grid'); if(!el) return;
+  el.innerHTML = SIZES.map(s => `<button class="size-btn${S.size===s?' active':''}" data-size="${s}" onclick="selectSize('${s}')">${s}</button>`).join('');
+}
+
+function renderPrintGrid() {
+  const el = document.getElementById('print-grid'); if(!el) return;
+  el.innerHTML = PATTERNS.map(p => `
+    <div class="print-thumb${S.activePrintId===p.id?' active':''}" onclick="selectPrint('${p.id}')" title="${p.label}">
+      <img src="${p.file}" alt="${p.label}" style="width:100%;height:100%;object-fit:cover"
+        onerror="this.style.display='none';this.parentElement.style.background='${p.css}'">
+      ${S.allOverPrintId===p.id?'<div class="print-all-badge">ALL</div>':''}
+    </div>`).join('');
+}
+
+function selectPrint(id) {
+  S.activePrintId = id;
+  renderPrintGrid();
+  const p = PATTERNS.find(x=>x.id===id);
+  const actEl = document.getElementById('print-actions');
+  const lbl = document.getElementById('active-print-label');
+  if(p && actEl && lbl){ actEl.style.display='block'; lbl.textContent = p.label; }
+}
+
+function renderGtGroups() {
+  const el = document.getElementById('gt-style-groups'); if(!el) return;
+  el.innerHTML = GT_GROUPS_DEF.map(group => {
+    const styles = GT_STYLES.filter(s => s.group === group.id);
+    const isOpen = S.gtGroupOpen === group.id;
+    return `<div class="gt-group">
+      <button class="gt-group-header${isOpen?' open':''}" onclick="toggleGtGroup('${group.id}')">
+        <span>${group.label} <span style="opacity:.5;font-weight:400">(${styles.length})</span></span>
+        <span style="font-size:9px">${isOpen?'▲':'▼'}</span>
+      </button>
+      ${isOpen?`<div class="gt-swatches">${styles.map(st=>{
+        const isActive = S.activeGtStyleId === st.id;
+        const swId = 'gts_'+st.id;
+        return `<button class="gt-swatch-btn${isActive?' active':''}" onclick="selectGtStyle('${st.id}')" title="${st.id} — ${st.label}">
+          <canvas class="gt-swatch-canvas" id="${swId}" width="60" height="60"></canvas>
+          <div class="gt-code">${st.id}</div>
+        </button>`;
+      }).join('')}</div>`:''}
+    </div>`;
+  }).join('');
+  // Draw all visible swatches
+  GT_GROUPS_DEF.forEach(group => {
+    if(group.id !== S.gtGroupOpen) return;
+    GT_STYLES.filter(s=>s.group===group.id).forEach(st => {
+      const c = document.getElementById('gts_'+st.id);
+      if(c) drawGtSwatch(c, st, null, null, null);
+    });
+  });
+}
+
+function toggleGtGroup(id) {
+  S.gtGroupOpen = S.gtGroupOpen===id ? null : id;
+  renderGtGroups();
+}
+
+function selectGtStyle(id) {
+  S.activeGtStyleId = id;
+  const st = GT_STYLES.find(s=>s.id===id); if(!st) return;
+  S.gtColors = { primary:st.primary, accent:st.accent, tertiary:st.tertiary||null };
+  applyGtStyle(id, st.primary, st.accent, st.tertiary||null);
+  renderGtGroups();
+}
+
+function updateGtActivePanel() {
+  const el = document.getElementById('gt-active-panel'); if(!el) return;
+  if(!S.activeGtStyleId) { el.style.display='none'; return; }
+  const st = GT_STYLES.find(s=>s.id===S.activeGtStyleId);
+  el.style.display='block';
+  el.innerHTML = `<div class="gt-active-panel">
+    <div style="font-size:12px;font-weight:600;color:var(--tx)">${st.id} — ${st.label}</div>
+    <div class="gt-color-row">
+      <input type="color" value="${S.gtColors.primary}" class="color-inp" onchange="S.gtColors.primary=this.value;updateGtStyle()" title="Primary">
+      <div><div style="font-size:11px;font-weight:500">Primary</div><div style="font-size:10px;color:var(--mu)">Body panels</div></div>
+    </div>
+    <div class="gt-color-row">
+      <input type="color" value="${S.gtColors.accent}" class="color-inp" onchange="S.gtColors.accent=this.value;updateGtStyle()" title="Accent">
+      <div><div style="font-size:11px;font-weight:500">Accent</div><div style="font-size:10px;color:var(--mu)">Collar / cuffs</div></div>
+    </div>
+    ${st.tertiary?`<div class="gt-color-row">
+      <input type="color" value="${S.gtColors.tertiary||st.tertiary}" class="color-inp" onchange="S.gtColors.tertiary=this.value;updateGtStyle()" title="Third">
+      <div><div style="font-size:11px;font-weight:500">Third Colour</div></div>
+    </div>`:''}
+    <div>
+      <div class="rp-label" style="margin-bottom:5px">Quick palette → primary</div>
+      <div class="palette">${PALETTE.map(c=>`<button class="pal-dot${S.gtColors.primary===c?' active':''}" style="background:${c}" onclick="S.gtColors.primary='${c}';updateGtStyle()" title="${c}"></button>`).join('')}</div>
+    </div>
+    <button class="rp-btn danger" style="width:100%" onclick="clearGtStyle()">✕ Remove Design Style</button>
+  </div>`;
+}
+
+function renderPalette() {
+  const el = document.getElementById('palette-row'); if(!el) return;
+  el.innerHTML = PALETTE.map(c=>`<button class="pal-dot" style="background:${c}" onclick="applyPalColor('${c}')" title="${c}"></button>`).join('');
+}
+
+function applyPalColor(hex) {
+  if(S.fullBody) { ALL_ZONES.forEach(z=>applyZoneColor(z,hex)); }
+  else { applyZoneColor(S.activeZone, hex); }
+  const bgInp=document.getElementById('canvas-bg-color');if(bgInp&&!S.activeGtStyleId){bgInp.value=hex;setFabricBg(hex);}
+  scheduleSync();
+}
+
+function updateSummary() {
+  document.getElementById('sku-display').textContent = getSku();
+  const el = document.getElementById('design-summary'); if(!el) return;
+  const rows = [
+    {label:'Style',   val: S.activeGtStyleId||'Custom'},
+    {label:'Size',    val: S.size},
+    {label:'Qty',     val: S.qty},
+    {label:'Zones',   val: Object.values(S.zoneColors).filter(Boolean).length+'/5 painted'},
+  ];
+  el.innerHTML = rows.map(r=>`<div class="summary-row"><span class="summary-label">${r.label}</span><span class="summary-val">${r.val}</span></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════════════════
+
+const TAB_CONFIG = {
+  printed: ['text','logo','prints','colors','canvas'],
+  pattern: ['text','logo','colors','canvas'],
+  solid:   ['text','logo','colors','prints','canvas'],
+};
+
+const TAB_LABELS = { text:'Text', logo:'Logo', prints:'Prints', colors:'Colors', canvas:'Canvas' };
+
+function renderTabs(type) {
+  const tabs = TAB_CONFIG[type]||TAB_CONFIG.printed;
+  const bar = document.getElementById('tab-bar'); if(!bar) return;
+  bar.innerHTML = tabs.map(t=>`<button class="tab${t==='text'?' active':''}" id="tab-btn-${t}" onclick="activateTab('${t}')">${TAB_LABELS[t]}</button>`).join('');
+  tabs.forEach(t => {
+    const c = document.getElementById('tab-'+t);
+    if(c) c.classList.toggle('active', t==='text');
+  });
+  // For pattern type, hide GT picker from colors (show locked style)
+  if(type==='pattern') {
+    const gts = document.getElementById('gt-styles-section');
+    if(gts) gts.style.display = 'none';
+    // Show locked pattern notice
+    const acPnl = document.getElementById('gt-active-panel');
+    if(acPnl && S.activeGtStyleId) updateGtActivePanel();
+  }
+  if(type==='solid') {
+    const gts = document.getElementById('gt-styles-section');
+    if(gts) gts.style.display = 'none'; // hide GT for solid, just palette
+  }
+}
+
+function activateTab(t) {
+  const tabs = TAB_CONFIG[S.productType]||TAB_CONFIG.printed;
+  tabs.forEach(tab => {
+    const btn = document.getElementById('tab-btn-'+tab);
+    const content = document.getElementById('tab-'+tab);
+    if(btn) btn.classList.toggle('active', tab===t);
+    if(content) content.classList.toggle('active', tab===t);
+  });
+  if(t==='canvas') { setTimeout(scaleFabricPreview, 50); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PLACEMENT BUTTONS
+// ═══════════════════════════════════════════════════════════════
+
+const PLACE_OPTS = ['front-chest','front-center','back-top','back-center','sleeve-left','sleeve-right'];
+const PLACE_LABELS = {'front-chest':'Front Chest','front-center':'Front Ctr','back-top':'Back Top','back-center':'Back Ctr','sleeve-left':'L. Sleeve','sleeve-right':'R. Sleeve'};
+
+function renderPlacement(containerId, stateKey) {
+  const el = document.getElementById(containerId); if(!el) return;
+  el.innerHTML = PLACE_OPTS.map(o=>`<button class="place-btn${S[stateKey]===o?' active':''}" onclick="${stateKey}='${o}';renderPlacement('${containerId}','${stateKey}')">${PLACE_LABELS[o]}</button>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PRODUCT PAGE
+// ═══════════════════════════════════════════════════════════════
+
+function renderProductGrid(filter='all') {
+  const grid = document.getElementById('product-grid'); if(!grid) return;
+  const list = filter==='all' ? PRODUCTS : PRODUCTS.filter(p=>p.type===filter);
+  grid.innerHTML = list.map((p,i) => {
+    const thumb = buildThumb(p);
+    return `<div class="product-card" onclick="openCustomizer(${p.id})" style="animation-delay:${i*40}ms">
+      <div class="product-thumb">${thumb}</div>
+      <span class="product-badge ${p.type}">${p.type.charAt(0).toUpperCase()+p.type.slice(1)}</span>
+      <div class="product-info">
+        <div class="product-name">${p.name}</div>
+        <div class="product-desc">${p.desc}</div>
+        <div class="product-price">${p.price}</div>
+        <div class="product-swatches">${(p.colors||[]).slice(0,5).map(c=>`<div class="swatch" style="background:${c}"></div>`).join('')}</div>
+        <div class="product-actions">
+          <button class="btn-customize" onclick="event.stopPropagation();openCustomizer(${p.id})">Customize ✦</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function buildThumb(product) {
+  // SVG T-shirt silhouette with product-appropriate styling
+  const type = product.type;
+  const colors = product.colors||['#C5D3DE','#ffffff'];
+  const c1=colors[0]||'#C5D3DE', c2=colors[1]||'#362223';
+
+  if(type==='pattern' && product.gtStyle) {
+    const st = GT_STYLES.find(s=>s.id===product.gtStyle)||{group:'classic',primary:c1,accent:c2};
+    const svgId = 'thumb_'+product.id;
+    // We'll use a canvas for GT swatch rendering
+    return `<canvas id="${svgId}" width="300" height="400" style="width:100%;height:100%" 
+      data-gt="${product.gtStyle}" data-primary="${st.primary}" data-accent="${st.accent}" data-group="${st.group}"></canvas>`;
+  }
+
+  // Printed or Solid — SVG with appropriate fill
+  const fill = type==='printed' ? `url(#p${product.id})` : c1;
+  const accentFill = type==='solid' ? c2||c1 : c2||'rgba(255,255,255,0.3)';
+
+  return `<svg viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      ${type==='printed'?`<radialGradient id="p${product.id}" cx="50%" cy="50%" r="70%">
+        <stop offset="0%" stop-color="${c1}"/>
+        <stop offset="60%" stop-color="${c2||'#888'}"/>
+        ${colors[2]?`<stop offset="100%" stop-color="${colors[2]}"/>`:''}
+      </radialGradient>`:''}
+    </defs>
+    <!-- T-shirt body -->
+    <path d="M80,70 L40,110 L70,125 L70,330 L230,330 L230,125 L260,110 L220,70 L190,45 Q150,30 110,45 Z" fill="${fill}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    <!-- collar -->
+    <path d="M110,45 Q150,65 190,45 Q175,80 150,85 Q125,80 110,45 Z" fill="${accentFill}" opacity="0.9"/>
+    <!-- left sleeve -->
+    <path d="M80,70 L40,110 L70,125 L85,85 Z" fill="${accentFill}" opacity="0.85"/>
+    <!-- right sleeve -->
+    <path d="M220,70 L260,110 L230,125 L215,85 Z" fill="${accentFill}" opacity="0.85"/>
+    ${type==='printed'?`<text x="150" y="220" text-anchor="middle" font-family="serif" font-size="11" fill="rgba(255,255,255,0.3)" letter-spacing="2">CUSTOM PRINT</text>`:''}
+    ${type==='solid'?`<text x="150" y="220" text-anchor="middle" font-family="serif" font-size="18" font-weight="bold" fill="rgba(255,255,255,0.12)" letter-spacing="4">KaSha</text>`:''}
+  </svg>`;
+}
+
+function drawPatternThumbs() {
+  // Render GT pattern thumbs using canvas after DOM update
+  requestAnimationFrame(() => {
+    PRODUCTS.filter(p=>p.type==='pattern'&&p.gtStyle).forEach(p => {
+      const c = document.getElementById('thumb_'+p.id);
+      if(!c) return;
+      const st = GT_STYLES.find(s=>s.id===p.gtStyle); if(!st) return;
+      const ctx = c.getContext('2d');
+      const W=c.width,H=c.height;
+      // Draw t-shirt silhouette shape
+      ctx.clearRect(0,0,W,H);
+      // Background gradient
+      const bg = ctx.createLinearGradient(0,0,0,H);
+      bg.addColorStop(0,'#1a1612'); bg.addColorStop(1,'#0c0a08');
+      ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+      // Draw shirt shape with GT colors
+      const bodyPath = new Path2D('M80,70 L40,110 L70,125 L70,330 L230,330 L230,125 L260,110 L220,70 L190,45 Q150,30 110,45 Z');
+      ctx.fillStyle = st.primary;
+      ctx.fill(bodyPath);
+      ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.stroke(bodyPath);
+      // Accent elements based on group
+      ctx.fillStyle = st.accent;
+      switch(st.group){
+        case 'classic':
+          ctx.fillRect(80,60,140,22);
+          ctx.fillRect(70,318,160,12);
+          const colPath=new Path2D('M110,45 Q150,65 190,45 Q175,80 150,85 Q125,80 110,45 Z');
+          ctx.fill(colPath);
+          break;
+        case 'sport-side':
+        case 'wave':
+          // Side panels
+          const lSlv=new Path2D('M80,70 L40,110 L70,125 L85,85 Z'); ctx.fill(lSlv);
+          const rSlv=new Path2D('M220,70 L260,110 L230,125 L215,85 Z'); ctx.fill(rSlv);
+          break;
+        case 'raglan':
+          const lYoke=new Path2D('M80,70 L110,45 L120,90 L85,110 Z'); ctx.fill(lYoke);
+          const rYoke=new Path2D('M220,70 L190,45 L180,90 L215,110 Z'); ctx.fill(rYoke);
+          const colR=new Path2D('M110,45 Q150,65 190,45 Q175,80 150,85 Q125,80 110,45 Z'); ctx.fill(colR);
+          break;
+        case 'pinstripe':
+          for(let x=100;x<220;x+=18){ctx.beginPath();ctx.moveTo(x,70);ctx.lineTo(x,330);ctx.lineWidth=2;ctx.strokeStyle=st.accent;ctx.stroke();}
+          break;
+        case 'hourglass':
+          ctx.beginPath();ctx.moveTo(120,70);ctx.lineTo(180,70);ctx.lineTo(160,200);ctx.lineTo(180,330);ctx.lineTo(120,330);ctx.lineTo(140,200);ctx.closePath();ctx.fill();
+          break;
+      }
+      // Watermark
+      ctx.font='bold 11px serif';ctx.fillStyle='rgba(201,168,124,0.5)';ctx.textAlign='center';
+      ctx.fillText(st.id,150,360);
+    });
+  });
+}
+
+function filterProducts(btn, filter) {
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderProductGrid(filter);
+  drawPatternThumbs();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+
+function openCustomizer(productId) {
+  const p = PRODUCTS.find(x=>x.id===productId); if(!p) return;
+  S.product = p;
+  S.productType = p.type;
+  S.activeGtStyleId = null;
+  S.activePrintId = null;
+  S.allOverPrintId = null;
+  S.zoneColors = { front:'', back:'', leftSleeve:'', rightSleeve:'', collar:'' };
+  S.modelLoaded = false;
+
+  // Set initial canvas background
+  let initBg = '#C5D3DE';
+  if(p.type==='solid' && p.defaultColor) initBg = p.defaultColor;
+  else if(p.type==='pattern' && p.gtStyle) {
+    const st = GT_STYLES.find(s=>s.id===p.gtStyle);
+    if(st) initBg = st.primary;
+  } else if(p.colors&&p.colors[0]) initBg = p.colors[0];
+  S.canvasBg = initBg;
+
+  // Show customizer
+  document.getElementById('page-products').style.display='none';
+  document.getElementById('page-customizer').style.display='flex';
+
+  // Update header
+  document.getElementById('c-product-name').textContent='— '+p.name;
+  document.getElementById('badge-name').textContent = p.name;
+  document.getElementById('badge-price').textContent = p.price;
+  document.getElementById('design-name-input').value='';
+
+  // Reset fabric canvas
+  if(S.fc){
+    S.fc.getObjects().slice().forEach(o=>S.fc.remove(o));
+    setFabricBg(initBg);
+    S.fc.renderAll();
+  }
+  const bgInp=document.getElementById('canvas-bg-color');if(bgInp)bgInp.value=initBg;
+
+  // Render UI
+  renderTabs(p.type);
+  renderZoneList();
+  renderSizeGrid();
+  renderPrintGrid();
+  renderGtGroups();
+  renderPalette();
+  renderPlacement('txt-placement','txtPlacement');
+  renderPlacement('logo-placement','logoPlacement');
+  updateSummary();
+  updateGtActivePanel();
+
+  // Move fabric canvas element into the preview host
+  moveFabricToPreview();
+
+  // Init model-viewer
+  const ov = document.getElementById('mv-overlay');
+  if(ov){ov.style.display='flex';ov.style.opacity='1';}
+  initModelViewer();
+
+  // Apply initial style/print
+  setTimeout(() => {
+    if(p.type==='pattern' && p.gtStyle) {
+      const st = GT_STYLES.find(s=>s.id===p.gtStyle);
+      if(st) { S.activeGtStyleId=p.gtStyle; applyGtStyle(p.gtStyle, st.primary, st.accent, st.tertiary||null); }
+      renderGtGroups();
+    } else if(p.type==='solid') {
+      setFabricBg(p.defaultColor||'#C5D3DE');
+    }
+  }, 100);
+}
+
+function moveFabricToPreview() {
+  // The fabric canvas lives in #fc-offscreen (always mounted).
+  // In the canvas tab we move a CLONE into the preview wrapper.
+  // Actually, we show the canvas element via CSS transform in the preview host.
+  // The host element is already injected in tab-canvas via the #fc-scale-host div.
+  const fcEl = document.getElementById('fabric-canvas');
+  const host = document.getElementById('fc-scale-host');
+  if(fcEl&&host&&!host.contains(fcEl)){
+    host.appendChild(fcEl);
+  }
+}
+
+function goBack() {
+  document.getElementById('page-customizer').style.display='none';
+  document.getElementById('page-products').style.display='flex';
+  // Don't tear down model-viewer — save resources
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TOAST NOTIFICATION
+// ═══════════════════════════════════════════════════════════════
+
+function showToast(msg, isError=false) {
+  let t = document.getElementById('toast');
+  if(!t){ t=document.createElement('div'); t.id='toast'; t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:9px 18px;border-radius:20px;font-size:12px;font-weight:600;font-family:"DM Sans",sans-serif;letter-spacing:0.04em;pointer-events:none;transition:opacity .3s;z-index:9999'; document.body.appendChild(t); }
+  t.style.background = isError ? '#c45c5c' : '#2d5a45';
+  t.style.color = '#fff';
+  t.textContent = msg;
+  t.style.opacity='1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{t.style.opacity='0';},2400);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  model-viewer SCRIPT LOADER
+// ═══════════════════════════════════════════════════════════════
+
+function loadModelViewerScript() {
+  return new Promise(res => {
+    if(document.querySelector('[data-mv]')){res();return;}
+    const s = document.createElement('script');
+    s.type='module'; s.setAttribute('data-mv','1');
+    s.src='https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js';
+    s.onload=res; s.onerror=()=>{console.warn('[KaSha] model-viewer failed to load');res();};
+    document.head.appendChild(s);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BOOTSTRAP
+// ═══════════════════════════════════════════════════════════════
+
+window.addEventListener('DOMContentLoaded', async () => {
+  // Init Fabric canvas
+  initFabric();
+
+  // Load model-viewer
+  loadModelViewerScript();
+
+  // Render product page
+  renderProductGrid('all');
+  drawPatternThumbs();
+});
+
+// Resize handler for canvas preview
+window.addEventListener('resize', scaleFabricPreview);
+
+</script>
+</body>
+</html>
