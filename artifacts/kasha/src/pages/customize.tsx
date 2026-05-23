@@ -199,11 +199,23 @@ export default function CustomizePage() {
     enabled:  isTypeMode,
   });
   const defaultTypeProduct: Product | undefined = isTypeMode
-    ? (allProducts?.find(p =>
-        garmentType === "pattern" ? p.subType === "pattern" :
-        garmentType === "printed" ? p.subType === "printed" :
-        (p.subType === "solid" || !p.subType)
-      ) ?? allProducts?.[0])
+    ? (() => {
+        if (!allProducts) return undefined;
+        if (garmentType === "pattern") {
+          // Prefer KS1002B family (has 3D model); fall back to any pattern product
+          return allProducts.find(p => p.sku?.startsWith("KS1002B"))
+              ?? allProducts.find(p => p.subType === "pattern");
+        }
+        if (garmentType === "printed") {
+          // Default to KS1000BGP004; fall back to any printed product
+          return allProducts.find(p => p.sku === "KS1000BGP004")
+              ?? allProducts.find(p => p.subType === "printed");
+        }
+        // solid: prefer subType="solid", otherwise first product
+        return allProducts.find(p => p.subType === "solid")
+            ?? allProducts.find(p => !p.subType)
+            ?? allProducts[0];
+      })()
     : undefined;
   // displayProduct: the product whose modelUrl/materials drive the 3D viewer
   const displayProduct = product ?? defaultTypeProduct;
@@ -390,7 +402,7 @@ export default function CustomizePage() {
       mv.removeEventListener("error", onError);
       clearTimeout(fallback);
     };
-  }, [mvReady, product?.modelUrl, webglAvailable]);
+  }, [mvReady, displayProduct?.modelUrl, webglAvailable]);
 
   // Update styleTab when productType resolves (after data fetch)
   useEffect(() => {
@@ -510,6 +522,19 @@ export default function CustomizePage() {
     const design = KASHA_DESIGNS.find(d => d.id === designId) ?? KASHA_DESIGNS[0];
     handleSelectKashaDesign(design);
   }, [canvasReady, productType, handleSelectKashaDesign, product]);
+
+  // When arriving from home in ?type=printed mode, auto-apply P3 (blue-floral)
+  // as the default all-over print so the model has a print on load.
+  const autoAppliedPrintRef = useRef(false);
+  useEffect(() => {
+    if (!isTypeMode || garmentType !== "printed") return;
+    if (autoAppliedPrintRef.current) return;
+    if (!canvasReady || !mats.length) return;
+    const p3 = PATTERNS.find(p => p.id === "blue-floral");
+    if (!p3) return;
+    autoAppliedPrintRef.current = true;
+    applyAllOverPrint(p3);
+  }, [isTypeMode, garmentType, canvasReady, mats, applyAllOverPrint]);
 
   const clearZonePrint = useCallback((zone: Exclude<PatternZone,"all">)=>{
     const fc=fcRef.current; if(!fc) return;
