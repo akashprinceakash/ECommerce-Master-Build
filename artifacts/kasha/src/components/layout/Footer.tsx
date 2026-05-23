@@ -126,10 +126,10 @@ export function Footer() {
             <div style={COL_TITLE}>Collections</div>
             <ul className="flex flex-col gap-2.5">
               <li>
-                <FooterLink href="/products?gender=men">Men's</FooterLink>
+                <FooterLink href="/products?gender=men">Men</FooterLink>
               </li>
               <li>
-                <FooterLink href="/products?gender=women">Women's</FooterLink>
+                <FooterLink href="/products?gender=women">Women</FooterLink>
               </li>
               {/* <li>
                 <FooterLink href="/products?gender=kids">Kids'</FooterLink>

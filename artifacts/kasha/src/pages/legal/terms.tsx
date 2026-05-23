@@ -9,7 +9,7 @@ const FONT_DISPLAY = "'Cormorant Garamond', serif";
 const FONT_UI = "'Josefin Sans', sans-serif";
 
 export default function TermsPage() {
-  useEffect(() => { document.title = "Terms of Service — KA.SHA"; }, []);
+  useEffect(() => { document.title = "Terms of Service — Ka.Sha"; }, []);
 
   return (
     <Layout>
@@ -18,24 +18,24 @@ export default function TermsPage() {
           <p>By accessing or placing an order on ka-sha.com ("Site"), you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree, please do not use the Site.</p>
         </Section>
         <Section title="2. Products & Bespoke Orders">
-          <p>KA.SHA offers premium golf and sportswear, including bespoke customised garments. Product descriptions and images are provided in good faith. Slight variations in colour between screen display and actual fabric are inherent to the manufacturing process and not grounds for a refund.</p>
+          <p>Ka.Sha offers premium golf and sportswear, including bespoke customised garments. Product descriptions and images are provided in good faith. Slight variations in colour between screen display and actual fabric are inherent to the manufacturing process and not grounds for a refund.</p>
           <p>Bespoke or customised orders (products personalised through the Custom Studio) are made to order and are non-refundable once production has commenced, except in cases of a manufacturing defect.</p>
         </Section>
         <Section title="3. Pricing & Payment">
-          <p>All prices are listed in Indian Rupees (₹) and are inclusive of applicable GST. KA.SHA reserves the right to modify prices at any time. Payment is processed securely through Razorpay. By completing a purchase you confirm that the payment method belongs to you.</p>
+          <p>All prices are listed in Indian Rupees (₹) and are inclusive of applicable GST. Ka.Sha reserves the right to modify prices at any time. Payment is processed securely through Razorpay. By completing a purchase you confirm that the payment method belongs to you.</p>
         </Section>
         <Section title="4. Order Confirmation & Cancellation">
-          <p>An order confirmation email is sent upon successful payment. KA.SHA reserves the right to cancel any order due to stock unavailability or suspected fraud, with a full refund to the original payment method within 5–7 business days.</p>
+          <p>An order confirmation email is sent upon successful payment. Ka.Sha reserves the right to cancel any order due to stock unavailability or suspected fraud, with a full refund to the original payment method within 5–7 business days.</p>
           <p>You may cancel a standard (non-bespoke) order within 24 hours of placement by contacting us at <strong>support@kashaonline.in</strong>.</p>
         </Section>
         <Section title="5. Intellectual Property">
-          <p>All content on this Site — including text, images, logos, product designs, and the KA.SHA brand — is the exclusive property of KA.SHA and protected under Indian copyright law. Unauthorised reproduction or commercial use is strictly prohibited.</p>
+          <p>All content on this Site — including text, images, logos, product designs, and the Ka.Sha brand — is the exclusive property of Ka.Sha and protected under Indian copyright law. Unauthorised reproduction or commercial use is strictly prohibited.</p>
         </Section>
         <Section title="6. User Accounts">
-          <p>You are responsible for maintaining the confidentiality of your account credentials. KA.SHA is not liable for losses arising from unauthorised account access due to negligence on your part.</p>
+          <p>You are responsible for maintaining the confidentiality of your account credentials. Ka.Sha is not liable for losses arising from unauthorised account access due to negligence on your part.</p>
         </Section>
         <Section title="7. Limitation of Liability">
-          <p>To the fullest extent permitted by law, KA.SHA is not liable for any indirect, incidental, or consequential damages arising from your use of the Site or purchase of products. Our total liability shall not exceed the amount paid for the relevant order.</p>
+          <p>To the fullest extent permitted by law, Ka.Sha is not liable for any indirect, incidental, or consequential damages arising from your use of the Site or purchase of products. Our total liability shall not exceed the amount paid for the relevant order.</p>
         </Section>
         <Section title="8. Governing Law">
           <p>These Terms are governed by the laws of India. Any disputes shall be subject to the exclusive jurisdiction of the courts of Mumbai, Maharashtra.</p>
