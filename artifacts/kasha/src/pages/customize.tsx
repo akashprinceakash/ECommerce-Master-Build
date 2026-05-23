@@ -311,6 +311,12 @@ export default function CustomizePage() {
   const [patColorA, setPatColorA] = useState(PAT_COLOR_A_DEFAULT);   // Channel A — dark tones
   const [patColorB, setPatColorB] = useState(PAT_COLOR_B_DEFAULT);   // Channel B — light tones
   const [patRecoloring, setPatRecoloring] = useState(false);         // spinner while recoloring
+  // ── Sizing matrix + modal state ───────────────────────────────────────────
+  const [sizeMode, setSizeMode] = useState<"standard"|"custom">("standard");
+  const [sizeQty, setSizeQty] = useState<Record<string,number>>({S:0,M:0,L:0,XL:0,XXL:0});
+  const [colorModalFor, setColorModalFor] = useState<"all"|"base"|"pattern"|null>(null);
+  const [printModalFor, setPrintModalFor] = useState<"all"|"base"|"pattern"|null>(null);
+  const [bgRemoving, setBgRemoving] = useState(false);
   const historyStack = useRef<string[]>([]);
   const historyIdx = useRef(-1);
 
@@ -464,6 +470,35 @@ export default function CustomizePage() {
       syncTexture();
     } finally { setPatRecoloring(false); }
   }, [activeKashaDesign, syncTexture]);
+
+  // ── Logo background removal (canvas-based white-threshold) ──────────────
+  const removeBackground = useCallback(async () => {
+    if (!logoPreview) return;
+    setBgRemoving(true);
+    try {
+      const img = new Image();
+      await new Promise<void>((res,rej)=>{ img.onload=()=>res(); img.onerror=()=>rej(new Error("img")); img.src=logoPreview!; });
+      const c=document.createElement("canvas"); c.width=img.naturalWidth||img.width; c.height=img.naturalHeight||img.height;
+      const ctx=c.getContext("2d")!; ctx.drawImage(img,0,0);
+      const d=ctx.getImageData(0,0,c.width,c.height); const p=d.data;
+      for (let i=0;i<p.length;i+=4) { if(p[i]>220&&p[i+1]>220&&p[i+2]>220) p[i+3]=0; }
+      ctx.putImageData(d,0,0);
+      const newUrl=c.toDataURL("image/png");
+      setLogoPreview(newUrl);
+      if (logoObjRef.current&&fcRef.current) {
+        const fc=fcRef.current; fc.remove(logoObjRef.current);
+        const ni=await fabric.FabricImage.fromURL(newUrl,{crossOrigin:"anonymous"});
+        const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};
+        const maxW=Math.round(logoSize*(1024/100));
+        if(ni.width&&ni.width>maxW) ni.scaleToWidth(maxW);
+        ni.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:true});
+        fc.add(ni); fc.setActiveObject(ni); logoObjRef.current=ni;
+        fc.renderAll(); syncTexture();
+      }
+      toast({title:"Background removed ✓"});
+    } catch { toast({title:"Could not remove background",variant:"destructive"}); }
+    finally { setBgRemoving(false); }
+  }, [logoPreview, logoPosition, logoSize, syncTexture, toast]);
 
   // ── Primary colour (fabric/solid) ────────────────────────────────────────
   const applyPrimary = (hex: string) => {
@@ -712,10 +747,12 @@ export default function CustomizePage() {
   const buildPayload=async()=>{
     const fc=fcRef.current; if(!fc) throw new Error("Canvas not ready");
     const views = await snapshotViews();
+    const effectiveQty = Object.values(sizeQty).reduce((a,b)=>a+b,0) || qty;
+    const effectiveSize = Object.entries(sizeQty).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])[0]?.[0] || size;
     return {
       productId:id, name:designName||`${product?.name} Custom`,
-      color:primaryColor, size,
-      partsEnabled:{qty,zoneColors,primaryColor,kdDesignId:activeKashaDesign?.id||"",activePrintId,sleeveLength},
+      color:primaryColor, size:effectiveSize,
+      partsEnabled:{qty:effectiveQty,zoneColors,primaryColor,kdDesignId:activeKashaDesign?.id||"",activePrintId,sleeveLength},
       canvasData:JSON.stringify({canvasJSON:JSON.stringify((fc as any).toJSON(["data"])),textureUrl:lastTextureUrlRef.current,primaryColor,kdDesignId:activeKashaDesign?.id||"",zoneColors,activePrintId,allOverPrintId,sleeveLength}),
       previewImageUrl: views.front,
       frontImageUrl:   views.front,
@@ -761,64 +798,6 @@ export default function CustomizePage() {
       boxShadow:selected?`0 0 0 1px ${V.ac}`:`inset 0 0 0 1px rgba(0,0,0,.08)`,
     }}/>
   );
-
-  // ── Step indicator ───────────────────────────────────────────────────────
-  const STEP_1_LABEL = isTypeMode
-    ? (garmentType === "solid" ? "Colour" : garmentType === "pattern" ? "Pattern" : "Print")
-    : "Style";
-  const STEP_2_LABEL = isTypeMode
-    ? (garmentType === "solid" ? "Prints" : garmentType === "pattern" ? "Colours" : "Patterns")
-    : "Parts";
-  const ALL_STEPS = [
-    { n:1, label: STEP_1_LABEL },
-    { n:2, label: STEP_2_LABEL },
-    { n:3, label:"Logo"   },
-    { n:4, label:"Size"   },
-  ];
-  const VISIBLE_STEPS = isQuickMode
-    ? ALL_STEPS.filter(s => s.n >= 3)
-    : ALL_STEPS;
-
-  const stepIndicator=(
-    <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:24,flexShrink:0,paddingBottom:20,borderBottom:`1px solid rgba(26,26,24,0.07)`}}>
-      {isQuickMode && (
-        <div style={{
-          display:"flex",alignItems:"center",gap:6,marginRight:16,
-          padding:"4px 10px",borderRadius:99,
-          background:"rgba(201,168,76,0.12)",
-          border:`1px solid rgba(201,168,76,0.3)`,
-        }}>
-          <span style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".1em",textTransform:"uppercase",color:V.ac,fontWeight:700}}>✦ Quick</span>
-        </div>
-      )}
-      {VISIBLE_STEPS.map((s,i)=>{
-        const active=step===s.n; const done=step>s.n;
-        const canNav = isQuickMode ? s.n >= 3 : true;
-        return(<React.Fragment key={s.n}>
-          {i>0&&<div style={{flex:1,height:"1px",background:done?V.ac:`rgba(26,26,24,0.12)`,minWidth:8,transition:"background 0.3s"}}/>}
-          <div onClick={()=>canNav&&setStep(s.n)} style={{
-            display:"flex",alignItems:"center",gap:6,fontSize:11,
-            color:active?V.tx:done?V.ac:V.mul,
-            cursor:canNav?"pointer":"default",padding:"5px 8px",borderRadius:99,
-            background:active?V.aclt:"transparent",
-            transition:"all 0.3s cubic-bezier(0.16,1,0.3,1)",
-            letterSpacing:".03em",
-          }}>
-            <div style={{
-              width:20,height:20,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
-              fontSize:9,fontWeight:700,
-              background:active?V.ac:done?V.ac:V.bd,
-              color:active?"#fff":done?"#fff":V.mu,
-              border:`1.5px solid ${active||done?V.ac:V.bd}`,
-              flexShrink:0,transition:"all 0.3s",
-            }}>{done?"✓":s.n}</div>
-            <span style={{fontWeight:active?600:400,fontSize:10,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase"}}>{s.label}</span>
-          </div>
-        </React.Fragment>);
-      })}
-    </div>
-  );
-
 
   // ── History helpers ───────────────────────────────────────────────────────
   const saveHistory = useCallback(() => {
@@ -899,13 +878,11 @@ export default function CustomizePage() {
   if (!product && !isTypeMode) return null;
 
 
+  const totalQty = Object.values(sizeQty).reduce((a,b)=>a+b,0);
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{
-      display:"flex",flexDirection:"column",height:"100vh",
-      background:V.bg,color:V.tx,
-      fontFamily:"'Jost', sans-serif",overflow:"hidden",
-    }}>
+    <div style={{display:"flex",flexDirection:"column",height:"100vh",background:V.bg,color:V.tx,fontFamily:"'Jost', sans-serif",overflow:"hidden"}}>
 
       {/* ── TOP ACTION BAR ─────────────────────────────────────────────── */}
       <header style={{
@@ -1042,20 +1019,616 @@ export default function CustomizePage() {
         </div>
       </header>
 
+      {/* ── PROGRESS TRACKER BAR ─────────────────────────────────────────── */}
+      <div style={{
+        display:"flex",alignItems:"center",height:52,flexShrink:0,
+        padding:"0 32px",gap:0,
+        background:"rgba(250,250,247,0.98)",
+        borderBottom:`1px solid rgba(201,168,76,0.14)`,
+        boxShadow:"0 1px 8px rgba(26,26,24,0.04)",
+      }}>
+        {([
+          {n:1,label:"Style"},
+          {n:2,label:"Design"},
+          {n:3,label:"Logo & Text"},
+          {n:4,label:"Sizing"},
+        ] as const).map((s,i)=>{
+          const active=step===s.n; const done=step>s.n;
+          return (
+            <React.Fragment key={s.n}>
+              {i>0&&<div style={{flex:1,height:1,background:done?V.ac:"rgba(26,26,24,0.1)",transition:"background .3s"}}/>}
+              <div onClick={()=>setStep(s.n)} style={{
+                display:"flex",alignItems:"center",gap:7,cursor:"pointer",
+                padding:"5px 10px",borderRadius:99,
+                background:active?V.aclt:"transparent",
+                transition:"all .25s cubic-bezier(.16,1,.3,1)",
+              }}>
+                <div style={{
+                  width:22,height:22,borderRadius:"50%",flexShrink:0,
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  fontSize:10,fontWeight:700,
+                  background:active?V.ac:done?V.ac:V.bd,
+                  color:active?"#fff":done?"#fff":V.mu,
+                  border:`1.5px solid ${active||done?V.ac:V.bd}`,
+                  transition:"all .3s",
+                }}>{done?"✓":s.n}</div>
+                <span style={{
+                  fontSize:10,fontFamily:"'Jost',sans-serif",letterSpacing:".07em",
+                  textTransform:"uppercase",fontWeight:active?700:400,
+                  color:active?V.tx:done?V.ac:V.mu,
+                  transition:"all .3s",
+                }}>{s.label}</span>
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </div>
+
       {/* ── WORKSPACE ──────────────────────────────────────────────────────── */}
       <div style={{display:"flex",flex:1,overflow:"hidden"}}>
 
-        {/* ── ICON SIDEBAR ────────────────────────────────────────────────── */}
+        {/* ── LEFT STEP PANEL ──────────────────────────────────────────────── */}
         <div style={{
-          width:70,flexShrink:0,
-          display:"flex",flexDirection:"column",alignItems:"center",
-          paddingTop:12,paddingBottom:12,gap:2,
+          width:360,flexShrink:0,
+          display:"flex",flexDirection:"column",
           borderRight:`1px solid rgba(26,26,24,0.07)`,
-          background:V.bg,
+          background:V.sf,
           overflowY:"auto",
-          scrollbarWidth:"none",
+          scrollbarWidth:"thin",
+          scrollbarColor:`${V.cream3} transparent`,
+          paddingBottom:80,
         }}>
-          {TOOLS.filter(t => !isQuickMode || (t.id !== "prints" && t.id !== "patterns")).map(t => {
+          {/* Panel heading */}
+          <div style={{
+            padding:"20px 24px 16px",flexShrink:0,
+            borderBottom:`1px solid rgba(26,26,24,0.07)`,
+            background:V.sf,position:"sticky",top:0,zIndex:5,
+          }}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
+              {step===1&&"Choose Style"}
+              {step===2&&"Design Your Garment"}
+              {step===3&&"Logo & Text"}
+              {step===4&&"Sizing & Quantity"}
+            </div>
+            <div style={{fontSize:9,color:V.mu,letterSpacing:".1em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",marginTop:3}}>
+              {step===1&&"Select the base style for your garment"}
+              {step===2&&"Customise colours, prints & patterns"}
+              {step===3&&"Add your logo or custom text"}
+              {step===4&&"Set sizes & quantities for your order"}
+            </div>
+          </div>
+
+          <div style={{padding:"20px 24px",display:"flex",flexDirection:"column",gap:18}}>
+
+            {/* ══════════════════ STEP 1: STYLE ══════════════════════════════ */}
+            {step===1&&(
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <div style={{...sb}}>Select style type</div>
+                {([
+                  {id:"solid",    pm:null,        icon:"◼",label:"SOLID",      desc:"Clean base colour"},
+                  {id:"print",    pm:"fullBody",  icon:"❋",label:"PRINT",      desc:"Full-body pattern"},
+                  {id:"pattern",  pm:null,        icon:"◈",label:"PATTERN 1",  desc:"KA.SHA bespoke design"},
+                  {id:"print",    pm:"parts",     icon:"◩",label:"PATTERN 2",  desc:"Sleeve & body split"},
+                ] as {id:"solid"|"print"|"pattern",pm:"fullBody"|"parts"|null,label:string,icon:string,desc:string}[]).map((c,ci)=>{
+                  const isActive = styleTab===c.id&&(c.pm==null||printMode===c.pm);
+                  return (
+                    <div key={ci} onClick={()=>{
+                      setStyleTab(c.id);
+                      if(c.pm) setPrintMode(c.pm as "fullBody"|"parts");
+                      if(c.id==="solid"&&allOverPrintId) { /* keep solid */ }
+                    }} style={{
+                      display:"flex",alignItems:"center",gap:14,
+                      padding:"14px 16px",borderRadius:12,cursor:"pointer",
+                      border:`1.5px solid ${isActive?V.ac:V.bd}`,
+                      background:isActive?V.aclt:"transparent",
+                      transition:"all .25s cubic-bezier(.16,1,.3,1)",
+                    }}
+                    onMouseEnter={e=>{if(!isActive){(e.currentTarget as HTMLElement).style.borderColor="rgba(201,168,76,0.5)";(e.currentTarget as HTMLElement).style.background=V.sf2;}}}
+                    onMouseLeave={e=>{if(!isActive){(e.currentTarget as HTMLElement).style.borderColor=V.bd;(e.currentTarget as HTMLElement).style.background="transparent";}}}>
+                      <div style={{
+                        width:42,height:42,borderRadius:10,flexShrink:0,
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                        fontSize:20,
+                        background:isActive?"rgba(201,168,76,0.18)":V.sf2,
+                        border:`1px solid ${isActive?V.ac:V.bd}`,
+                        color:isActive?V.ac:V.mu,
+                      }}>{c.icon}</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontFamily:"'Jost',sans-serif",fontSize:12,fontWeight:700,letterSpacing:".08em",color:isActive?V.tx:V.mu,textTransform:"uppercase"}}>{c.label}</div>
+                        <div style={{fontSize:10,color:V.mul,marginTop:2,fontFamily:"'Jost',sans-serif"}}>{c.desc}</div>
+                      </div>
+                      {isActive&&<div style={{width:8,height:8,borderRadius:"50%",background:V.ac,flexShrink:0}}/>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ══════════════════ STEP 2: DESIGN ════════════════════════════ */}
+            {step===2&&(
+              <div style={{display:"flex",flexDirection:"column",gap:18}}>
+
+                {/* SOLID → colour pickers */}
+                {styleTab==="solid"&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                    <div style={{...sb}}>Base colour</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                      {MAIN_PALETTE.map(h=>swatch(h,primaryColor===h,()=>applyPrimary(h)))}
+                    </div>
+                    <button onClick={()=>setColorModalFor("base")} style={{
+                      marginTop:4,padding:"9px 16px",borderRadius:8,
+                      border:`1px solid ${V.ac}`,background:"transparent",cursor:"pointer",
+                      fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:600,letterSpacing:".08em",
+                      textTransform:"uppercase",color:V.ac,transition:"all .2s",
+                    }}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=V.aclt;}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
+                      ⊕ Advanced Colour Picker
+                    </button>
+
+                    <div style={{...sb,marginTop:8}}>Zone colours</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {(["collar","leftSleeve","rightSleeve"] as const).filter(z=>zoneColors[z]!==undefined).map(z=>{
+                        const label = z==="collar"?"Collar":z==="leftSleeve"?"Left Sleeve":"Right Sleeve";
+                        return (
+                          <div key={z} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,background:V.sf2,border:`1px solid ${V.bd}`}}>
+                            <div style={{width:22,height:22,borderRadius:"50%",background:zoneColors[z as keyof typeof zoneColors]||primaryColor,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
+                            <span style={{flex:1,fontSize:11,fontFamily:"'Jost',sans-serif",color:V.tx,letterSpacing:".04em"}}>{label}</span>
+                            <button onClick={()=>setColorModalFor("base")} style={{
+                              fontSize:9,padding:"4px 10px",borderRadius:6,
+                              border:`1px solid ${V.ac}`,background:"transparent",cursor:"pointer",
+                              fontFamily:"'Jost',sans-serif",color:V.ac,letterSpacing:".06em",textTransform:"uppercase",
+                            }}>Change</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* PRINT fullBody → all-over print selection */}
+                {styleTab==="print"&&printMode==="fullBody"&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                    <div style={{...sb}}>All-over print</div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+                      {PATTERNS.map(p=>{
+                        const sel=allOverPrintId===p.id;
+                        return (
+                          <div key={p.id} onClick={()=>{applyAllOverPrint(p);}} style={{
+                            borderRadius:10,overflow:"hidden",cursor:"pointer",
+                            border:`2px solid ${sel?V.ac:V.bd}`,
+                            transition:"all .2s",
+                            boxShadow:sel?`0 2px 12px rgba(201,168,76,.3)`:"none",
+                          }}>
+                            <img src={patternUrl(p.id)} alt={p.label}
+                              style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}
+                              onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
+                            <div style={{padding:"6px 8px",background:sel?V.aclt:V.sf2}}>
+                              <div style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",color:sel?V.ac:V.mu,fontWeight:sel?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.label}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {allOverPrintId&&(
+                      <button onClick={()=>clearAllOverPrint()} style={{
+                        padding:"8px 16px",borderRadius:8,border:`1px solid ${V.bd}`,
+                        background:"transparent",cursor:"pointer",
+                        fontFamily:"'Jost',sans-serif",fontSize:10,color:V.mu,letterSpacing:".06em",
+                      }}>✕ Remove print</button>
+                    )}
+                  </div>
+                )}
+
+                {/* PATTERN 1 → KA.SHA design selection + recolor */}
+                {styleTab==="pattern"&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                    <div style={{...sb}}>KA.SHA signature designs</div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
+                      {KASHA_DESIGNS.map(d=>{
+                        const sel=activeKashaDesign?.id===d.id;
+                        return (
+                          <div key={d.id} onClick={()=>handleSelectKashaDesign(d)} style={{
+                            borderRadius:10,overflow:"hidden",cursor:"pointer",
+                            border:`2px solid ${sel?V.ac:V.bd}`,
+                            transition:"all .2s",
+                            boxShadow:sel?`0 2px 12px rgba(201,168,76,.3)`:"none",
+                          }}>
+                            {d.thumbnail
+                              ? <img src={d.thumbnail} alt={d.label} style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}/>
+                              : <div style={{width:"100%",aspectRatio:"1",background:V.sf2,display:"flex",alignItems:"center",justifyContent:"center",color:V.mu,fontSize:24}}>◈</div>
+                            }
+                            <div style={{padding:"6px 10px",background:sel?V.aclt:V.sf2}}>
+                              <div style={{fontSize:10,fontFamily:"'Jost',sans-serif",fontWeight:600,color:sel?V.ac:V.tx}}>{d.label}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {activeKashaDesign&&(
+                      <div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px",borderRadius:12,background:V.sf2,border:`1px solid ${V.bd}`}}>
+                        <div style={{...sb}}>Recolour design</div>
+                        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                          <div>
+                            <div style={{fontSize:9,color:V.mu,letterSpacing:".06em",fontFamily:"'Jost',sans-serif",marginBottom:4}}>DARK TONES</div>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                              {DARK_SWATCHES.map(h=>swatch(h,patColorA===h,()=>setPatColorA(h)))}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{fontSize:9,color:V.mu,letterSpacing:".06em",fontFamily:"'Jost',sans-serif",marginBottom:4}}>LIGHT TONES</div>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                              {LIGHT_SWATCHES.map(h=>swatch(h,patColorB===h,()=>setPatColorB(h)))}
+                            </div>
+                          </div>
+                        </div>
+                        <button onClick={()=>applyPatternColors(patColorA,patColorB)} disabled={patRecoloring} style={{
+                          padding:"9px 16px",borderRadius:8,border:"none",cursor:"pointer",
+                          background:V.ac,color:V.tx,fontFamily:"'Jost',sans-serif",
+                          fontSize:10,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",
+                          opacity:patRecoloring?.6:1,transition:"all .2s",
+                        }}>{patRecoloring?"Applying…":"✦ Apply Colours"}</button>
+                        <button onClick={()=>{const fc=fcRef.current;if(fc){clearKashaDesign(fc);syncTexture();}setActiveKashaDesign(null);}} style={{
+                          padding:"7px 16px",borderRadius:8,border:`1px solid ${V.bd}`,cursor:"pointer",
+                          background:"transparent",color:V.mu,fontFamily:"'Jost',sans-serif",fontSize:10,
+                        }}>✕ Remove design</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* PATTERN 2 → parts print selection */}
+                {styleTab==="print"&&printMode==="parts"&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                    <div style={{...sb}}>Parts print — choose pattern</div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+                      {PATTERNS.map(p=>{
+                        const sel=activePrintId===p.id;
+                        return (
+                          <div key={p.id} onClick={()=>{applyAllOverPrint(p);}} style={{
+                            borderRadius:10,overflow:"hidden",cursor:"pointer",
+                            border:`2px solid ${sel?V.ac:V.bd}`,
+                            transition:"all .2s",
+                          }}>
+                            <img src={patternUrl(p.id)} alt={p.label}
+                              style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}
+                              onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
+                            <div style={{padding:"5px 6px",background:sel?V.aclt:V.sf2}}>
+                              <div style={{fontSize:8,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",color:sel?V.ac:V.mu,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.label}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{...sb,marginTop:4}}>Base colour</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                      {MAIN_PALETTE.map(h=>swatch(h,primaryColor===h,()=>applyPrimary(h)))}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            )}
+
+            {/* ══════════════════ STEP 3: LOGO & TEXT ══════════════════════ */}
+            {step===3&&(
+              <div style={{display:"flex",flexDirection:"column",gap:18}}>
+
+                {/* Logo section */}
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  <div style={{...sbT}}>Upload Logo</div>
+                  {!logoPreview?(
+                    <label style={{
+                      display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+                      gap:8,height:120,borderRadius:12,cursor:"pointer",
+                      border:`1.5px dashed ${V.ac}`,background:V.aclt,
+                      transition:"all .2s",
+                    }}>
+                      <input type="file" accept="image/*" style={{display:"none"}}
+                        onChange={handleLogoUpload}/>
+                      <span style={{fontSize:24,color:V.ac}}>⊕</span>
+                      <span style={{fontSize:10,fontFamily:"'Jost',sans-serif",color:V.ac,letterSpacing:".08em",textTransform:"uppercase"}}>Drop or click to upload</span>
+                      <span style={{fontSize:9,color:V.mul,fontFamily:"'Jost',sans-serif"}}>PNG, JPG, SVG</span>
+                    </label>
+                  ):(
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      <div style={{position:"relative",borderRadius:12,overflow:"hidden",border:`1px solid ${V.bd}`}}>
+                        <img src={logoPreview} alt="Logo preview" style={{width:"100%",height:120,objectFit:"contain",background:V.sf2,display:"block"}}/>
+                        <button onClick={()=>{setLogoPreview(null);if(logoObjRef.current&&fcRef.current){fcRef.current.remove(logoObjRef.current);logoObjRef.current=null;syncTexture();}}} style={{
+                          position:"absolute",top:6,right:6,width:22,height:22,borderRadius:6,
+                          border:`1px solid ${V.bd}`,background:"rgba(250,250,247,0.9)",cursor:"pointer",
+                          display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:V.mu,
+                        }}>×</button>
+                      </div>
+                      <button onClick={removeBackground} disabled={bgRemoving} style={{
+                        padding:"8px 16px",borderRadius:8,border:`1px solid ${V.ac}`,
+                        background:"transparent",cursor:"pointer",color:V.ac,
+                        fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",
+                        opacity:bgRemoving?.6:1,transition:"all .2s",
+                      }}>{bgRemoving?"Removing…":"✦ Remove Background"}</button>
+                    </div>
+                  )}
+
+                  {logoPreview&&(
+                    <div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px",borderRadius:12,background:V.sf2,border:`1px solid ${V.bd}`}}>
+                      <div>
+                        <div style={{...sb}}>Position</div>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>
+                          {Object.keys(LOGO_POSITIONS).map(pos=>(
+                            <button key={pos} onClick={()=>setLogoPosition(pos as any)} style={{
+                              padding:"7px 4px",borderRadius:7,fontSize:9,
+                              fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",
+                              border:`1.5px solid ${logoPosition===pos?V.ac:V.bd}`,
+                              background:logoPosition===pos?V.aclt:"transparent",
+                              cursor:"pointer",color:logoPosition===pos?V.tx:V.mu,transition:"all .2s",
+                            }}>{pos.replace(/([A-Z])/g," $1").trim()}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{...sb}}>Size — {logoSize}%</div>
+                        <input type="range" min={5} max={60} value={logoSize} onChange={e=>setLogoSize(+e.target.value)}
+                          style={{width:"100%",accentColor:V.ac}}/>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Text section */}
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  <div style={{...sbT}}>Add Text</div>
+                  <textarea value={textInput} onChange={e=>setTextInput(e.target.value)} placeholder="Enter your text…"
+                    rows={2} style={{
+                      width:"100%",padding:"10px 12px",borderRadius:10,
+                      border:`1px solid ${V.bd}`,background:V.sf2,
+                      fontFamily:"'Jost',sans-serif",fontSize:12,color:V.tx,resize:"vertical",
+                      outline:"none",boxSizing:"border-box",
+                    }}/>
+                  <div style={{display:"flex",gap:8}}>
+                    <div style={{flex:1}}>
+                      <div style={{...sb}}>Colour</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                        {MAIN_PALETTE.slice(0,8).map(h=>swatch(h,textColor===h,()=>setTextColor(h)))}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{...sb}}>Size</div>
+                      <input type="range" min={14} max={80} value={textFontSize}
+                        onChange={e=>setTextFontSize(+e.target.value)}
+                        style={{width:80,accentColor:V.ac}}/>
+                      <div style={{fontSize:9,color:V.mu,textAlign:"center",fontFamily:"'Jost',sans-serif"}}>{textFontSize}px</div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    {["Tinos","Playfair Display","Jost","Cormorant Garamond"].map(f=>(
+                      <button key={f} onClick={()=>setTextFont(f)} style={{
+                        padding:"5px 10px",borderRadius:6,fontSize:10,fontFamily:f,
+                        border:`1.5px solid ${textFont===f?V.ac:V.bd}`,
+                        background:textFont===f?V.aclt:"transparent",
+                        cursor:"pointer",color:textFont===f?V.tx:V.mu,transition:"all .2s",
+                      }}>{f.split(" ")[0]}</button>
+                    ))}
+                  </div>
+                  <button onClick={()=>{
+                    if(!textInput.trim())return;
+                    applyText();
+                  }} style={{
+                    padding:"10px 16px",borderRadius:8,border:"none",background:V.ac,cursor:"pointer",
+                    fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:700,letterSpacing:".08em",
+                    textTransform:"uppercase",color:V.tx,transition:"all .2s",
+                  }}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=V.ac;(e.currentTarget as HTMLElement).style.opacity="0.85";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=V.ac;(e.currentTarget as HTMLElement).style.opacity="1";}}>
+                    ✦ Place Text on Garment
+                  </button>
+                  <div style={{...sb,marginTop:4}}>Align</div>
+                  <div style={{display:"flex",gap:6}}>
+                    {(["left","center","right"] as const).map(a=>(
+                      <button key={a} onClick={()=>setTextAlign(a)} style={{
+                        flex:1,padding:"6px 0",borderRadius:7,fontSize:11,
+                        border:`1.5px solid ${textAlign===a?V.ac:V.bd}`,
+                        background:textAlign===a?V.aclt:"transparent",
+                        cursor:"pointer",color:textAlign===a?V.tx:V.mu,transition:"all .2s",
+                      }}>{a==="left"?"⟵":a==="center"?"≡":"⟶"}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sleeve length */}
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  <div style={{...sb}}>Sleeve length</div>
+                  <div style={{display:"flex",gap:8}}>
+                    {(["full","half"] as const).map(sl=>(
+                      <button key={sl} onClick={()=>setSleeveLength(sl)} style={{
+                        flex:1,padding:"8px 0",borderRadius:8,fontSize:10,
+                        fontFamily:"'Jost',sans-serif",letterSpacing:".05em",textTransform:"uppercase",
+                        border:`1.5px solid ${sleeveLength===sl?V.ac:V.bd}`,
+                        background:sleeveLength===sl?V.aclt:"transparent",
+                        cursor:"pointer",color:sleeveLength===sl?V.tx:V.mu,transition:"all .2s",
+                      }}>{sl}</button>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* ══════════════════ STEP 4: SIZING ════════════════════════════ */}
+            {step===4&&(
+              <div style={{display:"flex",flexDirection:"column",gap:16}}>
+
+                {/* Design name */}
+                <div>
+                  <div style={{...sb}}>Design name</div>
+                  <input value={designName} onChange={e=>setDesignName(e.target.value)}
+                    placeholder={`${product?.name||"Custom"} Design`}
+                    style={{
+                      width:"100%",padding:"9px 12px",borderRadius:8,
+                      border:`1px solid ${V.bd}`,background:V.sf2,
+                      fontFamily:"'Jost',sans-serif",fontSize:12,color:V.tx,
+                      outline:"none",boxSizing:"border-box",
+                    }}/>
+                </div>
+
+                {/* Size × Qty table */}
+                <div>
+                  <div style={{...sb}}>Size &amp; quantity</div>
+                  <div style={{borderRadius:10,overflow:"hidden",border:`1px solid ${V.bd}`}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",background:V.sf2,padding:"8px 12px",borderBottom:`1px solid ${V.bd}`}}>
+                      <span style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",color:V.mu}}>Size</span>
+                      <span style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",color:V.mu,textAlign:"center"}}>Qty</span>
+                      <span style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",color:V.mu,textAlign:"right"}}>Chest (in)</span>
+                    </div>
+                    {([
+                      {s:"S",chest:"36–37"},
+                      {s:"M",chest:"38–39"},
+                      {s:"L",chest:"40–41"},
+                      {s:"XL",chest:"42–43"},
+                      {s:"XXL",chest:"44–46"},
+                    ]).map(({s,chest})=>(
+                      <div key={s} style={{
+                        display:"grid",gridTemplateColumns:"1fr 1fr 1fr",
+                        alignItems:"center",padding:"8px 12px",
+                        borderBottom:`1px solid rgba(26,26,24,0.05)`,
+                        background:sizeQty[s]>0?V.aclt:"transparent",
+                        transition:"background .2s",
+                      }}>
+                        <span style={{fontFamily:"'Jost',sans-serif",fontSize:12,fontWeight:700,color:sizeQty[s]>0?V.ac:V.tx,letterSpacing:".06em"}}>{s}</span>
+                        <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}>
+                          <button onClick={()=>setSizeQty(q=>({...q,[s]:Math.max(0,q[s]-1)}))} style={{
+                            width:22,height:22,borderRadius:6,border:`1px solid ${V.bd}`,
+                            background:"transparent",cursor:"pointer",fontSize:14,color:V.mu,lineHeight:1,
+                          }}>−</button>
+                          <span style={{width:24,textAlign:"center",fontFamily:"'Jost',sans-serif",fontSize:12,fontWeight:600,color:V.tx}}>{sizeQty[s]||0}</span>
+                          <button onClick={()=>setSizeQty(q=>({...q,[s]:q[s]+1}))} style={{
+                            width:22,height:22,borderRadius:6,border:`1px solid ${V.bd}`,
+                            background:"transparent",cursor:"pointer",fontSize:14,color:V.mu,lineHeight:1,
+                          }}>+</button>
+                        </div>
+                        <span style={{fontSize:10,color:V.mu,fontFamily:"'Jost',sans-serif",textAlign:"right"}}>{chest}</span>
+                      </div>
+                    ))}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",alignItems:"center",padding:"10px 12px",background:V.sf2,borderTop:`1.5px solid ${V.ac}`}}>
+                      <span style={{fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:700,color:V.tx,letterSpacing:".06em"}}>TOTAL</span>
+                      <span style={{textAlign:"center",fontFamily:"'Jost',sans-serif",fontSize:14,fontWeight:700,color:V.ac}}>{totalQty}</span>
+                      <span/>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Price summary */}
+                {!isTypeMode&&product&&totalQty>0&&(
+                  <div style={{padding:"14px 16px",borderRadius:10,background:V.aclt,border:`1px solid rgba(201,168,76,0.3)`}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <span style={{fontFamily:"'Jost',sans-serif",fontSize:11,color:V.mu,letterSpacing:".04em"}}>Unit price</span>
+                      <span style={{fontFamily:"'Jost',sans-serif",fontSize:13,fontWeight:600,color:V.tx}}>{formatPrice(product.priceInPaise)}</span>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8}}>
+                      <span style={{fontFamily:"'Jost',sans-serif",fontSize:11,color:V.mu,letterSpacing:".04em"}}>Total ({totalQty} pcs)</span>
+                      <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,fontWeight:700,color:V.ac}}>{formatPrice(product.priceInPaise*totalQty)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* WhatsApp bulk order callout */}
+                <a href={`https://wa.me/919999999999?text=${encodeURIComponent(`Hi KA.SHA! I'd like to place a bulk order for ${totalQty||"multiple"} custom golf t-shirts.`)}`}
+                  target="_blank" rel="noopener noreferrer" style={{
+                    display:"flex",alignItems:"center",gap:12,
+                    padding:"14px 18px",borderRadius:12,textDecoration:"none",
+                    background:"linear-gradient(135deg,#25D366 0%,#128C7E 100%)",
+                    boxShadow:"0 4px 16px rgba(37,211,102,0.25)",
+                    transition:"all .25s",
+                  }}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";(e.currentTarget as HTMLElement).style.boxShadow="0 6px 20px rgba(37,211,102,0.35)";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(0)";(e.currentTarget as HTMLElement).style.boxShadow="0 4px 16px rgba(37,211,102,0.25)";}}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                  <div>
+                    <div style={{fontFamily:"'Jost',sans-serif",fontSize:12,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",color:"#fff"}}>Bulk / Team Order?</div>
+                    <div style={{fontFamily:"'Jost',sans-serif",fontSize:10,color:"rgba(255,255,255,0.85)",marginTop:2}}>Chat with us on WhatsApp for 10+ pcs</div>
+                  </div>
+                </a>
+
+              </div>
+            )}
+
+          </div>
+
+          {/* ── BOTTOM NAV FOOTER ──────────────────────────────────────────── */}
+          <div style={{
+            position:"sticky",bottom:0,
+            padding:"12px 20px",
+            background:"rgba(250,250,247,0.97)",
+            borderTop:`1px solid rgba(201,168,76,0.18)`,
+            backdropFilter:"blur(12px)",
+            display:"flex",alignItems:"center",gap:8,
+            zIndex:20,flexShrink:0,
+            boxShadow:"0 -4px 20px rgba(26,26,24,0.07)",
+          }}>
+            {/* Back */}
+            <button
+              onClick={()=>setStep(s=>Math.max(1,s-1))}
+              disabled={step===1}
+              style={{
+                flex:1,padding:"11px 0",borderRadius:99,
+                border:`1.5px solid ${step===1?"rgba(26,26,24,0.12)":V.bd}`,
+                background:"transparent",
+                color:step===1?V.mu:V.tx,
+                fontSize:11,fontWeight:500,cursor:step===1?"default":"pointer",
+                fontFamily:"'Jost',sans-serif",letterSpacing:".06em",
+                transition:"all 0.25s",
+              }}
+              onMouseEnter={e=>{if(step>1){e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.ac;}}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor=step===1?"rgba(26,26,24,0.12)":V.bd;e.currentTarget.style.color=step===1?V.mu:V.tx;}}>
+              ← Back
+            </button>
+
+            {/* Continue / Add to Cart */}
+            {step<4 ? (
+              <button
+                onClick={()=>setStep(s=>Math.min(4,s+1))}
+                style={{
+                  flex:2,padding:"11px 0",borderRadius:99,
+                  border:"none",background:V.tx,color:"#fff",
+                  fontSize:11,fontWeight:600,cursor:"pointer",
+                  fontFamily:"'Jost',sans-serif",letterSpacing:".07em",textTransform:"uppercase",
+                  transition:"all 0.25s",
+                }}
+                onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}
+                onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
+                Continue →
+              </button>
+            ) : isTypeMode ? (
+              <a href="/products" style={{
+                flex:2,padding:"11px 0",borderRadius:99,textDecoration:"none",
+                background:V.tx,color:"#fff",textAlign:"center",
+                fontSize:11,fontWeight:600,cursor:"pointer",
+                fontFamily:"'Jost',sans-serif",letterSpacing:".07em",textTransform:"uppercase",
+                transition:"all 0.25s",display:"block",
+              }}>
+                Browse →
+              </a>
+            ) : (
+              <button
+                onClick={()=>cartMut.mutate()}
+                disabled={cartMut.isPending}
+                style={{
+                  flex:2,padding:"11px 0",borderRadius:99,
+                  border:"none",background:V.ac,color:V.tx,
+                  fontSize:11,fontWeight:600,cursor:"pointer",
+                  fontFamily:"'Jost',sans-serif",letterSpacing:".07em",textTransform:"uppercase",
+                  opacity:cartMut.isPending?.6:1,transition:"all 0.25s",
+                }}
+                onMouseEnter={e=>{if(!cartMut.isPending){e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}}
+                onMouseLeave={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}>
+                {cartMut.isPending?"Adding…":"🛒 Add to Cart"}
+              </button>
+            )}
+          </div>
+
+        </div>
+
+        {/* ── OLD_PANELS_REMOVED ── */}
+        {(false as unknown as null) && activeTool && TOOLS.filter(t => !isQuickMode || (t.id !== "prints" && t.id !== "patterns")).map(t => {
             const isA = activeTool === t.id;
             return (
               <button key={t.id}
@@ -1080,10 +1653,9 @@ export default function CustomizePage() {
               </button>
             );
           })}
-        </div>
 
-        {/* ── TOOL PANEL ──────────────────────────────────────────────────── */}
-        {activeTool && (
+        {/* ── TOOL PANEL (dead-coded) ───────────────────────────────────── */}
+        {false && activeTool && (
           <div style={{
             width:300,flexShrink:0,
             borderRight:`1px solid rgba(26,26,24,0.07)`,
@@ -1144,20 +1716,20 @@ export default function CustomizePage() {
                       background:V.sf2,border:`1px solid ${V.bd}`,
                       borderRadius:12,overflow:"hidden",
                     }}>
-                      {product.thumbnailUrl && (
-                        <img src={product.thumbnailUrl} alt={product.name}
+                      {product?.thumbnailUrl && (
+                        <img src={product?.thumbnailUrl||undefined} alt={product?.name||""}
                           style={{width:"100%",height:160,objectFit:"cover",display:"block"}}/>
                       )}
                       <div style={{padding:"14px"}}>
                         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:16,fontWeight:600,color:V.tx,letterSpacing:".02em",marginBottom:4}}>
-                          {product.name.replace(/\s*\[gt:GT\d+\]\s*$/,"")}
+                          {product?.name?.replace(/\s*\[gt:GT\d+\]\s*$/,"")}
                         </div>
                         <div style={{fontSize:15,color:V.ac,fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".04em"}}>
-                          {formatPrice(product.priceInPaise)}
+                          {formatPrice(product?.priceInPaise||0)}
                         </div>
-                        {product.description && (
+                        {product?.description && (
                           <div style={{fontSize:11,color:V.mu,lineHeight:1.65,marginTop:8,fontFamily:"'Jost',sans-serif"}}>
-                            {product.description.slice(0,120)}{product.description.length>120?"…":""}
+                            {product?.description?.slice(0,120)}{(product?.description?.length||0)>120?"…":""}
                           </div>
                         )}
                       </div>
@@ -1311,8 +1883,8 @@ export default function CustomizePage() {
                     return(
                       <div style={{background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:10,padding:12,display:"flex",flexDirection:"column",gap:10}}>
                         <div style={{display:"flex",alignItems:"center",gap:10}}>
-                          <div style={{width:36,height:36,borderRadius:7,background:`url(${patternUrl(p.file)}) center/cover`,border:`1px solid ${V.bd}`,flexShrink:0}}/>
-                          <div style={{fontSize:13,fontWeight:600,color:V.tx,fontFamily:"'Cormorant Garamond',serif",letterSpacing:".02em"}}>{p.label}</div>
+                          <div style={{width:36,height:36,borderRadius:7,background:`url(${patternUrl(p!.file)}) center/cover`,border:`1px solid ${V.bd}`,flexShrink:0}}/>
+                          <div style={{fontSize:13,fontWeight:600,color:V.tx,fontFamily:"'Cormorant Garamond',serif",letterSpacing:".02em"}}>{p!.label}</div>
                         </div>
                         {/* When a KA.SHA pattern design is active, print acts as base texture.
                             Hide By Part toggle — full body only applies beneath the design. */}
@@ -1336,14 +1908,14 @@ export default function CustomizePage() {
                         )}
                         {(productType==="print"||activeKashaDesign||printMode==="fullBody")&&(
                           <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                            <button onClick={()=>{applyAllOverPrint(p);saveHistory();}} style={{
+                            <button onClick={()=>{applyAllOverPrint(p!);saveHistory();}} style={{
                               padding:"9px 0",borderRadius:99,border:"none",
-                              background:allOverPrintId===p.id?V.tx:V.ac,
-                              color:allOverPrintId===p.id?"#fff":V.tx,
+                              background:allOverPrintId===p!.id?V.tx:V.ac,
+                              color:allOverPrintId===p!.id?"#fff":V.tx,
                               fontSize:11,fontWeight:600,cursor:"pointer",
                               fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",transition:"all 0.2s",
                             }}>
-                              {allOverPrintId===p.id
+                              {allOverPrintId===p!.id
                                 ? (productType==="print"?"✓ Selected": activeKashaDesign?"✓ Applied as Base":"✓ Applied")
                                 : (productType==="print"?"Select Print": activeKashaDesign?"Apply as Base Texture":"Apply All-Over")}
                             </button>
@@ -1368,11 +1940,11 @@ export default function CustomizePage() {
                               <div style={{fontSize:10,color:V.mu,marginBottom:2,fontStyle:"italic",fontFamily:"'Jost',sans-serif"}}>Click part to apply / remove:</div>
                               <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                                 {pzones.map(z=>{
-                                  const applied=zonePrintIds[z.id]===p.id;
-                                  const otherPrint=zonePrintIds[z.id]&&zonePrintIds[z.id]!==p.id;
+                                  const applied=zonePrintIds[z.id]===p!.id;
+                                  const otherPrint=zonePrintIds[z.id]&&zonePrintIds[z.id]!==p!.id;
                                   return(
                                     <button key={z.id}
-                                      onClick={()=>{applied?clearZonePrint(z.id):applyZonePrint(z.id,p);saveHistory();}}
+                                      onClick={()=>{applied?clearZonePrint(z.id):applyZonePrint(z.id,p!);saveHistory();}}
                                       style={{
                                         padding:"5px 10px",fontSize:10,fontWeight:applied?600:400,cursor:"pointer",
                                         borderRadius:99,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",
@@ -1440,8 +2012,8 @@ export default function CustomizePage() {
                   {activeKashaDesign&&(
                     <div style={{background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:10,padding:"10px 12px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
                       <div>
-                        <div style={{fontSize:12,fontWeight:600,color:V.tx,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>{activeKashaDesign.id}</div>
-                        <div style={{fontSize:12,color:V.mu,fontStyle:"italic",fontFamily:"'Cormorant Garamond',serif"}}>{activeKashaDesign.label}</div>
+                        <div style={{fontSize:12,fontWeight:600,color:V.tx,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>{activeKashaDesign!.id}</div>
+                        <div style={{fontSize:12,color:V.mu,fontStyle:"italic",fontFamily:"'Cormorant Garamond',serif"}}>{activeKashaDesign!.label}</div>
                       </div>
                       <button onClick={()=>{const fc=fcRef.current;if(fc){clearKashaDesign(fc);syncTexture();}setActiveKashaDesign(null);saveHistory();}}
                         style={{fontSize:9,color:V.mu,background:"transparent",border:`1px solid ${V.bd}`,borderRadius:99,padding:"4px 10px",cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".05em",flexShrink:0,transition:"all 0.2s"}}
@@ -1762,7 +2334,7 @@ export default function CustomizePage() {
                     {logoPreview&&(
                       <div style={{marginTop:10}}>
                         <div style={{width:"100%",aspectRatio:"2",background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",marginBottom:6}}>
-                          <img src={logoPreview} alt="Logo" style={{maxWidth:"80%",maxHeight:"80%",objectFit:"contain"}}/>
+                          <img src={logoPreview||undefined} alt="Logo" style={{maxWidth:"80%",maxHeight:"80%",objectFit:"contain"}}/>
                         </div>
                         <button onClick={()=>{removeLogo();saveHistory();}} style={{fontSize:10,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Remove logo</button>
                       </div>
@@ -1891,7 +2463,7 @@ export default function CustomizePage() {
                     <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:15,fontWeight:500,color:V.tx,letterSpacing:".02em",marginBottom:10}}>Your Design</div>
                     {[
                       ["Garment", isTypeMode ? `${garmentType.charAt(0).toUpperCase()+garmentType.slice(1)} T-Shirt` : product!.name.replace(/\s*\[gt:GT\d+\]\s*$/,"")],
-                      ["Style",   activeKashaDesign?`${activeKashaDesign.id} — ${activeKashaDesign.label}`:activePrintId?PATTERNS.find(p=>p.id===activePrintId)?.label||"—":primaryColor],
+                      ["Style",   activeKashaDesign?`${activeKashaDesign!.id} — ${activeKashaDesign!.label}`:activePrintId?PATTERNS.find(p=>p.id===activePrintId)?.label||"—":primaryColor],
                       ["Size",    size],
                       ["Qty",     String(qty)],
                       ...(!isTypeMode ? [["Price", formatPrice(product!.priceInPaise)]] : []),
@@ -2125,6 +2697,166 @@ export default function CustomizePage() {
           </button>
         </div>
       </div>
+
+      {/* ── COLOR PICKER MODAL ───────────────────────────────────────────── */}
+      {colorModalFor&&(
+        <div style={{
+          position:"fixed",inset:0,zIndex:200,
+          background:"rgba(26,26,24,0.55)",backdropFilter:"blur(6px)",
+          display:"flex",alignItems:"center",justifyContent:"center",
+        }} onClick={()=>setColorModalFor(null)}>
+          <div onClick={e=>e.stopPropagation()} style={{
+            background:V.bg,borderRadius:20,padding:"28px 28px 24px",
+            width:340,maxHeight:"80vh",overflowY:"auto",
+            boxShadow:"0 32px 80px rgba(26,26,24,0.32)",
+            border:`1px solid rgba(201,168,76,0.18)`,
+          }}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+              <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
+                Choose Colour
+              </div>
+              <button onClick={()=>setColorModalFor(null)} style={{
+                background:"transparent",border:"none",cursor:"pointer",
+                fontSize:18,color:V.mu,lineHeight:1,padding:"2px 6px",
+                borderRadius:99,transition:"all .2s",
+              }}
+              onMouseEnter={e=>{e.currentTarget.style.background=V.sf2;e.currentTarget.style.color=V.tx;}}
+              onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=V.mu;}}>✕</button>
+            </div>
+
+            {/* Preset swatches */}
+            {(()=>{
+              const pickedVal = colorModalFor==="pattern" ? patColorB : colorModalFor==="base" ? patColorA : primaryColor;
+              const applyCol = (col: string) => {
+                if(colorModalFor==="all"){
+                  applyPrimary(col);
+                } else if(colorModalFor==="base"){
+                  setPatColorA(col);
+                  applyPatternColors(col, patColorB);
+                } else {
+                  setPatColorB(col);
+                  applyPatternColors(patColorA, col);
+                }
+                setColorModalFor(null);
+              };
+              return(<>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:8,marginBottom:20}}>
+                  {[
+                    "#1a1a18","#2c2c2a","#4a4a48","#6b6b68","#9b9b98","#c8c8c4",
+                    "#ffffff","#faf8f4","#f2ede4","#e8e2d8","#d4cfc6","#c9c4bb",
+                    "#c9a84c","#e8c96a","#b8943e","#8b6914","#5c4209","#f5e6c0",
+                    "#8B1A1A","#C24B4B","#E07070","#F0A0A0","#FDDEDE","#FFE4E4",
+                    "#1A3A8B","#2B5CC8","#4D7FE0","#86AFF5","#C0D8FF","#E0EDFF",
+                    "#1A6B3A","#2D9A54","#4DC472","#80E0A0","#B8F0CC","#DFF8E8",
+                    "#6B1A8B","#9B3AC0","#C060E0","#D890F0","#ECC0F8","#F5E0FF",
+                    "#8B4A1A","#C47030","#E09050","#F0B880","#F8D8B0","#FFF0E0",
+                  ].map(col=>(
+                    <button key={col} onClick={()=>applyCol(col)} style={{
+                      width:"100%",aspectRatio:"1",borderRadius:8,cursor:"pointer",
+                      background:col,
+                      border:pickedVal===col?`2.5px solid ${V.ac}`:`1px solid rgba(26,26,24,0.15)`,
+                      transition:"all .15s",
+                      boxShadow:pickedVal===col?`0 2px 8px rgba(201,168,76,0.35)`:"none",
+                    }} title={col}/>
+                  ))}
+                </div>
+                {/* Custom colour input */}
+                <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                  <div style={{width:40,height:40,borderRadius:10,background:pickedVal,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
+                  <input type="color" value={pickedVal}
+                    onChange={e=>{
+                      const col=e.target.value;
+                      if(colorModalFor==="all"){applyPrimary(col);}
+                      else if(colorModalFor==="base"){setPatColorA(col);applyPatternColors(col,patColorB);}
+                      else{setPatColorB(col);applyPatternColors(patColorA,col);}
+                    }}
+                    style={{width:48,height:40,padding:2,border:`1.5px solid ${V.bd}`,borderRadius:8,cursor:"pointer",background:V.sf2}}/>
+                  <input type="text" value={pickedVal}
+                    onChange={e=>{
+                      const v=e.target.value.trim();
+                      if(/^#[0-9A-Fa-f]{6}$/.test(v)) applyCol(v);
+                    }}
+                    placeholder="#c9a84c"
+                    style={{
+                      flex:1,padding:"9px 12px",borderRadius:8,
+                      border:`1.5px solid ${V.bd}`,background:V.sf2,
+                      fontFamily:"'Jost',sans-serif",fontSize:12,color:V.tx,
+                      outline:"none",letterSpacing:".04em",
+                    }}
+                    onFocus={e=>e.target.style.borderColor=V.ac}
+                    onBlur={e=>e.target.style.borderColor=V.bd}/>
+                </div>
+              </>);
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* ── PRINT PICKER MODAL ───────────────────────────────────────────── */}
+      {printModalFor&&(
+        <div style={{
+          position:"fixed",inset:0,zIndex:200,
+          background:"rgba(26,26,24,0.55)",backdropFilter:"blur(6px)",
+          display:"flex",alignItems:"center",justifyContent:"center",
+        }} onClick={()=>setPrintModalFor(null)}>
+          <div onClick={e=>e.stopPropagation()} style={{
+            background:V.bg,borderRadius:20,padding:"28px 28px 24px",
+            width:420,maxHeight:"80vh",overflowY:"auto",
+            boxShadow:"0 32px 80px rgba(26,26,24,0.32)",
+            border:`1px solid rgba(201,168,76,0.18)`,
+          }}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+              <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
+                Choose Print
+              </div>
+              <button onClick={()=>setPrintModalFor(null)} style={{
+                background:"transparent",border:"none",cursor:"pointer",
+                fontSize:18,color:V.mu,lineHeight:1,padding:"2px 6px",
+                borderRadius:99,transition:"all .2s",
+              }}
+              onMouseEnter={e=>{e.currentTarget.style.background=V.sf2;e.currentTarget.style.color=V.tx;}}
+              onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=V.mu;}}>✕</button>
+            </div>
+
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+              {PATTERNS.map(p=>{
+                const isActive=allOverPrintId===p.id;
+                return(
+                  <div key={p.id} onClick={()=>{
+                    applyAllOverPrint(p); saveHistory(); setPrintModalFor(null);
+                  }} style={{
+                    cursor:"pointer",borderRadius:12,overflow:"hidden",
+                    border:`2px solid ${isActive?V.ac:V.bd}`,
+                    transition:"all .2s",
+                    boxShadow:isActive?`0 4px 16px rgba(201,168,76,0.3)`:"none",
+                  }}>
+                    <div style={{
+                      width:"100%",aspectRatio:"1",
+                      background:`url(${patternUrl(p.file)}) center/cover`,
+                    }}/>
+                    <div style={{
+                      padding:"6px 8px",background:isActive?V.aclt:V.sf2,
+                      fontFamily:"'Jost',sans-serif",fontSize:9,
+                      letterSpacing:".06em",textTransform:"uppercase",
+                      color:isActive?V.tx:V.mu,fontWeight:isActive?700:400,
+                      textAlign:"center",lineHeight:1.3,
+                    }}>{p.label}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {allOverPrintId&&(
+              <button onClick={()=>{clearAllOverPrint();saveHistory();setPrintModalFor(null);}} style={{
+                display:"block",width:"100%",marginTop:16,padding:"10px 0",
+                borderRadius:99,border:`1px solid rgba(196,92,92,.35)`,
+                background:"transparent",color:"#c45c5c",fontSize:11,
+                cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".05em",
+              }}>✕ Remove Print</button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Hidden Fabric canvas (texture pipeline) */}
       <div id="fc-wrapper" style={{position:"fixed",left:"-9999px",top:0,width:"1024px",height:"1024px",pointerEvents:"none",opacity:0.01,zIndex:-1}}>
