@@ -1,0 +1,227 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// sku-config.ts — KA.SHA SKU parsing & design-config resolution
+//
+// SKU format reference
+// ────────────────────
+//  PRINT   : KS1000BGP001 … KS1000BGP034
+//            KS = Ka.Sha | 1000 = print collection | BGP = golf print | NNN = design #
+//
+//  PATTERN : KS1001B-BB  … KS1005B-XX
+//            KS = Ka.Sha | 100N = pattern style | B = golfwear base | -XX = colorway
+//            colorway suffix encodes base+accent: e.g. BB = Blue+Black, RB = Red+Black
+//
+//  SOLID   : KS1000B-WH  … KS1000B-XX
+//            KS = Ka.Sha | 1000 = base collection | B = golfwear | -XX = color code
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Solid colour codes ───────────────────────────────────────────────────────
+export const SOLID_COLOR_MAP: Record<string, string> = {
+  WH: "#f5f5f5",  // White
+  BK: "#1a1a1a",  // Black
+  NV: "#1a2c5e",  // Navy
+  SB: "#4a8fd4",  // Sky Blue
+  RD: "#c0392b",  // Red
+  GN: "#1f7a45",  // Green
+  OR: "#d4600a",  // Orange
+  YL: "#c9a84c",  // Gold / Yellow
+  PR: "#6b2fa0",  // Purple
+  MR: "#7b241c",  // Maroon
+  GR: "#5a5a5a",  // Grey
+  WT: "#f5f5f5",  // White (alt code)
+};
+
+// ── Pattern colorway suffix → channel colors ─────────────────────────────────
+// colorA = dark channel (replaces black/dark pixels in the design PNG)
+// colorB = light channel (replaces light/pink pixels in the design PNG)
+// Convention: suffix[0] = primary/base color, suffix[1] = accent color
+// "B" in position 2 always = Black (accent); "B" in position 1 = Blue (primary)
+export interface PatternColors {
+  colorA: string; // dark channel
+  colorB: string; // light channel
+  label: string;
+}
+
+export const PATTERN_SUFFIX_COLORS: Record<string, PatternColors> = {
+  // Blue base + Black accent
+  BB: { colorA: "#1a1a1a", colorB: "#1e5ecd", label: "Blue + Black"    },
+  // Red base + Black accent
+  RB: { colorA: "#1a1a1a", colorB: "#c0392b", label: "Red + Black"     },
+  // Purple base + Black accent
+  PB: { colorA: "#1a1a1a", colorB: "#6b2fa0", label: "Purple + Black"  },
+  // Orange base + Black accent
+  OB: { colorA: "#1a1a1a", colorB: "#d4600a", label: "Orange + Black"  },
+  // Sky Blue base + Black accent
+  SB: { colorA: "#1a1a1a", colorB: "#4a8fd4", label: "Sky Blue + Black"},
+  // Green base + Black accent
+  GB: { colorA: "#1a1a1a", colorB: "#1f7a45", label: "Green + Black"   },
+  // White base + Black accent
+  WB: { colorA: "#1a1a1a", colorB: "#f0f0f0", label: "White + Black"   },
+  // Navy base + Black accent
+  NB: { colorA: "#1a1a1a", colorB: "#1a2c5e", label: "Navy + Black"    },
+  // Yellow/Gold base + Black accent
+  YB: { colorA: "#1a1a1a", colorB: "#c9a84c", label: "Gold + Black"    },
+  // Maroon base + Black accent
+  MB: { colorA: "#1a1a1a", colorB: "#7b241c", label: "Maroon + Black"  },
+  // Red base + White accent
+  RW: { colorA: "#f0f0f0", colorB: "#c0392b", label: "Red + White"     },
+  // Blue base + White accent
+  BW: { colorA: "#f0f0f0", colorB: "#1e5ecd", label: "Blue + White"    },
+  // Navy base + White accent
+  NW: { colorA: "#f0f0f0", colorB: "#1a2c5e", label: "Navy + White"    },
+  // Green base + White accent
+  GW: { colorA: "#f0f0f0", colorB: "#1f7a45", label: "Green + White"   },
+  // Black base + Gold accent
+  BG: { colorA: "#c9a84c", colorB: "#1a1a1a", label: "Black + Gold"    },
+  // Black base + Red accent
+  BR: { colorA: "#c0392b", colorB: "#1a1a1a", label: "Black + Red"     },
+  // Navy base + Gold accent
+  NG: { colorA: "#c9a84c", colorB: "#1a2c5e", label: "Navy + Gold"     },
+};
+
+// Default colours when suffix is not in the map
+export const DEFAULT_PATTERN_COLORS: PatternColors = {
+  colorA: "#1a1a1a",
+  colorB: "#1e5ecd",
+  label: "Blue + Black",
+};
+
+// ── Print SKU → PatternDef.id mapping ────────────────────────────────────────
+// 34 golf print designs, mapped to the available pattern files.
+// File IDs match PatternDef.id in patterns.ts.
+// Designs 013–034 reuse existing files as placeholders until the physical assets
+// are dropped into public/patterns/ and the entries below are updated.
+const PRINT_PATTERN_FILES = [
+  "paisley",         // 001
+  "vines-pink",      // 002
+  "blue-floral",     // 003
+  "green-flora",     // 004
+  "tropical-bloom",  // 005
+  "carnival",        // 006
+  "ogee-warm",       // 007
+  "smiley-pink",     // 008
+  "graffiti",        // 009
+  "money-bw",        // 010
+  "orange-abstract", // 011
+  "kasha-gt015",     // 012
+  // 013–034: placeholders cycling through the 12 base files
+  "paisley",         // 013
+  "vines-pink",      // 014
+  "blue-floral",     // 015
+  "green-flora",     // 016
+  "tropical-bloom",  // 017
+  "carnival",        // 018
+  "ogee-warm",       // 019
+  "smiley-pink",     // 020
+  "graffiti",        // 021
+  "money-bw",        // 022
+  "orange-abstract", // 023
+  "kasha-gt015",     // 024
+  "paisley",         // 025
+  "vines-pink",      // 026
+  "blue-floral",     // 027
+  "green-flora",     // 028
+  "tropical-bloom",  // 029
+  "carnival",        // 030
+  "ogee-warm",       // 031
+  "smiley-pink",     // 032
+  "graffiti",        // 033
+  "money-bw",        // 034
+];
+
+export const PRINT_SKU_MAP: Record<string, string> = Object.fromEntries(
+  PRINT_PATTERN_FILES.map((id, i) => [
+    `KS1000BGP${String(i + 1).padStart(3, "0")}`,
+    id,
+  ])
+);
+
+// ── Parsed SKU result types ──────────────────────────────────────────────────
+
+export interface PrintSkuResult {
+  type: "print";
+  sku: string;
+  patternId: string; // PatternDef.id
+  designNumber: number;
+}
+
+export interface PatternSkuResult {
+  type: "pattern";
+  sku: string;
+  designId: string; // KashaDesignDef.id — e.g. "KS1001B"
+  patternNumber: number; // 1001–1005
+  suffix: string; // e.g. "BB"
+  colorA: string;
+  colorB: string;
+  colorLabel: string;
+}
+
+export interface SolidSkuResult {
+  type: "solid";
+  sku: string;
+  colorCode: string; // e.g. "NV"
+  hex: string;
+}
+
+export interface UnknownSkuResult {
+  type: "unknown";
+  sku: string;
+}
+
+export type SkuResult =
+  | PrintSkuResult
+  | PatternSkuResult
+  | SolidSkuResult
+  | UnknownSkuResult;
+
+// ── SKU parser ───────────────────────────────────────────────────────────────
+
+/**
+ * Parse a KA.SHA product SKU into its design configuration.
+ *
+ * Examples:
+ *   parseSku("KS1000BGP005") → { type:"print", patternId:"tropical-bloom", … }
+ *   parseSku("KS1001B-BB")   → { type:"pattern", designId:"KS1001B", colorA:"#1a1a1a", colorB:"#1e5ecd", … }
+ *   parseSku("KS1000B-NV")   → { type:"solid", hex:"#1a2c5e", … }
+ */
+export function parseSku(sku: string): SkuResult {
+  if (!sku) return { type: "unknown", sku };
+
+  const upper = sku.trim().toUpperCase();
+
+  // ── Print: KS1000BGP001 … KS1000BGP034
+  const printMatch = upper.match(/^KS1000BGP(\d{3})$/);
+  if (printMatch) {
+    const num = parseInt(printMatch[1], 10);
+    const patternId = PRINT_SKU_MAP[`KS1000BGP${String(num).padStart(3, "0")}`] ?? "paisley";
+    return { type: "print", sku: upper, patternId, designNumber: num };
+  }
+
+  // ── Solid: KS1000B-XX (note: must check before pattern because both start with KS10)
+  const solidMatch = upper.match(/^KS1000B-([A-Z]{2,3})$/);
+  if (solidMatch) {
+    const code = solidMatch[1];
+    const hex = SOLID_COLOR_MAP[code] ?? "#f5f5f5";
+    return { type: "solid", sku: upper, colorCode: code, hex };
+  }
+
+  // ── Pattern: KS1001B-XX … KS1005B-XX  (also accept without suffix → use default colors)
+  const patternMatch = upper.match(/^KS(100[1-5])B(?:-([A-Z]{2,3}))?$/);
+  if (patternMatch) {
+    const patNum = parseInt(patternMatch[1], 10);
+    const suffix = patternMatch[2] ?? "BB";
+    const colors = PATTERN_SUFFIX_COLORS[suffix] ?? DEFAULT_PATTERN_COLORS;
+    return {
+      type: "pattern",
+      sku: upper,
+      designId: `KS${patternMatch[1]}B`,
+      patternNumber: patNum,
+      suffix,
+      colorA: colors.colorA,
+      colorB: colors.colorB,
+      colorLabel: colors.label,
+    };
+  }
+
+  return { type: "unknown", sku: upper };
+}

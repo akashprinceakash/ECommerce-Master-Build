@@ -29,6 +29,7 @@ import {
   KASHA_DESIGNS, applyKashaDesign, clearKashaDesign, SKU_KASHA_DESIGN_MAP,
   type KashaDesignDef, type RecolorOptions,
 } from "@/components/3d/kasha-designs";
+import { parseSku } from "@/components/3d/sku-config";
 
 // ── Pattern colour recolor constants ─────────────────────────────────────────
 const PAT_COLOR_A_DEFAULT = "#000000";   // Channel A source (dark / black)
@@ -595,29 +596,77 @@ export default function CustomizePage() {
     } catch { toast({title:"Could not apply print",variant:"destructive"}); }
   }, [syncTexture, toast]);
 
-  // Auto-apply the correct KA.SHA design for this product's SKU when navigating
-  // from the PDP (both quick and full customisation modes).
+  // ── SKU-based auto-apply ──────────────────────────────────────────────────
+  // When a product page links to the customiser (via ?id=), parse the product
+  // SKU and immediately apply the correct design so the 3D model matches the
+  // product the customer selected — no manual selection needed.
+
+  // PATTERN auto-apply: apply zone textures + colorway derived from SKU suffix
   useEffect(() => {
     if (!canvasReady || productType !== "pattern" || autoAppliedRef.current) return;
-    if (!product) return; // wait until product data is loaded
+    if (!product) return;
     autoAppliedRef.current = true;
-    const designId = SKU_KASHA_DESIGN_MAP[product.sku ?? ""] ?? "KD001";
-    const design = KASHA_DESIGNS.find(d => d.id === designId) ?? KASHA_DESIGNS[0];
-    handleSelectKashaDesign(design);
-  }, [canvasReady, productType, handleSelectKashaDesign, product]);
 
-  // When arriving from home in ?type=printed mode, auto-apply P3 (blue-floral)
-  // as the default all-over print so the model has a print on load.
+    const skuResult = parseSku(product.sku ?? "");
+
+    if (skuResult.type === "pattern") {
+      // Use SKU parser: correct design + correct colorway
+      const design = KASHA_DESIGNS.find(d => d.id === skuResult.designId) ?? KASHA_DESIGNS[0];
+      handleSelectKashaDesign(design).then(() => {
+        applyPatternColors(skuResult.colorA, skuResult.colorB);
+      }).catch(() => {
+        // handleSelectKashaDesign may not return a promise — apply colors after short delay
+        setTimeout(() => applyPatternColors(skuResult.colorA, skuResult.colorB), 600);
+      });
+    } else {
+      // Fallback: legacy SKU_KASHA_DESIGN_MAP lookup
+      const designId = SKU_KASHA_DESIGN_MAP[product.sku ?? ""] ?? "KS1001B";
+      const design = KASHA_DESIGNS.find(d => d.id === designId) ?? KASHA_DESIGNS[0];
+      handleSelectKashaDesign(design);
+    }
+  }, [canvasReady, productType, handleSelectKashaDesign, applyPatternColors, product]);
+
+  // PRINT auto-apply: select the correct print from the library based on SKU
   const autoAppliedPrintRef = useRef(false);
   useEffect(() => {
-    if (!isTypeMode || garmentType !== "printed") return;
     if (autoAppliedPrintRef.current) return;
     if (!canvasReady || !mats.length) return;
-    const p3 = PATTERNS.find(p => p.id === "blue-floral");
-    if (!p3) return;
+
+    let targetPatternId: string | null = null;
+
+    if (product?.sku) {
+      // Product loaded — resolve print ID from SKU
+      const skuResult = parseSku(product.sku);
+      if (skuResult.type === "print") {
+        targetPatternId = skuResult.patternId;
+      }
+    } else if (isTypeMode && garmentType === "printed") {
+      // Generic "printed" mode — default to blue-floral as before
+      targetPatternId = "blue-floral";
+    }
+
+    if (!targetPatternId) return;
+    const pattern = PATTERNS.find(p => p.id === targetPatternId);
+    if (!pattern) return;
     autoAppliedPrintRef.current = true;
-    applyAllOverPrint(p3);
-  }, [isTypeMode, garmentType, canvasReady, mats, applyAllOverPrint]);
+    applyAllOverPrint(pattern);
+  }, [product, isTypeMode, garmentType, canvasReady, mats, applyAllOverPrint]);
+
+  // SOLID auto-apply: apply the correct base color from SKU when arriving on a solid product
+  const autoAppliedSolidRef = useRef(false);
+  useEffect(() => {
+    if (autoAppliedSolidRef.current) return;
+    if (!canvasReady) return;
+    if (!product?.sku) return;
+
+    const skuResult = parseSku(product.sku);
+    if (skuResult.type !== "solid") return;
+
+    autoAppliedSolidRef.current = true;
+    applyPrimary(skuResult.hex);
+  // applyPrimary is stable (defined with plain function, not useCallback), so we omit it
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product, canvasReady]);
 
   const clearZonePrint = useCallback((zone: Exclude<PatternZone,"all">)=>{
     const fc=fcRef.current; if(!fc) return;

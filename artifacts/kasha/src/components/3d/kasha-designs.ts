@@ -52,10 +52,11 @@ const KD_ZONES: Record<string, string> = {
 };
 
 // ── Design catalogue ─────────────────────────────────────────────────────────
+// IDs follow the KA.SHA SKU pattern scheme: KS1001B … KS1005B
 export const KASHA_DESIGNS: KashaDesignDef[] = [
   {
-    id: "KD001", label: "Bespoke Design 1",
-    thumbnail: "/images/designs/KD001.png",
+    id: "KS1001B", label: "Pattern 1001",
+    thumbnail: "/images/designs/KS1001B.png",
     zones: {
       front: KD_ZONES["F1"],
       back: KD_ZONES["B1"],
@@ -65,8 +66,8 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
     },
   },
   {
-    id: "KD002", label: "Bespoke Design 2",
-    thumbnail: "/images/designs/KD002.png",
+    id: "KS1002B", label: "Pattern 1002",
+    thumbnail: "/images/designs/KS1002B.png",
     zones: {
       front: KD_ZONES["F2"],
       back: KD_ZONES["B2"],
@@ -76,8 +77,8 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
     },
   },
   {
-    id: "KD003", label: "Bespoke Design 3",
-    thumbnail: "/images/designs/KD003.png",
+    id: "KS1003B", label: "Pattern 1003",
+    thumbnail: "/images/designs/KS1003B.png",
     zones: {
       front: KD_ZONES["F3"],
       back: KD_ZONES["B3"],
@@ -87,8 +88,8 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
     },
   },
   {
-    id: "KD004", label: "Bespoke Design 4",
-    thumbnail: "/images/designs/KD004.png",
+    id: "KS1004B", label: "Pattern 1004",
+    thumbnail: "/images/designs/KS1004B.png",
     zones: {
       front: KD_ZONES["F4"],
       collar: KD_ZONES["COL4"],
@@ -97,7 +98,7 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
     },
   },
   {
-    id: "KD005", label: "Bespoke Design 5",
+    id: "KS1005B", label: "Pattern 1005",
     zones: {
       front: KD_ZONES["F5"],
       back: KD_ZONES["B5"],
@@ -247,12 +248,71 @@ export async function applyKashaDesign(
 }
 
 // ── SKU → KA.SHA Design mapping ──────────────────────────────────────────────
-// Maps each pattern product SKU to the KD design ID that should be
-// auto-applied when the user enters the customisation studio.
+// Maps each pattern product SKU (including colorway suffix) to the
+// KashaDesignDef.id (KS1001B … KS1005B) that should be auto-applied when the
+// customer enters the customisation studio.
+// The colorway suffix is stripped by the SKU parser — this map is kept as a
+// convenience fallback for any legacy or hardcoded product references.
 export const SKU_KASHA_DESIGN_MAP: Record<string, string> = {
-  "KS1001B-SB": "KD001",
-  "KS1001B-BB": "KD001",
-  "KS1002B-RB": "KD002",
-  "KS1003B-PB": "KD003",
-  "KS1006B-BP": "KD004",
+  // Pattern 1001 — all colorways
+  "KS1001B":    "KS1001B",
+  "KS1001B-BB": "KS1001B",
+  "KS1001B-SB": "KS1001B",
+  "KS1001B-RB": "KS1001B",
+  "KS1001B-PB": "KS1001B",
+  "KS1001B-OB": "KS1001B",
+  "KS1001B-GB": "KS1001B",
+  "KS1001B-WB": "KS1001B",
+  "KS1001B-NB": "KS1001B",
+  "KS1001B-YB": "KS1001B",
+  "KS1001B-BW": "KS1001B",
+  "KS1001B-NW": "KS1001B",
+  "KS1001B-BG": "KS1001B",
+  // Pattern 1002 — all colorways
+  "KS1002B":    "KS1002B",
+  "KS1002B-BB": "KS1002B",
+  "KS1002B-RB": "KS1002B",
+  "KS1002B-PB": "KS1002B",
+  "KS1002B-OB": "KS1002B",
+  "KS1002B-SB": "KS1002B",
+  "KS1002B-GB": "KS1002B",
+  "KS1002B-WB": "KS1002B",
+  "KS1002B-NB": "KS1002B",
+  "KS1002B-YB": "KS1002B",
+  "KS1002B-BW": "KS1002B",
+  "KS1002B-RW": "KS1002B",
+  "KS1002B-NG": "KS1002B",
+  // Pattern 1003 — all colorways
+  "KS1003B":    "KS1003B",
+  "KS1003B-BB": "KS1003B",
+  "KS1003B-RB": "KS1003B",
+  "KS1003B-PB": "KS1003B",
+  "KS1003B-OB": "KS1003B",
+  "KS1003B-SB": "KS1003B",
+  "KS1003B-GB": "KS1003B",
+  "KS1003B-WB": "KS1003B",
+  "KS1003B-NB": "KS1003B",
+  "KS1003B-BG": "KS1003B",
+  "KS1003B-BR": "KS1003B",
+  // Pattern 1004 — all colorways
+  "KS1004B":    "KS1004B",
+  "KS1004B-BB": "KS1004B",
+  "KS1004B-RB": "KS1004B",
+  "KS1004B-PB": "KS1004B",
+  "KS1004B-OB": "KS1004B",
+  "KS1004B-SB": "KS1004B",
+  "KS1004B-GB": "KS1004B",
+  "KS1004B-WB": "KS1004B",
+  "KS1004B-NB": "KS1004B",
+  "KS1004B-YB": "KS1004B",
+  // Pattern 1005 — all colorways
+  "KS1005B":    "KS1005B",
+  "KS1005B-BB": "KS1005B",
+  "KS1005B-RB": "KS1005B",
+  "KS1005B-PB": "KS1005B",
+  "KS1005B-OB": "KS1005B",
+  "KS1005B-SB": "KS1005B",
+  "KS1005B-GB": "KS1005B",
+  "KS1005B-WB": "KS1005B",
+  "KS1005B-NB": "KS1005B",
 };
