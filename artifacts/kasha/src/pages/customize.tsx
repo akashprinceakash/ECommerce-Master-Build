@@ -269,6 +269,8 @@ export default function CustomizePage() {
   // For Colour customisation: full body or individual parts?
   const [colorSubMode, setColorSubMode] = useState<"full"|"parts"|null>(null);
 
+  const [showOtherDesigns, setShowOtherDesigns] = useState(false);
+
   // ── Responsive layout ─────────────────────────────────────────────────────
   const [screenW, setScreenW] = useState(() => typeof window !== "undefined" ? window.innerWidth : 1280);
 
@@ -1283,7 +1285,7 @@ export default function CustomizePage() {
                           border:`2px solid ${sel?V.ac:V.bd}`,transition:"all .2s",
                           boxShadow:sel?`0 2px 12px rgba(201,168,76,.3)`:"none",
                         }}>
-                          <img src={patternUrl(p.file)} alt={p.label}
+                          <img src={patternUrl(p.file)} alt={p.label} loading="lazy" decoding="async"
                             style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}
                             onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
                           <div style={{padding:"5px 8px",background:sel?V.aclt:V.sf2}}>
@@ -1300,32 +1302,35 @@ export default function CustomizePage() {
               );
 
               // KA.SHA design gallery + recolour (shared)
-              const PatternGallery = ()=>(
-                <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                  <div style={{...sb}}>KA.SHA signature designs</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
-                    {KASHA_DESIGNS.map(d=>{
-                      const sel=activeKashaDesign?.id===d.id;
-                      return (
-                        <div key={d.id} onClick={()=>handleSelectKashaDesign(d)} style={{
-                          borderRadius:10,overflow:"hidden",cursor:"pointer",
-                          border:`2px solid ${sel?V.ac:V.bd}`,transition:"all .2s",
-                          boxShadow:sel?`0 2px 12px rgba(201,168,76,.3)`:"none",
-                        }}>
-                          {d.thumbnail
-                            ? <img src={d.thumbnail} alt={d.label} style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}/>
-                            : <div style={{width:"100%",aspectRatio:"1",background:V.sf2,display:"flex",alignItems:"center",justifyContent:"center",color:V.mu,fontSize:24}}>◈</div>
-                          }
-                          <div style={{padding:"6px 10px",background:sel?V.aclt:V.sf2}}>
-                            <div style={{fontSize:10,fontFamily:"'Jost',sans-serif",fontWeight:600,color:sel?V.ac:V.tx}}>{d.label}</div>
-                          </div>
-                        </div>
-                      );
-                    })}
+              // Renders a design card with thumbnail
+              const DesignCard = ({d}:{d:typeof KASHA_DESIGNS[number]})=>{
+                const sel=activeKashaDesign?.id===d.id;
+                const thumb=d.thumbnail||(d.zones?.front||undefined);
+                return (
+                  <div onClick={()=>handleSelectKashaDesign(d)} style={{
+                    borderRadius:10,overflow:"hidden",cursor:"pointer",
+                    border:`2px solid ${sel?V.ac:V.bd}`,transition:"all .2s",
+                    boxShadow:sel?`0 2px 12px rgba(201,168,76,.3)`:"none",
+                  }}>
+                    {thumb
+                      ? <img src={thumb} alt={d.label} loading="eager" decoding="async"
+                          style={{width:"100%",aspectRatio:"1",objectFit:"cover",objectPosition:"top",display:"block"}}/>
+                      : <div style={{width:"100%",aspectRatio:"1",background:V.sf2,display:"flex",alignItems:"center",justifyContent:"center",color:V.mu,fontSize:24}}>◈</div>
+                    }
+                    <div style={{padding:"6px 10px",background:sel?V.aclt:V.sf2}}>
+                      <div style={{fontSize:10,fontFamily:"'Jost',sans-serif",fontWeight:600,color:sel?V.ac:V.tx}}>{d.label}</div>
+                    </div>
                   </div>
+                );
+              };
+
+              const PatternGallery = ()=>(
+                <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+                  {/* ── 1. RECOLOUR FIRST ───────────────────────────────── */}
                   {activeKashaDesign&&(
                     <div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px",borderRadius:12,background:V.sf2,border:`1px solid ${V.bd}`}}>
-                      <div style={{...sb}}>Recolour design</div>
+                      <div style={{...sbT}}>Recolour your pattern design</div>
                       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                         <div>
                           <div style={{fontSize:9,color:V.mu,letterSpacing:".06em",fontFamily:"'Jost',sans-serif",marginBottom:4}}>DARK TONES</div>
@@ -1337,7 +1342,6 @@ export default function CustomizePage() {
                         </div>
                       </div>
                       <button onClick={()=>applyPatternColors(patColorA,patColorB)} disabled={patRecoloring} style={{padding:"9px 16px",borderRadius:8,border:"none",cursor:"pointer",background:V.ac,color:V.tx,fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",opacity:patRecoloring?.6:1,transition:"all .2s"}}>{patRecoloring?"Applying…":"✦ Apply Colours"}</button>
-                      {/* Body colour */}
                       <div style={{height:1,background:V.bd,margin:"2px 0"}}/>
                       <div style={{fontSize:9,color:V.mu,letterSpacing:".06em",fontFamily:"'Jost',sans-serif"}}>BODY COLOUR</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
@@ -1347,6 +1351,44 @@ export default function CustomizePage() {
                         onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=V.aclt;}}
                         onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>⊕ Advanced Body Colour</button>
                       <button onClick={()=>{const fc=fcRef.current;if(fc){clearKashaDesign(fc);syncTexture();}setActiveKashaDesign(null);}} style={{padding:"7px 16px",borderRadius:8,border:`1px solid ${V.bd}`,cursor:"pointer",background:"transparent",color:V.mu,fontFamily:"'Jost',sans-serif",fontSize:10}}>✕ Remove design</button>
+                    </div>
+                  )}
+
+                  {/* ── 2. SIGNATURE DESIGNS ────────────────────────────── */}
+                  {skuProductType==="pattern" ? (
+                    /* Pattern SKU product: locked to assigned design; toggle reveals others */
+                    <>
+                      {!showOtherDesigns ? (
+                        <button onClick={()=>setShowOtherDesigns(true)} style={{
+                          padding:"10px 16px",borderRadius:10,cursor:"pointer",
+                          border:`1.5px solid rgba(201,168,76,0.4)`,background:"transparent",
+                          fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:600,
+                          letterSpacing:".07em",textTransform:"uppercase",color:V.ac,
+                          transition:"all .2s",textAlign:"left",
+                        }}
+                        onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=V.aclt;}}
+                        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
+                          ◈ Choose other KA.SHA signature designs
+                        </button>
+                      ):(
+                        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                            <div style={{...sb}}>KA.SHA signature designs</div>
+                            <button onClick={()=>setShowOtherDesigns(false)} style={{padding:"3px 10px",borderRadius:6,border:`1px solid ${V.bd}`,background:"transparent",cursor:"pointer",fontSize:10,color:V.mu,fontFamily:"'Jost',sans-serif"}}>✕ Close</button>
+                          </div>
+                          <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
+                            {KASHA_DESIGNS.filter(d=>d.id!==activeKashaDesign?.id).map(d=><DesignCard key={d.id} d={d}/>)}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ):(
+                    /* Studio / solid → pattern: always show full gallery */
+                    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                      <div style={{...sb}}>KA.SHA signature designs</div>
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
+                        {KASHA_DESIGNS.map(d=><DesignCard key={d.id} d={d}/>)}
+                      </div>
                     </div>
                   )}
                 </div>
