@@ -94,14 +94,14 @@ const PART_ZONES: { id: Exclude<PatternZone,"all">; label: string }[] = [
 //   leftSleeve:  { left:210, top:4,   w:398, h:170 }
 //   rightSleeve: { left:617, top:2,   w:398, h:171 }
 const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
-  "front-chest": { left: 255, top: 490 },  // center-x of front zone, ~22% down
-  "front-left":  { left: 147, top: 490 },  // left quarter of front zone
-  "front-right": { left: 363, top: 490 },  // right quarter of front zone
-  "back-center": { left: 765, top: 371 },  // center-x of back zone, ~22% down
-  "back-left":   { left: 645, top: 371 },  // left quarter of back zone
-  "back-right":  { left: 886, top: 371 },  // right quarter of back zone
-  "left-sleeve": { left: 409, top:  89 },  // center of leftSleeve zone
-  "right-sleeve":{ left: 816, top:  88 },  // center of rightSleeve zone
+  "front-chest": { left: 255, top: 620 },  // center-x of front zone, lower chest
+  "front-left":  { left: 147, top: 620 },  // left quarter of front zone
+  "front-right": { left: 363, top: 620 },  // right quarter of front zone
+  "back-center": { left: 765, top: 520 },  // center-x of back zone, lower
+  "back-left":   { left: 645, top: 520 },  // left quarter of back zone
+  "back-right":  { left: 886, top: 520 },  // right quarter of back zone
+  "left-sleeve": { left: 409, top: 120 },  // center of leftSleeve zone
+  "right-sleeve":{ left: 816, top: 120 },  // center of rightSleeve zone
 };
 const PLACEMENT_GROUPS = [
   { label:"FRONT",  items:[{key:"front-chest",label:"Chest"},{key:"front-left",label:"Left"},{key:"front-right",label:"Right"}] },
@@ -1581,7 +1581,8 @@ export default function CustomizePage() {
                       <div>
                         <div style={{...sb}}>Size — {logoSize}%</div>
                         <input type="range" min={5} max={60} value={logoSize} onChange={e=>setLogoSize(+e.target.value)}
-                          style={{width:"100%",accentColor:V.ac}}/>
+                          style={{width:"100%",accentColor:V.tx,cursor:"pointer",height:4,borderRadius:2,
+                            background:`linear-gradient(to right,${V.tx} 0%,${V.tx} ${Math.round((logoSize-5)/55*100)}%,#c4bfb8 ${Math.round((logoSize-5)/55*100)}%,#c4bfb8 100%)`}}/>
                       </div>
                     </div>
                   )}
@@ -1619,7 +1620,8 @@ export default function CustomizePage() {
                       <div style={{...sb}}>Size</div>
                       <input type="range" min={14} max={80} value={textFontSize}
                         onChange={e=>setTextFontSize(+e.target.value)}
-                        style={{width:80,accentColor:V.ac}}/>
+                        style={{width:80,accentColor:V.tx,cursor:"pointer",height:4,borderRadius:2,
+                          background:`linear-gradient(to right,${V.tx} 0%,${V.tx} ${Math.round((textFontSize-14)/66*100)}%,#c4bfb8 ${Math.round((textFontSize-14)/66*100)}%,#c4bfb8 100%)`}}/>
                       <div style={{fontSize:9,color:V.mu,textAlign:"center",fontFamily:"'Jost',sans-serif"}}>{textFontSize}px</div>
                     </div>
                   </div>
