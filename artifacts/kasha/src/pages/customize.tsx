@@ -299,11 +299,13 @@ export default function CustomizePage() {
   const [logoPosition, setLogoPosition] = useState("front-chest");
   const [logoSize, setLogoSize] = useState(50);
   const [logoPreview, setLogoPreview] = useState<string|null>(null);
+  const [logoPlaced, setLogoPlaced] = useState(false);
 
   // ── Text step state ───────────────────────────────────────────────────────
   const textObjRef = useRef<any>(null);
   const [textInput, setTextInput] = useState("");
   const [textPosition, setTextPosition] = useState("front-chest");
+  const [textPlaced, setTextPlaced] = useState(false);
   const [textFontSize, setTextFontSize] = useState(40);
   const [textColor, setTextColor] = useState("#1a1a18");
   const [textBold, setTextBold] = useState(false);
@@ -730,6 +732,7 @@ export default function CustomizePage() {
       const fc=fcRef.current; if(!fc) return;
       if (logoObjRef.current) fc.remove(logoObjRef.current);
       fc.add(img); fc.setActiveObject(img); logoObjRef.current=img;
+      setLogoPlaced(true);
       fc.renderAll(); syncTexture();
     };
     reader.readAsDataURL(file);
@@ -747,7 +750,7 @@ export default function CustomizePage() {
 
   const removeLogo=()=>{
     const fc=fcRef.current; if(!fc) return;
-    if(logoObjRef.current){fc.remove(logoObjRef.current);logoObjRef.current=null;setLogoPreview(null);fc.renderAll();syncTexture();}
+    if(logoObjRef.current){fc.remove(logoObjRef.current);logoObjRef.current=null;setLogoPreview(null);setLogoPlaced(false);fc.renderAll();syncTexture();}
   };
 
   // ── Text handlers ─────────────────────────────────────────────────────────
@@ -771,6 +774,7 @@ export default function CustomizePage() {
     });
     fc.add(txt); fc.setActiveObject(txt);
     textObjRef.current=txt;
+    setTextPlaced(true);
     fc.renderAll(); syncTexture();
   };
 
@@ -783,7 +787,7 @@ export default function CustomizePage() {
 
   const removeText = () => {
     const fc=fcRef.current; if(!fc) return;
-    if(textObjRef.current){fc.remove(textObjRef.current);textObjRef.current=null;}
+    if(textObjRef.current){fc.remove(textObjRef.current);textObjRef.current=null;setTextPlaced(false);}
     fc.renderAll(); syncTexture();
   };
 
@@ -1103,11 +1107,11 @@ export default function CustomizePage() {
 
       {/* ── PROGRESS TRACKER BAR ─────────────────────────────────────────── */}
       <div style={{
-        display:"flex",alignItems:"center",height:52,flexShrink:0,
-        padding:"0 32px",gap:0,
-        background:"rgba(250,250,247,0.98)",
-        borderBottom:`1px solid rgba(201,168,76,0.14)`,
-        boxShadow:"0 1px 8px rgba(26,26,24,0.04)",
+        display:"flex",alignItems:"center",height:56,flexShrink:0,
+        padding:"0 24px",gap:0,
+        background:"#fff",
+        borderBottom:`1.5px solid rgba(201,168,76,0.22)`,
+        boxShadow:"0 2px 10px rgba(26,26,24,0.07)",
       }}>
         {([
           {n:1,label:"Style"},
@@ -1118,7 +1122,7 @@ export default function CustomizePage() {
           const active=step===s.n; const done=(s.n===1&&skuProductType!=="solid")||step>s.n;
           return (
             <React.Fragment key={s.n}>
-              {i>0&&<div style={{flex:1,height:1,background:done?V.ac:"rgba(26,26,24,0.1)",transition:"background .3s"}}/>}
+              {i>0&&<div style={{flex:1,height:2,borderRadius:2,background:done?V.ac:"rgba(26,26,24,0.14)",transition:"background .3s",margin:"0 4px"}}/>}
               <div onClick={()=>setStep(s.n)} style={{
                 display:"flex",alignItems:"center",gap:7,cursor:"pointer",
                 padding:"5px 10px",borderRadius:99,
@@ -1126,18 +1130,19 @@ export default function CustomizePage() {
                 transition:"all .25s cubic-bezier(.16,1,.3,1)",
               }}>
                 <div style={{
-                  width:22,height:22,borderRadius:"50%",flexShrink:0,
+                  width:24,height:24,borderRadius:"50%",flexShrink:0,
                   display:"flex",alignItems:"center",justifyContent:"center",
                   fontSize:10,fontWeight:700,
-                  background:active?V.ac:done?V.ac:V.bd,
-                  color:active?"#fff":done?"#fff":V.mu,
-                  border:`1.5px solid ${active||done?V.ac:V.bd}`,
+                  background:active?V.ac:done?V.ac:"#e8e4dc",
+                  color:active?"#fff":done?"#fff":"#888",
+                  border:`2px solid ${active||done?V.ac:"#d4cfc6"}`,
                   transition:"all .3s",
+                  boxShadow:active?`0 0 0 3px ${V.aclt}`:"none",
                 }}>{done?"✓":s.n}</div>
                 <span style={{
                   fontSize:10,fontFamily:"'Jost',sans-serif",letterSpacing:".07em",
                   textTransform:"uppercase",fontWeight:active?700:400,
-                  color:active?V.tx:done?V.ac:V.mu,
+                  color:active?V.tx:done?V.ac:"#999",
                   transition:"all .3s",
                 }}>{s.label}</span>
               </div>
@@ -1523,7 +1528,7 @@ export default function CustomizePage() {
                     <div style={{display:"flex",flexDirection:"column",gap:8}}>
                       <div style={{position:"relative",borderRadius:12,overflow:"hidden",border:`1px solid ${V.bd}`}}>
                         <img src={logoPreview} alt="Logo preview" style={{width:"100%",height:120,objectFit:"contain",background:V.sf2,display:"block"}}/>
-                        <button onClick={()=>{setLogoPreview(null);if(logoObjRef.current&&fcRef.current){fcRef.current.remove(logoObjRef.current);logoObjRef.current=null;syncTexture();}}} style={{
+                        <button onClick={()=>{setLogoPreview(null);setLogoPlaced(false);if(logoObjRef.current&&fcRef.current){fcRef.current.remove(logoObjRef.current);logoObjRef.current=null;syncTexture();}}} style={{
                           position:"absolute",top:6,right:6,width:22,height:22,borderRadius:6,
                           border:`1px solid ${V.bd}`,background:"rgba(250,250,247,0.9)",cursor:"pointer",
                           display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:V.mu,
@@ -1540,7 +1545,7 @@ export default function CustomizePage() {
 
                   {logoPreview&&(
                     <div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px",borderRadius:12,background:V.sf2,border:`1px solid ${V.bd}`}}>
-                      <div>
+                      {logoPlaced&&(<div>
                         <div style={{...sb,marginBottom:8}}>Position</div>
                         {(()=>{
                           const chips=[
@@ -1572,7 +1577,7 @@ export default function CustomizePage() {
                             </div>
                           );
                         })()}
-                      </div>
+                      </div>)}
                       <div>
                         <div style={{...sb}}>Size — {logoSize}%</div>
                         <input type="range" min={5} max={60} value={logoSize} onChange={e=>setLogoSize(+e.target.value)}
@@ -1595,8 +1600,19 @@ export default function CustomizePage() {
                   <div style={{display:"flex",gap:8}}>
                     <div style={{flex:1}}>
                       <div style={{...sb}}>Colour</div>
-                      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
                         {MAIN_PALETTE.slice(0,8).map(h=>swatch(h,textColor===h,()=>setTextColor(h)))}
+                        <label title="Custom colour" style={{
+                          width:22,height:22,borderRadius:"50%",cursor:"pointer",
+                          display:"flex",alignItems:"center",justifyContent:"center",
+                          border:`1.5px dashed ${V.ac}`,background:V.aclt,flexShrink:0,
+                          fontSize:13,color:V.ac,overflow:"hidden",position:"relative",
+                        }}>
+                          <span style={{pointerEvents:"none",lineHeight:1}}>+</span>
+                          <input type="color" value={textColor} onChange={e=>setTextColor(e.target.value)}
+                            style={{position:"absolute",inset:0,opacity:0,cursor:"pointer",width:"100%",height:"100%"}}/>
+                        </label>
+                        <div style={{width:22,height:22,borderRadius:"50%",background:textColor,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
                       </div>
                     </div>
                     <div>
@@ -1626,8 +1642,8 @@ export default function CustomizePage() {
                       }}>{label}</button>
                     ))}
                   </div>
-                  {/* Text placement chips */}
-                  <div>
+                  {/* Text placement chips — only shown after text has been placed */}
+                  {textPlaced&&<div>
                     <div style={{...sb,marginBottom:8}}>Placement</div>
                     {(()=>{
                       const chips=[
@@ -1659,7 +1675,7 @@ export default function CustomizePage() {
                         </div>
                       );
                     })()}
-                  </div>
+                  </div>}
                   <button onClick={()=>{
                     if(!textInput.trim())return;
                     applyText();
@@ -1672,17 +1688,6 @@ export default function CustomizePage() {
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=V.ac;(e.currentTarget as HTMLElement).style.opacity="1";}}>
                     ✦ Place Text on Garment
                   </button>
-                  <div style={{...sb,marginTop:4}}>Text Align</div>
-                  <div style={{display:"flex",gap:6}}>
-                    {(["left","center","right"] as const).map(a=>(
-                      <button key={a} onClick={()=>setTextAlign(a)} style={{
-                        flex:1,padding:"6px 0",borderRadius:7,fontSize:11,
-                        border:`1.5px solid ${textAlign===a?V.ac:V.bd}`,
-                        background:textAlign===a?V.aclt:"transparent",
-                        cursor:"pointer",color:textAlign===a?V.tx:V.mu,transition:"all .2s",
-                      }}>{a==="left"?"⟵":a==="center"?"≡":"⟶"}</button>
-                    ))}
-                  </div>
                 </div>
 
                 {/* Sleeve length */}
@@ -2779,7 +2784,7 @@ export default function CustomizePage() {
         {/* ── CENTER: 3D CANVAS ─────────────────────────────────────────────── */}
         <div style={{
           flex:1,position:"relative",
-          background:"radial-gradient(ellipse at 55% 40%, #f2efe8 0%, #e8e2d9 60%, #ddd7ca 100%)",
+          background:"radial-gradient(ellipse at 55% 40%, #c8c2b6 0%, #b8b1a4 60%, #a8a196 100%)",
           display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",
           minWidth:0,
         }}>
