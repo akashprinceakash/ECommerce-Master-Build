@@ -1161,20 +1161,22 @@ export default function CustomizePage() {
           width:screenW<768?"100%":"40%",
           minWidth:screenW<768?undefined:280,
           maxWidth:screenW<768?undefined:560,
-          height:screenW<768?"55vh":undefined,
-          flexShrink:0,
+          height:screenW>=768?"100%":undefined,
+          flex:screenW<768?"1 1 0":"0 0 40%",
+          minHeight:screenW<768?0:undefined,
+          order:screenW<768?2:1,
           display:"flex",flexDirection:"column",
           borderRight:screenW>=768?`1px solid rgba(26,26,24,0.07)`:undefined,
-          borderBottom:screenW<768?`1px solid rgba(26,26,24,0.07)`:undefined,
+          borderTop:screenW<768?`1px solid rgba(201,168,76,0.15)`:undefined,
           background:V.sf,
           overflowY:"auto",
+          overflowX:"hidden",
           scrollbarWidth:"thin",
           scrollbarColor:`${V.cream3} transparent`,
-          paddingBottom:80,
         }}>
           {/* Panel heading */}
           <div style={{
-            padding:"20px 24px 16px",flexShrink:0,
+            padding:screenW<768?"12px 16px 10px":"20px 24px 16px",flexShrink:0,
             borderBottom:`1px solid rgba(26,26,24,0.07)`,
             background:V.sf,position:"sticky",top:0,zIndex:5,
           }}>
@@ -1200,7 +1202,7 @@ export default function CustomizePage() {
             </div>
           </div>
 
-          <div style={{padding:"20px 24px",display:"flex",flexDirection:"column",gap:18}}>
+          <div style={{padding:screenW<768?"14px 16px":"20px 24px",display:"flex",flexDirection:"column",gap:18,overflowX:"hidden",boxSizing:"border-box" as const,minWidth:0}}>
 
             {/* ══════════════════ STEP 1: STYLE (Solid) / Auto-loaded (Pattern/Print) ═ */}
             {step===1&&(
@@ -2827,7 +2829,9 @@ export default function CustomizePage() {
 
         {/* ── CENTER: 3D CANVAS ─────────────────────────────────────────────── */}
         <div style={{
-          flex:1,position:"relative",
+          flex:screenW<768?"0 0 44vh":1,
+          order:screenW<768?1:2,
+          position:"relative",
           background:"radial-gradient(ellipse at 55% 40%, #c8c2b6 0%, #b8b1a4 60%, #a8a196 100%)",
           display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",
           minWidth:0,
@@ -2871,22 +2875,25 @@ export default function CustomizePage() {
           )}
 
           {/* Product badge */}
-          <div style={{
-            position:"absolute",bottom:20,left:20,
-            background:"rgba(250,250,247,0.94)",
-            border:`1px solid rgba(201,168,76,0.2)`,
-            borderRadius:10,padding:"8px 14px",
-            backdropFilter:"blur(12px)",
-            boxShadow:"0 2px 16px rgba(26,26,24,0.08)",
-          }}>
-            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:13,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
-              {isTypeMode ? `${garmentType.charAt(0).toUpperCase()+garmentType.slice(1)} T-Shirt` : product!.name.replace(/\s*\[gt:GT\d+\]\s*$/,"")}
+          {/* Product badge — desktop bottom-left, mobile top-left */}
+          {screenW>=768&&(
+            <div style={{
+              position:"absolute",bottom:20,left:20,
+              background:"rgba(250,250,247,0.94)",
+              border:`1px solid rgba(201,168,76,0.2)`,
+              borderRadius:10,padding:"8px 14px",
+              backdropFilter:"blur(12px)",
+              boxShadow:"0 2px 16px rgba(26,26,24,0.08)",
+            }}>
+              <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:13,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
+                {isTypeMode ? `${garmentType.charAt(0).toUpperCase()+garmentType.slice(1)} T-Shirt` : product!.name.replace(/\s*\[gt:GT\d+\]\s*$/,"")}
+              </div>
+              {!isTypeMode && <div style={{fontSize:11,color:V.ac,fontFamily:"'Jost',sans-serif",letterSpacing:".04em",marginTop:1}}>{formatPrice(product!.priceInPaise)}</div>}
             </div>
-            {!isTypeMode && <div style={{fontSize:11,color:V.ac,fontFamily:"'Jost',sans-serif",letterSpacing:".04em",marginTop:1}}>{formatPrice(product!.priceInPaise)}</div>}
-          </div>
+          )}
 
-          {/* Active design badge */}
-          {(activeKashaDesign||activePrintId)&&(
+          {/* Active design badge — desktop bottom-right, hidden on mobile */}
+          {(activeKashaDesign||activePrintId)&&screenW>=768&&(
             <div style={{
               position:"absolute",bottom:20,right:20,
               background:"rgba(250,250,247,0.94)",
@@ -2902,23 +2909,76 @@ export default function CustomizePage() {
             </div>
           )}
 
-          {/* Drag hint */}
-          <div style={{
-            position:"absolute",top:16,left:"50%",transform:"translateX(-50%)",
-            fontFamily:"'Cormorant Garamond', serif",
-            fontSize:11,letterSpacing:".16em",
-            color:"rgba(26,26,24,0.22)",textTransform:"uppercase",
-            pointerEvents:"none",whiteSpace:"nowrap",
-          }}>
-            Drag to rotate · Scroll to zoom
-          </div>
+          {/* Drag hint — desktop only */}
+          {screenW>=768&&(
+            <div style={{
+              position:"absolute",top:16,left:"50%",transform:"translateX(-50%)",
+              fontFamily:"'Cormorant Garamond', serif",
+              fontSize:11,letterSpacing:".16em",
+              color:"rgba(26,26,24,0.22)",textTransform:"uppercase",
+              pointerEvents:"none",whiteSpace:"nowrap",
+            }}>
+              Drag to rotate · Scroll to zoom
+            </div>
+          )}
+
+          {/* Mobile horizontal view selector */}
+          {screenW<768&&(
+            <div style={{
+              position:"absolute",bottom:10,left:"50%",transform:"translateX(-50%)",
+              display:"flex",gap:6,
+              background:"rgba(250,250,247,0.93)",
+              borderRadius:20,padding:"6px 10px",
+              backdropFilter:"blur(12px)",
+              border:`1px solid rgba(201,168,76,0.2)`,
+              boxShadow:"0 2px 12px rgba(26,26,24,0.10)",
+              zIndex:8,
+            }}>
+              {CAMERA_VIEWS.map(v=>{
+                const isA=cameraView===v.id;
+                return(
+                  <button key={v.id} onClick={()=>setCameraView(v.id as any)} style={{
+                    width:38,height:38,borderRadius:10,border:"none",cursor:"pointer",padding:0,
+                    background:isA?V.aclt:V.sf2,
+                    boxShadow:isA?`inset 0 0 0 1.5px ${V.ac}`:"none",
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    overflow:"hidden",flexShrink:0,transition:"all .2s",
+                  }}>
+                    {product?.thumbnailUrl
+                      ? <img src={product.thumbnailUrl} alt={v.label} style={{
+                          width:"100%",height:"100%",objectFit:"cover",
+                          opacity:isA?1:0.5,
+                          filter:v.id==="back"?"brightness(0.7)":v.id==="right"||v.id==="left"?"brightness(0.85)":"none",
+                          transform:v.id==="back"?"scaleX(-1)":"none",
+                        }}/>
+                      : <span style={{fontSize:14,opacity:isA?1:0.4}}>👕</span>
+                    }
+                  </button>
+                );
+              })}
+              <button onClick={()=>{
+                const mv:any=mvRef.current; if(!mv) return;
+                mv.setAttribute("auto-rotate",""); mv.setAttribute("rotation-per-second","20deg");
+                setTimeout(()=>{mv.removeAttribute("auto-rotate");mv.setAttribute("rotation-per-second","8deg");},3000);
+              }} style={{
+                width:38,height:38,borderRadius:10,padding:0,
+                border:`1.5px solid ${V.ac}`,background:`rgba(201,168,76,0.1)`,
+                cursor:"pointer",flexShrink:0,
+                display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:1,
+              }}>
+                <span style={{fontSize:13,lineHeight:1,color:V.ac}}>↻</span>
+                <span style={{fontSize:7,letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:700,color:V.ac,lineHeight:1}}>360°</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ── RIGHT: VIEW SELECTOR ─────────────────────────────────────────── */}
         <div style={{
           width:86,flexShrink:0,
-          display:"flex",flexDirection:"column",alignItems:"center",
+          display:screenW<768?"none":"flex",flexDirection:"column",alignItems:"center",
           paddingTop:16,paddingBottom:16,gap:8,
+          order:3,
           borderLeft:`1px solid rgba(26,26,24,0.07)`,
           background:V.bg,
           overflowY:"auto",
