@@ -87,54 +87,45 @@ export const DEFAULT_PATTERN_COLORS: PatternColors = {
 };
 
 // ── Print SKU → PatternDef.id mapping ────────────────────────────────────────
-// 34 golf print designs, mapped to the available pattern files.
-// File IDs match PatternDef.id in patterns.ts.
-// Designs 013–034 reuse existing files as placeholders until the physical assets
-// are dropped into public/patterns/ and the entries below are updated.
-const PRINT_PATTERN_FILES = [
-  "paisley",         // 001
-  "vines-pink",      // 002
-  "blue-floral",     // 003
-  "green-flora",     // 004
-  "tropical-bloom",  // 005
-  "carnival",        // 006
-  "ogee-warm",       // 007
-  "smiley-pink",     // 008
-  "graffiti",        // 009
-  "money-bw",        // 010
-  "orange-abstract", // 011
-  "kasha-gt015",     // 012
-  // 013–034: placeholders cycling through the 12 base files
-  "paisley",         // 013
-  "vines-pink",      // 014
-  "blue-floral",     // 015
-  "green-flora",     // 016
-  "tropical-bloom",  // 017
-  "carnival",        // 018
-  "ogee-warm",       // 019
-  "smiley-pink",     // 020
-  "graffiti",        // 021
-  "money-bw",        // 022
-  "orange-abstract", // 023
-  "kasha-gt015",     // 024
-  "paisley",         // 025
-  "vines-pink",      // 026
-  "blue-floral",     // 027
-  "green-flora",     // 028
-  "tropical-bloom",  // 029
-  "carnival",        // 030
-  "ogee-warm",       // 031
-  "smiley-pink",     // 032
-  "graffiti",        // 033
-  "money-bw",        // 034
-];
-
-export const PRINT_SKU_MAP: Record<string, string> = Object.fromEntries(
-  PRINT_PATTERN_FILES.map((id, i) => [
-    `KS1000BGP${String(i + 1).padStart(3, "0")}`,
-    id,
-  ])
-);
+// Each SKU maps directly to the PatternDef.id of the same name, which in turn
+// references the physical file public/patterns/KS1000BGP001.jpeg etc.
+// All 34 files are uploaded; this map is the canonical lookup used by parseSku().
+export const PRINT_SKU_MAP: Record<string, string> = {
+  "KS1000BGP001": "KS1000BGP001",
+  "KS1000BGP002": "KS1000BGP002",
+  "KS1000BGP003": "KS1000BGP003",
+  "KS1000BGP004": "KS1000BGP004",
+  "KS1000BGP005": "KS1000BGP005",
+  "KS1000BGP006": "KS1000BGP006",
+  "KS1000BGP007": "KS1000BGP007",
+  "KS1000BGP008": "KS1000BGP008",
+  "KS1000BGP009": "KS1000BGP009",
+  "KS1000BGP010": "KS1000BGP010",
+  "KS1000BGP011": "KS1000BGP011",
+  "KS1000BGP012": "KS1000BGP012",
+  "KS1000BGP013": "KS1000BGP013",
+  "KS1000BGP014": "KS1000BGP014",
+  "KS1000BGP015": "KS1000BGP015",
+  "KS1000BGP016": "KS1000BGP016",
+  "KS1000BGP017": "KS1000BGP017",
+  "KS1000BGP018": "KS1000BGP018",
+  "KS1000BGP019": "KS1000BGP019",
+  "KS1000BGP020": "KS1000BGP020",
+  "KS1000BGP021": "KS1000BGP021",
+  "KS1000BGP022": "KS1000BGP022",
+  "KS1000BGP023": "KS1000BGP023",
+  "KS1000BGP024": "KS1000BGP024",
+  "KS1000BGP025": "KS1000BGP025",
+  "KS1000BGP026": "KS1000BGP026",
+  "KS1000BGP027": "KS1000BGP027",
+  "KS1000BGP028": "KS1000BGP028",
+  "KS1000BGP029": "KS1000BGP029",
+  "KS1000BGP030": "KS1000BGP030",
+  "KS1000BGP031": "KS1000BGP031",
+  "KS1000BGP032": "KS1000BGP032",
+  "KS1000BGP033": "KS1000BGP033",
+  "KS1000BGP034": "KS1000BGP034",
+};
 
 // ── Parsed SKU result types ──────────────────────────────────────────────────
 
