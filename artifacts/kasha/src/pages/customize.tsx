@@ -256,6 +256,22 @@ export default function CustomizePage() {
     productType === "pattern" ? "pattern" :
     productType === "print"   ? "print"   : "solid"
   );
+
+  // ── SKU-driven flow state ─────────────────────────────────────────────────
+  // What base type is this product?
+  const skuProductType: "pattern" | "print" | "solid" =
+    (productType === "pattern" || garmentType === "pattern") ? "pattern" :
+    (productType === "print"   || garmentType === "printed") ? "print"   : "solid";
+  // For Solid products: which customisation type did the user pick?
+  const [customizationType, setCustomizationType] = useState<"color"|"print"|"pattern"|null>(null);
+  // For Pattern customisation: colour recolour or print overlay?
+  const [patternSubMode, setPatternSubMode] = useState<"color"|"print"|null>(null);
+  // For Colour customisation: full body or individual parts?
+  const [colorSubMode, setColorSubMode] = useState<"full"|"parts"|null>(null);
+
+  // ── Responsive layout ─────────────────────────────────────────────────────
+  const [screenW, setScreenW] = useState(() => typeof window !== "undefined" ? window.innerWidth : 1280);
+
   const [primaryColor, setPrimaryColor] = useState("#ffffff");
   const [sleeveLength, setSleeveLength] = useState<"half"|"full">("half");
 
@@ -444,6 +460,23 @@ export default function CustomizePage() {
     if (productType==="pattern") setStyleTab("pattern");
     else if (productType==="print") setStyleTab("print");
   }, [productType]);
+
+  // Auto-skip step 1 for pattern/print products — they jump straight to step 2
+  const autoStep1Ref = useRef(false);
+  useEffect(() => {
+    if (autoStep1Ref.current) return;
+    if (skuProductType !== "solid") {
+      autoStep1Ref.current = true;
+      setStep(2);
+    }
+  }, [skuProductType]);
+
+  // Responsive layout listener
+  useEffect(() => {
+    const handler = () => setScreenW(window.innerWidth);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
 
   // ── KA.SHA Bespoke Design handler ────────────────────────────────────────
   const handleSelectKashaDesign = useCallback(async (design: KashaDesignDef) => {
@@ -802,7 +835,7 @@ export default function CustomizePage() {
       productId:id, name:designName||`${product?.name} Custom`,
       color:primaryColor, size:effectiveSize,
       partsEnabled:{qty:effectiveQty,zoneColors,primaryColor,kdDesignId:activeKashaDesign?.id||"",activePrintId,sleeveLength},
-      canvasData:JSON.stringify({canvasJSON:JSON.stringify((fc as any).toJSON(["data"])),textureUrl:lastTextureUrlRef.current,primaryColor,kdDesignId:activeKashaDesign?.id||"",zoneColors,activePrintId,allOverPrintId,sleeveLength}),
+      canvasData:JSON.stringify({canvasJSON:JSON.stringify((fc as any).toJSON(["data"])),textureUrl:lastTextureUrlRef.current,primaryColor,kdDesignId:activeKashaDesign?.id||"",zoneColors,activePrintId,allOverPrintId,sleeveLength,productSku:product?.sku||"",skuProductType,customizationType:customizationType||(skuProductType==="print"?"print":skuProductType==="pattern"?"pattern":"color"),patternSubMode:patternSubMode||"",colorSubMode:colorSubMode||"",patColorA,patColorB}),
       previewImageUrl: views.front,
       frontImageUrl:   views.front,
       backImageUrl:    views.back,
@@ -1082,7 +1115,7 @@ export default function CustomizePage() {
           {n:3,label:"Logo & Text"},
           {n:4,label:"Sizing"},
         ] as const).map((s,i)=>{
-          const active=step===s.n; const done=step>s.n;
+          const active=step===s.n; const done=(s.n===1&&skuProductType!=="solid")||step>s.n;
           return (
             <React.Fragment key={s.n}>
               {i>0&&<div style={{flex:1,height:1,background:done?V.ac:"rgba(26,26,24,0.1)",transition:"background .3s"}}/>}
@@ -1114,13 +1147,18 @@ export default function CustomizePage() {
       </div>
 
       {/* ── WORKSPACE ──────────────────────────────────────────────────────── */}
-      <div style={{display:"flex",flex:1,overflow:"hidden"}}>
+      <div style={{display:"flex",flex:1,overflow:"hidden",flexDirection:screenW<768?"column":"row"}}>
 
         {/* ── LEFT STEP PANEL ──────────────────────────────────────────────── */}
         <div style={{
-          width:360,flexShrink:0,
+          width:screenW<768?"100%":"40%",
+          minWidth:screenW<768?undefined:280,
+          maxWidth:screenW<768?undefined:560,
+          height:screenW<768?"55vh":undefined,
+          flexShrink:0,
           display:"flex",flexDirection:"column",
-          borderRight:`1px solid rgba(26,26,24,0.07)`,
+          borderRight:screenW>=768?`1px solid rgba(26,26,24,0.07)`:undefined,
+          borderBottom:screenW<768?`1px solid rgba(26,26,24,0.07)`:undefined,
           background:V.sf,
           overflowY:"auto",
           scrollbarWidth:"thin",
@@ -1134,230 +1172,323 @@ export default function CustomizePage() {
             background:V.sf,position:"sticky",top:0,zIndex:5,
           }}>
             <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
-              {step===1&&"Choose Style"}
-              {step===2&&"Design Your Garment"}
+              {step===1&&"Choose Your Style"}
+              {step===2&&skuProductType==="print"&&"Choose Your Print"}
+              {step===2&&skuProductType==="pattern"&&(patternSubMode==="color"?"Customise Colours":patternSubMode==="print"?"Choose Print":"Customise Your Design")}
+              {step===2&&skuProductType==="solid"&&(customizationType==="color"?(colorSubMode==="full"?"Full Body Colour":colorSubMode==="parts"?"Parts Colour":"Colour Options"):customizationType==="print"?"Choose Your Print":customizationType==="pattern"?(patternSubMode==="color"?"Customise Colours":patternSubMode==="print"?"Choose Print":"Customise Pattern"):"Design Your Garment")}
               {step===3&&"Logo & Text"}
               {step===4&&"Sizing & Quantity"}
             </div>
             <div style={{fontSize:9,color:V.mu,letterSpacing:".1em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",marginTop:3}}>
-              {step===1&&"Select the base style for your garment"}
-              {step===2&&"Customise colours, prints & patterns"}
-              {step===3&&"Add your logo or custom text"}
+              {step===1&&"Start your design — choose a customisation type"}
+              {step===2&&skuProductType==="print"&&"Select a premium print pattern"}
+              {step===2&&(skuProductType==="pattern"||(skuProductType==="solid"&&customizationType==="pattern"))&&patternSubMode===null&&"Choose colour or print customisation"}
+              {step===2&&(skuProductType==="pattern"||(skuProductType==="solid"&&customizationType==="pattern"))&&patternSubMode==="color"&&"Recolour your pattern design"}
+              {step===2&&(skuProductType==="pattern"||(skuProductType==="solid"&&customizationType==="pattern"))&&patternSubMode==="print"&&"Apply a print across your pattern panels"}
+              {step===2&&skuProductType==="solid"&&customizationType==="color"&&colorSubMode===null&&"Full body or individual parts"}
+              {step===2&&skuProductType==="solid"&&customizationType==="color"&&colorSubMode==="full"&&"Apply one colour to the whole garment"}
+              {step===2&&skuProductType==="solid"&&customizationType==="color"&&colorSubMode==="parts"&&"Pick individual colours per section"}
+              {step===3&&"Upload a logo or add custom text"}
               {step===4&&"Set sizes & quantities for your order"}
             </div>
           </div>
 
           <div style={{padding:"20px 24px",display:"flex",flexDirection:"column",gap:18}}>
 
-            {/* ══════════════════ STEP 1: STYLE ══════════════════════════════ */}
+            {/* ══════════════════ STEP 1: STYLE (Solid) / Auto-loaded (Pattern/Print) ═ */}
             {step===1&&(
-              <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                <div style={{...sb}}>Select style type</div>
-                {([
-                  {id:"solid",    pm:null,        icon:"◼",label:"SOLID",      desc:"Clean base colour"},
-                  {id:"print",    pm:"fullBody",  icon:"❋",label:"PRINT",      desc:"Full-body pattern"},
-                  {id:"pattern",  pm:null,        icon:"◈",label:"PATTERN 1",  desc:"KA.SHA bespoke design"},
-                  {id:"print",    pm:"parts",     icon:"◩",label:"PATTERN 2",  desc:"Sleeve & body split"},
-                ] as {id:"solid"|"print"|"pattern",pm:"fullBody"|"parts"|null,label:string,icon:string,desc:string}[]).map((c,ci)=>{
-                  const isActive = styleTab===c.id&&(c.pm==null||printMode===c.pm);
-                  return (
-                    <div key={ci} onClick={()=>{
-                      setStyleTab(c.id);
-                      if(c.pm) setPrintMode(c.pm as "fullBody"|"parts");
-                      if(c.id==="solid"&&allOverPrintId) { /* keep solid */ }
-                    }} style={{
-                      display:"flex",alignItems:"center",gap:14,
-                      padding:"14px 16px",borderRadius:12,cursor:"pointer",
-                      border:`1.5px solid ${isActive?V.ac:V.bd}`,
-                      background:isActive?V.aclt:"transparent",
-                      transition:"all .25s cubic-bezier(.16,1,.3,1)",
-                    }}
-                    onMouseEnter={e=>{if(!isActive){(e.currentTarget as HTMLElement).style.borderColor="rgba(201,168,76,0.5)";(e.currentTarget as HTMLElement).style.background=V.sf2;}}}
-                    onMouseLeave={e=>{if(!isActive){(e.currentTarget as HTMLElement).style.borderColor=V.bd;(e.currentTarget as HTMLElement).style.background="transparent";}}}>
-                      <div style={{
-                        width:42,height:42,borderRadius:10,flexShrink:0,
-                        display:"flex",alignItems:"center",justifyContent:"center",
-                        fontSize:20,
-                        background:isActive?"rgba(201,168,76,0.18)":V.sf2,
-                        border:`1px solid ${isActive?V.ac:V.bd}`,
-                        color:isActive?V.ac:V.mu,
-                      }}>{c.icon}</div>
-                      <div style={{flex:1}}>
-                        <div style={{fontFamily:"'Jost',sans-serif",fontSize:12,fontWeight:700,letterSpacing:".08em",color:isActive?V.tx:V.mu,textTransform:"uppercase"}}>{c.label}</div>
-                        <div style={{fontSize:10,color:V.mul,marginTop:2,fontFamily:"'Jost',sans-serif"}}>{c.desc}</div>
-                      </div>
-                      {isActive&&<div style={{width:8,height:8,borderRadius:"50%",background:V.ac,flexShrink:0}}/>}
+              <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                {skuProductType!=="solid" ? (
+                  <div style={{padding:"14px",borderRadius:12,background:"rgba(201,168,76,0.07)",border:"1px solid rgba(201,168,76,0.2)"}}>
+                    <div style={{fontFamily:"'Jost',sans-serif",fontSize:12,color:V.mu,lineHeight:1.65}}>
+                      Your design has been pre-loaded from the product. Proceeding to customisation…
                     </div>
-                  );
-                })}
+                  </div>
+                ) : (
+                  <>
+                    <div style={{fontSize:13,color:V.mu,fontFamily:"'Jost',sans-serif",lineHeight:1.7,marginBottom:2}}>
+                      Start your design! Choose how you want to customise your t-shirt.
+                    </div>
+                    {([
+                      {id:"pattern" as const, icon:"◈", label:"Pattern Customisation", desc:"KA.SHA bespoke designs with recolourable zone panels"},
+                      {id:"print"   as const, icon:"❋", label:"Print Customisation",   desc:"Apply a full all-over premium print to your garment"},
+                      {id:"color"   as const, icon:"◼", label:"Colour Customisation",  desc:"Solid colours for the whole body or individual parts"},
+                    ]).map(c=>{
+                      const isActive=customizationType===c.id;
+                      return (
+                        <div key={c.id} onClick={()=>{
+                          setCustomizationType(c.id);
+                          setPatternSubMode(null);
+                          setColorSubMode(null);
+                          if(c.id==="pattern"){setStyleTab("pattern");}
+                          else if(c.id==="print"){setStyleTab("print");setPrintMode("fullBody");}
+                          else{setStyleTab("solid");}
+                          setStep(2);
+                        }} style={{
+                          display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderRadius:12,cursor:"pointer",
+                          border:`1.5px solid ${isActive?V.ac:V.bd}`,
+                          background:isActive?V.aclt:"transparent",
+                          transition:"all .25s cubic-bezier(.16,1,.3,1)",
+                        }}
+                        onMouseEnter={e=>{if(!isActive){(e.currentTarget as HTMLElement).style.borderColor="rgba(201,168,76,0.5)";(e.currentTarget as HTMLElement).style.background=V.sf2;}}}
+                        onMouseLeave={e=>{if(!isActive){(e.currentTarget as HTMLElement).style.borderColor=V.bd;(e.currentTarget as HTMLElement).style.background="transparent";}}}>
+                          <div style={{width:44,height:44,borderRadius:10,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,background:isActive?"rgba(201,168,76,0.18)":V.sf2,border:`1px solid ${isActive?V.ac:V.bd}`,color:isActive?V.ac:V.mu}}>{c.icon}</div>
+                          <div style={{flex:1}}>
+                            <div style={{fontFamily:"'Jost',sans-serif",fontSize:13,fontWeight:600,color:isActive?V.tx:V.mu}}>{c.label}</div>
+                            <div style={{fontSize:10,color:V.mul,marginTop:2,fontFamily:"'Jost',sans-serif"}}>{c.desc}</div>
+                          </div>
+                          {isActive&&<div style={{width:8,height:8,borderRadius:"50%",background:V.ac,flexShrink:0}}/>}
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             )}
 
-            {/* ══════════════════ STEP 2: DESIGN ════════════════════════════ */}
-            {step===2&&(
-              <div style={{display:"flex",flexDirection:"column",gap:18}}>
+            {/* ══════════════════ STEP 2: DESIGN (SKU-driven) ═══════════════ */}
+            {step===2&&(()=>{
+              // Determine what "mode" we are actually rendering
+              const effectiveCustType = customizationType ?? (skuProductType==="print"?"print":skuProductType==="pattern"?"pattern":null);
+              const isPatternMode = skuProductType==="pattern" || effectiveCustType==="pattern";
+              const isPrintMode   = skuProductType==="print"   || effectiveCustType==="print";
+              const isColorMode   = skuProductType==="solid"   && effectiveCustType==="color";
 
-                {/* SOLID → colour pickers */}
-                {styleTab==="solid"&&(
-                  <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                    <div style={{...sb}}>Base colour</div>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                      {MAIN_PALETTE.map(h=>swatch(h,primaryColor===h,()=>applyPrimary(h)))}
-                    </div>
-                    <button onClick={()=>setColorModalFor("base")} style={{
-                      marginTop:4,padding:"9px 16px",borderRadius:8,
-                      border:`1px solid ${V.ac}`,background:"transparent",cursor:"pointer",
-                      fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:600,letterSpacing:".08em",
-                      textTransform:"uppercase",color:V.ac,transition:"all .2s",
-                    }}
-                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=V.aclt;}}
-                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
-                      ⊕ Advanced Colour Picker
-                    </button>
+              // Back button helper
+              const BackBtn = ({label,onClick:oc}:{label:string,onClick:()=>void})=>(
+                <button onClick={oc} style={{
+                  display:"flex",alignItems:"center",gap:6,marginBottom:4,
+                  background:"none",border:"none",cursor:"pointer",padding:0,
+                  fontFamily:"'Jost',sans-serif",fontSize:10,color:V.mu,letterSpacing:".06em",textTransform:"uppercase",
+                }}>
+                  ← {label}
+                </button>
+              );
 
-                    <div style={{...sb,marginTop:8}}>Zone colours</div>
-                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                      {(["collar","leftSleeve","rightSleeve"] as const).filter(z=>zoneColors[z]!==undefined).map(z=>{
-                        const label = z==="collar"?"Collar":z==="leftSleeve"?"Left Sleeve":"Right Sleeve";
-                        return (
-                          <div key={z} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,background:V.sf2,border:`1px solid ${V.bd}`}}>
-                            <div style={{width:22,height:22,borderRadius:"50%",background:zoneColors[z as keyof typeof zoneColors]||primaryColor,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
-                            <span style={{flex:1,fontSize:11,fontFamily:"'Jost',sans-serif",color:V.tx,letterSpacing:".04em"}}>{label}</span>
-                            <button onClick={()=>setColorModalFor("base")} style={{
-                              fontSize:9,padding:"4px 10px",borderRadius:6,
-                              border:`1px solid ${V.ac}`,background:"transparent",cursor:"pointer",
-                              fontFamily:"'Jost',sans-serif",color:V.ac,letterSpacing:".06em",textTransform:"uppercase",
-                            }}>Change</button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* PRINT fullBody → all-over print selection */}
-                {styleTab==="print"&&printMode==="fullBody"&&(
-                  <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                    <div style={{...sb}}>All-over print</div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                      {PATTERNS.map(p=>{
-                        const sel=allOverPrintId===p.id;
-                        return (
-                          <div key={p.id} onClick={()=>{applyAllOverPrint(p);}} style={{
-                            borderRadius:10,overflow:"hidden",cursor:"pointer",
-                            border:`2px solid ${sel?V.ac:V.bd}`,
-                            transition:"all .2s",
-                            boxShadow:sel?`0 2px 12px rgba(201,168,76,.3)`:"none",
-                          }}>
-                            <img src={patternUrl(p.id)} alt={p.label}
-                              style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}
-                              onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
-                            <div style={{padding:"6px 8px",background:sel?V.aclt:V.sf2}}>
-                              <div style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",color:sel?V.ac:V.mu,fontWeight:sel?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.label}</div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {allOverPrintId&&(
-                      <button onClick={()=>clearAllOverPrint()} style={{
-                        padding:"8px 16px",borderRadius:8,border:`1px solid ${V.bd}`,
-                        background:"transparent",cursor:"pointer",
-                        fontFamily:"'Jost',sans-serif",fontSize:10,color:V.mu,letterSpacing:".06em",
-                      }}>✕ Remove print</button>
-                    )}
-                  </div>
-                )}
-
-                {/* PATTERN 1 → KA.SHA design selection + recolor */}
-                {styleTab==="pattern"&&(
-                  <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                    <div style={{...sb}}>KA.SHA signature designs</div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
-                      {KASHA_DESIGNS.map(d=>{
-                        const sel=activeKashaDesign?.id===d.id;
-                        return (
-                          <div key={d.id} onClick={()=>handleSelectKashaDesign(d)} style={{
-                            borderRadius:10,overflow:"hidden",cursor:"pointer",
-                            border:`2px solid ${sel?V.ac:V.bd}`,
-                            transition:"all .2s",
-                            boxShadow:sel?`0 2px 12px rgba(201,168,76,.3)`:"none",
-                          }}>
-                            {d.thumbnail
-                              ? <img src={d.thumbnail} alt={d.label} style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}/>
-                              : <div style={{width:"100%",aspectRatio:"1",background:V.sf2,display:"flex",alignItems:"center",justifyContent:"center",color:V.mu,fontSize:24}}>◈</div>
-                            }
-                            <div style={{padding:"6px 10px",background:sel?V.aclt:V.sf2}}>
-                              <div style={{fontSize:10,fontFamily:"'Jost',sans-serif",fontWeight:600,color:sel?V.ac:V.tx}}>{d.label}</div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {activeKashaDesign&&(
-                      <div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px",borderRadius:12,background:V.sf2,border:`1px solid ${V.bd}`}}>
-                        <div style={{...sb}}>Recolour design</div>
-                        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                          <div>
-                            <div style={{fontSize:9,color:V.mu,letterSpacing:".06em",fontFamily:"'Jost',sans-serif",marginBottom:4}}>DARK TONES</div>
-                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                              {DARK_SWATCHES.map(h=>swatch(h,patColorA===h,()=>setPatColorA(h)))}
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{fontSize:9,color:V.mu,letterSpacing:".06em",fontFamily:"'Jost',sans-serif",marginBottom:4}}>LIGHT TONES</div>
-                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                              {LIGHT_SWATCHES.map(h=>swatch(h,patColorB===h,()=>setPatColorB(h)))}
-                            </div>
+              // Print gallery (shared between print-product and pattern→print sub-mode)
+              const PrintGallery = ()=>(
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  <div style={{...sb}}>Choose your print</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+                    {PATTERNS.map(p=>{
+                      const sel=allOverPrintId===p.id;
+                      return (
+                        <div key={p.id} onClick={()=>{applyAllOverPrint(p);}} style={{
+                          borderRadius:10,overflow:"hidden",cursor:"pointer",
+                          border:`2px solid ${sel?V.ac:V.bd}`,transition:"all .2s",
+                          boxShadow:sel?`0 2px 12px rgba(201,168,76,.3)`:"none",
+                        }}>
+                          <img src={patternUrl(p.id)} alt={p.label}
+                            style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}
+                            onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
+                          <div style={{padding:"5px 8px",background:sel?V.aclt:V.sf2}}>
+                            <div style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",color:sel?V.ac:V.mu,fontWeight:sel?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.label}</div>
                           </div>
                         </div>
-                        <button onClick={()=>applyPatternColors(patColorA,patColorB)} disabled={patRecoloring} style={{
-                          padding:"9px 16px",borderRadius:8,border:"none",cursor:"pointer",
-                          background:V.ac,color:V.tx,fontFamily:"'Jost',sans-serif",
-                          fontSize:10,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",
-                          opacity:patRecoloring?.6:1,transition:"all .2s",
-                        }}>{patRecoloring?"Applying…":"✦ Apply Colours"}</button>
-                        <button onClick={()=>{const fc=fcRef.current;if(fc){clearKashaDesign(fc);syncTexture();}setActiveKashaDesign(null);}} style={{
-                          padding:"7px 16px",borderRadius:8,border:`1px solid ${V.bd}`,cursor:"pointer",
-                          background:"transparent",color:V.mu,fontFamily:"'Jost',sans-serif",fontSize:10,
-                        }}>✕ Remove design</button>
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
-                )}
+                  {allOverPrintId&&(
+                    <button onClick={()=>clearAllOverPrint()} style={{padding:"8px 16px",borderRadius:8,border:`1px solid ${V.bd}`,background:"transparent",cursor:"pointer",fontFamily:"'Jost',sans-serif",fontSize:10,color:V.mu,letterSpacing:".06em"}}>✕ Remove print</button>
+                  )}
+                </div>
+              );
 
-                {/* PATTERN 2 → parts print selection */}
-                {styleTab==="print"&&printMode==="parts"&&(
-                  <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                    <div style={{...sb}}>Parts print — choose pattern</div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                      {PATTERNS.map(p=>{
-                        const sel=activePrintId===p.id;
-                        return (
-                          <div key={p.id} onClick={()=>{applyAllOverPrint(p);}} style={{
-                            borderRadius:10,overflow:"hidden",cursor:"pointer",
-                            border:`2px solid ${sel?V.ac:V.bd}`,
-                            transition:"all .2s",
-                          }}>
-                            <img src={patternUrl(p.id)} alt={p.label}
-                              style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}
-                              onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
-                            <div style={{padding:"5px 6px",background:sel?V.aclt:V.sf2}}>
-                              <div style={{fontSize:8,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",color:sel?V.ac:V.mu,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.label}</div>
+              // KA.SHA design gallery + recolour (shared)
+              const PatternGallery = ()=>(
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  <div style={{...sb}}>KA.SHA signature designs</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
+                    {KASHA_DESIGNS.map(d=>{
+                      const sel=activeKashaDesign?.id===d.id;
+                      return (
+                        <div key={d.id} onClick={()=>handleSelectKashaDesign(d)} style={{
+                          borderRadius:10,overflow:"hidden",cursor:"pointer",
+                          border:`2px solid ${sel?V.ac:V.bd}`,transition:"all .2s",
+                          boxShadow:sel?`0 2px 12px rgba(201,168,76,.3)`:"none",
+                        }}>
+                          {d.thumbnail
+                            ? <img src={d.thumbnail} alt={d.label} style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}/>
+                            : <div style={{width:"100%",aspectRatio:"1",background:V.sf2,display:"flex",alignItems:"center",justifyContent:"center",color:V.mu,fontSize:24}}>◈</div>
+                          }
+                          <div style={{padding:"6px 10px",background:sel?V.aclt:V.sf2}}>
+                            <div style={{fontSize:10,fontFamily:"'Jost',sans-serif",fontWeight:600,color:sel?V.ac:V.tx}}>{d.label}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {activeKashaDesign&&(
+                    <div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px",borderRadius:12,background:V.sf2,border:`1px solid ${V.bd}`}}>
+                      <div style={{...sb}}>Recolour design</div>
+                      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                        <div>
+                          <div style={{fontSize:9,color:V.mu,letterSpacing:".06em",fontFamily:"'Jost',sans-serif",marginBottom:4}}>DARK TONES</div>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:4}}>{DARK_SWATCHES.map(h=>swatch(h,patColorA===h,()=>setPatColorA(h)))}</div>
+                        </div>
+                        <div>
+                          <div style={{fontSize:9,color:V.mu,letterSpacing:".06em",fontFamily:"'Jost',sans-serif",marginBottom:4}}>LIGHT TONES</div>
+                          <div style={{display:"flex",flexWrap:"wrap",gap:4}}>{LIGHT_SWATCHES.map(h=>swatch(h,patColorB===h,()=>setPatColorB(h)))}</div>
+                        </div>
+                      </div>
+                      <button onClick={()=>applyPatternColors(patColorA,patColorB)} disabled={patRecoloring} style={{padding:"9px 16px",borderRadius:8,border:"none",cursor:"pointer",background:V.ac,color:V.tx,fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",opacity:patRecoloring?.6:1,transition:"all .2s"}}>{patRecoloring?"Applying…":"✦ Apply Colours"}</button>
+                      <button onClick={()=>{const fc=fcRef.current;if(fc){clearKashaDesign(fc);syncTexture();}setActiveKashaDesign(null);}} style={{padding:"7px 16px",borderRadius:8,border:`1px solid ${V.bd}`,cursor:"pointer",background:"transparent",color:V.mu,fontFamily:"'Jost',sans-serif",fontSize:10}}>✕ Remove design</button>
+                    </div>
+                  )}
+                </div>
+              );
+
+              return (
+                <div style={{display:"flex",flexDirection:"column",gap:18}}>
+
+                  {/* ── PRINT product or print customisation type ─────────── */}
+                  {isPrintMode&&!isPatternMode&&(
+                    <PrintGallery/>
+                  )}
+
+                  {/* ── PATTERN product or pattern customisation type ──────── */}
+                  {isPatternMode&&(
+                    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+                      {/* Sub-mode chooser */}
+                      {patternSubMode===null&&(
+                        <>
+                          <div style={{fontSize:12,color:V.mu,fontFamily:"'Jost',sans-serif",lineHeight:1.6}}>
+                            How would you like to customise the pattern?
+                          </div>
+                          {([
+                            {id:"color" as const, icon:"◼", label:"Colour Customisation", desc:"Recolour the pattern using our curated palette"},
+                            {id:"print" as const, icon:"❋", label:"Print Overlay",        desc:"Apply a premium print across the pattern panels"},
+                          ]).map(c=>{
+                            return (
+                              <div key={c.id} onClick={()=>{
+                                setPatternSubMode(c.id);
+                                if(c.id==="print"){setStyleTab("print");setPrintMode("fullBody");}
+                                else{setStyleTab("pattern");}
+                              }} style={{
+                                display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderRadius:12,cursor:"pointer",
+                                border:`1.5px solid ${V.bd}`,background:"transparent",transition:"all .25s cubic-bezier(.16,1,.3,1)",
+                              }}
+                              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(201,168,76,0.5)";(e.currentTarget as HTMLElement).style.background=V.sf2;}}
+                              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=V.bd;(e.currentTarget as HTMLElement).style.background="transparent";}}>
+                                <div style={{width:40,height:40,borderRadius:9,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,background:V.sf2,border:`1px solid ${V.bd}`,color:V.mu}}>{c.icon}</div>
+                                <div style={{flex:1}}>
+                                  <div style={{fontFamily:"'Jost',sans-serif",fontSize:13,fontWeight:600,color:V.tx}}>{c.label}</div>
+                                  <div style={{fontSize:10,color:V.mul,marginTop:2,fontFamily:"'Jost',sans-serif"}}>{c.desc}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </>
+                      )}
+
+                      {/* Pattern → colour recolour */}
+                      {patternSubMode==="color"&&(
+                        <>
+                          <BackBtn label="Back to options" onClick={()=>setPatternSubMode(null)}/>
+                          <PatternGallery/>
+                        </>
+                      )}
+
+                      {/* Pattern → print overlay */}
+                      {patternSubMode==="print"&&(
+                        <>
+                          <BackBtn label="Back to options" onClick={()=>setPatternSubMode(null)}/>
+                          <PrintGallery/>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── SOLID product → colour customisation ──────────────── */}
+                  {isColorMode&&(
+                    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+                      {/* Sub-mode chooser: full body or parts */}
+                      {colorSubMode===null&&(
+                        <>
+                          <div style={{fontSize:12,color:V.mu,fontFamily:"'Jost',sans-serif",lineHeight:1.6}}>
+                            Apply colour to the full garment or customise individual zones?
+                          </div>
+                          {([
+                            {id:"full" as const, icon:"◼", label:"Full Body Colour", desc:"One colour applied evenly across the whole garment"},
+                            {id:"parts" as const, icon:"◩", label:"Parts Colour",   desc:"Choose different colours for collar, sleeves & body"},
+                          ]).map(c=>{
+                            return (
+                              <div key={c.id} onClick={()=>setColorSubMode(c.id)} style={{
+                                display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderRadius:12,cursor:"pointer",
+                                border:`1.5px solid ${V.bd}`,background:"transparent",transition:"all .25s cubic-bezier(.16,1,.3,1)",
+                              }}
+                              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(201,168,76,0.5)";(e.currentTarget as HTMLElement).style.background=V.sf2;}}
+                              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=V.bd;(e.currentTarget as HTMLElement).style.background="transparent";}}>
+                                <div style={{width:40,height:40,borderRadius:9,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,background:V.sf2,border:`1px solid ${V.bd}`,color:V.mu}}>{c.icon}</div>
+                                <div style={{flex:1}}>
+                                  <div style={{fontFamily:"'Jost',sans-serif",fontSize:13,fontWeight:600,color:V.tx}}>{c.label}</div>
+                                  <div style={{fontSize:10,color:V.mul,marginTop:2,fontFamily:"'Jost',sans-serif"}}>{c.desc}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </>
+                      )}
+
+                      {/* Full body colour */}
+                      {colorSubMode==="full"&&(
+                        <>
+                          <BackBtn label="Back to colour options" onClick={()=>setColorSubMode(null)}/>
+                          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                            <div style={{...sb}}>Body colour</div>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                              {MAIN_PALETTE.map(h=>swatch(h,primaryColor===h,()=>applyPrimary(h)))}
+                            </div>
+                            <button onClick={()=>setColorModalFor("base")} style={{marginTop:4,padding:"9px 16px",borderRadius:8,border:`1px solid ${V.ac}`,background:"transparent",cursor:"pointer",fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:600,letterSpacing:".08em",textTransform:"uppercase",color:V.ac,transition:"all .2s"}}
+                              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=V.aclt;}}
+                              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
+                              ⊕ Advanced Colour Picker
+                            </button>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Parts colour */}
+                      {colorSubMode==="parts"&&(
+                        <>
+                          <BackBtn label="Back to colour options" onClick={()=>setColorSubMode(null)}/>
+                          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                            <div style={{...sb}}>Base colour</div>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                              {MAIN_PALETTE.map(h=>swatch(h,primaryColor===h,()=>applyPrimary(h)))}
+                            </div>
+                            <div style={{...sb,marginTop:8}}>Zone colours</div>
+                            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                              {(["collar","leftSleeve","rightSleeve"] as const).filter(z=>zoneColors[z]!==undefined).map(z=>{
+                                const label=z==="collar"?"Collar":z==="leftSleeve"?"Left Sleeve":"Right Sleeve";
+                                return (
+                                  <div key={z} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,background:V.sf2,border:`1px solid ${V.bd}`}}>
+                                    <div style={{width:22,height:22,borderRadius:"50%",background:zoneColors[z as keyof typeof zoneColors]||primaryColor,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
+                                    <span style={{flex:1,fontSize:11,fontFamily:"'Jost',sans-serif",color:V.tx,letterSpacing:".04em"}}>{label}</span>
+                                    <button onClick={()=>setColorModalFor("base")} style={{fontSize:9,padding:"4px 10px",borderRadius:6,border:`1px solid ${V.ac}`,background:"transparent",cursor:"pointer",fontFamily:"'Jost',sans-serif",color:V.ac,letterSpacing:".06em",textTransform:"uppercase"}}>Change</button>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                    <div style={{...sb,marginTop:4}}>Base colour</div>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                      {MAIN_PALETTE.map(h=>swatch(h,primaryColor===h,()=>applyPrimary(h)))}
-                    </div>
-                  </div>
-                )}
+                        </>
+                      )}
 
-              </div>
-            )}
+                    </div>
+                  )}
+
+                  {/* Fallback: no customisation type selected yet (solid products before step 1) */}
+                  {!isPrintMode&&!isPatternMode&&!isColorMode&&(
+                    <div style={{padding:"16px",borderRadius:12,background:V.sf2,border:`1px solid ${V.bd}`,fontFamily:"'Jost',sans-serif",fontSize:12,color:V.mu,lineHeight:1.6}}>
+                      Please go back to Step 1 and choose a customisation type to get started.
+                    </div>
+                  )}
+
+                </div>
+              );
+            })()}
 
             {/* ══════════════════ STEP 3: LOGO & TEXT ══════════════════════ */}
             {step===3&&(
@@ -1449,13 +1580,22 @@ export default function CustomizePage() {
                     </div>
                   </div>
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                    {["Tinos","Playfair Display","Jost","Cormorant Garamond"].map(f=>(
+                    {[
+                      {f:"Tinos",            label:"Tinos"},
+                      {f:"Playfair Display", label:"Playfair"},
+                      {f:"Jost",             label:"Jost"},
+                      {f:"Cormorant Garamond",label:"Cormorant"},
+                      {f:"Impact",           label:"Impact"},
+                      {f:"Anton",            label:"Anton"},
+                      {f:"Bebas Neue",       label:"Bebas"},
+                      {f:"Oswald",           label:"Oswald"},
+                    ].map(({f,label})=>(
                       <button key={f} onClick={()=>setTextFont(f)} style={{
                         padding:"5px 10px",borderRadius:6,fontSize:10,fontFamily:f,
                         border:`1.5px solid ${textFont===f?V.ac:V.bd}`,
                         background:textFont===f?V.aclt:"transparent",
                         cursor:"pointer",color:textFont===f?V.tx:V.mu,transition:"all .2s",
-                      }}>{f.split(" ")[0]}</button>
+                      }}>{label}</button>
                     ))}
                   </div>
                   <button onClick={()=>{

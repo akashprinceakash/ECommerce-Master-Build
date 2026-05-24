@@ -456,7 +456,7 @@ export default function AdminPage() {
   const modelFileRef = useRef<HTMLInputElement>(null);
   const thumbFileRef = useRef<HTMLInputElement>(null);
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "orders" | "users" | "designs" | "site">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "orders" | "users" | "designs" | "site" | "skuassets">("dashboard");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
@@ -467,6 +467,11 @@ export default function AdminPage() {
   const [heroImageUrls, setHeroImageUrls] = useState<(string | null)[]>([null, null, null, null]);
   const [viewingDesign, setViewingDesign] = useState<UserDesign | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
+  // SKU Assets form state
+  const skuAssetFileRef = useRef<HTMLInputElement>(null);
+  const [skuAssetForm, setSkuAssetForm] = useState({ sku: "", assetType: "print" as "print" | "pattern" | "solid_colour" });
+  const [uploadingSkuAsset, setUploadingSkuAsset] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -496,6 +501,14 @@ export default function AdminPage() {
     queryKey: ["site-settings"],
     queryFn: () => apiFetch("/api/site-settings"),
     enabled: isAdmin === true,
+  });
+
+  const { data: skuAssets = [], isLoading: loadingSkuAssets } = useQuery<{
+    id: number; sku: string; assetType: string; fileUrl: string; fileName: string; createdAt: string;
+  }[]>({
+    queryKey: ["admin-sku-assets"],
+    queryFn: () => apiFetch("/api/admin/sku-assets"),
+    enabled: isAdmin === true && activeTab === "skuassets",
   });
 
   useEffect(() => {
@@ -735,6 +748,7 @@ export default function AdminPage() {
             { id: "users", label: "Users", icon: UserCog, count: 0 },
             { id: "designs", label: "Designs", icon: Users, count: designs.length },
             { id: "site", label: "Site", icon: ImageIcon, count: 0 },
+            { id: "skuassets", label: "SKU Assets", icon: Upload, count: skuAssets.length },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1138,6 +1152,146 @@ export default function AdminPage() {
               })}
             </div>
             <p className="mt-4 text-xs text-muted-foreground">Recommended: landscape photos, minimum 1920×1080 px. The system resizes and converts to WebP automatically.</p>
+          </div>
+        )}
+
+        {/* ── SKU ASSETS TAB ── */}
+        {activeTab === "skuassets" && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold mb-1">SKU Asset Manager</h2>
+              <p className="text-sm text-muted-foreground">
+                Upload print, pattern, or solid-colour assets tied to a specific product SKU.
+                These assets are served to the customiser to drive the design flow.
+              </p>
+            </div>
+
+            {/* Upload form */}
+            <div className="border border-border rounded-sm p-5 mb-8 bg-card">
+              <h3 className="text-sm font-semibold tracking-wide mb-4">Upload New Asset</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">Product SKU</label>
+                  <Input
+                    value={skuAssetForm.sku}
+                    onChange={e => setSkuAssetForm(f => ({ ...f, sku: e.target.value.toUpperCase() }))}
+                    placeholder="e.g. KS1000BGP001"
+                    className="rounded-none text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">Asset Type</label>
+                  <select
+                    value={skuAssetForm.assetType}
+                    onChange={e => setSkuAssetForm(f => ({ ...f, assetType: e.target.value as any }))}
+                    className="w-full h-9 border border-input bg-background px-3 text-xs rounded-none"
+                  >
+                    <option value="print">Print</option>
+                    <option value="pattern">Pattern</option>
+                    <option value="solid_colour">Solid Colour</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">File (image / texture)</label>
+                  <input
+                    ref={skuAssetFileRef}
+                    type="file"
+                    accept="image/*,.glb,.gltf"
+                    className="w-full h-9 text-xs file:mr-2 file:py-1 file:px-3 file:border-0 file:bg-muted file:text-xs file:font-medium cursor-pointer"
+                  />
+                </div>
+              </div>
+              <Button
+                disabled={uploadingSkuAsset || !skuAssetForm.sku.trim()}
+                onClick={async () => {
+                  const file = skuAssetFileRef.current?.files?.[0];
+                  if (!file || !skuAssetForm.sku.trim()) return;
+                  setUploadingSkuAsset(true);
+                  try {
+                    const fd = new FormData();
+                    fd.append("sku", skuAssetForm.sku.trim());
+                    fd.append("assetType", skuAssetForm.assetType);
+                    fd.append("file", file);
+                    await apiFetch("/api/admin/sku-assets", { method: "POST", body: fd });
+                    queryClient.invalidateQueries({ queryKey: ["admin-sku-assets"] });
+                    setSkuAssetForm({ sku: "", assetType: "print" });
+                    if (skuAssetFileRef.current) skuAssetFileRef.current.value = "";
+                    toast({ title: "Asset uploaded", description: `${skuAssetForm.sku} · ${skuAssetForm.assetType}` });
+                  } catch (e: any) {
+                    toast({ title: "Upload failed", description: e.message, variant: "destructive" });
+                  } finally {
+                    setUploadingSkuAsset(false);
+                  }
+                }}
+                className="rounded-none text-xs tracking-widest"
+              >
+                {uploadingSkuAsset ? <><Loader2 className="w-3 h-3 animate-spin mr-2" />Uploading…</> : <><Upload className="w-3 h-3 mr-2" />UPLOAD ASSET</>}
+              </Button>
+            </div>
+
+            {/* Asset list */}
+            {loadingSkuAssets ? (
+              <div className="flex items-center justify-center h-24"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+            ) : skuAssets.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground text-sm">No assets uploaded yet.</div>
+            ) : (
+              <div className="border border-border rounded-sm overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/50 border-b border-border">
+                    <tr>
+                      <th className="text-left px-4 py-2 font-semibold text-muted-foreground">SKU</th>
+                      <th className="text-left px-4 py-2 font-semibold text-muted-foreground">Type</th>
+                      <th className="text-left px-4 py-2 font-semibold text-muted-foreground">File</th>
+                      <th className="text-left px-4 py-2 font-semibold text-muted-foreground">Preview</th>
+                      <th className="text-left px-4 py-2 font-semibold text-muted-foreground">Uploaded</th>
+                      <th className="px-4 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {skuAssets.map(a => (
+                      <tr key={a.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-2.5 font-mono font-semibold text-primary">{a.sku}</td>
+                        <td className="px-4 py-2.5">
+                          <span className={`px-2 py-0.5 rounded-full font-medium ${
+                            a.assetType === "print" ? "bg-blue-50 text-blue-700" :
+                            a.assetType === "pattern" ? "bg-amber-50 text-amber-700" :
+                            "bg-emerald-50 text-emerald-700"
+                          }`}>
+                            {a.assetType}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-muted-foreground max-w-[180px] truncate">{a.fileName}</td>
+                        <td className="px-4 py-2.5">
+                          {/\.(png|jpg|jpeg|webp|gif|svg)$/i.test(a.fileName) ? (
+                            <img src={a.fileUrl} alt={a.sku} className="w-10 h-10 object-cover rounded border border-border" />
+                          ) : (
+                            <a href={a.fileUrl} target="_blank" rel="noreferrer" className="text-primary underline">View</a>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5 text-muted-foreground">{new Date(a.createdAt).toLocaleDateString()}</td>
+                        <td className="px-4 py-2.5">
+                          <button
+                            onClick={async () => {
+                              if (!confirm(`Delete asset for SKU ${a.sku}?`)) return;
+                              try {
+                                await apiFetch(`/api/admin/sku-assets/${a.id}`, { method: "DELETE" });
+                                queryClient.invalidateQueries({ queryKey: ["admin-sku-assets"] });
+                                toast({ title: "Asset deleted" });
+                              } catch (e: any) {
+                                toast({ title: "Error", description: e.message, variant: "destructive" });
+                              }
+                            }}
+                            className="p-1.5 rounded hover:bg-destructive/10 text-destructive transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 

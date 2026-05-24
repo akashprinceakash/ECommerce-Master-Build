@@ -10,6 +10,7 @@ import adminExtraRouter from "./adminExtra";
 import paymentsRouter from "./payments";
 import siteSettingsRouter from "./siteSettings";
 import r2proxyRouter from "./r2proxy";
+import skuAssetsRouter from "./skuAssets";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(adminExtraRouter);
 router.use(paymentsRouter);
 router.use(siteSettingsRouter);
 router.use(r2proxyRouter);
+router.use(skuAssetsRouter);
 
 export default router;
