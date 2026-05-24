@@ -466,9 +466,11 @@ export default function CustomizePage() {
   }, [productType]);
 
   // Auto-skip step 1 for pattern/print products — they jump straight to step 2
+  // Skip this in quick mode because quick mode always starts at step 3 (Logo & Text)
   const autoStep1Ref = useRef(false);
   useEffect(() => {
     if (autoStep1Ref.current) return;
+    if (isQuickMode) { autoStep1Ref.current = true; return; }
     if (skuProductType !== "solid") {
       autoStep1Ref.current = true;
       setStep(2);
