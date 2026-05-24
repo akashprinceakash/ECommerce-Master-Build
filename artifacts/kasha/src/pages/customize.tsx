@@ -465,13 +465,14 @@ export default function CustomizePage() {
     else if (productType==="print") setStyleTab("print");
   }, [productType]);
 
-  // Auto-skip step 1 for pattern/print products — they jump straight to step 2
+  // Auto-skip step 1 for pattern/print products — they jump straight to step 2.
+  // Only advances from step 1; does NOT override quick-mode which starts at step 3.
   const autoStep1Ref = useRef(false);
   useEffect(() => {
     if (autoStep1Ref.current) return;
     if (skuProductType !== "solid") {
       autoStep1Ref.current = true;
-      setStep(2);
+      setStep(s => s === 1 ? 2 : s);
     }
   }, [skuProductType]);
 
