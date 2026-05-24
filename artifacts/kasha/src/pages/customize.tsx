@@ -1270,7 +1270,7 @@ export default function CustomizePage() {
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
                   <div style={{...sb}}>Choose your print</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                    {PATTERNS.map(p=>{
+                    {PATTERNS.filter(p=>p.label.startsWith("GP")).map(p=>{
                       const sel=allOverPrintId===p.id;
                       return (
                         <div key={p.id} onClick={()=>{applyAllOverPrint(p);}} style={{
@@ -1278,7 +1278,7 @@ export default function CustomizePage() {
                           border:`2px solid ${sel?V.ac:V.bd}`,transition:"all .2s",
                           boxShadow:sel?`0 2px 12px rgba(201,168,76,.3)`:"none",
                         }}>
-                          <img src={patternUrl(p.id)} alt={p.label}
+                          <img src={patternUrl(p.file)} alt={p.label}
                             style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}
                             onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
                           <div style={{padding:"5px 8px",background:sel?V.aclt:V.sf2}}>
@@ -1332,6 +1332,15 @@ export default function CustomizePage() {
                         </div>
                       </div>
                       <button onClick={()=>applyPatternColors(patColorA,patColorB)} disabled={patRecoloring} style={{padding:"9px 16px",borderRadius:8,border:"none",cursor:"pointer",background:V.ac,color:V.tx,fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",opacity:patRecoloring?.6:1,transition:"all .2s"}}>{patRecoloring?"Applying…":"✦ Apply Colours"}</button>
+                      {/* Body colour */}
+                      <div style={{height:1,background:V.bd,margin:"2px 0"}}/>
+                      <div style={{fontSize:9,color:V.mu,letterSpacing:".06em",fontFamily:"'Jost',sans-serif"}}>BODY COLOUR</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                        {MAIN_PALETTE.map(h=>swatch(h,primaryColor===h,()=>applyPrimary(h)))}
+                      </div>
+                      <button onClick={()=>setColorModalFor("base")} style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${V.ac}`,background:"transparent",cursor:"pointer",fontFamily:"'Jost',sans-serif",fontSize:9,fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",color:V.ac,transition:"all .2s"}}
+                        onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=V.aclt;}}
+                        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>⊕ Advanced Body Colour</button>
                       <button onClick={()=>{const fc=fcRef.current;if(fc){clearKashaDesign(fc);syncTexture();}setActiveKashaDesign(null);}} style={{padding:"7px 16px",borderRadius:8,border:`1px solid ${V.bd}`,cursor:"pointer",background:"transparent",color:V.mu,fontFamily:"'Jost',sans-serif",fontSize:10}}>✕ Remove design</button>
                     </div>
                   )}
@@ -1532,18 +1541,37 @@ export default function CustomizePage() {
                   {logoPreview&&(
                     <div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px",borderRadius:12,background:V.sf2,border:`1px solid ${V.bd}`}}>
                       <div>
-                        <div style={{...sb}}>Position</div>
-                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>
-                          {Object.keys(LOGO_POSITIONS).map(pos=>(
-                            <button key={pos} onClick={()=>setLogoPosition(pos as any)} style={{
-                              padding:"7px 4px",borderRadius:7,fontSize:9,
-                              fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",
-                              border:`1.5px solid ${logoPosition===pos?V.ac:V.bd}`,
-                              background:logoPosition===pos?V.aclt:"transparent",
-                              cursor:"pointer",color:logoPosition===pos?V.tx:V.mu,transition:"all .2s",
-                            }}>{pos.replace(/([A-Z])/g," $1").trim()}</button>
-                          ))}
-                        </div>
+                        <div style={{...sb,marginBottom:8}}>Position</div>
+                        {(()=>{
+                          const chips=[
+                            {key:"front-chest", label:"F. Chest",  cx:30,cy:40,back:false},
+                            {key:"front-left",  label:"F. Left",   cx:21,cy:40,back:false},
+                            {key:"front-right", label:"F. Right",  cx:39,cy:40,back:false},
+                            {key:"back-center", label:"B. Center", cx:30,cy:48,back:true},
+                            {key:"back-left",   label:"B. Left",   cx:21,cy:48,back:true},
+                            {key:"back-right",  label:"B. Right",  cx:39,cy:48,back:true},
+                            {key:"left-sleeve", label:"L. Sleeve", cx:7, cy:23,back:false},
+                            {key:"right-sleeve",label:"R. Sleeve", cx:53,cy:23,back:false},
+                          ];
+                          return(
+                            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+                              {chips.map(c=>{
+                                const isA=logoPosition===c.key;
+                                const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
+                                return(
+                                  <div key={c.key} onClick={()=>{setLogoPosition(c.key as any);if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});fcRef.current?.renderAll();syncTexture();}}} style={{
+                                    display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
+                                    padding:"7px 3px",borderRadius:9,transition:"all .18s",
+                                    border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
+                                  }}>
+                                    <div style={{width:36,height:41}} dangerouslySetInnerHTML={{__html:svg}}/>
+                                    <span style={{fontSize:7,textTransform:"uppercase",letterSpacing:".05em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:V.mu,fontWeight:isA?700:400,textAlign:"center",lineHeight:1.2}}>{c.label}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div>
                         <div style={{...sb}}>Size — {logoSize}%</div>
@@ -1598,6 +1626,40 @@ export default function CustomizePage() {
                       }}>{label}</button>
                     ))}
                   </div>
+                  {/* Text placement chips */}
+                  <div>
+                    <div style={{...sb,marginBottom:8}}>Placement</div>
+                    {(()=>{
+                      const chips=[
+                        {key:"front-chest", label:"F. Chest",  cx:30,cy:40,back:false},
+                        {key:"front-left",  label:"F. Left",   cx:21,cy:40,back:false},
+                        {key:"front-right", label:"F. Right",  cx:39,cy:40,back:false},
+                        {key:"back-center", label:"B. Center", cx:30,cy:48,back:true},
+                        {key:"back-left",   label:"B. Left",   cx:21,cy:48,back:true},
+                        {key:"back-right",  label:"B. Right",  cx:39,cy:48,back:true},
+                        {key:"left-sleeve", label:"L. Sleeve", cx:7, cy:23,back:false},
+                        {key:"right-sleeve",label:"R. Sleeve", cx:53,cy:23,back:false},
+                      ];
+                      return(
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+                          {chips.map(c=>{
+                            const isA=textPosition===c.key;
+                            const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
+                            return(
+                              <div key={c.key} onClick={()=>{setTextPosition(c.key as any);if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});fcRef.current?.renderAll();syncTexture();}}} style={{
+                                display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
+                                padding:"7px 3px",borderRadius:9,transition:"all .18s",
+                                border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
+                              }}>
+                                <div style={{width:36,height:41}} dangerouslySetInnerHTML={{__html:svg}}/>
+                                <span style={{fontSize:7,textTransform:"uppercase",letterSpacing:".05em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:V.mu,fontWeight:isA?700:400,textAlign:"center",lineHeight:1.2}}>{c.label}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
                   <button onClick={()=>{
                     if(!textInput.trim())return;
                     applyText();
@@ -1610,7 +1672,7 @@ export default function CustomizePage() {
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=V.ac;(e.currentTarget as HTMLElement).style.opacity="1";}}>
                     ✦ Place Text on Garment
                   </button>
-                  <div style={{...sb,marginTop:4}}>Align</div>
+                  <div style={{...sb,marginTop:4}}>Text Align</div>
                   <div style={{display:"flex",gap:6}}>
                     {(["left","center","right"] as const).map(a=>(
                       <button key={a} onClick={()=>setTextAlign(a)} style={{
