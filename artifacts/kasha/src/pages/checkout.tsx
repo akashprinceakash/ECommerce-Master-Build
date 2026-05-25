@@ -148,8 +148,11 @@ export default function CheckoutPage() {
     } else if (!pincodeResolvedState) {
       errs.shippingPostalCode = "PIN code not recognised. Please check and try again.";
     }
-    if (!formData.shippingState)
-      errs.shippingState = "State will be filled automatically from PIN code";
+    if (!formData.shippingState) {
+      errs.shippingState = "Please select a state";
+    } else if (pincodeResolvedState && formData.shippingState !== pincodeResolvedState) {
+      errs.shippingState = `State doesn't match PIN code — expected ${pincodeResolvedState}`;
+    }
     return errs;
   }
 
@@ -534,25 +537,33 @@ export default function CheckoutPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="shippingState">State</Label>
-                  {pincodeResolvedState && (
+                  {pincodeLoading && (
                     <span className="text-[9px] text-muted-foreground flex items-center gap-1" style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.1em" }}>
-                      <MapPin className="w-2.5 h-2.5" /> Auto-detected from PIN
+                      <Loader2 className="w-2.5 h-2.5 animate-spin" /> Detecting…
+                    </span>
+                  )}
+                  {!pincodeLoading && pincodeResolvedState && (
+                    <span className="text-[9px] text-muted-foreground flex items-center gap-1" style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.1em" }}>
+                      <MapPin className="w-2.5 h-2.5" /> Auto-filled from PIN
                     </span>
                   )}
                 </div>
-                {pincodeResolvedState ? (
-                  <div className={`border rounded-none bg-secondary/20 h-10 px-3 flex items-center text-sm ${errors.shippingState ? "border-destructive" : "border-border/50"}`}>
-                    {formData.shippingState}
-                  </div>
-                ) : (
-                  <div className={`border rounded-none bg-secondary/10 h-10 px-3 flex items-center text-sm text-muted-foreground ${errors.shippingState ? "border-destructive" : "border-border/50"}`}>
-                    {pincodeLoading ? (
-                      <span className="flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> Detecting state…</span>
-                    ) : (
-                      "Enter PIN code to auto-detect"
-                    )}
-                  </div>
-                )}
+                <Select
+                  value={formData.shippingState}
+                  onValueChange={(val) => {
+                    handleChange("shippingState", val);
+                    if (errors.shippingState) setErrors(prev => ({ ...prev, shippingState: "" }));
+                  }}
+                >
+                  <SelectTrigger className={`rounded-none bg-secondary/10 ${errors.shippingState ? "border-destructive" : "border-border/50"}`}>
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60 overflow-y-auto">
+                    {INDIAN_STATES.map(state => (
+                      <SelectItem key={state} value={state}>{state}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {errors.shippingState && <p className="text-xs text-destructive mt-1">{errors.shippingState}</p>}
               </div>
 
