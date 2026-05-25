@@ -17,6 +17,7 @@ import { useState, useEffect, useRef } from "react";
 import { Loader2, ArrowLeft, Truck, X, MapPin } from "lucide-react";
 import { getApiUrl, getAssetUrl } from "@/lib/api";
 import { useAuth } from "@clerk/react";
+import { useCart } from "@/contexts/CartContext";
 
 declare global { interface Window { Razorpay?: any } }
 
@@ -54,7 +55,8 @@ export default function CheckoutPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { getToken } = useAuth();
+  const { getToken, isSignedIn } = useAuth();
+  const { guestCart, clearGuestCart } = useCart();
 
   const { data: cart, isLoading: isLoadingCart } = useGetCart({
     query: { queryKey: getGetCartQueryKey() }
@@ -63,6 +65,37 @@ export default function CheckoutPage() {
   const { data: profile } = useGetUserProfile({
     query: { queryKey: getGetUserProfileQueryKey() }
   });
+
+  // ── Sync localStorage cart → server when a guest just signed in ───────
+  const hasSyncedRef = useRef(false);
+  useEffect(() => {
+    if (!isSignedIn || isLoadingCart || hasSyncedRef.current) return;
+    if (guestCart.length === 0) return;
+    hasSyncedRef.current = true;
+
+    const doSync = async () => {
+      try {
+        const token = await getToken();
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        await Promise.all(
+          guestCart.map(item =>
+            fetch(`${getApiUrl()}/api/cart/items`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ productId: item.productId, quantity: item.quantity, size: item.size }),
+            }).catch(() => null)
+          )
+        );
+        clearGuestCart();
+        queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+      } catch {
+        hasSyncedRef.current = false;
+      }
+    };
+
+    doSync();
+  }, [isSignedIn, isLoadingCart]);
 
   const [formData, setFormData] = useState({
     shippingName: "",
