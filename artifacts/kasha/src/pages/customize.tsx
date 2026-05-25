@@ -1057,18 +1057,21 @@ export default function CustomizePage() {
       }}>
         {/* Left: back + logo */}
         <div style={{display:"flex",alignItems:"center",gap:14,minWidth:180}}>
-          <Link href={isTypeMode ? "/" : `/products/${id}`} style={{
-            color:V.mu,fontSize:11,textDecoration:"none",
-            display:"flex",alignItems:"center",gap:5,
-            padding:"5px 12px",borderRadius:40,
-            border:`1px solid rgba(201,168,76,0.25)`,
-            transition:"all 0.25s",fontWeight:500,letterSpacing:".05em",
-            fontFamily:"'Jost',sans-serif",
-          }}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.background=V.aclt;}}
-          onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(201,168,76,0.25)";e.currentTarget.style.background="transparent";}}>
+          <button
+            onClick={()=>step>1?setStep(s=>s-1):setLocation(isTypeMode?"/":`/products/${id}`)}
+            style={{
+              color:V.mu,fontSize:11,textDecoration:"none",
+              display:"flex",alignItems:"center",gap:5,
+              padding:"5px 12px",borderRadius:40,
+              border:`1px solid rgba(201,168,76,0.25)`,
+              background:"transparent",cursor:"pointer",
+              transition:"all 0.25s",fontWeight:500,letterSpacing:".05em",
+              fontFamily:"'Jost',sans-serif",
+            }}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.background=V.aclt;}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(201,168,76,0.25)";e.currentTarget.style.background="transparent";}}>
             ← Back
-          </Link>
+          </button>
           <div style={{width:1,height:18,background:`rgba(26,26,24,0.1)`}}/>
           <img
             src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Horizontal%20logo%20coloured%20(350%20by%2075)%20(1).svg"
@@ -2087,19 +2090,18 @@ export default function CustomizePage() {
           }}>
             {/* Back */}
             <button
-              onClick={()=>setStep(s=>Math.max(1,s-1))}
-              disabled={step===1}
+              onClick={()=>step>1?setStep(s=>s-1):setLocation(isTypeMode?"/":`/products/${id}`)}
               style={{
                 flex:1,padding:"11px 0",borderRadius:99,
-                border:`1.5px solid ${step===1?"rgba(26,26,24,0.12)":V.bd}`,
+                border:`1.5px solid ${V.bd}`,
                 background:"transparent",
-                color:step===1?V.mu:V.tx,
-                fontSize:11,fontWeight:500,cursor:step===1?"default":"pointer",
+                color:V.tx,
+                fontSize:11,fontWeight:500,cursor:"pointer",
                 fontFamily:"'Jost',sans-serif",letterSpacing:".06em",
                 transition:"all 0.25s",
               }}
-              onMouseEnter={e=>{if(step>1){e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.ac;}}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor=step===1?"rgba(26,26,24,0.12)":V.bd;e.currentTarget.style.color=step===1?V.mu:V.tx;}}>
+              onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.ac;}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.tx;}}>
               ← Back
             </button>
 
