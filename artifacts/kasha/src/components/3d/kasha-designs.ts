@@ -262,6 +262,9 @@ export async function applyKashaDesign(
  * Place zone textures, applying patColorA to channel-A pixels and tiling
  * printImageUrl into channel-B pixels — so the print fills exactly the same
  * accent-shape areas that the colour-picker recolours.
+ *
+ * Uses fetch() to load the print image so that the canvas is never tainted
+ * and getImageData() always succeeds (same-origin fetch → blob URL).
  */
 export async function applyKashaDesignWithPrint(
   fc:            fabric.Canvas,
@@ -271,17 +274,24 @@ export async function applyKashaDesignWithPrint(
 ): Promise<void> {
   clearKashaDesign(fc);
 
-  // ── Load & tile the print image once ──────────────────────────────────────
+  // ── Load print image via fetch → blob URL (avoids canvas CORS taint) ──────
   const TILE = 192;
   let printData: ImageData | null = null;
   let tileW = TILE, tileH = TILE;
   try {
-    const pImg = await loadImageEl(printImageUrl);
-    const pc = document.createElement("canvas");
-    pc.width = TILE; pc.height = TILE;
-    pc.getContext("2d")!.drawImage(pImg, 0, 0, TILE, TILE);
-    printData = pc.getContext("2d")!.getImageData(0, 0, TILE, TILE);
-    tileW = TILE; tileH = TILE;
+    const resp     = await fetch(printImageUrl);
+    const blob     = await resp.blob();
+    const blobUrl  = URL.createObjectURL(blob);
+    try {
+      const pImg = await loadImageEl(blobUrl);
+      const pc   = document.createElement("canvas");
+      pc.width = TILE; pc.height = TILE;
+      pc.getContext("2d")!.drawImage(pImg, 0, 0, TILE, TILE);
+      printData = pc.getContext("2d")!.getImageData(0, 0, TILE, TILE);
+      tileW = TILE; tileH = TILE;
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
   } catch { /* print unavailable — channel B kept as-is */ }
 
   const nA = hexToRgb(patColorA);

@@ -3420,12 +3420,9 @@ export default function CustomizePage() {
                     } else if(printModalFor==="collar"){
                       applyZonePrint("collar",p);
                     } else if(printModalFor==="accent"){
-                      // Pattern Design — same 5 zones as applyPatternColors/applyKashaDesign
-                      applyZonePrint("front",p);
-                      applyZonePrint("back",p);
-                      applyZonePrint("collar",p);
-                      applyZonePrint("leftSleeve",p);
-                      applyZonePrint("rightSleeve",p);
+                      // Pattern Design — tile print into the exact same shaped zones
+                      // that applyPatternColors colours (fetch-based, no CORS taint)
+                      applyPatternDesignPrint(p);
                     } else {
                       applyAllOverPrint(p); // "all" — full garment
                     }
