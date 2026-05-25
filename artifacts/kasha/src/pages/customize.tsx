@@ -389,8 +389,10 @@ export default function CustomizePage() {
   // ── Design name ──────────────────────────────────────────────────────────
   const { data: existing } = useQuery<any>({
     queryKey: ["customization", id],
-    queryFn:  () => apiFetch(`/api/customizations/product/${id}/latest`),
+    queryFn:  () => apiFetch(`/api/customizations/product/${id}/latest`).catch(() => null),
     enabled:  !!id && !!user,
+    retry:    false,
+    staleTime: 30_000,
   });
 
   // ── Load model-viewer script ─────────────────────────────────────────────

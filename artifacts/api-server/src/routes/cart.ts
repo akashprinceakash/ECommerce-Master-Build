@@ -25,8 +25,10 @@ async function buildCartResponse(userId: string) {
       const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId));
       let customization = null;
       if (item.customizationId) {
-        const [c] = await db.select().from(customizationsTable).where(eq(customizationsTable.id, item.customizationId));
-        customization = c ?? null;
+        try {
+          const [c] = await db.select().from(customizationsTable).where(eq(customizationsTable.id, item.customizationId));
+          customization = c ?? null;
+        } catch { /* schema mismatch — return item without customization detail */ }
       }
       return { ...item, product, customization };
     })
