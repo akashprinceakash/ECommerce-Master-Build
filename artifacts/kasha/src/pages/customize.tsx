@@ -355,7 +355,7 @@ export default function CustomizePage() {
   const [sizeMode, setSizeMode] = useState<"standard"|"custom">("standard");
   const [sizeQty, setSizeQty] = useState<Record<string,number>>({S:0,M:0,L:0,XL:0,XXL:0});
   const [colorModalFor, setColorModalFor] = useState<"all"|"base"|"pattern"|"base-body"|"collar"|null>(null);
-  const [printModalFor, setPrintModalFor] = useState<"all"|"base-body"|"collar"|null>(null);
+  const [printModalFor, setPrintModalFor] = useState<"all"|"base-body"|"collar"|"accent"|null>(null);
   const [bgRemoving, setBgRemoving] = useState(false);
   const historyStack = useRef<string[]>([]);
   const historyIdx = useRef(-1);
@@ -1309,7 +1309,7 @@ export default function CustomizePage() {
                 const TargetRow = ({title,desc,showColour,colourFor,showPrint,printFor}:{
                   title:string; desc?:string;
                   showColour?:boolean; colourFor?:"all"|"base"|"pattern"|"base-body"|"collar";
-                  showPrint?:boolean; printFor?:"all"|"base-body"|"collar";
+                  showPrint?:boolean; printFor?:"all"|"base-body"|"collar"|"accent";
                 }) => (
                   <div style={{padding:"14px 16px",borderRadius:12,border:`1px solid ${V.bd}`,background:V.sf2,display:"flex",flexDirection:"column",gap:10}}>
                     <div>
@@ -1364,7 +1364,7 @@ export default function CustomizePage() {
                     {isPatternMode&&(
                       <>
                         <TargetRow title="Base Body" desc="Background body colour and all-over print" showColour colourFor="all" showPrint printFor="all"/>
-                        <TargetRow title="Pattern Design" desc="Recolour accent panels, trims, collar and sleeves" showColour colourFor="base" showPrint printFor="all"/>
+                        <TargetRow title="Pattern Design" desc="Recolour accent panels, trims, collar and sleeves" showColour colourFor="base" showPrint printFor="accent"/>
                         {activeKashaDesign&&(
                           <div style={{padding:"10px 14px",borderRadius:10,background:V.sf2,border:`1px solid ${V.bd}`,display:"flex",gap:10,alignItems:"center"}}>
                             {activeKashaDesign.thumbnail&&<img src={activeKashaDesign.thumbnail} alt="" style={{width:36,height:36,objectFit:"cover",borderRadius:6,border:`1px solid ${V.bd}`,flexShrink:0}}/>}
@@ -3338,6 +3338,11 @@ export default function CustomizePage() {
                       applyZonePrint("leftSleeve",p); applyZonePrint("rightSleeve",p);
                     } else if(printModalFor==="collar"){
                       applyZonePrint("collar",p);
+                    } else if(printModalFor==="accent"){
+                      // Pattern Design accent zones: collar + sleeves
+                      applyZonePrint("collar",p);
+                      applyZonePrint("leftSleeve",p);
+                      applyZonePrint("rightSleeve",p);
                     } else {
                       applyAllOverPrint(p); // "all" — full garment
                     }
