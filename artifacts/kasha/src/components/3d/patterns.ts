@@ -66,6 +66,7 @@ export const PATTERNS: PatternDef[] = [
   { id: "KS1000BGP032", label: "GP 032", file: "KS1000BGP032.jpeg", swatchColors: ["#4a6b1a", "#c9a84c"] },
   { id: "KS1000BGP033", label: "GP 033", file: "KS1000BGP033.jpeg", swatchColors: ["#1a1a6b", "#e8633c"] },
   { id: "KS1000BGP034", label: "GP 034", file: "KS1000BGP034.jpeg", swatchColors: ["#6b4a4a", "#39b6c7"] },
+  { id: "KS1000BGP035", label: "GP 035", file: "KS1000BGP035.png",  swatchColors: ["#7a1535", "#f5c84a", "#39b6c7", "#e6188a"] },
 ];
 
 export type PatternZone = "all" | "front" | "back" | "leftSleeve" | "rightSleeve" | "collar";
