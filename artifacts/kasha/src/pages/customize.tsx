@@ -1627,7 +1627,7 @@ export default function CustomizePage() {
                       </div>)}
                       <div>
                         <div style={{...sb}}>Size — {logoSize}%</div>
-                        <input type="range" min={5} max={60} value={logoSize} onChange={e=>setLogoSize(+e.target.value)}
+                        <input type="range" min={5} max={60} value={logoSize} onChange={e=>{const v=+e.target.value;setLogoSize(v);if(logoObjRef.current){logoObjRef.current.scaleToWidth(Math.round(v*(1024/100)));logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
                           style={{width:"100%",accentColor:V.tx,cursor:"pointer",height:4,borderRadius:2,
                             background:`linear-gradient(to right,${V.tx} 0%,${V.tx} ${Math.round((logoSize-5)/55*100)}%,#c4bfb8 ${Math.round((logoSize-5)/55*100)}%,#c4bfb8 100%)`}}/>
                       </div>
@@ -1666,7 +1666,7 @@ export default function CustomizePage() {
                     <div>
                       <div style={{...sb}}>Size</div>
                       <input type="range" min={14} max={80} value={textFontSize}
-                        onChange={e=>setTextFontSize(+e.target.value)}
+                        onChange={e=>{const v=+e.target.value;setTextFontSize(v);if(textObjRef.current){textObjRef.current.set({fontSize:v});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
                         style={{width:80,accentColor:V.tx,cursor:"pointer",height:4,borderRadius:2,
                           background:`linear-gradient(to right,${V.tx} 0%,${V.tx} ${Math.round((textFontSize-14)/66*100)}%,#c4bfb8 ${Math.round((textFontSize-14)/66*100)}%,#c4bfb8 100%)`}}/>
                       <div style={{fontSize:9,color:V.mu,textAlign:"center",fontFamily:"'Jost',sans-serif"}}>{textFontSize}px</div>
