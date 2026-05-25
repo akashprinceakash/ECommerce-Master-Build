@@ -94,12 +94,12 @@ const PART_ZONES: { id: Exclude<PatternZone,"all">; label: string }[] = [
 //   leftSleeve:  { left:210, top:4,   w:398, h:170 }
 //   rightSleeve: { left:617, top:2,   w:398, h:171 }
 const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
-  "front-chest": { left: 255, top: 620 },  // center-x of front zone, lower chest
-  "front-left":  { left: 147, top: 620 },  // left quarter of front zone
-  "front-right": { left: 363, top: 620 },  // right quarter of front zone
-  "back-center": { left: 765, top: 520 },  // center-x of back zone, lower
-  "back-left":   { left: 645, top: 520 },  // left quarter of back zone
-  "back-right":  { left: 886, top: 520 },  // right quarter of back zone
+  "front-chest": { left: 255, top: 490 },  // center-x of front zone, just below chest
+  "front-left":  { left: 147, top: 490 },  // left quarter of front zone, just below chest
+  "front-right": { left: 363, top: 490 },  // right quarter of front zone, just below chest
+  "back-center": { left: 765, top: 460 },  // center-x of back zone, upper back
+  "back-left":   { left: 645, top: 460 },  // left quarter of back zone
+  "back-right":  { left: 886, top: 460 },  // right quarter of back zone
   "left-sleeve": { left: 409, top: 120 },  // center of leftSleeve zone
   "right-sleeve":{ left: 816, top: 120 },  // center of rightSleeve zone
 };

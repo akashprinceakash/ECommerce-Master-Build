@@ -15,7 +15,7 @@ export default function TermsPage() {
     <Layout>
       <LegalPage title="Terms of Service" updated="15 May 2026">
         <Section title="1. Acceptance of Terms">
-          <p>By accessing or placing an order on ka-sha.com ("Site"), you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree, please do not use the Site.</p>
+          <p>By accessing or placing an order on www.kashaonline.in("Site"), you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree, please do not use the Site.</p>
         </Section>
         <Section title="2. Products & Bespoke Orders">
           <p>Ka.Sha offers premium golf and sportswear, including bespoke customised garments. Product descriptions and images are provided in good faith. Slight variations in colour between screen display and actual fabric are inherent to the manufacturing process and not grounds for a refund.</p>
