@@ -71,8 +71,8 @@ const SLIDES = [
     eyebrow: "New Season · Golf Collection 2026",
     title:   (<>Crafted for players<br />Bespoke prints.Try our custom studio.</>),
     sub:     SHOW_KIDS ? "Men · Women · Kids · Custom" : "Men · Women",
-    primary: { label: "CUSTOM STUDIO",    href: "/products?gender=men" },
-    outline: SHOW_CUSTOMIZATION ? { label: "Custom Studio", href: "/products/1/customize" } : undefined,
+    primary: { label: "CUSTOM STUDIO",    href: "/products/1/customize" },
+    outline: undefined,
   },
 ] as const;
 
