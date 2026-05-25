@@ -38,7 +38,7 @@ async function checkAdmin(req: Request): Promise<boolean> {
 }
 
 // GET /api/sku-assets — public (for customizer)
-router.get("/api/sku-assets", async (_req: Request, res: Response): Promise<void> => {
+router.get("/sku-assets", async (_req: Request, res: Response): Promise<void> => {
   try {
     const rows = await db.select().from(skuAssetsTable).orderBy(desc(skuAssetsTable.createdAt));
     res.json(rows);
@@ -48,7 +48,7 @@ router.get("/api/sku-assets", async (_req: Request, res: Response): Promise<void
 });
 
 // GET /api/admin/sku-assets — admin list
-router.get("/api/admin/sku-assets", requireAuth, async (req: Request, res: Response): Promise<void> => {
+router.get("/admin/sku-assets", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!(await checkAdmin(req))) { res.status(403).json({ error: "Forbidden" }); return; }
   try {
     const rows = await db.select().from(skuAssetsTable).orderBy(desc(skuAssetsTable.createdAt));
@@ -70,7 +70,7 @@ router.get("/api/admin/sku-assets", requireAuth, async (req: Request, res: Respo
 
 // POST /api/admin/sku-assets — upload asset
 router.post(
-  "/api/admin/sku-assets",
+  "/admin/sku-assets",
   requireAuth,
   uploadAsset.single("file"),
   async (req: Request, res: Response): Promise<void> => {
@@ -131,7 +131,7 @@ router.post(
 );
 
 // DELETE /api/admin/sku-assets/:id
-router.delete("/api/admin/sku-assets/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
+router.delete("/admin/sku-assets/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   if (!(await checkAdmin(req))) { res.status(403).json({ error: "Forbidden" }); return; }
   try {
     const id = parseInt(req.params["id"] as string, 10);
@@ -151,7 +151,7 @@ router.delete("/api/admin/sku-assets/:id", requireAuth, async (req: Request, res
 });
 
 // Serve local sku-asset files
-router.get("/api/public/sku-assets/:filename", (req: Request, res: Response): void => {
+router.get("/public/sku-assets/:filename", (req: Request, res: Response): void => {
   const filename = path.basename(req.params["filename"] as string);
   const filepath = path.join(SKU_ASSETS_DIR, filename);
   if (!fs.existsSync(filepath)) { res.status(404).end(); return; }

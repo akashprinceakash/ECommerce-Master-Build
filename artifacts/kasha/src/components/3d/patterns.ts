@@ -15,20 +15,6 @@ export interface PatternDef {
 }
 
 export const PATTERNS: PatternDef[] = [
-  // ── Legacy prints (fabric/custom mode) ────────────────────────────────────
-  { id: "paisley",         label: "P1",  file: "paisley.jpg",         swatchColors: ["#7a2030", "#f5c84a", "#39b6c7"] },
-  { id: "vines-pink",      label: "P2",  file: "vines-pink.jpg",      swatchColors: ["#f6dce0", "#a4626a", "#e88a9a"] },
-  { id: "blue-floral",     label: "P3",  file: "blue-floral.jpg",     swatchColors: ["#103a5a", "#cdb893", "#f0e8d2"] },
-  { id: "green-flora",     label: "P4",  file: "green-flora.jpg",     swatchColors: ["#7fae3a", "#7a4a9b", "#e8633c"] },
-  { id: "tropical-bloom",  label: "P5",  file: "tropical-bloom.jpg",  swatchColors: ["#152233", "#e87a48", "#7fae73"] },
-  { id: "carnival",        label: "P6",  file: "carnival.jpg",        swatchColors: ["#152244", "#f4b400", "#e76b8a"] },
-  { id: "ogee-warm",       label: "P7",  file: "ogee-warm.jpg",       swatchColors: ["#a04030", "#1f6e64", "#d8a878"] },
-  { id: "smiley-pink",     label: "P8",  file: "smiley-pink.jpg",     swatchColors: ["#e6188a", "#f5dc56"] },
-  { id: "graffiti",        label: "P9",  file: "graffiti.jpg",        swatchColors: ["#dc1e4a", "#f4a000", "#ffffff"] },
-  { id: "money-bw",        label: "P10", file: "money-bw.jpg",        swatchColors: ["#f4ecd7", "#1a1a1a"] },
-  { id: "orange-abstract", label: "P11", file: "orange-abstract.jpg", swatchColors: ["#ed7c2a", "#3552c0"] },
-  { id: "kasha-gt015",     label: "P12", file: "kasha.png",           swatchColors: ["#000000", "#F0CED2"] },
-
   // ── KA.SHA Golf Print Collection (KS1000BGP001–034) ───────────────────────
   // Files are named exactly as their SKU with .jpeg extension.
   // swatchColors are extracted dominant hues for the picker UI.
