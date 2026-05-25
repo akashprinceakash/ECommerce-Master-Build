@@ -1,0 +1,136 @@
+Here is the complete, consolidated prompt based on both the FRD PDF and the additional notes:
+
+---
+
+## Ka.Sha Golfwear — T-Shirt Customization Engine: Full Product Prompt
+
+---
+
+### Global Rules (apply to every step)
+
+- A **persistent progress bar** sits at the top at all times: `1. Style → 2. Design → 3. Logo & Text → 4. Sizing`
+- A **persistent bottom navigation bar** on every step: `← Back` | `Continue →` | `Add to Cart` (cart is accessible at any stage)
+- All user selections, uploads, colours, and text must be **retained in state** when navigating back and forth — nothing resets
+- A **3D rotating model** shows the t-shirt live. User can **pause/resume the rotation** via a toggle button on the canvas
+- A short **on-screen instruction** appears above each step's panel
+
+---
+
+### Step 1 — Choose product style
+
+Display a horizontal, scrollable thumbnail grid with one representative t-shirt image per style:
+
+- Solid
+- Print
+- Pattern 1
+- Pattern 2
+- Pattern 3
+- Pattern 4
+- Pattern 5
+
+Clicking any thumbnail **instantly loads that style's mesh onto the 3D canvas**. For pattern types, the default SKU colour combination auto-applies (e.g. KS1001B-SB loads with Sky Blue + Black). For print types, the default print auto-applies (e.g. KS1000BGP001).
+
+---
+
+### Step 2 — Design (colour / print)
+
+The customization panel is **conditional based on the style selected in Step 1.**
+
+---
+
+**Case A — Pattern t-shirt selected**
+
+Two customization targets:
+
+1. **Base body**
+   - Colour → opens Colour pop-up
+   - Print → opens Print library pop-up
+
+2. **Pattern design** (covers all accent panels, trims, side panels, collar simultaneously)
+   - Colour → opens Colour pop-up
+   - Print → opens Print library pop-up
+
+---
+
+**Case B — Print t-shirt selected**
+
+Three customization targets:
+
+1. **Full body** → opens Print library pop-up (applies print to entire shirt)
+2. **Base body** (full body excluding collar) → opens Print library pop-up (applies only to base body)
+3. **Collar**
+   - Colour → opens Colour pop-up
+   - Print → opens Print library pop-up
+
+---
+
+**Case C — Solid t-shirt selected**
+
+Three customization targets:
+
+1. **Full body**
+   - Colour → opens Colour pop-up
+   - Print → opens Print library pop-up (applies to full body)
+
+2. **Base body** (full body excluding collar)
+   - Colour → opens Colour pop-up
+   - Print → opens Print library pop-up (applies only to base body)
+
+3. **Collar**
+   - Colour → opens Colour pop-up
+   - Print → opens Print library pop-up (applies only to collar)
+
+---
+
+**Pop-up specs (both types):**
+
+Colour pop-up:
+- Preset colour swatches: White, Black, Navy, Green, Red (and more)
+- Advanced colour wheel / spectrum canvas
+- Eyedropper / colour picker tool
+- `Cancel` and `Apply` buttons
+
+Print library pop-up:
+- Grid of print swatch thumbnails
+- User selects one, clicks `Apply`
+- `Cancel` and `Apply` buttons
+
+Every selection **updates the 3D canvas in real time.**
+
+---
+
+### Step 3 — Logo & text
+
+**Add logo / image:**
+- Upload image button
+- One-click "Remove image background" toggle
+- Uploaded asset is constrained inside a pre-fixed bounding box on the canvas (drag and resize allowed within bounds only)
+
+**Add text:**
+- Text input field
+- Font selector (dropdown with corporate/sport typography presets)
+- Size slider
+- Colour picker (routes to the same colour pop-up)
+- Alignment: Left / Centre / Right
+
+**Text placement positions** (user selects where the text appears on the shirt):
+- Front: Left chest / Centre (stomach) / Right chest
+- Back: Top / Centre (near stomach)
+- Left sleeve
+- Right sleeve
+
+---
+
+### Step 4 — Sizing & order matrix
+
+Mode toggle: **Standard wholesale sizes** | **Custom specification form**
+
+Standard mode shows a quantity input grid:
+
+| S | M | L | XL | XXL | Running total |
+|---|---|---|----|-----|---------------|
+| input | input | input | input | input | auto-sum |
+
+A callout box at the bottom: "Looking for special custom tailoring or large bulk quantities? Connect with us directly via WhatsApp."
+
+---

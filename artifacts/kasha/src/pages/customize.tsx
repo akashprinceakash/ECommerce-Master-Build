@@ -270,6 +270,15 @@ export default function CustomizePage() {
   const [colorSubMode, setColorSubMode] = useState<"full"|"parts"|null>(null);
 
   const [showOtherDesigns, setShowOtherDesigns] = useState(false);
+  // User-selected style from Step 1 (overrides SKU-derived type)
+  const [userStyle, setUserStyle] = useState<"solid"|"print"|"pattern"|null>(null);
+  const [userChosenDesignId, setUserChosenDesignId] = useState<string|null>(null);
+  // Effective type — user choice wins, falls back to SKU-driven type
+  const effectiveSkuType: "pattern"|"print"|"solid" =
+    userStyle === "pattern" ? "pattern" :
+    userStyle === "print"   ? "print"   :
+    userStyle === "solid"   ? "solid"   :
+    skuProductType;
 
   // ── Responsive layout ─────────────────────────────────────────────────────
   const [screenW, setScreenW] = useState(() => typeof window !== "undefined" ? window.innerWidth : 1280);
@@ -465,16 +474,7 @@ export default function CustomizePage() {
     else if (productType==="print") setStyleTab("print");
   }, [productType]);
 
-  // Auto-skip step 1 for pattern/print products — they jump straight to step 2.
-  // Only advances from step 1; does NOT override quick-mode which starts at step 3.
-  const autoStep1Ref = useRef(false);
-  useEffect(() => {
-    if (autoStep1Ref.current) return;
-    if (skuProductType !== "solid") {
-      autoStep1Ref.current = true;
-      setStep(s => s === 1 ? 2 : s);
-    }
-  }, [skuProductType]);
+  // All users start at Step 1 to choose their style (no auto-advance)
 
   // Responsive layout listener
   useEffect(() => {
@@ -1124,7 +1124,7 @@ export default function CustomizePage() {
           {n:3,label:"Logo & Text"},
           {n:4,label:"Sizing"},
         ] as const).map((s,i)=>{
-          const active=step===s.n; const done=(s.n===1&&skuProductType!=="solid")||step>s.n;
+          const active=step===s.n; const done=step>s.n;
           return (
             <React.Fragment key={s.n}>
               {i>0&&<div style={{flex:1,height:2,borderRadius:2,background:done?V.ac:"rgba(26,26,24,0.14)",transition:"background .3s",margin:"0 4px"}}/>}
@@ -1185,21 +1185,17 @@ export default function CustomizePage() {
           }}>
             <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
               {step===1&&"Choose Your Style"}
-              {step===2&&skuProductType==="print"&&"Choose Your Print"}
-              {step===2&&skuProductType==="pattern"&&(patternSubMode==="color"?"Customise Colours":patternSubMode==="print"?"Choose Print":"Customise Your Design")}
-              {step===2&&skuProductType==="solid"&&(customizationType==="color"?(colorSubMode==="full"?"Full Body Colour":colorSubMode==="parts"?"Parts Colour":"Colour Options"):customizationType==="print"?"Choose Your Print":customizationType==="pattern"?(patternSubMode==="color"?"Customise Colours":patternSubMode==="print"?"Choose Print":"Customise Pattern"):"Design Your Garment")}
+              {step===2&&effectiveSkuType==="print"&&"Choose Your Print"}
+              {step===2&&effectiveSkuType==="pattern"&&"Customise Your Design"}
+              {step===2&&effectiveSkuType==="solid"&&"Colour & Print Options"}
               {step===3&&"Logo & Text"}
               {step===4&&"Sizing & Quantity"}
             </div>
             <div style={{fontSize:9,color:V.mu,letterSpacing:".1em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",marginTop:3}}>
               {step===1&&"Start your design — choose a customisation type"}
-              {step===2&&skuProductType==="print"&&"Select a premium print pattern"}
-              {step===2&&(skuProductType==="pattern"||(skuProductType==="solid"&&customizationType==="pattern"))&&patternSubMode===null&&"Choose colour or print customisation"}
-              {step===2&&(skuProductType==="pattern"||(skuProductType==="solid"&&customizationType==="pattern"))&&patternSubMode==="color"&&"Recolour your pattern design"}
-              {step===2&&(skuProductType==="pattern"||(skuProductType==="solid"&&customizationType==="pattern"))&&patternSubMode==="print"&&"Apply a print across your pattern panels"}
-              {step===2&&skuProductType==="solid"&&customizationType==="color"&&colorSubMode===null&&"Full body or individual parts"}
-              {step===2&&skuProductType==="solid"&&customizationType==="color"&&colorSubMode==="full"&&"Apply one colour to the whole garment"}
-              {step===2&&skuProductType==="solid"&&customizationType==="color"&&colorSubMode==="parts"&&"Pick individual colours per section"}
+              {step===2&&effectiveSkuType==="print"&&"Choose prints per garment section"}
+              {step===2&&effectiveSkuType==="pattern"&&"Customise body colour and pattern design"}
+              {step===2&&effectiveSkuType==="solid"&&"Apply colours and prints to each section"}
               {step===3&&"Upload a logo or add custom text"}
               {step===4&&"Set sizes & quantities for your order"}
             </div>
@@ -1207,59 +1203,179 @@ export default function CustomizePage() {
 
           <div style={{padding:screenW<768?"14px 16px":"20px 24px",display:"flex",flexDirection:"column",gap:18,overflowX:"hidden",boxSizing:"border-box" as const,minWidth:0}}>
 
-            {/* ══════════════════ STEP 1: STYLE (Solid) / Auto-loaded (Pattern/Print) ═ */}
+            {/* ══════════════════ STEP 1: CHOOSE STYLE ══════════════════════ */}
             {step===1&&(
-              <div style={{display:"flex",flexDirection:"column",gap:14}}>
-                {skuProductType!=="solid" ? (
-                  <div style={{padding:"14px",borderRadius:12,background:"rgba(201,168,76,0.07)",border:"1px solid rgba(201,168,76,0.2)"}}>
-                    <div style={{fontFamily:"'Jost',sans-serif",fontSize:12,color:V.mu,lineHeight:1.65}}>
-                      Your design has been pre-loaded from the product. Proceeding to customisation…
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{fontSize:13,color:V.mu,fontFamily:"'Jost',sans-serif",lineHeight:1.7,marginBottom:2}}>
-                      Start your design! Choose how you want to customise your t-shirt.
-                    </div>
-                    {([
-                      {id:"pattern" as const, icon:"◈", label:"Pattern Customisation", desc:"KA.SHA bespoke designs with recolourable zone panels"},
-                      {id:"print"   as const, icon:"❋", label:"Print Customisation",   desc:"Apply a full all-over premium print to your garment"},
-                      {id:"color"   as const, icon:"◼", label:"Colour Customisation",  desc:"Solid colours for the whole body or individual parts"},
-                    ]).map(c=>{
-                      const isActive=customizationType===c.id;
-                      return (
-                        <div key={c.id} onClick={()=>{
-                          setCustomizationType(c.id);
-                          setPatternSubMode(null);
-                          setColorSubMode(null);
-                          if(c.id==="pattern"){setStyleTab("pattern");}
-                          else if(c.id==="print"){setStyleTab("print");setPrintMode("fullBody");}
-                          else{setStyleTab("solid");}
-                          setStep(2);
-                        }} style={{
-                          display:"flex",alignItems:"center",gap:14,padding:"14px 16px",borderRadius:12,cursor:"pointer",
-                          border:`1.5px solid ${isActive?V.ac:V.bd}`,
-                          background:isActive?V.aclt:"transparent",
-                          transition:"all .25s cubic-bezier(.16,1,.3,1)",
-                        }}
-                        onMouseEnter={e=>{if(!isActive){(e.currentTarget as HTMLElement).style.borderColor="rgba(201,168,76,0.5)";(e.currentTarget as HTMLElement).style.background=V.sf2;}}}
-                        onMouseLeave={e=>{if(!isActive){(e.currentTarget as HTMLElement).style.borderColor=V.bd;(e.currentTarget as HTMLElement).style.background="transparent";}}}>
-                          <div style={{width:44,height:44,borderRadius:10,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,background:isActive?"rgba(201,168,76,0.18)":V.sf2,border:`1px solid ${isActive?V.ac:V.bd}`,color:isActive?V.ac:V.mu}}>{c.icon}</div>
-                          <div style={{flex:1}}>
-                            <div style={{fontFamily:"'Jost',sans-serif",fontSize:13,fontWeight:600,color:isActive?V.tx:V.mu}}>{c.label}</div>
-                            <div style={{fontSize:10,color:V.mul,marginTop:2,fontFamily:"'Jost',sans-serif"}}>{c.desc}</div>
-                          </div>
-                          {isActive&&<div style={{width:8,height:8,borderRadius:"50%",background:V.ac,flexShrink:0}}/>}
+              <div style={{display:"flex",flexDirection:"column",gap:16}}>
+                <div style={{fontSize:12,color:V.mu,fontFamily:"'Jost',sans-serif",lineHeight:1.75}}>
+                  Select a product style to get started — you'll customise colours, prints, and add your logo in the steps ahead.
+                </div>
+
+                {/* Solid + Print */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  {([
+                    {id:"solid" as const, label:"Solid", icon:"◼", bg:"linear-gradient(145deg,#2e2e2c 55%,#4a4a46 100%)"},
+                    {id:"print" as const, label:"Print",  icon:"❋", bg:"linear-gradient(145deg,#1e3040 55%,#2e4a60 100%)"},
+                  ]).map(s=>{
+                    const sel=userStyle===s.id||(userStyle===null&&(skuProductType as string)===s.id);
+                    return(
+                      <div key={s.id} onClick={()=>{
+                        setUserStyle(s.id);
+                        setStyleTab(s.id==="print"?"print":"solid");
+                        setCustomizationType(s.id==="print"?"print":null);
+                        if(s.id==="print") setPrintMode("fullBody");
+                        setPatternSubMode(null); setColorSubMode(null);
+                        setStep(2);
+                      }} style={{
+                        cursor:"pointer",borderRadius:12,overflow:"hidden",
+                        border:`2px solid ${sel?V.ac:V.bd}`,transition:"all .2s",
+                        boxShadow:sel?`0 2px 12px rgba(201,168,76,.25)`:"none",
+                      }}>
+                        <div style={{
+                          width:"100%",aspectRatio:"5/4",background:s.bg,
+                          display:"flex",alignItems:"center",justifyContent:"center",
+                          fontSize:36,color:"rgba(255,255,255,0.12)",
+                        }}>{s.icon}</div>
+                        <div style={{padding:"8px 10px",background:sel?V.aclt:V.sf2}}>
+                          <div style={{fontSize:10,fontFamily:"'Jost',sans-serif",fontWeight:sel?700:500,color:sel?V.ac:V.tx,letterSpacing:".06em",textTransform:"uppercase"}}>{s.label}</div>
                         </div>
-                      );
-                    })}
-                  </>
-                )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* KA.SHA Signature Patterns */}
+                <div style={{...sb}}>KA.SHA Signature Patterns</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+                  {KASHA_DESIGNS.map(d=>{
+                    const sel=userStyle==="pattern"&&userChosenDesignId===d.id;
+                    return(
+                      <div key={d.id} onClick={()=>{
+                        setUserStyle("pattern");
+                        setUserChosenDesignId(d.id);
+                        setStyleTab("pattern");
+                        setCustomizationType("pattern");
+                        setPatternSubMode("color");
+                        handleSelectKashaDesign(d);
+                        setStep(2);
+                      }} style={{
+                        cursor:"pointer",borderRadius:12,overflow:"hidden",
+                        border:`2px solid ${sel?V.ac:V.bd}`,transition:"all .2s",
+                        boxShadow:sel?`0 2px 12px rgba(201,168,76,.3)`:"none",
+                      }}>
+                        {d.thumbnail
+                          ?<img src={d.thumbnail} alt={d.label} loading="eager" style={{width:"100%",aspectRatio:"1",objectFit:"cover",objectPosition:"top",display:"block"}}/>
+                          :<div style={{width:"100%",aspectRatio:"1",background:V.sf2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,color:V.mu}}>◈</div>
+                        }
+                        <div style={{padding:"6px 8px",background:sel?V.aclt:V.sf2}}>
+                          <div style={{fontSize:9,fontFamily:"'Jost',sans-serif",fontWeight:sel?700:500,color:sel?V.ac:V.tx,letterSpacing:".04em",textTransform:"uppercase",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.label}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
-            {/* ══════════════════ STEP 2: DESIGN (SKU-driven) ═══════════════ */}
+            {/* ══════════════════ STEP 2: DESIGN ═════════════════════════════ */}
             {step===2&&(()=>{
+
+              // ── NEW FLAT DESIGN UI (user picked a style in Step 1) ──────────
+              if (userStyle !== null) {
+                const isPatternMode = effectiveSkuType === "pattern";
+                const isPrintMode   = effectiveSkuType === "print";
+
+                const TargetRow = ({title,desc,showColour,colourFor,showPrint}:{
+                  title:string; desc?:string;
+                  showColour?:boolean; colourFor?:"all"|"base"|"pattern";
+                  showPrint?:boolean;
+                }) => (
+                  <div style={{padding:"14px 16px",borderRadius:12,border:`1px solid ${V.bd}`,background:V.sf2,display:"flex",flexDirection:"column",gap:10}}>
+                    <div>
+                      <div style={{fontFamily:"'Jost',sans-serif",fontSize:12,fontWeight:600,color:V.tx,letterSpacing:".03em"}}>{title}</div>
+                      {desc&&<div style={{fontSize:10,color:V.mu,marginTop:2,fontFamily:"'Jost',sans-serif",lineHeight:1.5}}>{desc}</div>}
+                    </div>
+                    <div style={{display:"flex",gap:8}}>
+                      {showColour&&(
+                        <button onClick={()=>setColorModalFor(colourFor||"all")} style={{
+                          flex:1,padding:"9px 0",borderRadius:8,border:`1.5px solid ${V.bd}`,
+                          background:"transparent",cursor:"pointer",
+                          fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:600,
+                          letterSpacing:".06em",textTransform:"uppercase" as const,color:V.tx,transition:"all .2s",
+                        }}
+                        onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.ac;e.currentTarget.style.background=V.aclt;}}
+                        onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.tx;e.currentTarget.style.background="transparent";}}>
+                          ● Colour
+                        </button>
+                      )}
+                      {showPrint&&(
+                        <button onClick={()=>setPrintModalFor("all")} style={{
+                          flex:1,padding:"9px 0",borderRadius:8,border:`1.5px solid ${V.bd}`,
+                          background:"transparent",cursor:"pointer",
+                          fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:600,
+                          letterSpacing:".06em",textTransform:"uppercase" as const,color:V.tx,transition:"all .2s",
+                        }}
+                        onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.ac;e.currentTarget.style.background=V.aclt;}}
+                        onMouseLeave={e=>{e.currentTarget.style.borderColor=V.bd;e.currentTarget.style.color=V.tx;e.currentTarget.style.background="transparent";}}>
+                          ❋ Print
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+
+                return (
+                  <div style={{display:"flex",flexDirection:"column",gap:12}}>
+
+                    {/* Active style indicator + Change button */}
+                    <div style={{display:"flex",alignItems:"center",gap:8,padding:"9px 14px",borderRadius:10,background:"rgba(201,168,76,0.07)",border:"1px solid rgba(201,168,76,0.18)"}}>
+                      <span style={{fontSize:9,color:V.mu,letterSpacing:".1em",textTransform:"uppercase" as const,fontFamily:"'Jost',sans-serif"}}>Style:</span>
+                      <span style={{fontSize:11,fontFamily:"'Jost',sans-serif",fontWeight:600,color:V.tx}}>
+                        {isPatternMode?(KASHA_DESIGNS.find(d=>d.id===userChosenDesignId)?.label||"Pattern"):isPrintMode?"Print":"Solid"}
+                      </span>
+                      <button onClick={()=>setStep(1)} style={{
+                        marginLeft:"auto",fontSize:9,padding:"3px 9px",borderRadius:6,
+                        border:`1px solid rgba(201,168,76,0.3)`,background:"transparent",cursor:"pointer",
+                        color:V.ac,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",textTransform:"uppercase" as const,
+                      }}>Change</button>
+                    </div>
+
+                    {isPatternMode&&(
+                      <>
+                        <TargetRow title="Base Body" desc="Background body colour and all-over print" showColour colourFor="all" showPrint/>
+                        <TargetRow title="Pattern Design" desc="Recolour accent panels, trims, collar and sleeves" showColour colourFor="base" showPrint/>
+                        {activeKashaDesign&&(
+                          <div style={{padding:"10px 14px",borderRadius:10,background:V.sf2,border:`1px solid ${V.bd}`,display:"flex",gap:10,alignItems:"center"}}>
+                            {activeKashaDesign.thumbnail&&<img src={activeKashaDesign.thumbnail} alt="" style={{width:36,height:36,objectFit:"cover",borderRadius:6,border:`1px solid ${V.bd}`,flexShrink:0}}/>}
+                            <div style={{flex:1}}>
+                              <div style={{fontSize:9,color:V.mu,letterSpacing:".08em",textTransform:"uppercase" as const,fontFamily:"'Jost',sans-serif"}}>Active design</div>
+                              <div style={{fontSize:11,fontFamily:"'Jost',sans-serif",fontWeight:600,color:V.tx,marginTop:2}}>{activeKashaDesign.label}</div>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {isPrintMode&&(
+                      <>
+                        <TargetRow title="Full Body" desc="Apply a premium print to the entire garment" showPrint/>
+                        <TargetRow title="Base Body" desc="Print on body, excluding the collar" showPrint/>
+                        <TargetRow title="Collar" desc="Collar accent colour or print" showColour colourFor="all" showPrint/>
+                      </>
+                    )}
+
+                    {!isPatternMode&&!isPrintMode&&(
+                      <>
+                        <TargetRow title="Full Body" desc="Colour or print the entire garment" showColour colourFor="all" showPrint/>
+                        <TargetRow title="Base Body" desc="Body colour, excluding the collar" showColour colourFor="base" showPrint/>
+                        <TargetRow title="Collar" desc="Collar accent colour or print" showColour colourFor="pattern" showPrint/>
+                      </>
+                    )}
+
+                  </div>
+                );
+              }
+
+              // ── LEGACY: direct product-page access (no style chosen in Step 1) ──
               // Determine what "mode" we are actually rendering
               const effectiveCustType = customizationType ?? (skuProductType==="print"?"print":skuProductType==="pattern"?"pattern":null);
               const isPatternMode = skuProductType==="pattern" || effectiveCustType==="pattern";

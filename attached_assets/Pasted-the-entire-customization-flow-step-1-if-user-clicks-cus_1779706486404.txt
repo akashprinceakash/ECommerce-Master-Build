@@ -1,0 +1,61 @@
+the entire customization flow
+step 1:-
+if user clicks custom studio it should show Solid(one t-shirt from solid), Print(one t-shirt from prints), Pattern1 t-shirt, Pattern2 t-shirt, Pattern3 t-shirt, Pattern4 t-shirt, Pattern 5 t-shirt at customization entry modal..
+
+step 2:- Based on the user selected t-shirts
+
+case 01:- if user selects any pattern t-shirts to customize
+if user selected any type of  pattern t-shirt that pattern should automatically apply on the 3d model with color(refer sku full example here KS1001B-SB this pattern should apply with Sky-blue and Balck color)..
+
+as soon as user clicks the type of t-shirt they should  have two option to customize.. 
+  -> Base body -> upon clicking base body they will again have 2 options 
+      i. Color -> if they click on color it should open a color section with pop up where can change the color        color picker 
+      ii. print -> if they click on print it should open prints librabry with pop up  where they can apply prints on body
+  -> Pattern design -> upon clicking pattern design will again have 2 options
+         i. Color -> if they click on color it should open color with pop up  where can change the color trough color picker 
+      ii. print -> they click on print it should open prints librabry with pop up  where they can apply prints on pattern
+
+case 02:- if user selects printed t-shirts customize
+
+if user selected  printed t-shirt that print should automatically apply on the 3d model (refer sku full example here KS1000BGP001 print should apply )..    
+ 
+as soon as user clicks the type of t-shirt they should have three option to customize.. 
+->Full body -> if clicking Full body they will have options add different prints for full body from with poped up prints    librabry
+->Base body -> if user select base body then user can apply the different prints from  poped up prints library for base body from prints    librabry only for base body(the base body is nothing but full body except collar)
+->t-shirts Collar -> if user selects t-shirt's collar then user will have 2 options where 
+            i.Color -> if they click on color it should open color where user can change the color trough color picker 
+            ii. prints -> they click on print it should open prints librabry where they can apply different prints on the collar
+    
+
+case 03:- if user selects Solid T-shirts to customize
+     
+if user selected  Solid t-shirt that solid should  automatically apply on the 3d model (refer sku)..      
+       
+ 
+if user selected  printed t-shirt that print should automatically apply on the 3d model (refer sku full example here KS1000BGP001 print should apply )..    
+ 
+as soon as user clicks the Solid  of t-shirt type they should have Three option to customize.. 
+  ->Full body -> upon clicking Full body they will again have 2 options 
+            i. Color -> if they click on color it should open color section where can change the color     from picker for the full body
+           ii. print -> if they click on print it should open prints librabry where they can apply prints on Full body
+  ->Base body -> upon clicking base body they will again have 2 options 
+            i. Color -> if they click on color it should open color section where user can change the color     from picker and applied on the base body(the base body is nothing but full body except collar)
+           ii. print -> if they click on print it should open prints librabry where they can apply prints   only for base body(the base body is nothing but full body except collar)
+  ->t-shirts Collar -> if user selects t-shirt's collar then user will have 2 options where 
+            i.Color -> if they click on color it should open color where user can change the color trough color picker  applied only on collar 
+            ii. print -> they click on print it should open prints librabry where they can apply prints on the collar applied only on collar 
+
+Note:-
+1. everywhere both Prints and color should be showed inthe pop-up 
+ if user selects color then color section should pop-up(as same current functionality which is choosing advaced color option)
+if user selects prints then prints library  should pop-up.)
+
+2. At the bottom user will have 3 options on every step which are back,continue, add to cart.. user can add add to cart at ay stage
+
+The Next step same liek current which is adding logo and text 
+ but the placing of them will be different 
+ where text should display in the front(left, right, center(at stomach)), back(Top, center(near stomach)), left sleeve, right sleeve
+
+user will have option to stop the 3d model rotation..
+
+in size add custom size and custom size give options like earlir to directly enter size on that part
