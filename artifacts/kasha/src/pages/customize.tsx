@@ -99,8 +99,13 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "back-center":  { left: 765, top: 604 },  // centre across back
   "left-sleeve":  { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
   "right-sleeve": { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve (UV is horizontally mirrored)
-  "collar-edge":  { left: 255, top: 360 },  // edge of collar / neckline
+  "collar-edge":  { left: 265, top: 240 },  // collar UV zone: { left:12, top:183, w:507, h:166 } → center ≈ (265,240)
 };
+// For right-sleeve placement the client wants text to appear reversed.
+// All other placements use flipX:true to counteract the UV horizontal mirror.
+function placementFlipX(placement: string): boolean {
+  return placement !== "right-sleeve";
+}
 // Which 3-D view to jump to when a placement is selected
 const PLACEMENT_VIEW: Record<string, "front"|"back"|"left"|"right"> = {
   "front-left":   "front",
@@ -579,7 +584,7 @@ export default function CustomizePage() {
         const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};
         const maxW=Math.round(logoSize*(1024/100));
         if(ni.width&&ni.width>maxW) ni.scaleToWidth(maxW);
-        ni.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:true});
+        ni.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition)});
         fc.add(ni); fc.setActiveObject(ni); logoObjRef.current=ni;
         fc.renderAll(); syncTexture();
       }
@@ -792,7 +797,7 @@ export default function CustomizePage() {
       const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};
       const maxW=Math.round(logoSize*(1024/100));
       if (img.width&&img.width>maxW) img.scaleToWidth(maxW);
-      img.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:true});
+      img.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition)});
       const fc=fcRef.current; if(!fc) return;
       if (logoObjRef.current) fc.remove(logoObjRef.current);
       fc.add(img); fc.setActiveObject(img); logoObjRef.current=img;
@@ -808,7 +813,7 @@ export default function CustomizePage() {
     const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};
     const maxW=Math.round(logoSize*(1024/100));
     o.scaleToWidth(maxW);
-    o.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});
+    o.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition)});
     o.setCoords();
     fcRef.current?.renderAll(); syncTexture();
   };
@@ -833,7 +838,7 @@ export default function CustomizePage() {
       fontStyle:textItalic?"italic":"normal",
       underline:textUnderline,
       textAlign:textAlign,
-      flipX:true,
+      flipX:placementFlipX(textPosition),
       selectable:true, evented:true,
       data:{tag:"user-text"},
     });
@@ -846,7 +851,7 @@ export default function CustomizePage() {
   const repositionText = () => {
     const o=textObjRef.current; if(!o) return;
     const pos=LOGO_POSITIONS[textPosition]||{left:512,top:512};
-    o.set({left:pos.left, top:pos.top, originX:"center", originY:"center", fontSize:textFontSize, fill:textColor, fontFamily:textFont, fontWeight:textBold?"700":"400", fontStyle:textItalic?"italic":"normal"});
+    o.set({left:pos.left, top:pos.top, originX:"center", originY:"center", flipX:placementFlipX(textPosition), fontSize:textFontSize, fill:textColor, fontFamily:textFont, fontWeight:textBold?"700":"400", fontStyle:textItalic?"italic":"normal"});
     o.setCoords();
     fcRef.current?.renderAll(); syncTexture();
   };
