@@ -15,7 +15,7 @@ export default function LookbookPage() {
     { query: { queryKey: getListProductsQueryKey({}), staleTime: 5 * 60 * 1000 } }
   );
 
-  const items = (products ?? []).filter(p => p.thumbnailUrl);
+  const items = (products ?? []).filter(p => p.thumbnailUrl).sort((a, b) => a.id - b.id);
 
   return (
     <Layout>
@@ -104,7 +104,7 @@ export default function LookbookPage() {
                         style={{
                           width: "100%",
                           display: "block",
-                          objectFit: "cover",
+                          objectFit: "contain",
                           transition: "transform 0.6s ease",
                         }}
                         className="group-hover:scale-105"

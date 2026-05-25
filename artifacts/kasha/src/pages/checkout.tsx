@@ -166,7 +166,10 @@ export default function CheckoutPage() {
         if (postOffice) {
           const district = postOffice.District || postOffice.Block || postOffice.Name || "";
           const state    = postOffice.State || "";
-          const resolvedState = INDIAN_STATES.includes(state) ? state : "";
+          const resolvedState = INDIAN_STATES.find(s => s === state)
+            || INDIAN_STATES.find(s => s.toLowerCase() === state.toLowerCase())
+            || INDIAN_STATES.find(s => state.toLowerCase().startsWith(s.toLowerCase()))
+            || "";
           setFormData(prev => ({
             ...prev,
             shippingCity:  district || prev.shippingCity,
@@ -427,18 +430,21 @@ export default function CheckoutPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="shippingPhone">Mobile Number</Label>
-                <Input
-                  id="shippingPhone"
-                  value={formData.shippingPhone}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                    handleChange("shippingPhone", val);
-                    if (errors.shippingPhone) setErrors(prev => ({ ...prev, shippingPhone: "" }));
-                  }}
-                  className={`rounded-none bg-secondary/10 ${errors.shippingPhone ? "border-destructive" : "border-border/50"}`}
-                  placeholder="10-digit mobile number"
-                  inputMode="numeric"
-                />
+                <div className="flex">
+                  <span className="flex items-center px-3 border border-r-0 border-border/50 bg-secondary/20 text-sm text-muted-foreground select-none" style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.04em" }}>+91</span>
+                  <Input
+                    id="shippingPhone"
+                    value={formData.shippingPhone}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      handleChange("shippingPhone", val);
+                      if (errors.shippingPhone) setErrors(prev => ({ ...prev, shippingPhone: "" }));
+                    }}
+                    className={`flex-1 rounded-none rounded-l-none bg-secondary/10 ${errors.shippingPhone ? "border-destructive" : "border-border/50"}`}
+                    placeholder="10-digit mobile number"
+                    inputMode="numeric"
+                  />
+                </div>
                 {errors.shippingPhone && <p className="text-xs text-destructive mt-1">{errors.shippingPhone}</p>}
               </div>
 

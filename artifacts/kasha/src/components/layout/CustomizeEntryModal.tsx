@@ -33,7 +33,7 @@ const WIDE_OPTIONS = [
     title: "Printed Polo",
     subtitle: "Artistry meets athleticism",
     desc: "Begin with a signature KA.SHA print. Personalise with zone prints, custom text and logos.",
-    thumbnail: "/api/public/thumbnails/KS1000BGP001-01.png",
+    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/KS1000BGP001-01.png",
     href: "/products/26/customize?style=print",
   },
 ];
@@ -42,7 +42,7 @@ const PATTERN_OPTIONS = [
   {
     key: "pattern-1001",
     label: "Pattern 1001",
-    thumbnail: "/api/public/thumbnails/KS1002BOLIVEGREEN-BLACK01.png",
+    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1779449525478-157065178.webp",
     href: "/products/34/customize?style=pattern&design=KS1001B",
   },
   {
@@ -60,7 +60,7 @@ const PATTERN_OPTIONS = [
   {
     key: "pattern-1004",
     label: "Pattern 1004",
-    thumbnail: "/api/public/thumbnails/KS1006BBLACK-PINK01.png",
+    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1779449327778-896276668.webp",
     href: "/products/36/customize?style=pattern&design=KS1004B",
   },
   {

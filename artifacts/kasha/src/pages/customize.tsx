@@ -99,8 +99,8 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "front-center": { left: 255, top: 680 },  // vertical centre of front zone
   "back-top":     { left: 765, top: 460 },  // upper back (was back-center)
   "back-center":  { left: 765, top: 604 },  // vertical centre of back zone
-  "left-sleeve":  { left: 409, top: 120 },  // centre of leftSleeve zone
-  "right-sleeve": { left: 816, top: 120 },  // centre of rightSleeve zone
+  "left-sleeve":  { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
+  "right-sleeve": { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve (UV is horizontally mirrored)
 };
 // Which 3-D view to jump to when a placement is selected
 const PLACEMENT_VIEW: Record<string, "front"|"back"|"left"|"right"> = {
@@ -846,7 +846,7 @@ export default function CustomizePage() {
   const repositionText = () => {
     const o=textObjRef.current; if(!o) return;
     const pos=LOGO_POSITIONS[textPosition]||{left:512,top:512};
-    o.set({left:pos.left, top:pos.top, originX:"center", originY:"center", fontSize:textFontSize, fill:textColor});
+    o.set({left:pos.left, top:pos.top, originX:"center", originY:"center", fontSize:textFontSize, fill:textColor, fontFamily:textFont, fontWeight:textBold?"700":"400", fontStyle:textItalic?"italic":"normal"});
     o.setCoords();
     fcRef.current?.renderAll(); syncTexture();
   };
@@ -932,6 +932,11 @@ export default function CustomizePage() {
   const handleAddToCart=()=>{
     if(!user){setLocation("/sign-in?redirect_url="+encodeURIComponent(window.location.pathname+window.location.search));return;}
     cartMut.mutate();
+  };
+
+  const handleSave=()=>{
+    if(!user){setLocation("/sign-in?redirect_url="+encodeURIComponent(window.location.pathname+window.location.search));return;}
+    saveMut.mutate();
   };
 
   // ── Style helpers ────────────────────────────────────────────────────────
@@ -1112,7 +1117,7 @@ export default function CustomizePage() {
           />
           {!isTypeMode && (
             <Show when="signed-in">
-              <button onClick={()=>saveMut.mutate()} disabled={saveMut.isPending}
+              <button onClick={handleSave} disabled={saveMut.isPending}
                 style={{
                   padding:"7px 16px",borderRadius:40,
                   border:`1px solid rgba(201,168,76,0.35)`,
@@ -1844,7 +1849,7 @@ export default function CustomizePage() {
                     <div style={{flex:1}}>
                       <div style={{...sb}}>Colour</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
-                        {MAIN_PALETTE.slice(0,8).map(h=>swatch(h,textColor===h,()=>setTextColor(h)))}
+                        {MAIN_PALETTE.slice(0,8).map(h=>swatch(h,textColor===h,()=>{setTextColor(h);if(textObjRef.current){textObjRef.current.set({fill:h});fcRef.current?.renderAll();syncTexture();}}))}
                         <label title="Custom colour" style={{
                           width:22,height:22,borderRadius:"50%",cursor:"pointer",
                           display:"flex",alignItems:"center",justifyContent:"center",
@@ -1852,7 +1857,7 @@ export default function CustomizePage() {
                           fontSize:13,color:V.ac,overflow:"hidden",position:"relative",
                         }}>
                           <span style={{pointerEvents:"none",lineHeight:1}}>+</span>
-                          <input type="color" value={textColor} onChange={e=>setTextColor(e.target.value)}
+                          <input type="color" value={textColor} onChange={e=>{const v=e.target.value;setTextColor(v);if(textObjRef.current){textObjRef.current.set({fill:v});fcRef.current?.renderAll();syncTexture();}}}
                             style={{position:"absolute",inset:0,opacity:0,cursor:"pointer",width:"100%",height:"100%"}}/>
                         </label>
                         <div style={{width:22,height:22,borderRadius:"50%",background:textColor,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
@@ -1878,7 +1883,7 @@ export default function CustomizePage() {
                       {f:"Bebas Neue",       label:"Bebas"},
                       {f:"Oswald",           label:"Oswald"},
                     ].map(({f,label})=>(
-                      <button key={f} onClick={()=>setTextFont(f)} style={{
+                      <button key={f} onClick={()=>{setTextFont(f);if(textObjRef.current){textObjRef.current.set({fontFamily:f});fcRef.current?.renderAll();syncTexture();}}} style={{
                         padding:"5px 10px",borderRadius:6,fontSize:10,fontFamily:f,
                         border:`1.5px solid ${textFont===f?V.ac:V.bd}`,
                         background:textFont===f?V.aclt:"transparent",
@@ -3043,7 +3048,7 @@ export default function CustomizePage() {
                     )}
                     {!isTypeMode && (
                       <Show when="signed-in">
-                        <button onClick={()=>saveMut.mutate()} disabled={saveMut.isPending} style={{
+                        <button onClick={handleSave} disabled={saveMut.isPending} style={{
                           padding:"10px 0",borderRadius:99,
                           border:`1.5px solid rgba(201,168,76,0.4)`,background:"transparent",
                           color:V.tx,fontSize:11,fontWeight:500,cursor:"pointer",

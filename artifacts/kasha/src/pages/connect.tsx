@@ -46,6 +46,8 @@ export default function ConnectPage() {
   const [message,         setMessage]         = useState("");
   const [focused,         setFocused]         = useState<string | null>(null);
   const [submitted,       setSubmitted]       = useState(false);
+  const [sending,         setSending]         = useState(false);
+  const [sendError,       setSendError]       = useState("");
   const [location] = useLocation();
 
   useEffect(() => { document.title = "Connect with Us — Ka.Sha"; }, []);
@@ -61,15 +63,27 @@ export default function ConnectPage() {
     }
   }, [location]);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSending(true);
+    setSendError("");
     const label = INQUIRY_OPTIONS.find(o => o.value === inquiryType)?.label ?? inquiryType;
-    const subject = encodeURIComponent(`${label} Enquiry from ${name}`);
-    const body = encodeURIComponent(
-      `Name: ${name}\nEmail: ${email}\nEnquiry Type: ${label}\nStyle Preference: ${stylePreference || "Not specified"}\n\nMessage:\n${message}\n\n---\nSent via Ka.sha website`
-    );
-    window.open(`mailto:support@kashaonline.in?subject=${subject}&body=${body}`, "_blank");
-    setSubmitted(true);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, inquiryType: label, stylePreference, message }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error || "Failed to send");
+      }
+      setSubmitted(true);
+    } catch (err: unknown) {
+      setSendError(err instanceof Error ? err.message : "Something went wrong. Please try emailing us directly.");
+    } finally {
+      setSending(false);
+    }
   }
 
   const borderFor = (key: string) => focused === key ? GOLD : "rgba(0,0,0,0.18)";
@@ -120,7 +134,7 @@ export default function ConnectPage() {
                 Enquiry Sent
               </h2>
               <p style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 14, letterSpacing: "0.06em", color: "rgba(0,0,0,0.5)", lineHeight: 1.8, maxWidth: 440, margin: "0 auto 32px" }}>
-                Thank you, {name}. Your enquiry has been opened in your email client. We'll respond within 1–2 business days.
+                Thank you, {name}. Your enquiry has been sent directly to our team. We'll respond within 1–2 business days.
               </p>
               <button
                 onClick={() => { setSubmitted(false); setName(""); setEmail(""); setMessage(""); setStylePreference(""); }}
@@ -198,14 +212,20 @@ export default function ConnectPage() {
                 onFocus={() => setFocused("message")} onBlur={() => setFocused(null)} />
             </div>
 
-            <button type="submit" style={{
+            {sendError && (
+              <p style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 13, color: "#c0392b", letterSpacing: "0.04em" }}>
+                {sendError}
+              </p>
+            )}
+            <button type="submit" disabled={sending} style={{
               background: GOLD, color: "#fff",
               fontFamily: "'Josefin Sans', sans-serif", fontSize: 12,
               letterSpacing: "0.3em", textTransform: "uppercase",
-              padding: "18px 48px", border: "none", cursor: "pointer",
-              alignSelf: "flex-start", transition: "background 0.2s",
+              padding: "18px 48px", border: "none", cursor: sending ? "default" : "pointer",
+              alignSelf: "flex-start", transition: "background 0.2s, opacity 0.2s",
+              opacity: sending ? 0.6 : 1,
             }}>
-              Send Enquiry
+              {sending ? "Sending…" : "Send Enquiry"}
             </button>
 
           </form>

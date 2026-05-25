@@ -41,13 +41,13 @@ export default function HeritagePage() {
           </h2>
           <div className="space-y-3 text-gray-600 text-[15px] leading-relaxed text-left md:text-center">
             <p>
-              Ka.Sha was born of one man's passion for golf. After 30 years on the course,
-              our founder Pranay Somaia knew exactly what golf wear needed to be — easy to move in,
-              crafted to let you focus on your game, and of course, stylish.
+              Ka.Sha was born from one man's passion for golf. After 30 years on the course,
+              our founder, Pranay Somaia, knew exactly what golf wear needed to be — comfortable to move in,
+              designed to help players focus on their game, and, of course, stylish.
             </p>
             <p>
-              Add to this a family legacy in textiles across India and Africa, and the result is gear
-              built for players who care just as much about how they play as how they look doing it.
+              Combined with a family legacy in textiles across India and Africa, the result is apparel crafted
+              for players who care just as much about how they play as how they look doing it.
             </p>
           </div>
         </section>
@@ -88,7 +88,7 @@ export default function HeritagePage() {
                 <div className="flex gap-5">
                   <span className="font-serif text-3xl text-[#B8925A]/30 font-medium leading-none mt-1 shrink-0">01</span>
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase">Built for the Swing</h3>
+                    <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>Built for the Swing</h3>
                     <p className="text-gray-500 text-sm leading-relaxed">
                       The shoulder line is cut specifically for the address position, so it never fights your movement.
                     </p>
@@ -97,7 +97,7 @@ export default function HeritagePage() {
                 <div className="flex gap-5">
                   <span className="font-serif text-3xl text-[#B8925A]/30 font-medium leading-none mt-1 shrink-0">02</span>
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase">Zero Distractions</h3>
+                    <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>Zero Distractions</h3>
                     <p className="text-gray-500 text-sm leading-relaxed">
                       A stay-flat button-down collar requires no fussing.
                     </p>
@@ -106,7 +106,7 @@ export default function HeritagePage() {
                 <div className="flex gap-5">
                   <span className="font-serif text-3xl text-[#B8925A]/30 font-medium leading-none mt-1 shrink-0">03</span>
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase">Make it Yours</h3>
+                    <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>Make it Yours</h3>
                     <p className="text-gray-500 text-sm leading-relaxed">
                       Fully customizable prints, fits, logos, and initials.
                     </p>
@@ -148,7 +148,7 @@ export default function HeritagePage() {
                   <div className="flex gap-5">
                     <span className="font-serif text-3xl text-[#B8925A]/30 font-medium leading-none mt-1 shrink-0">01</span>
                     <div>
-                      <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase">Glove Docks</h3>
+                      <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>Glove Docks</h3>
                       <p className="text-gray-500 text-sm leading-relaxed">
                         Four discreet velcro patches to secure your glove between shots.
                       </p>
@@ -157,7 +157,7 @@ export default function HeritagePage() {
                   <div className="flex gap-5">
                     <span className="font-serif text-3xl text-[#B8925A]/30 font-medium leading-none mt-1 shrink-0">02</span>
                     <div>
-                      <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase">Smart Tee Holder</h3>
+                      <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>Smart Tee Holder</h3>
                       <p className="text-gray-500 text-sm leading-relaxed">
                         Angled on the thigh so tees are easy to grab and won't poke.
                       </p>
@@ -166,7 +166,7 @@ export default function HeritagePage() {
                   <div className="flex gap-5">
                     <span className="font-serif text-3xl text-[#B8925A]/30 font-medium leading-none mt-1 shrink-0">03</span>
                     <div>
-                      <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase">Strategic Zips</h3>
+                      <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>Strategic Zips</h3>
                       <p className="text-gray-500 text-sm leading-relaxed">
                         Two below-the-knee pockets for scorecards or glasses.
                       </p>
@@ -175,7 +175,7 @@ export default function HeritagePage() {
                   <div className="flex gap-5">
                     <span className="font-serif text-3xl text-[#B8925A]/30 font-medium leading-none mt-1 shrink-0">04</span>
                     <div>
-                      <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase">Grip Strip</h3>
+                      <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>Grip Strip</h3>
                       <p className="text-gray-500 text-sm leading-relaxed">
                         An inner waistband strip keeps your shirt perfectly tucked through every drive.
                       </p>
@@ -184,7 +184,7 @@ export default function HeritagePage() {
                   <div className="flex gap-5">
                     <span className="font-serif text-3xl text-[#B8925A]/30 font-medium leading-none mt-1 shrink-0">05</span>
                     <div>
-                      <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase">Customizable</h3>
+                      <h3 className="font-medium text-gray-900 mb-2 tracking-wide text-sm uppercase" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>Customizable</h3>
                       <p className="text-gray-500 text-sm leading-relaxed">
                         Need something specific? We tailor exactly to your specs.
                       </p>

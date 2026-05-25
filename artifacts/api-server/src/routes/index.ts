@@ -11,6 +11,7 @@ import paymentsRouter from "./payments";
 import siteSettingsRouter from "./siteSettings";
 import r2proxyRouter from "./r2proxy";
 import skuAssetsRouter from "./skuAssets";
+import contactRouter from "./contact";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(paymentsRouter);
 router.use(siteSettingsRouter);
 router.use(r2proxyRouter);
 router.use(skuAssetsRouter);
+router.use(contactRouter);
 
 export default router;

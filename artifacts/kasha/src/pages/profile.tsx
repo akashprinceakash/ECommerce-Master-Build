@@ -151,12 +151,17 @@ export default function ProfilePage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
-                    <Input 
-                      id="phone" 
-                      value={formData.phone} 
-                      onChange={(e) => setFormData({...formData, phone: e.target.value})} 
-                      className="rounded-none border-border/50 bg-secondary/5"
-                    />
+                    <div className="flex">
+                      <span className="flex items-center px-3 border border-r-0 border-border/50 bg-secondary/20 text-sm text-muted-foreground select-none" style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.04em" }}>+91</span>
+                      <Input 
+                        id="phone" 
+                        value={formData.phone} 
+                        onChange={(e) => setFormData({...formData, phone: e.target.value.replace(/\D/g, "").slice(0, 10)})} 
+                        className="flex-1 rounded-none rounded-l-none border-border/50 bg-secondary/5"
+                        placeholder="10-digit mobile number"
+                        inputMode="numeric"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="defaultShippingAddress">Default Shipping Address</Label>
