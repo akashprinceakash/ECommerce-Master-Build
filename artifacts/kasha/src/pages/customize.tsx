@@ -748,6 +748,7 @@ export default function CustomizePage() {
     const maxW=Math.round(logoSize*(1024/100));
     o.scaleToWidth(maxW);
     o.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});
+    o.setCoords();
     fcRef.current?.renderAll(); syncTexture();
   };
 
@@ -785,6 +786,7 @@ export default function CustomizePage() {
     const o=textObjRef.current; if(!o) return;
     const pos=LOGO_POSITIONS[textPosition]||{left:512,top:512};
     o.set({left:pos.left, top:pos.top, originX:"center", originY:"center", fontSize:textFontSize, fill:textColor});
+    o.setCoords();
     fcRef.current?.renderAll(); syncTexture();
   };
 
@@ -1609,7 +1611,7 @@ export default function CustomizePage() {
                                 const isA=logoPosition===c.key;
                                 const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                                 return(
-                                  <div key={c.key} onClick={()=>{setLogoPosition(c.key as any);if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});fcRef.current?.renderAll();syncTexture();}}} style={{
+                                  <div key={c.key} onClick={()=>{setLogoPosition(c.key as any);if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
                                     display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
                                     padding:"7px 3px",borderRadius:9,transition:"all .18s",
                                     border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
@@ -1709,7 +1711,7 @@ export default function CustomizePage() {
                             const isA=textPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                             return(
-                              <div key={c.key} onClick={()=>{setTextPosition(c.key as any);if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});fcRef.current?.renderAll();syncTexture();}}} style={{
+                              <div key={c.key} onClick={()=>{setTextPosition(c.key as any);if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
                                 display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
                                 padding:"7px 3px",borderRadius:9,transition:"all .18s",
                                 border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
