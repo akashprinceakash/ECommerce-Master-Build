@@ -444,19 +444,19 @@ export default function ProductDetailPage() {
                   justifyContent: "space-between",
                   width: "100%",
                   padding: "14px 16px",
-                  border: "1px solid rgba(184,146,90,0.3)",
+                  border: "1px solid #B8925A",
                   borderRadius: 4,
-                  background: "rgba(184,146,90,0.04)",
+                  background: "#1a1a18",
                   cursor: "pointer",
                   transition: "background 0.2s, border-color 0.2s",
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.09)";
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.55)";
+                  (e.currentTarget as HTMLElement).style.background = "#2a2520";
+                  (e.currentTarget as HTMLElement).style.borderColor = "#d4a96a";
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.04)";
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.3)";
+                  (e.currentTarget as HTMLElement).style.background = "#1a1a18";
+                  (e.currentTarget as HTMLElement).style.borderColor = "#B8925A";
                 }}
               >
                 <div className="flex items-center gap-2">
