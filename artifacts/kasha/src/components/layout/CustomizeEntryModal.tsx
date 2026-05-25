@@ -42,7 +42,7 @@ const CATEGORIES = [
     href: "/customize?type=printed",
     accent: "#c9a84c",
     bg: "linear-gradient(135deg, #fafaf7 60%, #e8e5df 100%)",
-    thumbnail: "/api/public/thumbnails/KS1000BGP001-01.png",
+    thumbnail: "/images/designs/KD003.png",
   },
 ];
 
