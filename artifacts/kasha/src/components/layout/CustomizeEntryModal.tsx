@@ -12,11 +12,6 @@ interface Props {
 }
 
 // ── Curated style entries — each maps to a specific product & design ──────────
-// thumbnail:  real product photo from the API
-// href:       /products/:id/customize?style=X&design=Y
-//             ?style  — pre-selects userStyle in the customizer (skips Step 1)
-//             ?design — overrides which KA.SHA design to apply (for pattern cards)
-// ─────────────────────────────────────────────────────────────────────────────
 const WIDE_OPTIONS = [
   {
     key: "solid",
@@ -96,11 +91,11 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
       <div className="cem-sheet" style={{
         background: "#fafaf7",
         borderRadius: 20,
-        maxWidth: 900,
+        maxWidth: 860,
         width: "calc(100vw - 32px)",
         maxHeight: "calc(100vh - 40px)",
         overflowY: "auto",
-        padding: "40px 32px 44px",
+        padding: "36px 28px 40px",
         position: "relative",
         animation: "cemSlideUp 0.32s cubic-bezier(0.16,1,0.3,1)",
         boxShadow: "0 32px 80px rgba(26,26,24,0.24), 0 8px 24px rgba(26,26,24,0.12)",
@@ -122,20 +117,20 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         >×</button>
 
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div style={{
             fontFamily: "'Jost', sans-serif",
             fontSize: 10, letterSpacing: ".2em", textTransform: "uppercase",
-            color: "#c9a84c", marginBottom: 10, fontWeight: 500,
+            color: "#c9a84c", marginBottom: 8, fontWeight: 500,
           }}>KA.SHA Bespoke Studio</div>
           <h2 style={{
             fontFamily: "'Cormorant Garamond', serif",
-            fontSize: 32, fontWeight: 600, color: "#1a1a18",
+            fontSize: 28, fontWeight: 600, color: "#1a1a18",
             letterSpacing: ".02em", margin: 0, lineHeight: 1.2,
           }}>Choose Your Style</h2>
           <p style={{
             fontFamily: "'Jost', sans-serif",
-            fontSize: 12, color: "#8a8780", marginTop: 8,
+            fontSize: 11, color: "#8a8780", marginTop: 6,
             letterSpacing: ".04em", fontStyle: "italic",
           }}>Select a t-shirt — the design loads instantly, ready for you to personalise</p>
         </div>
@@ -144,11 +139,11 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         <div style={{
           height: 1,
           background: "linear-gradient(90deg, transparent, #c9a84c, transparent)",
-          opacity: 0.4, marginBottom: 24,
+          opacity: 0.4, marginBottom: 20,
         }} />
 
-        {/* Wide cards: Solid + Print */}
-        <div className="cem-wide-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+        {/* Wide cards: Solid + Print — horizontal layout */}
+        <div className="cem-wide-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
           {WIDE_OPTIONS.map(opt => (
             <WideCard key={opt.key} opt={opt} onSelect={handleSelect} />
           ))}
@@ -158,7 +153,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         <div style={{
           fontFamily: "'Jost', sans-serif",
           fontSize: 9, letterSpacing: ".18em", textTransform: "uppercase",
-          color: "#c9a84c", fontWeight: 600, marginBottom: 12,
+          color: "#c9a84c", fontWeight: 600, marginBottom: 10,
         }}>
           KA.SHA Signature Patterns
         </div>
@@ -172,7 +167,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
 
         {/* Footer note */}
         <p style={{
-          textAlign: "center", marginTop: 24,
+          textAlign: "center", marginTop: 20,
           fontFamily: "'Jost', sans-serif",
           fontSize: 10, color: "#b8b5ae",
           letterSpacing: ".08em", fontStyle: "italic",
@@ -185,12 +180,11 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         @keyframes cemFadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes cemSlideUp { from { opacity: 0; transform: translateY(24px) } to { opacity: 1; transform: translateY(0) } }
         @media (max-width: 620px) {
-          .cem-sheet { padding: 24px 14px 28px !important; border-radius: 14px !important; width: calc(100vw - 16px) !important; }
-          .cem-wide-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+          .cem-sheet { padding: 20px 12px 24px !important; border-radius: 14px !important; width: calc(100vw - 16px) !important; }
+          .cem-wide-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
           .cem-pattern-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
         }
         @media (max-width: 380px) {
-          .cem-wide-grid { grid-template-columns: 1fr !important; }
           .cem-pattern-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
       `}</style>
@@ -198,7 +192,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   );
 }
 
-// ── Wide card (Solid / Print) ─────────────────────────────────────────────────
+// ── Wide card (Solid / Print) — horizontal: image left, text right ────────────
 interface WideOpt { key: string; label: string; title: string; subtitle: string; desc: string; thumbnail: string; href: string; }
 function WideCard({ opt, onSelect }: { opt: WideOpt; onSelect: (h: string) => void }) {
   return (
@@ -208,47 +202,59 @@ function WideCard({ opt, onSelect }: { opt: WideOpt; onSelect: (h: string) => vo
         padding: 0, border: "1.5px solid rgba(26,26,24,0.09)",
         borderRadius: 12, cursor: "pointer", background: "#ffffff",
         textAlign: "left", overflow: "hidden",
-        transition: "all 0.28s cubic-bezier(0.16,1,0.3,1)",
-        boxShadow: "0 2px 10px rgba(26,26,24,0.05)",
-        display: "flex", flexDirection: "column",
+        transition: "border-color 0.22s, box-shadow 0.22s",
+        boxShadow: "0 2px 8px rgba(26,26,24,0.05)",
+        display: "flex", flexDirection: "row",
+        height: 140,
+        width: "100%",
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement;
         el.style.borderColor = "#c9a84c";
-        el.style.transform = "translateY(-3px)";
-        el.style.boxShadow = "0 8px 28px rgba(201,168,76,0.16), 0 3px 10px rgba(26,26,24,0.06)";
+        el.style.boxShadow = "0 4px 20px rgba(201,168,76,0.18), 0 2px 8px rgba(26,26,24,0.06)";
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLElement;
         el.style.borderColor = "rgba(26,26,24,0.09)";
-        el.style.transform = "translateY(0)";
-        el.style.boxShadow = "0 2px 10px rgba(26,26,24,0.05)";
+        el.style.boxShadow = "0 2px 8px rgba(26,26,24,0.05)";
       }}
     >
-      {/* Image — contain so full garment is always visible */}
+      {/* Image — fixed square, centred + contained, no cropping */}
       <div style={{
-        width: "100%", aspectRatio: "3/4", overflow: "hidden",
-        flexShrink: 0, background: "#ede9e1",
+        width: 140, minWidth: 140, height: "100%",
+        background: "#f2efe9",
+        borderRight: "1px solid rgba(26,26,24,0.06)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "10px 8px",
-        boxSizing: "border-box",
+        padding: 10, boxSizing: "border-box", overflow: "hidden",
       }}>
-        <img src={opt.thumbnail} alt={opt.title}
-          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+        <img
+          src={opt.thumbnail}
+          alt={opt.title}
+          style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
           onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.3"; }}
         />
       </div>
-      <div style={{ padding: "10px 12px 13px", flex: 1, display: "flex", flexDirection: "column", gap: 3 }}>
-        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 8, letterSpacing: ".14em", textTransform: "uppercase" as const, color: "#c9a84c", fontWeight: 600 }}>
+
+      {/* Text */}
+      <div style={{ padding: "14px 16px 14px", flex: 1, display: "flex", flexDirection: "column", gap: 3, minWidth: 0, overflow: "hidden" }}>
+        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 8, letterSpacing: ".16em", textTransform: "uppercase" as const, color: "#c9a84c", fontWeight: 700 }}>
           {opt.label}
         </div>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontWeight: 600, color: "#1a1a18", letterSpacing: ".02em", lineHeight: 1.2 }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 600, color: "#1a1a18", letterSpacing: ".02em", lineHeight: 1.15 }}>
           {opt.title}
         </div>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 11, color: "#8a8780", fontStyle: "italic", lineHeight: 1.3 }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 11.5, color: "#8a8780", fontStyle: "italic", lineHeight: 1.35 }}>
           {opt.subtitle}
         </div>
-        <div style={{ marginTop: "auto", paddingTop: 8 }}>
+        <div style={{
+          fontFamily: "'Jost', sans-serif", fontSize: 10, color: "#aaa8a3",
+          lineHeight: 1.5, marginTop: 3,
+          overflow: "hidden", display: "-webkit-box",
+          WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
+        }}>
+          {opt.desc}
+        </div>
+        <div style={{ marginTop: "auto" }}>
           <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 8, letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#c9a84c", fontWeight: 600 }}>
             Customise →
           </span>
@@ -285,13 +291,19 @@ function PatternCard({ opt, onSelect }: { opt: PatOpt; onSelect: (h: string) => 
         el.style.boxShadow = "0 2px 10px rgba(26,26,24,0.05)";
       }}
     >
-      <div style={{ width: "100%", aspectRatio: "3/4", overflow: "hidden", flexShrink: 0, background: "#ede9e1" }}>
+      {/* Image — contained within frame, no cropping */}
+      <div style={{
+        width: "100%", aspectRatio: "3/4", overflow: "hidden",
+        flexShrink: 0, background: "#f2efe9",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "8px 6px", boxSizing: "border-box",
+      }}>
         <img src={opt.thumbnail} alt={opt.label}
-          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }}
+          style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
           onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.3"; }}
         />
       </div>
-      <div style={{ padding: "8px 10px 10px" }}>
+      <div style={{ padding: "7px 8px 9px" }}>
         <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase" as const, color: "#1a1a18", fontWeight: 600, lineHeight: 1.3 }}>
           {opt.label}
         </div>
