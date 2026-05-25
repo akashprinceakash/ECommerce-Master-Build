@@ -922,8 +922,13 @@ export default function CustomizePage() {
       const payload=await buildPayload();
       const effectiveQty=Object.values(sizeQty).reduce((a,b)=>a+b,0)||qty;
       const effectiveSize=Object.entries(sizeQty).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])[0]?.[0]||size;
-      const cust=await apiFetch("/api/customizations",{method:"POST",body:JSON.stringify(payload)});
-      return apiFetch("/api/cart/items",{method:"POST",body:JSON.stringify({productId:id,customizationId:cust.id,quantity:effectiveQty,size:effectiveSize})});
+      // Try to save the customisation; if it fails, still add to cart without a customisation ID
+      let customizationId: number|null = null;
+      try {
+        const cust=await apiFetch("/api/customizations",{method:"POST",body:JSON.stringify(payload)});
+        customizationId=cust.id??null;
+      } catch { /* non-blocking — cart add will proceed */ }
+      return apiFetch("/api/cart/items",{method:"POST",body:JSON.stringify({productId:id,customizationId,quantity:effectiveQty,size:effectiveSize})});
     },
     onSuccess:()=>{toast({title:"Added to Cart ✓",description:"Your custom design has been added."});setLocation("/cart");},
     onError:(e:any)=>toast({title:"Could not add to cart",description:e.message,variant:"destructive"}),
