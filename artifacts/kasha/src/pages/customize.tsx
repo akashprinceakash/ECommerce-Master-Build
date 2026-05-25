@@ -206,7 +206,8 @@ export default function CustomizePage() {
 
   // ── Wizard step (1–4) ────────────────────────────────────────────────────
   // Auto-advance to Step 2 when arriving via the entry modal (?style= present)
-  const [step, setStep] = useState(() => isQuickMode ? 3 : (_entryStyle ? 2 : 1));
+  const initialStep = isQuickMode ? 3 : (_entryStyle ? 2 : 1);
+  const [step, setStep] = useState(() => initialStep);
 
   // ── 3D model-viewer ──────────────────────────────────────────────────────
   const [webglAvailable] = useState(() => {
@@ -2087,19 +2088,19 @@ export default function CustomizePage() {
           }}>
             {/* Back */}
             <button
-              onClick={()=>setStep(s=>Math.max(1,s-1))}
-              disabled={step===1}
+              onClick={()=>setStep(s=>Math.max(initialStep,s-1))}
+              disabled={step===initialStep}
               style={{
                 flex:1,padding:"11px 0",borderRadius:99,
-                border:`1.5px solid ${step===1?"rgba(26,26,24,0.12)":V.bd}`,
+                border:`1.5px solid ${step===initialStep?"rgba(26,26,24,0.12)":V.bd}`,
                 background:"transparent",
-                color:step===1?V.mu:V.tx,
-                fontSize:11,fontWeight:500,cursor:step===1?"default":"pointer",
+                color:step===initialStep?V.mu:V.tx,
+                fontSize:11,fontWeight:500,cursor:step===initialStep?"default":"pointer",
                 fontFamily:"'Jost',sans-serif",letterSpacing:".06em",
                 transition:"all 0.25s",
               }}
-              onMouseEnter={e=>{if(step>1){e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.ac;}}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor=step===1?"rgba(26,26,24,0.12)":V.bd;e.currentTarget.style.color=step===1?V.mu:V.tx;}}>
+              onMouseEnter={e=>{if(step>initialStep){e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.ac;}}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor=step===initialStep?"rgba(26,26,24,0.12)":V.bd;e.currentTarget.style.color=step===initialStep?V.mu:V.tx;}}>
               ← Back
             </button>
 
