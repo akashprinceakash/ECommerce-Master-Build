@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Link } from "wouter";
+import { CustomizeEntryModal } from "./CustomizeEntryModal";
 
 const GOLD = "#B8925A";
 const MUTED = "rgba(0,0,0,0.68)";
@@ -47,7 +49,9 @@ function FooterLink({
 }
 
 export function Footer() {
+  const [customizeModalOpen, setCustomizeModalOpen] = useState(false);
   return (
+    <>
     <footer
       style={{
         background: "#F5F2EC",
@@ -152,9 +156,13 @@ export function Footer() {
             <div style={COL_TITLE}>Services</div>
             <ul className="flex flex-col gap-2.5">
               <li>
-                <FooterLink href="#">
+                <button
+                  onClick={() => setCustomizeModalOpen(true)}
+                  style={{ ...LINK_STYLE, background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                  className="hover:!text-[#B8925A] transition-colors"
+                >
                   Custom Studio
-                </FooterLink>
+                </button>
               </li>
               <li>
                 <FooterLink href="#">
@@ -290,5 +298,7 @@ export function Footer() {
         </div>
       </div>
     </footer>
+    <CustomizeEntryModal isOpen={customizeModalOpen} onClose={() => setCustomizeModalOpen(false)} />
+    </>
   );
 }

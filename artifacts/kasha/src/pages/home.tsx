@@ -473,26 +473,49 @@ export default function Home() {
                   transform: i === active ? "translateY(0)" : "translateY(14px)",
                   transition:"opacity 0.7s 0.6s ease, transform 0.7s 0.6s ease",
                 }}>
-                  {/* Primary CTA — navigates to the product section matching the banner name */}
-                  <Link
-                    href={s.primary.href}
-                    style={{
-                      background:    GOLD,
-                      color:         "#fff",
-                      fontFamily:    "'Josefin Sans', sans-serif",
-                      fontSize:      14,
-                      letterSpacing: "0.22em",
-                      textTransform: "uppercase",
-                      padding:       "14px 32px",
-                      display:       "inline-block",
-                      transition:    "background 0.2s, transform 0.2s",
-                      boxShadow:     "0 6px 18px rgba(184,146,90,0.4)",
-                    }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = GOLD_LIGHT; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = GOLD;       (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
-                  >
-                    {s.primary.label}
-                  </Link>
+                  {/* Primary CTA — modal for studio links, navigate for all others */}
+                  {s.primary.href.includes("/customize") ? (
+                    <button
+                      onClick={() => setCustomizeModalOpen(true)}
+                      style={{
+                        background:    GOLD,
+                        color:         "#fff",
+                        fontFamily:    "'Josefin Sans', sans-serif",
+                        fontSize:      14,
+                        letterSpacing: "0.22em",
+                        textTransform: "uppercase",
+                        padding:       "14px 32px",
+                        border:        "none",
+                        cursor:        "pointer",
+                        transition:    "background 0.2s, transform 0.2s",
+                        boxShadow:     "0 6px 18px rgba(184,146,90,0.4)",
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = GOLD_LIGHT; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = GOLD;       (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+                    >
+                      {s.primary.label}
+                    </button>
+                  ) : (
+                    <Link
+                      href={s.primary.href}
+                      style={{
+                        background:    GOLD,
+                        color:         "#fff",
+                        fontFamily:    "'Josefin Sans', sans-serif",
+                        fontSize:      14,
+                        letterSpacing: "0.22em",
+                        textTransform: "uppercase",
+                        padding:       "14px 32px",
+                        display:       "inline-block",
+                        transition:    "background 0.2s, transform 0.2s",
+                        boxShadow:     "0 6px 18px rgba(184,146,90,0.4)",
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = GOLD_LIGHT; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = GOLD;       (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+                    >
+                      {s.primary.label}
+                    </Link>
+                  )}
                   {/* Secondary outline CTA */}
                   {s.outline && (
                     <button
