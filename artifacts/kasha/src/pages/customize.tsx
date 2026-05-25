@@ -94,18 +94,27 @@ const PART_ZONES: { id: Exclude<PatternZone,"all">; label: string }[] = [
 //   leftSleeve:  { left:210, top:4,   w:398, h:170 }
 //   rightSleeve: { left:617, top:2,   w:398, h:171 }
 const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
-  "front-chest": { left: 255, top: 490 },  // center-x of front zone, just below chest
-  "front-left":  { left: 147, top: 490 },  // left quarter of front zone, just below chest
-  "front-right": { left: 363, top: 490 },  // right quarter of front zone, just below chest
-  "back-center": { left: 765, top: 460 },  // center-x of back zone, upper back
-  "back-left":   { left: 645, top: 460 },  // left quarter of back zone
-  "back-right":  { left: 886, top: 460 },  // right quarter of back zone
-  "left-sleeve": { left: 409, top: 120 },  // center of leftSleeve zone
-  "right-sleeve":{ left: 816, top: 120 },  // center of rightSleeve zone
+  "front-left":   { left: 147, top: 490 },  // left quarter of front zone
+  "front-right":  { left: 363, top: 490 },  // right quarter of front zone
+  "front-center": { left: 255, top: 680 },  // vertical centre of front zone
+  "back-top":     { left: 765, top: 460 },  // upper back (was back-center)
+  "back-center":  { left: 765, top: 604 },  // vertical centre of back zone
+  "left-sleeve":  { left: 409, top: 120 },  // centre of leftSleeve zone
+  "right-sleeve": { left: 816, top: 120 },  // centre of rightSleeve zone
+};
+// Which 3-D view to jump to when a placement is selected
+const PLACEMENT_VIEW: Record<string, "front"|"back"|"left"|"right"> = {
+  "front-left":   "front",
+  "front-right":  "front",
+  "front-center": "front",
+  "back-top":     "back",
+  "back-center":  "back",
+  "left-sleeve":  "left",
+  "right-sleeve": "right",
 };
 const PLACEMENT_GROUPS = [
-  { label:"FRONT",  items:[{key:"front-chest",label:"Chest"},{key:"front-left",label:"Left"},{key:"front-right",label:"Right"}] },
-  { label:"BACK",   items:[{key:"back-center",label:"Center"},{key:"back-left",label:"Left"},{key:"back-right",label:"Right"}] },
+  { label:"FRONT",  items:[{key:"front-left",label:"Left"},{key:"front-right",label:"Right"},{key:"front-center",label:"Center"}] },
+  { label:"BACK",   items:[{key:"back-top",label:"Top"},{key:"back-center",label:"Center"}] },
   { label:"SLEEVES",items:[{key:"left-sleeve",label:"Left"},{key:"right-sleeve",label:"Right"}] },
 ];
 
@@ -1790,14 +1799,13 @@ export default function CustomizePage() {
                         <div style={{...sb,marginBottom:8}}>Position</div>
                         {(()=>{
                           const chips=[
-                            {key:"front-chest", label:"F. Chest",  cx:30,cy:40,back:false},
-                            {key:"front-left",  label:"F. Left",   cx:21,cy:40,back:false},
-                            {key:"front-right", label:"F. Right",  cx:39,cy:40,back:false},
-                            {key:"back-center", label:"B. Center", cx:30,cy:48,back:true},
-                            {key:"back-left",   label:"B. Left",   cx:21,cy:48,back:true},
-                            {key:"back-right",  label:"B. Right",  cx:39,cy:48,back:true},
-                            {key:"left-sleeve", label:"L. Sleeve", cx:7, cy:23,back:false},
-                            {key:"right-sleeve",label:"R. Sleeve", cx:53,cy:23,back:false},
+                            {key:"front-left",   label:"F. Left",   cx:21,cy:40,back:false},
+                            {key:"front-right",  label:"F. Right",  cx:39,cy:40,back:false},
+                            {key:"front-center", label:"F. Center", cx:30,cy:52,back:false},
+                            {key:"back-top",     label:"B. Top",    cx:30,cy:35,back:true},
+                            {key:"back-center",  label:"B. Center", cx:30,cy:52,back:true},
+                            {key:"left-sleeve",  label:"L. Sleeve", cx:7, cy:23,back:false},
+                            {key:"right-sleeve", label:"R. Sleeve", cx:53,cy:23,back:false},
                           ];
                           return(
                             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
@@ -1805,7 +1813,7 @@ export default function CustomizePage() {
                                 const isA=logoPosition===c.key;
                                 const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                                 return(
-                                  <div key={c.key} onClick={()=>{setLogoPosition(c.key as any);if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
+                                  <div key={c.key} onClick={()=>{setLogoPosition(c.key as any);setCameraView(PLACEMENT_VIEW[c.key]||"front");if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
                                     display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
                                     padding:"7px 3px",borderRadius:9,transition:"all .18s",
                                     border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
@@ -1890,14 +1898,13 @@ export default function CustomizePage() {
                     <div style={{...sb,marginBottom:8}}>Placement</div>
                     {(()=>{
                       const chips=[
-                        {key:"front-chest", label:"F. Chest",  cx:30,cy:40,back:false},
-                        {key:"front-left",  label:"F. Left",   cx:21,cy:40,back:false},
-                        {key:"front-right", label:"F. Right",  cx:39,cy:40,back:false},
-                        {key:"back-center", label:"B. Center", cx:30,cy:48,back:true},
-                        {key:"back-left",   label:"B. Left",   cx:21,cy:48,back:true},
-                        {key:"back-right",  label:"B. Right",  cx:39,cy:48,back:true},
-                        {key:"left-sleeve", label:"L. Sleeve", cx:7, cy:23,back:false},
-                        {key:"right-sleeve",label:"R. Sleeve", cx:53,cy:23,back:false},
+                        {key:"front-left",   label:"F. Left",   cx:21,cy:40,back:false},
+                        {key:"front-right",  label:"F. Right",  cx:39,cy:40,back:false},
+                        {key:"front-center", label:"F. Center", cx:30,cy:52,back:false},
+                        {key:"back-top",     label:"B. Top",    cx:30,cy:35,back:true},
+                        {key:"back-center",  label:"B. Center", cx:30,cy:52,back:true},
+                        {key:"left-sleeve",  label:"L. Sleeve", cx:7, cy:23,back:false},
+                        {key:"right-sleeve", label:"R. Sleeve", cx:53,cy:23,back:false},
                       ];
                       return(
                         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
@@ -1905,7 +1912,7 @@ export default function CustomizePage() {
                             const isA=textPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                             return(
-                              <div key={c.key} onClick={()=>{setTextPosition(c.key as any);if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
+                              <div key={c.key} onClick={()=>{setTextPosition(c.key as any);setCameraView(PLACEMENT_VIEW[c.key]||"front");if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
                                 display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
                                 padding:"7px 3px",borderRadius:9,transition:"all .18s",
                                 border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
@@ -1933,21 +1940,6 @@ export default function CustomizePage() {
                   </button>
                 </div>
 
-                {/* Sleeve length */}
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  <div style={{...sb}}>Sleeve length</div>
-                  <div style={{display:"flex",gap:8}}>
-                    {(["full","half"] as const).map(sl=>(
-                      <button key={sl} onClick={()=>setSleeveLength(sl)} style={{
-                        flex:1,padding:"8px 0",borderRadius:8,fontSize:10,
-                        fontFamily:"'Jost',sans-serif",letterSpacing:".05em",textTransform:"uppercase",
-                        border:`1.5px solid ${sleeveLength===sl?V.ac:V.bd}`,
-                        background:sleeveLength===sl?V.aclt:"transparent",
-                        cursor:"pointer",color:sleeveLength===sl?V.tx:V.mu,transition:"all .2s",
-                      }}>{sl}</button>
-                    ))}
-                  </div>
-                </div>
 
               </div>
             )}
@@ -2765,14 +2757,13 @@ export default function CustomizePage() {
                     <div style={{fontSize:9,letterSpacing:".12em",textTransform:"uppercase",color:V.mu,fontFamily:"'Jost',sans-serif",marginBottom:8}}>Placement</div>
                     {(()=>{
                       const cards=[
-                        {key:"front-chest", label:"F. Chest",  cx:30,cy:40},
-                        {key:"front-left",  label:"F. Left",   cx:21,cy:40},
-                        {key:"front-right", label:"F. Right",  cx:39,cy:40},
-                        {key:"back-center", label:"B. Center", cx:30,cy:48,back:true},
-                        {key:"back-left",   label:"B. Left",   cx:21,cy:48,back:true},
-                        {key:"back-right",  label:"B. Right",  cx:39,cy:48,back:true},
-                        {key:"left-sleeve", label:"L. Sleeve", cx:7, cy:23},
-                        {key:"right-sleeve",label:"R. Sleeve", cx:53,cy:23},
+                        {key:"front-left",   label:"F. Left",   cx:21,cy:40},
+                        {key:"front-right",  label:"F. Right",  cx:39,cy:40},
+                        {key:"front-center", label:"F. Center", cx:30,cy:52},
+                        {key:"back-top",     label:"B. Top",    cx:30,cy:35,back:true},
+                        {key:"back-center",  label:"B. Center", cx:30,cy:52,back:true},
+                        {key:"left-sleeve",  label:"L. Sleeve", cx:7, cy:23},
+                        {key:"right-sleeve", label:"R. Sleeve", cx:53,cy:23},
                       ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
                       return(
                         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
@@ -2780,7 +2771,7 @@ export default function CustomizePage() {
                             const isA=textPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                             return(
-                              <div key={c.key} onClick={()=>{setTextPosition(c.key);if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});fcRef.current?.renderAll();syncTexture();}}} style={{
+                              <div key={c.key} onClick={()=>{setTextPosition(c.key);setCameraView(PLACEMENT_VIEW[c.key]||"front");if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});fcRef.current?.renderAll();syncTexture();}}} style={{
                                 display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
                                 padding:"7px 3px",borderRadius:9,transition:"all .18s",
                                 border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
@@ -2844,14 +2835,13 @@ export default function CustomizePage() {
                     <div style={{fontSize:9,letterSpacing:".12em",textTransform:"uppercase",color:V.mu,fontFamily:"'Jost',sans-serif",marginBottom:8,...sb}}>Placement</div>
                     {(()=>{
                       const cards=[
-                        {key:"front-chest", label:"F. Chest",  cx:30,cy:40},
-                        {key:"front-left",  label:"F. Left",   cx:21,cy:40},
-                        {key:"front-right", label:"F. Right",  cx:39,cy:40},
-                        {key:"back-center", label:"B. Center", cx:30,cy:48,back:true},
-                        {key:"back-left",   label:"B. Left",   cx:21,cy:48,back:true},
-                        {key:"back-right",  label:"B. Right",  cx:39,cy:48,back:true},
-                        {key:"left-sleeve", label:"L. Sleeve", cx:7, cy:23},
-                        {key:"right-sleeve",label:"R. Sleeve", cx:53,cy:23},
+                        {key:"front-left",   label:"F. Left",   cx:21,cy:40},
+                        {key:"front-right",  label:"F. Right",  cx:39,cy:40},
+                        {key:"front-center", label:"F. Center", cx:30,cy:52},
+                        {key:"back-top",     label:"B. Top",    cx:30,cy:35,back:true},
+                        {key:"back-center",  label:"B. Center", cx:30,cy:52,back:true},
+                        {key:"left-sleeve",  label:"L. Sleeve", cx:7, cy:23},
+                        {key:"right-sleeve", label:"R. Sleeve", cx:53,cy:23},
                       ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
                       return(
                         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
@@ -2859,7 +2849,7 @@ export default function CustomizePage() {
                             const isA=logoPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                             return(
-                              <div key={c.key} onClick={()=>{setLogoPosition(c.key);if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});fcRef.current?.renderAll();syncTexture();}}} style={{
+                              <div key={c.key} onClick={()=>{setLogoPosition(c.key);setCameraView(PLACEMENT_VIEW[c.key]||"front");if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center"});fcRef.current?.renderAll();syncTexture();}}} style={{
                                 display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
                                 padding:"7px 3px",borderRadius:9,transition:"all .18s",
                                 border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
@@ -3178,19 +3168,6 @@ export default function CustomizePage() {
                   </button>
                 );
               })}
-              <button onClick={()=>{
-                const mv:any=mvRef.current; if(!mv) return;
-                mv.setAttribute("auto-rotate",""); mv.setAttribute("rotation-per-second","20deg");
-                setTimeout(()=>{mv.removeAttribute("auto-rotate");mv.setAttribute("rotation-per-second","8deg");},3000);
-              }} style={{
-                width:38,height:38,borderRadius:10,padding:0,
-                border:`1.5px solid ${V.ac}`,background:`rgba(201,168,76,0.1)`,
-                cursor:"pointer",flexShrink:0,
-                display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:1,
-              }}>
-                <span style={{fontSize:13,lineHeight:1,color:V.ac}}>↻</span>
-                <span style={{fontSize:7,letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",fontWeight:700,color:V.ac,lineHeight:1}}>360°</span>
-              </button>
             </div>
           )}
         </div>
@@ -3250,33 +3227,6 @@ export default function CustomizePage() {
             );
           })}
 
-          {/* Divider */}
-          <div style={{width:40,height:1,background:V.bd,margin:"4px 0"}}/>
-
-          {/* TRY 360° button */}
-          <button
-            onClick={()=>{
-              const mv:any=mvRef.current; if(!mv) return;
-              mv.setAttribute("auto-rotate",""); mv.setAttribute("rotation-per-second","20deg");
-              setTimeout(()=>{mv.removeAttribute("auto-rotate");mv.setAttribute("rotation-per-second","8deg");},3000);
-            }}
-            style={{
-              width:62,padding:"10px 0",borderRadius:12,
-              border:`1.5px solid ${V.ac}`,
-              background:`rgba(201,168,76,0.1)`,
-              cursor:"pointer",
-              display:"flex",flexDirection:"column",alignItems:"center",gap:4,
-              transition:"all 0.25s",
-            }}
-            onMouseEnter={e=>{e.currentTarget.style.background=V.aclt;e.currentTarget.style.boxShadow=`0 4px 14px rgba(201,168,76,0.25)`;}}
-            onMouseLeave={e=>{e.currentTarget.style.background=`rgba(201,168,76,0.1)`;e.currentTarget.style.boxShadow="none";}}>
-            <span style={{fontSize:14,lineHeight:1}}>↻</span>
-            <span style={{
-              fontSize:8,letterSpacing:".06em",textTransform:"uppercase",
-              fontFamily:"'Jost',sans-serif",fontWeight:700,
-              color:V.ac,lineHeight:1,
-            }}>360°</span>
-          </button>
         </div>
       </div>
 
