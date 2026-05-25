@@ -1,0 +1,96 @@
+*Case A — Pattern t-shirt selected**
+
+Two customization targets:
+
+1. **Base body**
+   - Colour → opens Colour pop-up
+   - Print → opens Print library pop-up
+
+2. **Pattern design** (covers all accent panels, trims, side panels, collar simultaneously)
+   - Colour → opens Colour pop-up
+   - Print → opens Print library pop-up
+
+---
+
+**Case B — Print t-shirt selected**
+
+Three customization targets:
+
+1. **Full body** → opens Print library pop-up (applies print to entire shirt)
+2. **Base body** (full body excluding collar) → opens Print library pop-up (applies only to base body)
+3. **Collar**
+   - Colour → opens Colour pop-up
+   - Print → opens Print library pop-up
+
+---
+
+**Case C — Solid t-shirt selected**
+
+Three customization targets:
+
+1. **Full body**
+   - Colour → opens Colour pop-up
+   - Print → opens Print library pop-up (applies to full body)
+
+2. **Base body** (full body excluding collar)
+   - Colour → opens Colour pop-up
+   - Print → opens Print library pop-up (applies only to base body)
+
+3. **Collar**
+   - Colour → opens Colour pop-up
+   - Print → opens Print library pop-up (applies only to collar)
+
+---
+
+**Pop-up specs (both types):**
+
+Colour pop-up:
+- Preset colour swatches: White, Black, Navy, Green, Red (and more)
+- Advanced colour wheel / spectrum canvas
+- Eyedropper / colour picker tool
+- `Cancel` and `Apply` buttons
+
+Print library pop-up:
+- Grid of print swatch thumbnails
+- User selects one, clicks `Apply`
+- `Cancel` and `Apply` buttons
+
+Every selection **updates the 3D canvas in real time.**
+
+---
+
+### Step 3 — Logo & text
+
+**Add logo / image:**
+- Upload image button
+- One-click "Remove image background" toggle
+- Uploaded asset is constrained inside a pre-fixed bounding box on the canvas (drag and resize allowed within bounds only)
+
+**Add text:**
+- Text input field
+- Font selector (dropdown with corporate/sport typography presets)
+- Size slider
+- Colour picker (routes to the same colour pop-up)
+- Alignment: Left / Centre / Right
+
+**Text placement positions** (user selects where the text appears on the shirt):
+- Front: Left chest / Centre (stomach) / Right chest
+- Back: Top / Centre (near stomach)
+- Left sleeve
+- Right sleeve
+
+---
+
+### Step 4 — Sizing & order matrix
+
+Mode toggle: **Standard wholesale sizes** | **Custom specification form**
+
+Standard mode shows a quantity input grid:
+
+| S | M | L | XL | XXL | Running total |
+|---|---|---|----|-----|---------------|
+| input | input | input | input | input | auto-sum |
+
+A callout box at the bottom: "Looking for special custom tailoring or large bulk quantities? Connect with us directly via WhatsApp."
+
+---

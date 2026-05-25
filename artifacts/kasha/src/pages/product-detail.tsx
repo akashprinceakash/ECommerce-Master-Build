@@ -550,6 +550,7 @@ export default function ProductDetailPage() {
         onClose={() => setPersonalizeOpen(false)}
         productId={product.id}
         productName={product.name}
+        productSku={product.sku ?? undefined}
       />
     </Layout>
   );

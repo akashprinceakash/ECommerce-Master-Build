@@ -4,15 +4,17 @@
  */
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { parseSku } from "@/components/3d/sku-config";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   productId: number;
   productName?: string;
+  productSku?: string;
 }
 
-export function PersonalizeModal({ isOpen, onClose, productId, productName }: Props) {
+export function PersonalizeModal({ isOpen, onClose, productId, productName, productSku }: Props) {
   const [, navigate] = useLocation();
   const [selectedMode, setSelectedMode] = useState<"quick"|"full"|null>(null);
 
@@ -25,7 +27,21 @@ export function PersonalizeModal({ isOpen, onClose, productId, productName }: Pr
       if (mode === "quick") {
         navigate(`/products/${productId}/customize?mode=quick`);
       } else {
-        navigate(`/products/${productId}/customize`);
+        // Derive style + design from SKU so the customizer skips Step 1
+        let styleParam = "";
+        let designParam = "";
+        if (productSku) {
+          const skuResult = parseSku(productSku);
+          if (skuResult.type === "pattern") {
+            styleParam = "&style=pattern";
+            if (skuResult.designId) designParam = `&design=${skuResult.designId}`;
+          } else if (skuResult.type === "print") {
+            styleParam = "&style=print";
+          } else {
+            styleParam = "&style=solid";
+          }
+        }
+        navigate(`/products/${productId}/customize?entry=1${styleParam}${designParam}`);
       }
     }, 160);
   }

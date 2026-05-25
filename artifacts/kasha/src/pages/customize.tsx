@@ -354,8 +354,8 @@ export default function CustomizePage() {
   // ── Sizing matrix + modal state ───────────────────────────────────────────
   const [sizeMode, setSizeMode] = useState<"standard"|"custom">("standard");
   const [sizeQty, setSizeQty] = useState<Record<string,number>>({S:0,M:0,L:0,XL:0,XXL:0});
-  const [colorModalFor, setColorModalFor] = useState<"all"|"base"|"pattern"|null>(null);
-  const [printModalFor, setPrintModalFor] = useState<"all"|"base"|"pattern"|null>(null);
+  const [colorModalFor, setColorModalFor] = useState<"all"|"base"|"pattern"|"base-body"|"collar"|null>(null);
+  const [printModalFor, setPrintModalFor] = useState<"all"|"base-body"|"collar"|null>(null);
   const [bgRemoving, setBgRemoving] = useState(false);
   const historyStack = useRef<string[]>([]);
   const historyIdx = useRef(-1);
@@ -1306,10 +1306,10 @@ export default function CustomizePage() {
                 const isPatternMode = effectiveSkuType === "pattern";
                 const isPrintMode   = effectiveSkuType === "print";
 
-                const TargetRow = ({title,desc,showColour,colourFor,showPrint}:{
+                const TargetRow = ({title,desc,showColour,colourFor,showPrint,printFor}:{
                   title:string; desc?:string;
-                  showColour?:boolean; colourFor?:"all"|"base"|"pattern";
-                  showPrint?:boolean;
+                  showColour?:boolean; colourFor?:"all"|"base"|"pattern"|"base-body"|"collar";
+                  showPrint?:boolean; printFor?:"all"|"base-body"|"collar";
                 }) => (
                   <div style={{padding:"14px 16px",borderRadius:12,border:`1px solid ${V.bd}`,background:V.sf2,display:"flex",flexDirection:"column",gap:10}}>
                     <div>
@@ -1330,7 +1330,7 @@ export default function CustomizePage() {
                         </button>
                       )}
                       {showPrint&&(
-                        <button onClick={()=>setPrintModalFor("all")} style={{
+                        <button onClick={()=>setPrintModalFor(printFor||"all")} style={{
                           flex:1,padding:"9px 0",borderRadius:8,border:`1.5px solid ${V.bd}`,
                           background:"transparent",cursor:"pointer",
                           fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:600,
@@ -1363,8 +1363,8 @@ export default function CustomizePage() {
 
                     {isPatternMode&&(
                       <>
-                        <TargetRow title="Base Body" desc="Background body colour and all-over print" showColour colourFor="all" showPrint/>
-                        <TargetRow title="Pattern Design" desc="Recolour accent panels, trims, collar and sleeves" showColour colourFor="base" showPrint/>
+                        <TargetRow title="Base Body" desc="Background body colour and all-over print" showColour colourFor="all" showPrint printFor="all"/>
+                        <TargetRow title="Pattern Design" desc="Recolour accent panels, trims, collar and sleeves" showColour colourFor="base" showPrint printFor="all"/>
                         {activeKashaDesign&&(
                           <div style={{padding:"10px 14px",borderRadius:10,background:V.sf2,border:`1px solid ${V.bd}`,display:"flex",gap:10,alignItems:"center"}}>
                             {activeKashaDesign.thumbnail&&<img src={activeKashaDesign.thumbnail} alt="" style={{width:36,height:36,objectFit:"cover",borderRadius:6,border:`1px solid ${V.bd}`,flexShrink:0}}/>}
@@ -1379,17 +1379,17 @@ export default function CustomizePage() {
 
                     {isPrintMode&&(
                       <>
-                        <TargetRow title="Full Body" desc="Apply a premium print to the entire garment" showPrint/>
-                        <TargetRow title="Base Body" desc="Print on body, excluding the collar" showPrint/>
-                        <TargetRow title="Collar" desc="Collar accent colour or print" showColour colourFor="all" showPrint/>
+                        <TargetRow title="Full Body" desc="Apply a premium print to the entire garment" showPrint printFor="all"/>
+                        <TargetRow title="Base Body" desc="Print on body, excluding the collar" showPrint printFor="base-body"/>
+                        <TargetRow title="Collar" desc="Collar accent colour or print" showColour colourFor="collar" showPrint printFor="collar"/>
                       </>
                     )}
 
                     {!isPatternMode&&!isPrintMode&&(
                       <>
-                        <TargetRow title="Full Body" desc="Colour or print the entire garment" showColour colourFor="all" showPrint/>
-                        <TargetRow title="Base Body" desc="Body colour, excluding the collar" showColour colourFor="base" showPrint/>
-                        <TargetRow title="Collar" desc="Collar accent colour or print" showColour colourFor="pattern" showPrint/>
+                        <TargetRow title="Full Body" desc="Colour or print the entire garment" showColour colourFor="all" showPrint printFor="all"/>
+                        <TargetRow title="Base Body" desc="Body colour, excluding the collar" showColour colourFor="base-body" showPrint printFor="base-body"/>
+                        <TargetRow title="Collar" desc="Collar accent colour or print" showColour colourFor="collar" showPrint printFor="collar"/>
                       </>
                     )}
 
@@ -3234,7 +3234,13 @@ export default function CustomizePage() {
                 } else if(colorModalFor==="base"){
                   setPatColorA(col);
                   applyPatternColors(col, patColorB);
+                } else if(colorModalFor==="base-body"){
+                  // Apply to body zones, excluding collar
+                  (["front","back","leftSleeve","rightSleeve"] as const).forEach(z=>applyZoneColor(z,col));
+                } else if(colorModalFor==="collar"){
+                  applyZoneColor("collar",col);
                 } else {
+                  // "pattern" — pattern layer color B
                   setPatColorB(col);
                   applyPatternColors(patColorA, col);
                 }
@@ -3269,6 +3275,8 @@ export default function CustomizePage() {
                       const col=e.target.value;
                       if(colorModalFor==="all"){applyPrimary(col);}
                       else if(colorModalFor==="base"){setPatColorA(col);applyPatternColors(col,patColorB);}
+                      else if(colorModalFor==="base-body"){(["front","back","leftSleeve","rightSleeve"] as const).forEach(z=>applyZoneColor(z,col));}
+                      else if(colorModalFor==="collar"){applyZoneColor("collar",col);}
                       else{setPatColorB(col);applyPatternColors(patColorA,col);}
                     }}
                     style={{width:48,height:40,padding:2,border:`1.5px solid ${V.bd}`,borderRadius:8,cursor:"pointer",background:V.sf2}}/>
@@ -3324,7 +3332,16 @@ export default function CustomizePage() {
                 const isActive=allOverPrintId===p.id;
                 return(
                   <div key={p.id} onClick={()=>{
-                    applyAllOverPrint(p); saveHistory(); setPrintModalFor(null);
+                    // Route print to the correct zone based on which TargetRow opened this modal
+                    if(printModalFor==="base-body"){
+                      applyZonePrint("front",p); applyZonePrint("back",p);
+                      applyZonePrint("leftSleeve",p); applyZonePrint("rightSleeve",p);
+                    } else if(printModalFor==="collar"){
+                      applyZonePrint("collar",p);
+                    } else {
+                      applyAllOverPrint(p); // "all" — full garment
+                    }
+                    saveHistory(); setPrintModalFor(null);
                   }} style={{
                     cursor:"pointer",borderRadius:12,overflow:"hidden",
                     border:`2px solid ${isActive?V.ac:V.bd}`,
