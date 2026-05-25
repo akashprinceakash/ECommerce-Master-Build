@@ -5,8 +5,10 @@ import { useRemoveCartItem, useUpdateCartItem, getGetCartQueryKey } from "@works
 import { useQueryClient } from "@tanstack/react-query";
 import type { Cart } from "@workspace/api-client-react";
 import { getAssetUrl } from "@/lib/api";
-import { useUser } from "@clerk/react";
+import { useUser, useClerk } from "@clerk/react";
 import { useCart } from "@/contexts/CartContext";
+
+const REDIRECT_KEY = "kasha_redirect_after_login";
 
 interface CartDrawerProps {
   open: boolean;
@@ -19,7 +21,14 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
   const removeCartItem = useRemoveCartItem();
   const updateCartItem = useUpdateCartItem();
   const { user } = useUser();
+  const { openSignIn } = useClerk();
   const { guestCart, removeFromGuestCart, updateGuestCartQty, guestCartTotal, guestCartCount } = useCart();
+
+  function handleGuestCheckout() {
+    try { localStorage.setItem(REDIRECT_KEY, "/checkout"); } catch {}
+    onClose();
+    openSignIn({ forceRedirectUrl: "/checkout" });
+  }
 
   const handleUpdateQuantity = async (itemId: number, newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -232,11 +241,12 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
 
             {isGuest ? (
               <>
-                <Link href={`/sign-in?redirect_url=${import.meta.env.BASE_URL.replace(/\/$/, "")}/cart`} onClick={onClose}>
-                  <button className="w-full bg-black hover:bg-gray-900 text-white text-[12px] font-bold tracking-[0.15em] py-4 transition-colors flex items-center justify-center gap-2">
-                    <LogIn className="w-4 h-4" /> SIGN IN TO CHECKOUT
-                  </button>
-                </Link>
+                <button
+                  onClick={handleGuestCheckout}
+                  className="w-full bg-black hover:bg-gray-900 text-white text-[12px] font-bold tracking-[0.15em] py-4 transition-colors flex items-center justify-center gap-2"
+                >
+                  <LogIn className="w-4 h-4" /> SIGN IN TO CHECKOUT
+                </button>
                 <Link href="/products" onClick={onClose}>
                   <button className="w-full border border-black text-black text-[11px] font-bold tracking-[0.12em] py-3 hover:bg-gray-50 transition-colors">
                     CONTINUE SHOPPING

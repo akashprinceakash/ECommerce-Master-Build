@@ -1,12 +1,19 @@
 import { SignIn } from "@clerk/react";
-import { useSearch } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const REDIRECT_KEY = "kasha_redirect_after_login";
+
+function getRedirectUrl(): string {
+  try {
+    const stored = localStorage.getItem(REDIRECT_KEY);
+    if (stored) return stored;
+  } catch {}
+  return `${basePath}/`;
+}
 
 export default function SignInPage() {
-  const search = useSearch();
-  const redirectUrl = new URLSearchParams(search).get("redirect_url") ?? undefined;
+  const redirectUrl = getRedirectUrl();
 
   return (
     <Layout>
@@ -15,8 +22,8 @@ export default function SignInPage() {
           routing="path"
           path={`${basePath}/sign-in`}
           signUpUrl={`${basePath}/sign-up`}
-          fallbackRedirectUrl={redirectUrl ?? `${basePath}/`}
           forceRedirectUrl={redirectUrl}
+          fallbackRedirectUrl={redirectUrl}
         />
       </div>
     </Layout>

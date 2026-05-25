@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
 export interface GuestCartItem {
   productId: number;
@@ -50,49 +50,40 @@ const CartContext = createContext<CartContextType>({
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [guestCart, setGuestCartRaw] = useState<GuestCartItem[]>(loadGuestCart);
+  const [guestCart, setGuestCart] = useState<GuestCartItem[]>(loadGuestCart);
 
-  function persist(next: GuestCartItem[]) {
-    try { localStorage.setItem(GUEST_CART_KEY, JSON.stringify(next)); } catch {}
-  }
+  useEffect(() => {
+    try {
+      localStorage.setItem(GUEST_CART_KEY, JSON.stringify(guestCart));
+    } catch {}
+  }, [guestCart]);
 
   function addToGuestCart(item: GuestCartItem) {
-    setGuestCartRaw(prev => {
+    setGuestCart(prev => {
       const existing = prev.find(i => i.productId === item.productId && i.size === item.size);
-      const next = existing
+      return existing
         ? prev.map(i =>
             i.productId === item.productId && i.size === item.size
               ? { ...i, quantity: i.quantity + item.quantity }
               : i
           )
         : [...prev, item];
-      persist(next);
-      return next;
     });
   }
 
   function removeFromGuestCart(productId: number, size: string) {
-    setGuestCartRaw(prev => {
-      const next = prev.filter(i => !(i.productId === productId && i.size === size));
-      persist(next);
-      return next;
-    });
+    setGuestCart(prev => prev.filter(i => !(i.productId === productId && i.size === size)));
   }
 
   function updateGuestCartQty(productId: number, size: string, quantity: number) {
     if (quantity < 1) return;
-    setGuestCartRaw(prev => {
-      const next = prev.map(i =>
-        i.productId === productId && i.size === size ? { ...i, quantity } : i
-      );
-      persist(next);
-      return next;
-    });
+    setGuestCart(prev =>
+      prev.map(i => (i.productId === productId && i.size === size ? { ...i, quantity } : i))
+    );
   }
 
   function clearGuestCart() {
-    setGuestCartRaw([]);
-    try { localStorage.removeItem(GUEST_CART_KEY); } catch {}
+    setGuestCart([]);
   }
 
   const guestCartCount = guestCart.reduce((s, i) => s + i.quantity, 0);
