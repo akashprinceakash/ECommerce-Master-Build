@@ -182,8 +182,17 @@ export default function CustomizePage() {
   const garmentType = (new URLSearchParams(searchStr).get("type") ?? "") as "solid"|"pattern"|"printed"|"";
   const isTypeMode = !!garmentType && !id; // standalone type-driven studio, no specific product
 
+  // ── Entry-modal URL params (?style=solid|print|pattern, ?design=KS100XB) ──
+  // Set by CustomizeEntryModal when the user picks a product card — used to
+  // pre-initialise userStyle + userChosenDesignId and skip Step 1 automatically.
+  const _entryStyle = (new URLSearchParams(searchStr).get("style") ?? null) as "solid"|"print"|"pattern"|null;
+  const _entryDesign = new URLSearchParams(searchStr).get("design");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const entryDesignRef = useRef(_entryDesign); // stable ref — captured once at mount
+
   // ── Wizard step (1–4) ────────────────────────────────────────────────────
-  const [step, setStep] = useState(() => isQuickMode ? 3 : 1);
+  // Auto-advance to Step 2 when arriving via the entry modal (?style= present)
+  const [step, setStep] = useState(() => isQuickMode ? 3 : (_entryStyle ? 2 : 1));
 
   // ── 3D model-viewer ──────────────────────────────────────────────────────
   const [webglAvailable] = useState(() => {
@@ -270,9 +279,10 @@ export default function CustomizePage() {
   const [colorSubMode, setColorSubMode] = useState<"full"|"parts"|null>(null);
 
   const [showOtherDesigns, setShowOtherDesigns] = useState(false);
-  // User-selected style from Step 1 (overrides SKU-derived type)
-  const [userStyle, setUserStyle] = useState<"solid"|"print"|"pattern"|null>(null);
-  const [userChosenDesignId, setUserChosenDesignId] = useState<string|null>(null);
+  // User-selected style from Step 1 (overrides SKU-derived type).
+  // Seeded from ?style= URL param when arriving via CustomizeEntryModal.
+  const [userStyle, setUserStyle] = useState<"solid"|"print"|"pattern"|null>(_entryStyle);
+  const [userChosenDesignId, setUserChosenDesignId] = useState<string|null>(_entryDesign);
   // Effective type — user choice wins, falls back to SKU-driven type
   const effectiveSkuType: "pattern"|"print"|"solid" =
     userStyle === "pattern" ? "pattern" :
@@ -647,13 +657,25 @@ export default function CustomizePage() {
 
     const skuResult = parseSku(product.sku ?? "");
 
-    if (skuResult.type === "pattern") {
+    // If a specific design was requested via URL (?design=KS100XB), use it —
+    // this allows the entry modal to show e.g. KS1005B on a KS1002B product.
+    const requestedDesignId = entryDesignRef.current;
+
+    if (requestedDesignId) {
+      const design = KASHA_DESIGNS.find(d => d.id === requestedDesignId) ?? KASHA_DESIGNS[0];
+      handleSelectKashaDesign(design).then(() => {
+        if (skuResult.type === "pattern") applyPatternColors(skuResult.colorA, skuResult.colorB);
+      }).catch(() => {
+        setTimeout(() => {
+          if (skuResult.type === "pattern") applyPatternColors(skuResult.colorA, skuResult.colorB);
+        }, 600);
+      });
+    } else if (skuResult.type === "pattern") {
       // Use SKU parser: correct design + correct colorway
       const design = KASHA_DESIGNS.find(d => d.id === skuResult.designId) ?? KASHA_DESIGNS[0];
       handleSelectKashaDesign(design).then(() => {
         applyPatternColors(skuResult.colorA, skuResult.colorB);
       }).catch(() => {
-        // handleSelectKashaDesign may not return a promise — apply colors after short delay
         setTimeout(() => applyPatternColors(skuResult.colorA, skuResult.colorB), 600);
       });
     } else {
