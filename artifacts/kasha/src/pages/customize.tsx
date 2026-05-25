@@ -94,23 +94,21 @@ const PART_ZONES: { id: Exclude<PatternZone,"all">; label: string }[] = [
 //   leftSleeve:  { left:210, top:4,   w:398, h:170 }
 //   rightSleeve: { left:617, top:2,   w:398, h:171 }
 const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
-  "front-left":   { left: 147, top: 490 },  // left quarter of front zone
-  "front-right":  { left: 363, top: 490 },  // right quarter of front zone
-  "front-center": { left: 255, top: 680 },  // vertical centre of front zone
-  "back-top":     { left: 765, top: 460 },  // upper back (was back-center)
-  "back-center":  { left: 765, top: 604 },  // vertical centre of back zone
+  "front-left":   { left: 147, top: 490 },  // left chest zone
+  "front-right":  { left: 363, top: 490 },  // right chest zone
+  "back-center":  { left: 765, top: 604 },  // centre across back
   "left-sleeve":  { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
   "right-sleeve": { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve (UV is horizontally mirrored)
+  "collar-edge":  { left: 255, top: 360 },  // edge of collar / neckline
 };
 // Which 3-D view to jump to when a placement is selected
 const PLACEMENT_VIEW: Record<string, "front"|"back"|"left"|"right"> = {
   "front-left":   "front",
   "front-right":  "front",
-  "front-center": "front",
-  "back-top":     "back",
   "back-center":  "back",
   "left-sleeve":  "left",
   "right-sleeve": "right",
+  "collar-edge":  "front",
 };
 const PLACEMENT_GROUPS = [
   { label:"FRONT",  items:[{key:"front-left",label:"Left"},{key:"front-right",label:"Right"},{key:"front-center",label:"Center"}] },
@@ -342,7 +340,7 @@ export default function CustomizePage() {
   });
 
   // ── Logo step state ──────────────────────────────────────────────────────
-  const [logoPosition, setLogoPosition] = useState("front-chest");
+  const [logoPosition, setLogoPosition] = useState("front-left");
   const [logoSize, setLogoSize] = useState(50);
   const [logoPreview, setLogoPreview] = useState<string|null>(null);
   const [logoPlaced, setLogoPlaced] = useState(false);
@@ -350,7 +348,7 @@ export default function CustomizePage() {
   // ── Text step state ───────────────────────────────────────────────────────
   const textObjRef = useRef<any>(null);
   const [textInput, setTextInput] = useState("");
-  const [textPosition, setTextPosition] = useState("front-chest");
+  const [textPosition, setTextPosition] = useState("front-left");
   const [textPlaced, setTextPlaced] = useState(false);
   const [textFontSize, setTextFontSize] = useState(40);
   const [textColor, setTextColor] = useState("#1a1a18");
@@ -1804,16 +1802,15 @@ export default function CustomizePage() {
                         <div style={{...sb,marginBottom:8}}>Position</div>
                         {(()=>{
                           const chips=[
-                            {key:"front-left",   label:"F. Left",   cx:21,cy:40,back:false},
-                            {key:"front-right",  label:"F. Right",  cx:39,cy:40,back:false},
-                            {key:"front-center", label:"F. Center", cx:30,cy:52,back:false},
-                            {key:"back-top",     label:"B. Top",    cx:30,cy:35,back:true},
-                            {key:"back-center",  label:"B. Center", cx:30,cy:52,back:true},
-                            {key:"left-sleeve",  label:"L. Sleeve", cx:7, cy:23,back:false},
-                            {key:"right-sleeve", label:"R. Sleeve", cx:53,cy:23,back:false},
+                            {key:"front-left",   label:"Chest Left",   cx:21,cy:40,back:false},
+                            {key:"front-right",  label:"Chest Right",  cx:39,cy:40,back:false},
+                            {key:"left-sleeve",  label:"Left Sleeve",  cx:7, cy:23,back:false},
+                            {key:"right-sleeve", label:"Right Sleeve", cx:53,cy:23,back:false},
+                            {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
+                            {key:"collar-edge",  label:"Collar Edge",  cx:30,cy:9, back:false},
                           ];
                           return(
-                            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+                            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5}}>
                               {chips.map(c=>{
                                 const isA=logoPosition===c.key;
                                 const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
@@ -1903,16 +1900,15 @@ export default function CustomizePage() {
                     <div style={{...sb,marginBottom:8}}>Placement</div>
                     {(()=>{
                       const chips=[
-                        {key:"front-left",   label:"F. Left",   cx:21,cy:40,back:false},
-                        {key:"front-right",  label:"F. Right",  cx:39,cy:40,back:false},
-                        {key:"front-center", label:"F. Center", cx:30,cy:52,back:false},
-                        {key:"back-top",     label:"B. Top",    cx:30,cy:35,back:true},
-                        {key:"back-center",  label:"B. Center", cx:30,cy:52,back:true},
-                        {key:"left-sleeve",  label:"L. Sleeve", cx:7, cy:23,back:false},
-                        {key:"right-sleeve", label:"R. Sleeve", cx:53,cy:23,back:false},
+                        {key:"front-left",   label:"Chest Left",   cx:21,cy:40,back:false},
+                        {key:"front-right",  label:"Chest Right",  cx:39,cy:40,back:false},
+                        {key:"left-sleeve",  label:"Left Sleeve",  cx:7, cy:23,back:false},
+                        {key:"right-sleeve", label:"Right Sleeve", cx:53,cy:23,back:false},
+                        {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
+                        {key:"collar-edge",  label:"Collar Edge",  cx:30,cy:9, back:false},
                       ];
                       return(
-                        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5}}>
                           {chips.map(c=>{
                             const isA=textPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
@@ -2819,16 +2815,15 @@ export default function CustomizePage() {
                     <div style={{fontSize:9,letterSpacing:".12em",textTransform:"uppercase",color:V.mu,fontFamily:"'Jost',sans-serif",marginBottom:8}}>Placement</div>
                     {(()=>{
                       const cards=[
-                        {key:"front-left",   label:"F. Left",   cx:21,cy:40},
-                        {key:"front-right",  label:"F. Right",  cx:39,cy:40},
-                        {key:"front-center", label:"F. Center", cx:30,cy:52},
-                        {key:"back-top",     label:"B. Top",    cx:30,cy:35,back:true},
-                        {key:"back-center",  label:"B. Center", cx:30,cy:52,back:true},
-                        {key:"left-sleeve",  label:"L. Sleeve", cx:7, cy:23},
-                        {key:"right-sleeve", label:"R. Sleeve", cx:53,cy:23},
+                        {key:"front-left",   label:"Chest Left",   cx:21,cy:40},
+                        {key:"front-right",  label:"Chest Right",  cx:39,cy:40},
+                        {key:"left-sleeve",  label:"Left Sleeve",  cx:7, cy:23},
+                        {key:"right-sleeve", label:"Right Sleeve", cx:53,cy:23},
+                        {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
+                        {key:"collar-edge",  label:"Collar Edge",  cx:30,cy:9},
                       ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
                       return(
-                        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5}}>
                           {cards.map(c=>{
                             const isA=textPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
@@ -2897,16 +2892,15 @@ export default function CustomizePage() {
                     <div style={{fontSize:9,letterSpacing:".12em",textTransform:"uppercase",color:V.mu,fontFamily:"'Jost',sans-serif",marginBottom:8,...sb}}>Placement</div>
                     {(()=>{
                       const cards=[
-                        {key:"front-left",   label:"F. Left",   cx:21,cy:40},
-                        {key:"front-right",  label:"F. Right",  cx:39,cy:40},
-                        {key:"front-center", label:"F. Center", cx:30,cy:52},
-                        {key:"back-top",     label:"B. Top",    cx:30,cy:35,back:true},
-                        {key:"back-center",  label:"B. Center", cx:30,cy:52,back:true},
-                        {key:"left-sleeve",  label:"L. Sleeve", cx:7, cy:23},
-                        {key:"right-sleeve", label:"R. Sleeve", cx:53,cy:23},
+                        {key:"front-left",   label:"Chest Left",   cx:21,cy:40},
+                        {key:"front-right",  label:"Chest Right",  cx:39,cy:40},
+                        {key:"left-sleeve",  label:"Left Sleeve",  cx:7, cy:23},
+                        {key:"right-sleeve", label:"Right Sleeve", cx:53,cy:23},
+                        {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
+                        {key:"collar-edge",  label:"Collar Edge",  cx:30,cy:9},
                       ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
                       return(
-                        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5}}>
                           {cards.map(c=>{
                             const isA=logoPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;

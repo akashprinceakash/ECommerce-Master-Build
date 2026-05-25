@@ -42,19 +42,19 @@ const PATTERN_OPTIONS = [
   {
     key: "pattern-1001",
     label: "Pattern 1001",
-    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1779449525478-157065178.webp",
+    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/Solid-t-shirt (1).png",
     href: "/products/34/customize?style=pattern&design=KS1001B",
   },
   {
     key: "pattern-1002",
     label: "Pattern 1002",
-    thumbnail: "/api/public/thumbnails/KS1001BSKYBLUE-BROWN01.png",
+    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1779449004280-642782439.webp",
     href: "/products/31/customize?style=pattern&design=KS1002B",
   },
   {
     key: "pattern-1003",
     label: "Pattern 1003",
-    thumbnail: "/api/public/thumbnails/KS1003BPINK-BLACK01.png",
+    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1779449254970-226857725.webp",
     href: "/products/35/customize?style=pattern&design=KS1003B",
   },
   {

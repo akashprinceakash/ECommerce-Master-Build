@@ -1049,7 +1049,7 @@ export default function AdminPage() {
                     {/* Preview — prefer front-view snapshot, fall back to legacy preview, then product thumb */}
                     <div className="aspect-square bg-muted relative overflow-hidden">
                       {(d.frontImageUrl || d.previewImageUrl) ? (
-                        <img src={d.frontImageUrl ?? d.previewImageUrl!} alt={d.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <img src={d.frontImageUrl ?? d.previewImageUrl!} alt={d.name} className="w-full h-full object-contain p-2" />
                       ) : d.productThumbnailUrl ? (
                         <img src={d.productThumbnailUrl} alt={d.name} className="w-full h-full object-cover opacity-50" />
                       ) : (
