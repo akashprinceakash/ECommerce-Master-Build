@@ -3420,9 +3420,12 @@ export default function CustomizePage() {
                     } else if(printModalFor==="collar"){
                       applyZonePrint("collar",p);
                     } else if(printModalFor==="accent"){
-                      // Pattern Design — pixel-level: print fills the channel-B
-                      // accent shape areas, same zones as applyPatternColors
-                      applyPatternDesignPrint(p);
+                      // Pattern Design — same 5 zones as applyPatternColors/applyKashaDesign
+                      applyZonePrint("front",p);
+                      applyZonePrint("back",p);
+                      applyZonePrint("collar",p);
+                      applyZonePrint("leftSleeve",p);
+                      applyZonePrint("rightSleeve",p);
                     } else {
                       applyAllOverPrint(p); // "all" — full garment
                     }
