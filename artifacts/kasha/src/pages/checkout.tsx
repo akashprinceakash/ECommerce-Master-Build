@@ -141,12 +141,15 @@ export default function CheckoutPage() {
       errs.shippingAddress = "Address is required";
     if (!formData.shippingCity.trim())
       errs.shippingCity = "City is required";
-    if (!formData.shippingState)
-      errs.shippingState = "Please select a state";
-    else if (pincodeResolvedState && formData.shippingState !== pincodeResolvedState)
-      errs.shippingState = `State doesn't match PIN code — expected: ${pincodeResolvedState}`;
-    if (!/^\d{6}$/.test(formData.shippingPostalCode))
+    if (!/^\d{6}$/.test(formData.shippingPostalCode)) {
       errs.shippingPostalCode = "Enter a valid 6-digit PIN code";
+    } else if (pincodeLoading) {
+      errs.shippingPostalCode = "Verifying PIN code, please wait…";
+    } else if (!pincodeResolvedState) {
+      errs.shippingPostalCode = "PIN code not recognised. Please check and try again.";
+    }
+    if (!formData.shippingState)
+      errs.shippingState = "State will be filled automatically from PIN code";
     return errs;
   }
 
@@ -170,18 +173,22 @@ export default function CheckoutPage() {
             || INDIAN_STATES.find(s => s.toLowerCase() === state.toLowerCase())
             || INDIAN_STATES.find(s => state.toLowerCase().startsWith(s.toLowerCase()))
             || "";
+          // Always force state from pincode; only fill city if not already entered
           setFormData(prev => ({
             ...prev,
-            shippingCity:  district || prev.shippingCity,
+            shippingCity:  prev.shippingCity.trim() ? prev.shippingCity : (district || prev.shippingCity),
             shippingState: resolvedState || prev.shippingState,
           }));
-          if (resolvedState) setPincodeResolvedState(resolvedState);
-          if (district || resolvedState) setPincodeResolved(true);
+          if (resolvedState) {
+            setPincodeResolvedState(resolvedState);
+            setPincodeResolved(true);
+          }
+          if (!resolvedState && district) setPincodeResolved(true);
         }
       } catch { /* silently ignore */ } finally {
         setPincodeLoading(false);
       }
-    }, 600);
+    }, 400);
     return () => { if (pincodeTimerRef.current) clearTimeout(pincodeTimerRef.current); };
   }, [formData.shippingPostalCode]);
 
@@ -527,25 +534,24 @@ export default function CheckoutPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="shippingState">State</Label>
-                  {pincodeResolved && (
-                    <button type="button" onClick={() => setPincodeResolved(false)} className="text-[9px] text-primary hover:underline" style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.1em" }}>Edit</button>
+                  {pincodeResolvedState && (
+                    <span className="text-[9px] text-muted-foreground flex items-center gap-1" style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.1em" }}>
+                      <MapPin className="w-2.5 h-2.5" /> Auto-detected from PIN
+                    </span>
                   )}
                 </div>
-                {pincodeResolved ? (
-                  <div className={`border rounded-none bg-secondary/20 h-10 px-3 flex items-center text-sm opacity-70 ${errors.shippingState ? "border-destructive" : "border-border/50"}`}>
-                    {formData.shippingState || <span className="text-muted-foreground">Not resolved</span>}
+                {pincodeResolvedState ? (
+                  <div className={`border rounded-none bg-secondary/20 h-10 px-3 flex items-center text-sm ${errors.shippingState ? "border-destructive" : "border-border/50"}`}>
+                    {formData.shippingState}
                   </div>
                 ) : (
-                  <Select value={formData.shippingState} onValueChange={(val) => { handleChange("shippingState", val); if (errors.shippingState) setErrors(prev => ({ ...prev, shippingState: "" })); }}>
-                    <SelectTrigger className={`rounded-none bg-secondary/10 ${errors.shippingState ? "border-destructive" : "border-border/50"}`}>
-                      <SelectValue placeholder="Select State" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60 overflow-y-auto">
-                      {INDIAN_STATES.map(state => (
-                        <SelectItem key={state} value={state}>{state}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className={`border rounded-none bg-secondary/10 h-10 px-3 flex items-center text-sm text-muted-foreground ${errors.shippingState ? "border-destructive" : "border-border/50"}`}>
+                    {pincodeLoading ? (
+                      <span className="flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> Detecting state…</span>
+                    ) : (
+                      "Enter PIN code to auto-detect"
+                    )}
+                  </div>
                 )}
                 {errors.shippingState && <p className="text-xs text-destructive mt-1">{errors.shippingState}</p>}
               </div>
