@@ -3147,8 +3147,8 @@ export default function CustomizePage() {
               title={modelPaused?"Resume rotation":"Pause rotation"}
               onClick={()=>{
                 const mv=mvRef.current as any; if(!mv) return;
-                if(modelPaused){ mv.setAttribute("auto-rotate",""); mv.setAttribute("rotation-per-second","8deg"); }
-                else { mv.removeAttribute("auto-rotate"); }
+                if(modelPaused){ mv.setAttribute("auto-rotate-delay","0"); mv.setAttribute("auto-rotate",""); mv.setAttribute("rotation-per-second","8deg"); }
+                else { mv.removeAttribute("auto-rotate"); mv.removeAttribute("auto-rotate-delay"); }
                 setModelPaused(p=>!p);
               }}
               style={{
