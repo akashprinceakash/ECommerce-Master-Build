@@ -24,7 +24,7 @@ const WIDE_OPTIONS = [
     title: "Solid Polo",
     subtitle: "Pure colour, infinite expression",
     desc: "Start from a clean canvas — choose your base colour, add zone accents, prints, logos and text.",
-    thumbnail: "/api/public/thumbnails/KS1002BOLIVEGREEN-BLACK01.png",
+    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/Solid-t-shirt (1).png",
     href: "/products/34/customize?style=solid",
   },
   {
@@ -206,46 +206,50 @@ function WideCard({ opt, onSelect }: { opt: WideOpt; onSelect: (h: string) => vo
       onClick={() => onSelect(opt.href)}
       style={{
         padding: 0, border: "1.5px solid rgba(26,26,24,0.09)",
-        borderRadius: 14, cursor: "pointer", background: "#ffffff",
+        borderRadius: 12, cursor: "pointer", background: "#ffffff",
         textAlign: "left", overflow: "hidden",
         transition: "all 0.28s cubic-bezier(0.16,1,0.3,1)",
-        boxShadow: "0 2px 12px rgba(26,26,24,0.06)",
+        boxShadow: "0 2px 10px rgba(26,26,24,0.05)",
         display: "flex", flexDirection: "column",
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement;
         el.style.borderColor = "#c9a84c";
         el.style.transform = "translateY(-3px)";
-        el.style.boxShadow = "0 10px 36px rgba(201,168,76,0.18), 0 4px 12px rgba(26,26,24,0.06)";
+        el.style.boxShadow = "0 8px 28px rgba(201,168,76,0.16), 0 3px 10px rgba(26,26,24,0.06)";
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLElement;
         el.style.borderColor = "rgba(26,26,24,0.09)";
         el.style.transform = "translateY(0)";
-        el.style.boxShadow = "0 2px 12px rgba(26,26,24,0.06)";
+        el.style.boxShadow = "0 2px 10px rgba(26,26,24,0.05)";
       }}
     >
-      <div style={{ width: "100%", aspectRatio: "4/3", overflow: "hidden", flexShrink: 0, background: "#ede9e1" }}>
+      {/* Image — contain so full garment is always visible */}
+      <div style={{
+        width: "100%", aspectRatio: "3/4", overflow: "hidden",
+        flexShrink: 0, background: "#ede9e1",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "10px 8px",
+        boxSizing: "border-box",
+      }}>
         <img src={opt.thumbnail} alt={opt.title}
-          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }}
+          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
           onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.3"; }}
         />
       </div>
-      <div style={{ padding: "16px 18px 18px", flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
-        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, letterSpacing: ".14em", textTransform: "uppercase" as const, color: "#c9a84c", fontWeight: 600 }}>
+      <div style={{ padding: "10px 12px 13px", flex: 1, display: "flex", flexDirection: "column", gap: 3 }}>
+        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 8, letterSpacing: ".14em", textTransform: "uppercase" as const, color: "#c9a84c", fontWeight: 600 }}>
           {opt.label}
         </div>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontWeight: 600, color: "#1a1a18", letterSpacing: ".02em", lineHeight: 1.2 }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontWeight: 600, color: "#1a1a18", letterSpacing: ".02em", lineHeight: 1.2 }}>
           {opt.title}
         </div>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 12, color: "#8a8780", fontStyle: "italic" }}>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 11, color: "#8a8780", fontStyle: "italic", lineHeight: 1.3 }}>
           {opt.subtitle}
         </div>
-        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#8a8780", lineHeight: 1.55, marginTop: 3 }}>
-          {opt.desc}
-        </div>
-        <div style={{ marginTop: "auto", paddingTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#c9a84c", fontWeight: 600 }}>
+        <div style={{ marginTop: "auto", paddingTop: 8 }}>
+          <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 8, letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#c9a84c", fontWeight: 600 }}>
             Customise →
           </span>
         </div>
