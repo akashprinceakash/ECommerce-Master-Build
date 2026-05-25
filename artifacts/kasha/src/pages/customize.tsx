@@ -564,7 +564,8 @@ export default function CustomizePage() {
     setBgRemoving(true);
     try {
       const img = new Image();
-      await new Promise<void>((res,rej)=>{ img.onload=()=>res(); img.onerror=()=>rej(new Error("img")); img.src=logoPreview!; });
+      img.crossOrigin = "anonymous";
+      await new Promise<void>((res,rej)=>{ img.onload=()=>res(); img.onerror=()=>rej(new Error("img")); img.src=toProxiedUrl(logoPreview!); });
       const c=document.createElement("canvas"); c.width=img.naturalWidth||img.width; c.height=img.naturalHeight||img.height;
       const ctx=c.getContext("2d")!; ctx.drawImage(img,0,0);
       const d=ctx.getImageData(0,0,c.width,c.height); const p=d.data;
@@ -619,7 +620,7 @@ export default function CustomizePage() {
   }, [syncTexture]);
 
   // ── Print library ────────────────────────────────────────────────────────
-  const loadHTMLImage=(url:string)=>new Promise<HTMLImageElement>((res,rej)=>{const img=new Image();img.crossOrigin="anonymous";img.onload=()=>res(img);img.onerror=rej;img.src=url;});
+  const loadHTMLImage=(url:string)=>new Promise<HTMLImageElement>((res,rej)=>{const img=new Image();img.crossOrigin="anonymous";img.onload=()=>res(img);img.onerror=rej;img.src=toProxiedUrl(url);});
 
   const applyAllOverPrint = useCallback(async (p: PatternDef) => {
     const fc=fcRef.current; if(!fc) return;
