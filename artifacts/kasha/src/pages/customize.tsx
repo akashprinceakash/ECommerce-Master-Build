@@ -144,7 +144,12 @@ async function apiFetch(path: string, opts?: RequestInit): Promise<any> {
   if (!(opts?.body instanceof FormData)) headers["Content-Type"] = "application/json";
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${getApiUrl()}${path}`, { ...opts, headers });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const text = await res.text();
+    let msg = text;
+    try { const j = JSON.parse(text); msg = j.error || j.message || text; } catch {}
+    throw new Error(msg);
+  }
   return res.status === 204 ? null : res.json();
 }
 const raf = () => new Promise<void>(r => requestAnimationFrame(() => r()));
@@ -911,10 +916,21 @@ export default function CustomizePage() {
     onError:(e:any)=>toast({title:"Error",description:e.message,variant:"destructive"}),
   });
   const cartMut=useMutation({
-    mutationFn:async()=>{const cust=await apiFetch("/api/customizations",{method:"POST",body:JSON.stringify(await buildPayload())});return apiFetch("/api/cart/items",{method:"POST",body:JSON.stringify({productId:id,customizationId:cust.id,quantity:qty,size})});},
-    onSuccess:()=>{toast({title:"Added to Cart"});setLocation("/cart");},
-    onError:(e:any)=>toast({title:"Error",description:e.message,variant:"destructive"}),
+    mutationFn:async()=>{
+      const payload=await buildPayload();
+      const effectiveQty=Object.values(sizeQty).reduce((a,b)=>a+b,0)||qty;
+      const effectiveSize=Object.entries(sizeQty).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])[0]?.[0]||size;
+      const cust=await apiFetch("/api/customizations",{method:"POST",body:JSON.stringify(payload)});
+      return apiFetch("/api/cart/items",{method:"POST",body:JSON.stringify({productId:id,customizationId:cust.id,quantity:effectiveQty,size:effectiveSize})});
+    },
+    onSuccess:()=>{toast({title:"Added to Cart ✓",description:"Your custom design has been added."});setLocation("/cart");},
+    onError:(e:any)=>toast({title:"Could not add to cart",description:e.message,variant:"destructive"}),
   });
+
+  const handleAddToCart=()=>{
+    if(!user){setLocation("/sign-in?redirect_url="+encodeURIComponent(window.location.pathname+window.location.search));return;}
+    cartMut.mutate();
+  };
 
   // ── Style helpers ────────────────────────────────────────────────────────
   // Section label — small-caps with gold bottom border
@@ -2105,7 +2121,7 @@ export default function CustomizePage() {
                 </button>
                 {!isTypeMode&&(
                   <button
-                    onClick={()=>cartMut.mutate()}
+                    onClick={handleAddToCart}
                     disabled={cartMut.isPending}
                     style={{
                       flex:1,padding:"11px 0",borderRadius:99,
@@ -2132,7 +2148,7 @@ export default function CustomizePage() {
               </a>
             ) : (
               <button
-                onClick={()=>cartMut.mutate()}
+                onClick={handleAddToCart}
                 disabled={cartMut.isPending}
                 style={{
                   flex:2,padding:"11px 0",borderRadius:99,
@@ -3011,7 +3027,7 @@ export default function CustomizePage() {
                         Browse Products →
                       </Link>
                     ) : (
-                      <button onClick={()=>cartMut.mutate()} disabled={cartMut.isPending} style={{
+                      <button onClick={handleAddToCart} disabled={cartMut.isPending} style={{
                         padding:"12px 0",borderRadius:99,border:"none",
                         background:V.tx,color:"white",
                         fontSize:12,fontWeight:600,cursor:"pointer",
