@@ -26,7 +26,7 @@ import {
   type PatternZone, type PatternDef, type ProductType,
 } from "@/components/3d/patterns";
 import {
-  KASHA_DESIGNS, applyKashaDesign, clearKashaDesign, SKU_KASHA_DESIGN_MAP,
+  KASHA_DESIGNS, applyKashaDesign, applyKashaDesignWithPrint, clearKashaDesign, SKU_KASHA_DESIGN_MAP,
   type KashaDesignDef, type RecolorOptions,
 } from "@/components/3d/kasha-designs";
 import { parseSku } from "@/components/3d/sku-config";
@@ -520,6 +520,18 @@ export default function CustomizePage() {
       syncTexture();
     } finally { setPatRecoloring(false); }
   }, [activeKashaDesign, syncTexture]);
+
+  // ── Pattern Design print — applies a tiled print into the same channel-B
+  //    pixel areas that applyPatternColors recolours ─────────────────────────
+  const applyPatternDesignPrint = useCallback(async (p: PatternDef) => {
+    if (!activeKashaDesign) return;
+    const fc = fcRef.current; if (!fc) return;
+    setPatRecoloring(true);
+    try {
+      await applyKashaDesignWithPrint(fc, activeKashaDesign, patColorA, patternUrl(p.file));
+      syncTexture();
+    } finally { setPatRecoloring(false); }
+  }, [activeKashaDesign, patColorA, syncTexture]);
 
   // ── Logo background removal (canvas-based white-threshold) ──────────────
   const removeBackground = useCallback(async () => {
@@ -3408,12 +3420,9 @@ export default function CustomizePage() {
                     } else if(printModalFor==="collar"){
                       applyZonePrint("collar",p);
                     } else if(printModalFor==="accent"){
-                      // Pattern Design — all zones to match the same coverage as applyPatternColors
-                      applyZonePrint("front",p);
-                      applyZonePrint("back",p);
-                      applyZonePrint("collar",p);
-                      applyZonePrint("leftSleeve",p);
-                      applyZonePrint("rightSleeve",p);
+                      // Pattern Design — pixel-level: print fills the channel-B
+                      // accent shape areas, same zones as applyPatternColors
+                      applyPatternDesignPrint(p);
                     } else {
                       applyAllOverPrint(p); // "all" — full garment
                     }

@@ -184,6 +184,17 @@ function dataUrlToCanvas(dataUrl: string): Promise<HTMLCanvasElement> {
   });
 }
 
+/** Load an image URL into an HTMLImageElement (with CORS) */
+function loadImageEl(url: string): Promise<HTMLImageElement> {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload  = () => res(img);
+    img.onerror = rej;
+    img.src = url;
+  });
+}
+
 /** Remove the KA.SHA design layer from the fabric canvas */
 export function clearKashaDesign(fc: fabric.Canvas): void {
   fc.getObjects()
@@ -233,6 +244,110 @@ export async function applyKashaDesign(
       scaleY:  preset.h / img.height!,
       originX: 'left',
       originY: 'top',
+      selectable: true,
+      evented:    true,
+      data: { tag: KD_TAG, designId: design.id, zone: key },
+    } as any);
+    imgs.push(img);
+  }
+
+  for (const img of imgs) {
+    fc.add(img);
+    fc.sendObjectToBack(img);
+  }
+  fc.renderAll();
+}
+
+/**
+ * Place zone textures, applying patColorA to channel-A pixels and tiling
+ * printImageUrl into channel-B pixels — so the print fills exactly the same
+ * accent-shape areas that the colour-picker recolours.
+ */
+export async function applyKashaDesignWithPrint(
+  fc:            fabric.Canvas,
+  design:        KashaDesignDef,
+  patColorA:     string,      // solid hex for channel A (dark areas)
+  printImageUrl: string,      // URL of print image, tiled into channel B areas
+): Promise<void> {
+  clearKashaDesign(fc);
+
+  // ── Load & tile the print image once ──────────────────────────────────────
+  const TILE = 192;
+  let printData: ImageData | null = null;
+  let tileW = TILE, tileH = TILE;
+  try {
+    const pImg = await loadImageEl(printImageUrl);
+    const pc = document.createElement("canvas");
+    pc.width = TILE; pc.height = TILE;
+    pc.getContext("2d")!.drawImage(pImg, 0, 0, TILE, TILE);
+    printData = pc.getContext("2d")!.getImageData(0, 0, TILE, TILE);
+    tileW = TILE; tileH = TILE;
+  } catch { /* print unavailable — channel B kept as-is */ }
+
+  const nA = hexToRgb(patColorA);
+
+  const zoneMap: Array<{ key: keyof KashaDesignDef["zones"]; zone: keyof typeof ZONE_PRESETS }> = [
+    { key: "front",       zone: "front"       },
+    { key: "back",        zone: "back"        },
+    { key: "collar",      zone: "collar"      },
+    { key: "leftSleeve",  zone: "leftSleeve"  },
+    { key: "rightSleeve", zone: "rightSleeve" },
+  ];
+
+  const imgs: fabric.FabricImage[] = [];
+
+  for (const { key, zone } of zoneMap) {
+    let dataUrl = design.zones[key];
+    if (!dataUrl) continue;
+
+    try {
+      const src = await dataUrlToCanvas(dataUrl);
+      const w = src.width, h = src.height;
+      const out = document.createElement("canvas");
+      out.width = w; out.height = h;
+      const ctx = out.getContext("2d")!;
+      ctx.drawImage(src, 0, 0);
+      const id = ctx.getImageData(0, 0, w, h);
+      const px = id.data;
+
+      for (let i = 0; i < px.length; i += 4) {
+        if (px[i + 3] === 0) continue;
+        const r = px[i], g = px[i + 1], b = px[i + 2];
+        const dA = colorDist(r, g, b, SRC_A.r, SRC_A.g, SRC_A.b);
+        const dB = colorDist(r, g, b, SRC_B.r, SRC_B.g, SRC_B.b);
+
+        if (dA <= dB && dA < TOLERANCE) {
+          // Channel A → solid patColorA
+          const t = Math.max(0, 1 - dA / TOLERANCE);
+          px[i]     = Math.round(r * (1 - t) + nA.r * t);
+          px[i + 1] = Math.round(g * (1 - t) + nA.g * t);
+          px[i + 2] = Math.round(b * (1 - t) + nA.b * t);
+        } else if (dB < TOLERANCE && printData) {
+          // Channel B → tiled print pixel
+          const pixIdx = i / 4;
+          const px2 = pixIdx % w;
+          const py2 = Math.floor(pixIdx / w);
+          const pi  = ((py2 % tileH) * tileW + (px2 % tileW)) * 4;
+          const t   = Math.max(0, 1 - dB / TOLERANCE);
+          px[i]     = Math.round(r * (1 - t) + printData.data[pi]     * t);
+          px[i + 1] = Math.round(g * (1 - t) + printData.data[pi + 1] * t);
+          px[i + 2] = Math.round(b * (1 - t) + printData.data[pi + 2] * t);
+        }
+      }
+
+      ctx.putImageData(id, 0, 0);
+      dataUrl = out.toDataURL("image/png");
+    } catch { /* use original dataUrl */ }
+
+    const preset = ZONE_PRESETS[zone];
+    const img = await fabric.FabricImage.fromURL(dataUrl, { crossOrigin: "anonymous" });
+    img.set({
+      left:    preset.left,
+      top:     preset.top,
+      scaleX:  preset.w / img.width!,
+      scaleY:  preset.h / img.height!,
+      originX: "left",
+      originY: "top",
       selectable: true,
       evented:    true,
       data: { tag: KD_TAG, designId: design.id, zone: key },
