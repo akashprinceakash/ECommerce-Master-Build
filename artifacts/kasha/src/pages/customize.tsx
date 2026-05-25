@@ -357,6 +357,7 @@ export default function CustomizePage() {
   const [colorModalFor, setColorModalFor] = useState<"all"|"base"|"pattern"|"base-body"|"collar"|null>(null);
   const [printModalFor, setPrintModalFor] = useState<"all"|"base-body"|"collar"|"accent"|null>(null);
   const [bgRemoving, setBgRemoving] = useState(false);
+  const [modelPaused, setModelPaused] = useState(false);
   const historyStack = useRef<string[]>([]);
   const historyIdx = useRef(-1);
 
@@ -1205,21 +1206,64 @@ export default function CustomizePage() {
             borderBottom:`1px solid rgba(26,26,24,0.07)`,
             background:V.sf,position:"sticky",top:0,zIndex:5,
           }}>
-            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
-              {step===1&&"Choose Your Style"}
-              {step===2&&effectiveSkuType==="print"&&"Choose Your Print"}
-              {step===2&&effectiveSkuType==="pattern"&&"Customise Your Design"}
-              {step===2&&effectiveSkuType==="solid"&&"Colour & Print Options"}
-              {step===3&&"Logo & Text"}
-              {step===4&&"Sizing & Quantity"}
-            </div>
-            <div style={{fontSize:9,color:V.mu,letterSpacing:".1em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",marginTop:3}}>
-              {step===1&&"Start your design — choose a customisation type"}
-              {step===2&&effectiveSkuType==="print"&&"Choose prints per garment section"}
-              {step===2&&effectiveSkuType==="pattern"&&"Customise body colour and pattern design"}
-              {step===2&&effectiveSkuType==="solid"&&"Apply colours and prints to each section"}
-              {step===3&&"Upload a logo or add custom text"}
-              {step===4&&"Set sizes & quantities for your order"}
+            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
+                  {step===1&&"Choose Your Style"}
+                  {step===2&&effectiveSkuType==="print"&&"Choose Your Print"}
+                  {step===2&&effectiveSkuType==="pattern"&&"Customise Your Design"}
+                  {step===2&&effectiveSkuType==="solid"&&"Colour & Print Options"}
+                  {step===3&&"Logo & Text"}
+                  {step===4&&"Sizing & Quantity"}
+                </div>
+                <div style={{fontSize:9,color:V.mu,letterSpacing:".1em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",marginTop:3}}>
+                  {step===1&&"Start your design — choose a customisation type"}
+                  {step===2&&effectiveSkuType==="print"&&"Choose prints per garment section"}
+                  {step===2&&effectiveSkuType==="pattern"&&"Customise body colour and pattern design"}
+                  {step===2&&effectiveSkuType==="solid"&&"Apply colours and prints to each section"}
+                  {step===3&&"Upload a logo or add custom text"}
+                  {step===4&&"Set sizes & quantities for your order"}
+                </div>
+              </div>
+              {/* Clear design button */}
+              <button
+                onClick={()=>{
+                  const fc=fcRef.current;
+                  if(step===2){
+                    if(effectiveSkuType==="pattern"){
+                      applyPatternColors(PAT_COLOR_A_DEFAULT,PAT_COLOR_B_DEFAULT);
+                    } else if(effectiveSkuType==="solid"){
+                      applyPrimary("#1a1a18");
+                    }
+                    clearAllOverPrint(); clearAllZonePrints(); saveHistory();
+                  } else if(step===3){
+                    if(fc){
+                      fc.getObjects()
+                        .filter((o:any)=>!o?.data?.kashaZonePrint&&!o?.data?.kdDesignZone&&(o.type==="image"||o.type==="textbox"))
+                        .forEach((o:any)=>fc.remove(o));
+                      fc.renderAll(); syncTexture();
+                    }
+                    setLogoPreview(null); logoObjRef.current=null;
+                    setTextInput(""); setTextPlaced(false);
+                  } else if(step===4){
+                    setSizeQty({S:0,M:0,L:0,XL:0,XXL:0});
+                    setCustomMeasurements({chest:"",shoulder:"",length:"",sleeve:""});
+                  }
+                }}
+                style={{
+                  flexShrink:0,marginTop:3,
+                  padding:"5px 11px",borderRadius:8,
+                  border:"1px solid rgba(196,92,92,0.3)",
+                  background:"transparent",cursor:"pointer",
+                  fontFamily:"'Jost',sans-serif",fontSize:9,
+                  fontWeight:600,letterSpacing:".08em",
+                  textTransform:"uppercase" as const,
+                  color:"#c45c5c",transition:"all .2s",
+                  whiteSpace:"nowrap" as const,
+                }}
+                onMouseEnter={e=>{e.currentTarget.style.background="rgba(196,92,92,0.08)";e.currentTarget.style.borderColor="rgba(196,92,92,0.55)";}}
+                onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.borderColor="rgba(196,92,92,0.3)";}}
+              >✕ Clear</button>
             </div>
           </div>
 
@@ -3033,6 +3077,31 @@ export default function CustomizePage() {
             </div>
           )}
 
+          {/* Pause / Resume 3D rotation toggle */}
+          {mvReady&&displayProduct?.modelUrl&&webglAvailable&&(
+            <button
+              title={modelPaused?"Resume rotation":"Pause rotation"}
+              onClick={()=>{
+                const mv=mvRef.current as any; if(!mv) return;
+                if(modelPaused){ mv.setAttribute("auto-rotate",""); mv.setAttribute("rotation-per-second","8deg"); }
+                else { mv.removeAttribute("auto-rotate"); }
+                setModelPaused(p=>!p);
+              }}
+              style={{
+                position:"absolute",top:14,right:14,zIndex:10,
+                width:34,height:34,borderRadius:"50%",
+                background:"rgba(250,250,247,0.90)",backdropFilter:"blur(10px)",
+                border:"1px solid rgba(201,168,76,0.28)",
+                display:"flex",alignItems:"center",justifyContent:"center",
+                cursor:"pointer",fontSize:13,color:V.tx,
+                boxShadow:"0 2px 12px rgba(26,26,24,0.10)",
+                transition:"all .2s",
+              }}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.background="rgba(250,250,247,0.98)";}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(201,168,76,0.28)";e.currentTarget.style.background="rgba(250,250,247,0.90)";}}
+            >{modelPaused?"▶":"⏸"}</button>
+          )}
+
           {/* Active design badge — desktop bottom-right, hidden on mobile */}
           {(activeKashaDesign||activePrintId)&&screenW>=768&&(
             <div style={{
@@ -3339,7 +3408,9 @@ export default function CustomizePage() {
                     } else if(printModalFor==="collar"){
                       applyZonePrint("collar",p);
                     } else if(printModalFor==="accent"){
-                      // Pattern Design accent zones: collar + sleeves
+                      // Pattern Design — all zones to match the same coverage as applyPatternColors
+                      applyZonePrint("front",p);
+                      applyZonePrint("back",p);
                       applyZonePrint("collar",p);
                       applyZonePrint("leftSleeve",p);
                       applyZonePrint("rightSleeve",p);
