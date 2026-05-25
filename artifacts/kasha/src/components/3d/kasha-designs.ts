@@ -259,42 +259,46 @@ export async function applyKashaDesign(
 }
 
 /**
- * Place zone textures, applying patColorA to channel-A pixels and tiling
- * printImageUrl into channel-B pixels — so the print fills exactly the same
- * accent-shape areas that the colour-picker recolours.
+ * Apply a print to the KA.SHA design zones using canvas compositing.
  *
- * Uses fetch() to load the print image so that the canvas is never tainted
- * and getImageData() always succeeds (same-origin fetch → blob URL).
+ * Strategy: for each zone PNG (which has the exact pattern shape as opacity),
+ * tile the print image across the zone area, then use `destination-in`
+ * compositing to clip the print to the opaque pixels of the zone PNG.
+ * This puts the print in exactly the same shaped areas that applyKashaDesign
+ * colours — with zero pixel-reading (no CORS/getImageData restrictions).
+ *
+ * The print image is fetched via fetch() → blob URL so it never taints the
+ * canvas, ensuring the compositing works in both dev and production.
  */
 export async function applyKashaDesignWithPrint(
   fc:            fabric.Canvas,
   design:        KashaDesignDef,
-  patColorA:     string,      // solid hex for channel A (dark areas)
-  printImageUrl: string,      // URL of print image, tiled into channel B areas
+  _patColorA:    string,        // reserved for future channel-A overlay
+  printImageUrl: string,
 ): Promise<void> {
   clearKashaDesign(fc);
 
-  // ── Load print image via fetch → blob URL (avoids canvas CORS taint) ──────
+  // ── Load print image: fetch → blob URL → img element (no CORS taint) ──────
   const TILE = 192;
-  let printData: ImageData | null = null;
-  let tileW = TILE, tileH = TILE;
-  try {
-    const resp     = await fetch(printImageUrl);
-    const blob     = await resp.blob();
-    const blobUrl  = URL.createObjectURL(blob);
-    try {
-      const pImg = await loadImageEl(blobUrl);
-      const pc   = document.createElement("canvas");
-      pc.width = TILE; pc.height = TILE;
-      pc.getContext("2d")!.drawImage(pImg, 0, 0, TILE, TILE);
-      printData = pc.getContext("2d")!.getImageData(0, 0, TILE, TILE);
-      tileW = TILE; tileH = TILE;
-    } finally {
-      URL.revokeObjectURL(blobUrl);
-    }
-  } catch { /* print unavailable — channel B kept as-is */ }
+  let printEl: HTMLImageElement | null = null;
+  let blobUrl: string | null = null;
 
-  const nA = hexToRgb(patColorA);
+  try {
+    const resp = await fetch(printImageUrl);
+    const blob = await resp.blob();
+    blobUrl = URL.createObjectURL(blob);
+    printEl = await new Promise<HTMLImageElement>((res, rej) => {
+      const img = new Image(); // no crossOrigin — blob URLs are same-origin
+      img.onload  = () => res(img);
+      img.onerror = () => rej(new Error("print load failed"));
+      img.src = blobUrl!;
+    });
+  } catch {
+    // Print load failed — fall back to plain coloured zones
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    await applyKashaDesign(fc, design);
+    return;
+  }
 
   const zoneMap: Array<{ key: keyof KashaDesignDef["zones"]; zone: keyof typeof ZONE_PRESETS }> = [
     { key: "front",       zone: "front"       },
@@ -307,63 +311,56 @@ export async function applyKashaDesignWithPrint(
   const imgs: fabric.FabricImage[] = [];
 
   for (const { key, zone } of zoneMap) {
-    let dataUrl = design.zones[key];
+    const dataUrl = design.zones[key];
     if (!dataUrl) continue;
 
-    try {
-      const src = await dataUrlToCanvas(dataUrl);
-      const w = src.width, h = src.height;
-      const out = document.createElement("canvas");
-      out.width = w; out.height = h;
-      const ctx = out.getContext("2d")!;
-      ctx.drawImage(src, 0, 0);
-      const id = ctx.getImageData(0, 0, w, h);
-      const px = id.data;
-
-      for (let i = 0; i < px.length; i += 4) {
-        if (px[i + 3] === 0) continue;
-        const r = px[i], g = px[i + 1], b = px[i + 2];
-        const dA = colorDist(r, g, b, SRC_A.r, SRC_A.g, SRC_A.b);
-        const dB = colorDist(r, g, b, SRC_B.r, SRC_B.g, SRC_B.b);
-
-        if (dA <= dB && dA < TOLERANCE) {
-          // Channel A → solid patColorA
-          const t = Math.max(0, 1 - dA / TOLERANCE);
-          px[i]     = Math.round(r * (1 - t) + nA.r * t);
-          px[i + 1] = Math.round(g * (1 - t) + nA.g * t);
-          px[i + 2] = Math.round(b * (1 - t) + nA.b * t);
-        } else if (dB < TOLERANCE && printData) {
-          // Channel B → tiled print pixel
-          const pixIdx = i / 4;
-          const px2 = pixIdx % w;
-          const py2 = Math.floor(pixIdx / w);
-          const pi  = ((py2 % tileH) * tileW + (px2 % tileW)) * 4;
-          const t   = Math.max(0, 1 - dB / TOLERANCE);
-          px[i]     = Math.round(r * (1 - t) + printData.data[pi]     * t);
-          px[i + 1] = Math.round(g * (1 - t) + printData.data[pi + 1] * t);
-          px[i + 2] = Math.round(b * (1 - t) + printData.data[pi + 2] * t);
-        }
-      }
-
-      ctx.putImageData(id, 0, 0);
-      dataUrl = out.toDataURL("image/png");
-    } catch { /* use original dataUrl */ }
-
     const preset = ZONE_PRESETS[zone];
-    const img = await fabric.FabricImage.fromURL(dataUrl, { crossOrigin: "anonymous" });
-    img.set({
+    const W = preset.w, H = preset.h;
+
+    // Create working canvas at the display dimensions of this zone
+    const out = document.createElement("canvas");
+    out.width  = W;
+    out.height = H;
+    const ctx = out.getContext("2d")!;
+
+    // Step 1 — tile print across the full zone area
+    for (let row = 0; row * TILE < H; row++) {
+      for (let col = 0; col * TILE < W; col++) {
+        ctx.drawImage(printEl!, col * TILE, row * TILE, TILE, TILE);
+      }
+    }
+
+    // Step 2 — load zone PNG (data URL, always safe) and use it as a mask.
+    // `destination-in` keeps destination (print) pixels only where the source
+    // (zone PNG) is non-transparent — i.e. exactly the shaped zone areas.
+    const zoneEl = await new Promise<HTMLImageElement>((res, rej) => {
+      const img = new Image();
+      img.onload  = () => res(img);
+      img.onerror = rej;
+      img.src = dataUrl;
+    });
+    ctx.globalCompositeOperation = "destination-in";
+    ctx.drawImage(zoneEl, 0, 0, W, H);
+    ctx.globalCompositeOperation = "source-over"; // reset
+
+    // Step 3 — add to Fabric canvas at zone position (already at preset size)
+    const resultUrl = out.toDataURL("image/png");
+    const fImg = await fabric.FabricImage.fromURL(resultUrl, { crossOrigin: "anonymous" });
+    fImg.set({
       left:    preset.left,
       top:     preset.top,
-      scaleX:  preset.w / img.width!,
-      scaleY:  preset.h / img.height!,
+      scaleX:  1,
+      scaleY:  1,
       originX: "left",
       originY: "top",
       selectable: true,
       evented:    true,
       data: { tag: KD_TAG, designId: design.id, zone: key },
     } as any);
-    imgs.push(img);
+    imgs.push(fImg);
   }
+
+  if (blobUrl) URL.revokeObjectURL(blobUrl);
 
   for (const img of imgs) {
     fc.add(img);
