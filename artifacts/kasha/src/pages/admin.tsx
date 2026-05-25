@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/format";
 import { getApiUrl, getAssetUrl } from "@/lib/api";
+import { PATTERNS, patternUrl } from "@/components/3d/patterns";
 
 interface Product {
   id: number;
@@ -510,6 +511,31 @@ export default function AdminPage() {
     queryFn: () => apiFetch("/api/admin/sku-assets"),
     enabled: isAdmin === true && activeTab === "skuassets",
   });
+
+  const { data: hiddenPatternsData, refetch: refetchHidden } = useQuery<{ hiddenPatterns: string[] }>({
+    queryKey: ["admin-hidden-patterns"],
+    queryFn: () => apiFetch("/api/admin/site-settings/hidden-patterns"),
+    enabled: isAdmin === true && activeTab === "skuassets",
+  });
+  const hiddenPatterns: string[] = hiddenPatternsData?.hiddenPatterns ?? [];
+  const [savingHidden, setSavingHidden] = useState(false);
+
+  async function togglePattern(id: string) {
+    const next = hiddenPatterns.includes(id)
+      ? hiddenPatterns.filter(x => x !== id)
+      : [...hiddenPatterns, id];
+    setSavingHidden(true);
+    try {
+      await apiFetch("/api/admin/site-settings/hidden-patterns", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hiddenPatterns: next }),
+      });
+      await refetchHidden();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally { setSavingHidden(false); }
+  }
 
   useEffect(() => {
     if (!siteSettings?.hero_banners) return;
@@ -1164,6 +1190,48 @@ export default function AdminPage() {
                 Upload print, pattern, or solid-colour assets tied to a specific product SKU.
                 These assets are served to the customiser to drive the design flow.
               </p>
+            </div>
+
+            {/* ── GP Print Library Manager ── */}
+            <div className="border border-border rounded-sm p-5 mb-8 bg-card">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-sm font-semibold tracking-wide">GP Print Library</h3>
+                <span className="text-xs text-muted-foreground">{hiddenPatterns.length} hidden · {PATTERNS.length - hiddenPatterns.length} visible</span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">Toggle any print to hide it from the customiser. Changes take effect immediately for customers.</p>
+              <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-3">
+                {PATTERNS.map(p => {
+                  const isHidden = hiddenPatterns.includes(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      disabled={savingHidden}
+                      onClick={() => togglePattern(p.id)}
+                      title={isHidden ? `Show ${p.label}` : `Hide ${p.label}`}
+                      className={`relative flex flex-col items-center gap-1.5 p-1.5 rounded border transition-all ${
+                        isHidden
+                          ? "border-destructive/40 bg-destructive/5 opacity-50"
+                          : "border-border hover:border-primary bg-background hover:bg-muted/40"
+                      }`}
+                    >
+                      <div className="relative w-full aspect-square overflow-hidden rounded-sm bg-muted">
+                        <img
+                          src={patternUrl(p.file)}
+                          alt={p.label}
+                          className="w-full h-full object-cover"
+                          onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.2"; }}
+                        />
+                        {isHidden && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-background/60">
+                            <X className="w-4 h-4 text-destructive" />
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-medium tracking-wide leading-none">{p.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Upload form */}

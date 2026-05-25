@@ -234,6 +234,16 @@ export default function CustomizePage() {
     enabled:  !!id,
   });
 
+  const { data: siteSettingsRaw } = useQuery<Record<string, unknown>>({
+    queryKey: ["site-settings"],
+    queryFn:  () => apiFetch("/api/site-settings"),
+    staleTime: 60_000,
+  });
+  const hiddenPatternIds: string[] = Array.isArray(siteSettingsRaw?.hidden_patterns)
+    ? (siteSettingsRaw!.hidden_patterns as string[])
+    : [];
+  const visiblePatterns = PATTERNS.filter(p => !hiddenPatternIds.includes(p.id));
+
   // In type-mode (arriving from home with ?type=), auto-load the first product of
   // that type so the 3D model shows even before the user selects a specific product.
   const { data: allProducts } = useQuery<Product[]>({
@@ -1450,7 +1460,7 @@ export default function CustomizePage() {
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
                   <div style={{...sb}}>Choose your print</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                    {PATTERNS.filter(p=>p.label.startsWith("GP")).map(p=>{
+                    {visiblePatterns.filter(p=>p.label.startsWith("GP")).map(p=>{
                       const sel=allOverPrintId===p.id;
                       return (
                         <div key={p.id} onClick={()=>{applyAllOverPrint(p);}} style={{
@@ -2369,7 +2379,7 @@ export default function CustomizePage() {
                     </div>
                   )}
                   <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
-                    {PATTERNS.filter(p=>p.id!=="kasha-gt015").map(p=>{
+                    {visiblePatterns.map(p=>{
                       const sel=activePrintId===p.id;
                       const allApplied=allOverPrintId===p.id;
                       const inZone=Object.values(zonePrintIds).includes(p.id);
@@ -3325,7 +3335,7 @@ export default function CustomizePage() {
             </div>
 
             <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
-              {PATTERNS.map(p=>{
+              {visiblePatterns.map(p=>{
                 const isActive=allOverPrintId===p.id;
                 return(
                   <div key={p.id} onClick={()=>{

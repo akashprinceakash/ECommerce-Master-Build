@@ -96,4 +96,30 @@ router.post("/admin/upload/hero", requireAuth, (req, res) => {
   });
 });
 
+// ── Admin: get hidden patterns ────────────────────────────────────────────────
+router.get("/admin/site-settings/hidden-patterns", requireAuth, async (req, res): Promise<void> => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  try {
+    const rows = await db.select().from(siteSettingsTable).where(eq(siteSettingsTable.key, "hidden_patterns"));
+    const ids: string[] = rows.length ? JSON.parse(rows[0].value) : [];
+    res.json({ hiddenPatterns: ids });
+  } catch { res.status(500).json({ error: "Failed to load hidden patterns" }); }
+});
+
+// ── Admin: update hidden patterns ─────────────────────────────────────────────
+router.put("/admin/site-settings/hidden-patterns", requireAuth, async (req, res): Promise<void> => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  const { hiddenPatterns } = req.body as { hiddenPatterns: string[] };
+  if (!Array.isArray(hiddenPatterns)) { res.status(400).json({ error: "hiddenPatterns must be an array" }); return; }
+  try {
+    await db
+      .insert(siteSettingsTable)
+      .values({ key: "hidden_patterns", value: JSON.stringify(hiddenPatterns) })
+      .onConflictDoUpdate({ target: siteSettingsTable.key, set: { value: JSON.stringify(hiddenPatterns) } });
+    res.json({ ok: true, hiddenPatterns });
+  } catch { res.status(500).json({ error: "Failed to save hidden patterns" }); }
+});
+
 export default router;
