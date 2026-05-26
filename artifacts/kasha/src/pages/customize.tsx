@@ -531,13 +531,16 @@ export default function CustomizePage() {
   }, []);
 
   // ── KA.SHA Bespoke Design handler ────────────────────────────────────────
-  const handleSelectKashaDesign = useCallback(async (design: KashaDesignDef) => {
+  // colorOverride: optional colors to apply in the same call; avoids stale-closure
+  // issues when calling from effects where activeKashaDesign state hasn't updated yet.
+  const handleSelectKashaDesign = useCallback(async (design: KashaDesignDef, colorOverride?: {colorA:string;colorB:string}) => {
     const fc=fcRef.current; if(!fc) return;
     const myReq=++kdRequestIdRef.current;
     setActiveKashaDesign(design);
     // When a print is active it acts as the base colour — keep it; design renders on top
     try{mats[0]?.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]);}catch{}
-    const recolor: RecolorOptions = { colorA: patColorA, colorB: patColorB };
+    const recolor: RecolorOptions = colorOverride ?? { colorA: patColorA, colorB: patColorB };
+    if (colorOverride) { setPatColorA(colorOverride.colorA); setPatColorB(colorOverride.colorB); }
     await applyKashaDesign(fc, design, recolor);
     if (myReq!==kdRequestIdRef.current) return;
     syncTexture();
@@ -705,36 +708,42 @@ export default function CustomizePage() {
     if (!product) return;
     autoAppliedRef.current = true;
 
-    const skuResult = parseSku(product.sku ?? "");
+    // Parse the product's own SKU for colors (may have suffix like KS1002B-BB)
+    const productSkuResult = parseSku(product.sku ?? "");
 
-    // If a specific design was requested via URL (?design=KS100XB), use it —
-    // this allows the entry modal to show e.g. KS1005B on a KS1002B product.
-    const requestedDesignId = entryDesignRef.current;
+    // The ?design= param may be a bare design ID ("KS1002B") or a full SKU
+    // ("KS1002B-BB") when arriving from the PersonalizeModal with a specific colorway.
+    const rawDesignParam = entryDesignRef.current; // e.g. "KS1002B-BB" or "KS1002B"
+    const entrySkuResult = parseSku(rawDesignParam ?? "");
 
-    if (requestedDesignId) {
-      const design = KASHA_DESIGNS.find(d => d.id === requestedDesignId) ?? KASHA_DESIGNS[0];
-      handleSelectKashaDesign(design).then(() => {
-        if (skuResult.type === "pattern") applyPatternColors(skuResult.colorA, skuResult.colorB);
-      }).catch(() => {
-        setTimeout(() => {
-          if (skuResult.type === "pattern") applyPatternColors(skuResult.colorA, skuResult.colorB);
-        }, 600);
-      });
-    } else if (skuResult.type === "pattern") {
-      // Use SKU parser: correct design + correct colorway
-      const design = KASHA_DESIGNS.find(d => d.id === skuResult.designId) ?? KASHA_DESIGNS[0];
-      handleSelectKashaDesign(design).then(() => {
-        applyPatternColors(skuResult.colorA, skuResult.colorB);
-      }).catch(() => {
-        setTimeout(() => applyPatternColors(skuResult.colorA, skuResult.colorB), 600);
-      });
+    // Resolve the design ID and the best available colorway:
+    // Priority: 1) full-SKU entry param  2) product SKU  3) defaults
+    let designId: string;
+    let colorOverride: {colorA:string;colorB:string} | undefined;
+
+    if (entrySkuResult.type === "pattern") {
+      // Full SKU passed in URL (e.g. KS1002B-BB) — use its design + colors
+      designId = entrySkuResult.designId;
+      colorOverride = { colorA: entrySkuResult.colorA, colorB: entrySkuResult.colorB };
+    } else if (rawDesignParam) {
+      // Bare design ID passed (e.g. "KS1002B") — use product SKU colors as fallback
+      designId = rawDesignParam;
+      if (productSkuResult.type === "pattern") {
+        colorOverride = { colorA: productSkuResult.colorA, colorB: productSkuResult.colorB };
+      }
+    } else if (productSkuResult.type === "pattern") {
+      // No entry param — derive everything from product SKU
+      designId = productSkuResult.designId;
+      colorOverride = { colorA: productSkuResult.colorA, colorB: productSkuResult.colorB };
     } else {
       // Fallback: legacy SKU_KASHA_DESIGN_MAP lookup
-      const designId = SKU_KASHA_DESIGN_MAP[product.sku ?? ""] ?? "KS1001B";
-      const design = KASHA_DESIGNS.find(d => d.id === designId) ?? KASHA_DESIGNS[0];
-      handleSelectKashaDesign(design);
+      designId = SKU_KASHA_DESIGN_MAP[product.sku ?? ""] ?? "KS1001B";
     }
-  }, [canvasReady, productType, handleSelectKashaDesign, applyPatternColors, product]);
+
+    const design = KASHA_DESIGNS.find(d => d.id === designId) ?? KASHA_DESIGNS[0];
+    // Pass colorOverride directly to avoid stale-closure issue with applyPatternColors
+    handleSelectKashaDesign(design, colorOverride);
+  }, [canvasReady, productType, handleSelectKashaDesign, product]);
 
   // PRINT auto-apply: select the correct print from the library based on SKU
   const autoAppliedPrintRef = useRef(false);

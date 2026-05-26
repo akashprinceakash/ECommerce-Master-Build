@@ -11,7 +11,7 @@ interface Props {
   onClose: () => void;
 }
 
-const GENDERS = ["Men", "Women", "Boys", "Girls"] as const;
+const GENDERS = ["Men", "Women"] as const;
 type Gender = typeof GENDERS[number];
 
 interface CarouselItem {
@@ -77,12 +77,10 @@ const MEN_ITEMS: CarouselItem[] = [
   },
 ];
 
-// Placeholder items for genders not yet stocked — copy from Men for now
-const GENDER_ITEMS: Record<Gender, CarouselItem[]> = {
+// Women's collection coming soon — carousel replaced with a placeholder
+const GENDER_ITEMS: Record<Gender, CarouselItem[] | null> = {
   Men: MEN_ITEMS,
-  Women: MEN_ITEMS,
-  Boys: MEN_ITEMS,
-  Girls: MEN_ITEMS,
+  Women: null, // Coming soon
 };
 
 const VISIBLE = 3; // cards visible at once on desktop
@@ -94,8 +92,8 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
 
   if (!isOpen) return null;
 
-  const items = GENDER_ITEMS[gender];
-  const total = items.length;
+  const items = GENDER_ITEMS[gender]; // null means "coming soon"
+  const total = items ? items.length : 0;
   const canPrev = startIdx > 0;
   const canNext = startIdx + VISIBLE < total;
 
@@ -107,7 +105,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   function prev() { setStartIdx(i => Math.max(0, i - 1)); }
   function next() { setStartIdx(i => Math.min(total - VISIBLE, i + 1)); }
 
-  const visible = items.slice(startIdx, startIdx + VISIBLE);
+  const visible = items ? items.slice(startIdx, startIdx + VISIBLE) : [];
 
   return (
     <div
@@ -196,64 +194,103 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           ))}
         </div>
 
-        {/* Carousel */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {/* Prev arrow */}
-          <button
-            onClick={prev}
-            disabled={!canPrev}
-            style={{
-              flexShrink: 0, width: 36, height: 36, borderRadius: "50%",
-              border: "1.5px solid rgba(26,26,24,0.15)",
-              background: canPrev ? "#fff" : "rgba(26,26,24,0.04)",
-              cursor: canPrev ? "pointer" : "default",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 16, color: canPrev ? "#1a1a18" : "#c8c8c4",
-              transition: "all .2s", boxShadow: canPrev ? "0 2px 8px rgba(26,26,24,0.08)" : "none",
-            }}
-          >‹</button>
-
-          {/* Cards */}
-          <div className="cem-carousel" style={{
-            flex: 1, display: "grid",
-            gridTemplateColumns: `repeat(${VISIBLE}, 1fr)`,
-            gap: 12,
+        {/* Carousel or Coming Soon */}
+        {items === null ? (
+          /* ── Women Coming Soon ─────────────────────────────────────── */
+          <div style={{
+            textAlign: "center", padding: "48px 24px",
+            background: "linear-gradient(135deg, #fdfbf6 0%, #f5efe0 100%)",
+            borderRadius: 16, border: "1px solid rgba(201,168,76,0.2)",
           }}>
-            {visible.map(item => (
-              <CarouselCard key={item.key} item={item} onSelect={handleSelect} />
-            ))}
-          </div>
-
-          {/* Next arrow */}
-          <button
-            onClick={next}
-            disabled={!canNext}
-            style={{
-              flexShrink: 0, width: 36, height: 36, borderRadius: "50%",
-              border: "1.5px solid rgba(26,26,24,0.15)",
-              background: canNext ? "#fff" : "rgba(26,26,24,0.04)",
-              cursor: canNext ? "pointer" : "default",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 16, color: canNext ? "#1a1a18" : "#c8c8c4",
-              transition: "all .2s", boxShadow: canNext ? "0 2px 8px rgba(26,26,24,0.08)" : "none",
-            }}
-          >›</button>
-        </div>
-
-        {/* Dot indicators */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 5, marginTop: 16 }}>
-          {Array.from({ length: total - VISIBLE + 1 }).map((_, i) => (
-            <div
-              key={i}
-              onClick={() => setStartIdx(i)}
+            <div style={{ fontSize: 36, marginBottom: 16, opacity: 0.7 }}>✦</div>
+            <div style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: 26, fontWeight: 600, color: "#1a1a18",
+              letterSpacing: ".02em", marginBottom: 10,
+            }}>Coming Soon</div>
+            <p style={{
+              fontFamily: "'Jost', sans-serif",
+              fontSize: 12, color: "#8a8780",
+              letterSpacing: ".05em", lineHeight: 1.7, maxWidth: 340, margin: "0 auto",
+            }}>
+              The KA.SHA Women's Bespoke Studio is being crafted with care.
+              Check back shortly — or explore our <strong style={{ color: "#c9a84c" }}>Men's collection</strong> while you wait.
+            </p>
+            <button
+              onClick={() => { setGender("Men"); setStartIdx(0); }}
               style={{
-                width: i === startIdx ? 18 : 6, height: 6, borderRadius: 99,
-                background: i === startIdx ? "#c9a84c" : "#d4cfc6",
-                cursor: "pointer", transition: "all .2s",
+                marginTop: 24, padding: "10px 28px", borderRadius: 99,
+                border: "1.5px solid #c9a84c", background: "transparent",
+                fontFamily: "'Jost', sans-serif", fontSize: 10,
+                letterSpacing: ".12em", textTransform: "uppercase",
+                color: "#c9a84c", fontWeight: 700, cursor: "pointer",
+                transition: "all .2s",
               }}
-            />
-          ))}
-        </div>
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(201,168,76,0.08)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+            >View Men's Styles</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {/* Prev arrow */}
+              <button
+                onClick={prev}
+                disabled={!canPrev}
+                style={{
+                  flexShrink: 0, width: 36, height: 36, borderRadius: "50%",
+                  border: "1.5px solid rgba(26,26,24,0.15)",
+                  background: canPrev ? "#fff" : "rgba(26,26,24,0.04)",
+                  cursor: canPrev ? "pointer" : "default",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 16, color: canPrev ? "#1a1a18" : "#c8c8c4",
+                  transition: "all .2s", boxShadow: canPrev ? "0 2px 8px rgba(26,26,24,0.08)" : "none",
+                }}
+              >‹</button>
+
+              {/* Cards */}
+              <div className="cem-carousel" style={{
+                flex: 1, display: "grid",
+                gridTemplateColumns: `repeat(${VISIBLE}, 1fr)`,
+                gap: 12,
+              }}>
+                {visible.map(item => (
+                  <CarouselCard key={item.key} item={item} onSelect={handleSelect} />
+                ))}
+              </div>
+
+              {/* Next arrow */}
+              <button
+                onClick={next}
+                disabled={!canNext}
+                style={{
+                  flexShrink: 0, width: 36, height: 36, borderRadius: "50%",
+                  border: "1.5px solid rgba(26,26,24,0.15)",
+                  background: canNext ? "#fff" : "rgba(26,26,24,0.04)",
+                  cursor: canNext ? "pointer" : "default",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 16, color: canNext ? "#1a1a18" : "#c8c8c4",
+                  transition: "all .2s", boxShadow: canNext ? "0 2px 8px rgba(26,26,24,0.08)" : "none",
+                }}
+              >›</button>
+            </div>
+
+            {/* Dot indicators */}
+            <div style={{ display: "flex", justifyContent: "center", gap: 5, marginTop: 16 }}>
+              {Array.from({ length: Math.max(1, total - VISIBLE + 1) }).map((_, i) => (
+                <div
+                  key={i}
+                  onClick={() => setStartIdx(i)}
+                  style={{
+                    width: i === startIdx ? 18 : 6, height: 6, borderRadius: 99,
+                    background: i === startIdx ? "#c9a84c" : "#d4cfc6",
+                    cursor: "pointer", transition: "all .2s",
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Footer note */}
         <p style={{

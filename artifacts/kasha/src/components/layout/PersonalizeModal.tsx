@@ -34,7 +34,8 @@ export function PersonalizeModal({ isOpen, onClose, productId, productName, prod
           const skuResult = parseSku(productSku);
           if (skuResult.type === "pattern") {
             styleParam = "&style=pattern";
-            if (skuResult.designId) designParam = `&design=${skuResult.designId}`;
+            // Pass the FULL SKU (e.g. KS1002B-BB) so the studio derives the correct colorway
+            designParam = `&design=${encodeURIComponent(productSku)}`;
           } else if (skuResult.type === "print") {
             styleParam = "&style=print";
           } else {
