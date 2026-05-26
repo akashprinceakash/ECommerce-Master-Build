@@ -44,15 +44,21 @@ export interface PatternColors {
 
 export const PATTERN_SUFFIX_COLORS: Record<string, PatternColors> = {
   // Blue base + Black accent
-  BB: { colorA: "#1a1a1a", colorB: "#1e5ecd", label: "Blue + Black"    },
+  BLB: { colorA: "#1a1a1a", colorB: "#1e5ecd", label: "Blue + Black"    },
+  // Beige base + Brown accent  (admin suffix BB = Beige & Brown)
+  BB: { colorA: "#795548", colorB: "#E8D5B7", label: "Beige + Brown"   },
   // Red base + Black accent
   RB: { colorA: "#1a1a1a", colorB: "#c0392b", label: "Red + Black"     },
   // Purple base + Black accent
   PB: { colorA: "#1a1a1a", colorB: "#6b2fa0", label: "Purple + Black"  },
+  // Pink base + Black accent
+  PKB: { colorA: "#1a1a1a", colorB: "#e91e8c", label: "Pink + Black"   },
   // Orange base + Black accent
   OB: { colorA: "#1a1a1a", colorB: "#d4600a", label: "Orange + Black"  },
-  // Sky Blue base + Black accent
-  SB: { colorA: "#1a1a1a", colorB: "#4a8fd4", label: "Sky Blue + Black"},
+  // Sky Blue base + Brown accent  (admin suffix SB = Sky Blue & Brown)
+  SB: { colorA: "#795548", colorB: "#4a8fd4", label: "Sky Blue + Brown"},
+  // Sky Blue base + Black accent (canonical code)
+  SKB: { colorA: "#1a1a1a", colorB: "#4a8fd4", label: "Sky Blue + Black"},
   // Green base + Black accent
   GB: { colorA: "#1a1a1a", colorB: "#1f7a45", label: "Green + Black"   },
   // White base + Black accent
@@ -75,6 +81,8 @@ export const PATTERN_SUFFIX_COLORS: Record<string, PatternColors> = {
   BG: { colorA: "#c9a84c", colorB: "#1a1a1a", label: "Black + Gold"    },
   // Black base + Red accent
   BR: { colorA: "#c0392b", colorB: "#1a1a1a", label: "Black + Red"     },
+  // Black base + Pink accent  (admin suffix BP = Black & Pink)
+  BP: { colorA: "#e91e8c", colorB: "#1a1a1a", label: "Black + Pink"    },
   // Navy base + Gold accent
   NG: { colorA: "#c9a84c", colorB: "#1a2c5e", label: "Navy + Gold"     },
 };

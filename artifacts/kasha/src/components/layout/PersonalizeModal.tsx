@@ -25,7 +25,20 @@ export function PersonalizeModal({ isOpen, onClose, productId, productName, prod
     setTimeout(() => {
       onClose();
       if (mode === "quick") {
-        navigate(`/products/${productId}/customize?mode=quick`);
+        // Pass design info even in quick mode so the studio auto-applies the
+        // correct pattern + colors when the user arrives at the logo/text step.
+        let quickDesignParam = "";
+        let quickStyleParam = "";
+        if (productSku) {
+          const skuResult = parseSku(productSku);
+          if (skuResult.type === "pattern") {
+            quickStyleParam = "&style=pattern";
+            quickDesignParam = `&design=${encodeURIComponent(productSku)}`;
+          } else if (skuResult.type === "print") {
+            quickStyleParam = "&style=print";
+          }
+        }
+        navigate(`/products/${productId}/customize?mode=quick${quickStyleParam}${quickDesignParam}`);
       } else {
         // Derive style + design from SKU so the customizer skips Step 1
         let styleParam = "";
