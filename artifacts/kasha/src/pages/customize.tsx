@@ -387,7 +387,9 @@ export default function CustomizePage() {
   const [sizeMode, setSizeMode] = useState<"standard"|"custom">("standard");
   const [sizeQty, setSizeQty] = useState<Record<string,number>>({S:0,M:0,L:0,XL:0,XXL:0});
   const [colorModalFor, setColorModalFor] = useState<"all"|"base"|"pattern"|"base-body"|"collar"|null>(null);
+  const [pendingColorPick, setPendingColorPick] = useState<string|null>(null);
   const [printModalFor, setPrintModalFor] = useState<"all"|"base-body"|"collar"|"accent"|null>(null);
+  const [pendingPrintKey, setPendingPrintKey] = useState<string|null>(null);
   const [bgRemoving, setBgRemoving] = useState(false);
   const [modelPaused, setModelPaused] = useState(false);
   const historyStack = useRef<string[]>([]);
@@ -1310,8 +1312,8 @@ export default function CustomizePage() {
                 {/* Solid + Print */}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                   {([
-                    {id:"solid" as const, label:"Solid", icon:"◼", bg:"linear-gradient(145deg,#2e2e2c 55%,#4a4a46 100%)"},
-                    {id:"print" as const, label:"Print",  icon:"❋", bg:"linear-gradient(145deg,#1e3040 55%,#2e4a60 100%)"},
+                    {id:"solid" as const, label:"Solid", thumb:"https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/Solid-t-shirt (1).png"},
+                    {id:"print" as const, label:"Print",  thumb:"https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/KS1000BGP001-01.png"},
                   ]).map(s=>{
                     const sel=userStyle===s.id||(userStyle===null&&(skuProductType as string)===s.id);
                     return(
@@ -1328,10 +1330,13 @@ export default function CustomizePage() {
                         boxShadow:sel?`0 2px 12px rgba(201,168,76,.25)`:"none",
                       }}>
                         <div style={{
-                          width:"100%",aspectRatio:"5/4",background:s.bg,
+                          width:"100%",aspectRatio:"3/4",background:V.sf2,
                           display:"flex",alignItems:"center",justifyContent:"center",
-                          fontSize:36,color:"rgba(255,255,255,0.12)",
-                        }}>{s.icon}</div>
+                          padding:"8px 6px",boxSizing:"border-box" as const,overflow:"hidden",
+                        }}>
+                          <img src={s.thumb} alt={s.label} style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain",display:"block"}}
+                            onError={e=>{(e.currentTarget as HTMLImageElement).style.opacity="0.2";}}/>
+                        </div>
                         <div style={{padding:"8px 10px",background:sel?V.aclt:V.sf2}}>
                           <div style={{fontSize:10,fontFamily:"'Jost',sans-serif",fontWeight:sel?700:500,color:sel?V.ac:V.tx,letterSpacing:".06em",textTransform:"uppercase"}}>{s.label}</div>
                         </div>
@@ -1431,11 +1436,7 @@ export default function CustomizePage() {
                       <span style={{fontSize:11,fontFamily:"'Jost',sans-serif",fontWeight:600,color:V.tx}}>
                         {isPatternMode?(KASHA_DESIGNS.find(d=>d.id===userChosenDesignId)?.label||"Pattern"):isPrintMode?"Print":"Solid"}
                       </span>
-                      <button onClick={()=>setStep(1)} style={{
-                        marginLeft:"auto",fontSize:9,padding:"3px 9px",borderRadius:6,
-                        border:`1px solid rgba(201,168,76,0.3)`,background:"transparent",cursor:"pointer",
-                        color:V.ac,fontFamily:"'Jost',sans-serif",letterSpacing:".05em",textTransform:"uppercase" as const,
-                      }}>Change</button>
+                      {/* Change Style button hidden per client request */}
                     </div>
 
                     {isPatternMode&&(
@@ -1826,7 +1827,7 @@ export default function CustomizePage() {
                                 const isA=logoPosition===c.key;
                                 const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                                 return(
-                                  <div key={c.key} onClick={()=>{setLogoPosition(c.key as any);setCameraView(PLACEMENT_VIEW[c.key]||"front");if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
+                                  <div key={c.key} onClick={()=>{setLogoPosition(c.key as any);setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
                                     display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
                                     padding:"7px 3px",borderRadius:9,transition:"all .18s",
                                     border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
@@ -1926,7 +1927,7 @@ export default function CustomizePage() {
                             const isA=textPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                             return(
-                              <div key={c.key} onClick={()=>{setTextPosition(c.key as any);setCameraView(PLACEMENT_VIEW[c.key]||"front");if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
+                              <div key={c.key} onClick={()=>{setTextPosition(c.key as any);setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
                                 display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
                                 padding:"7px 3px",borderRadius:9,transition:"all .18s",
                                 border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
@@ -2013,17 +2014,26 @@ export default function CustomizePage() {
                         <span style={{fontSize:10,color:V.mu,fontFamily:"'Jost',sans-serif",textAlign:"right"}}>{chest}</span>
                       </div>
                     ))}
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",alignItems:"center",padding:"10px 12px",background:V.sf2,borderTop:`1.5px solid ${V.ac}`}}>
-                      <span style={{fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:700,color:V.tx,letterSpacing:".06em"}}>TOTAL</span>
-                      <span style={{textAlign:"center",fontFamily:"'Jost',sans-serif",fontSize:14,fontWeight:700,color:V.ac}}>{totalQty}</span>
-                      <span/>
-                    </div>
+                    {totalQty>4&&(
+                      <div style={{padding:"10px 14px",background:"rgba(201,168,76,0.08)",borderTop:`1px solid rgba(201,168,76,0.25)`}}>
+                        <div style={{fontFamily:"'Jost',sans-serif",fontSize:10,color:"#b87a14",letterSpacing:".04em",lineHeight:1.5}}>
+                          Orders above 4 pieces qualify for our <a href="/contact?subject=bulk" style={{color:"#c9a84c",fontWeight:700,textDecoration:"underline"}}>Bulk Enquiry</a> for better pricing and dedicated support.
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
+
+                {/* Price summary removed per client request */}
 
                 {/* Custom measurements */}
                 <div>
                   <div style={{...sb,marginBottom:6}}>Custom Measurements <span style={{fontSize:9,fontWeight:400,color:V.mu,marginLeft:4}}>(optional, in inches)</span></div>
+                  <div style={{padding:"10px 14px",background:"rgba(201,168,76,0.07)",border:"1px solid rgba(201,168,76,0.2)",borderRadius:8,marginBottom:12}}>
+                    <div style={{fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:700,color:"#8b6914",letterSpacing:".06em",textTransform:"uppercase",lineHeight:1.6}}>
+                      IMPORTANT: ALL SIZES BELOW ARE BODY MEASUREMENTS, NOT GARMENT MEASUREMENTS. PLEASE SPECIFY WHETHER YOUR INPUTS ARE BODY OR GARMENT MEASUREMENTS.
+                    </div>
+                  </div>
                   <div style={{fontSize:10,color:V.mu,fontFamily:"'Jost',sans-serif",marginBottom:10,lineHeight:1.5}}>
                     Leave blank to use standard sizing above. Fill in for a tailored fit.
                   </div>
@@ -2035,7 +2045,10 @@ export default function CustomizePage() {
                       {key:"shoulder",label:"Shoulder Width"},
                       {key:"length",  label:"Garment Length"},
                       {key:"sleeve",  label:"Sleeve Length"},
-                    ] as {key:string;label:string}[]).map(({key,label})=>(
+                    ] as {key:string;label:string}[]).map(({key,label})=>{
+                      // Chest clash check: warn if value matches a standard size range
+                      const chestSizes=[{s:"S",lo:36,hi:37},{s:"M",lo:38,hi:39},{s:"L",lo:40,hi:41},{s:"XL",lo:42,hi:43},{s:"XXL",lo:44,hi:46}];
+                      return(
                       <div key={key}>
                         <div style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".07em",textTransform:"uppercase",color:V.mu,marginBottom:4}}>{label}</div>
                         <input
@@ -2050,29 +2063,36 @@ export default function CustomizePage() {
                             outline:"none",boxSizing:"border-box" as const,
                           }}
                           onFocus={e=>e.target.style.borderColor=V.ac}
-                          onBlur={e=>e.target.style.borderColor=V.bd}
+                          onBlur={e=>{
+                            e.target.style.borderColor=V.bd;
+                            if(key==="chest"){
+                              const v=parseFloat(e.target.value);
+                              if(!isNaN(v)){
+                                const match=chestSizes.find(sz=>v>=sz.lo&&v<=sz.hi);
+                                if(match){
+                                  const warn=e.target.nextElementSibling as HTMLElement|null;
+                                  if(warn){warn.textContent=`${v}" matches our standard ${match.s} size (${match.lo}–${match.hi}"). Consider selecting ${match.s} above.`;warn.style.display="block";}
+                                }
+                              }
+                            }
+                          }}
+                          onChange={e=>{
+                            if(key==="chest"){
+                              const warn=e.target.nextElementSibling as HTMLElement|null;
+                              if(warn){warn.style.display="none";}
+                            }
+                          }}
                         />
+                        <div style={{display:"none",marginTop:4,fontSize:9,color:"#b87a14",fontFamily:"'Jost',sans-serif",lineHeight:1.4,padding:"5px 8px",background:"rgba(201,168,76,0.08)",borderRadius:6}}/>
                       </div>
-                    ))}
+                    );})}
                   </div>
                   <div style={{marginTop:8,fontSize:9,color:V.mu,fontFamily:"'Jost',sans-serif",fontStyle:"italic"}}>
                     Our team will contact you to confirm measurements before production.
                   </div>
                 </div>
 
-                {/* Price summary */}
-                {!isTypeMode&&product&&totalQty>0&&(
-                  <div style={{padding:"14px 16px",borderRadius:10,background:V.aclt,border:`1px solid rgba(201,168,76,0.3)`}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <span style={{fontFamily:"'Jost',sans-serif",fontSize:11,color:V.mu,letterSpacing:".04em"}}>Unit price</span>
-                      <span style={{fontFamily:"'Jost',sans-serif",fontSize:13,fontWeight:600,color:V.tx}}>{formatPrice(product.priceInPaise)}</span>
-                    </div>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8}}>
-                      <span style={{fontFamily:"'Jost',sans-serif",fontSize:11,color:V.mu,letterSpacing:".04em"}}>Total ({totalQty} pcs)</span>
-                      <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,fontWeight:700,color:V.ac}}>{formatPrice(product.priceInPaise*totalQty)}</span>
-                    </div>
-                  </div>
-                )}
+                {/* Price summary hidden per client request */}
 
                 {/* WhatsApp bulk order callout */}
                 <a href={`https://wa.me/919999999999?text=${encodeURIComponent(`Hi KA.SHA! I'd like to place a bulk order for ${totalQty||"multiple"} custom golf t-shirts.`)}`}
@@ -2843,7 +2863,7 @@ export default function CustomizePage() {
                             const isA=textPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                             return(
-                              <div key={c.key} onClick={()=>{setTextPosition(c.key);setCameraView(PLACEMENT_VIEW[c.key]||"front");if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
+                              <div key={c.key} onClick={()=>{setTextPosition(c.key);setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
                                 display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
                                 padding:"7px 3px",borderRadius:9,transition:"all .18s",
                                 border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
@@ -2922,7 +2942,7 @@ export default function CustomizePage() {
                             const isA=logoPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                             return(
-                              <div key={c.key} onClick={()=>{setLogoPosition(c.key);setCameraView(PLACEMENT_VIEW[c.key]||"front");if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
+                              <div key={c.key} onClick={()=>{setLogoPosition(c.key);setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
                                 display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
                                 padding:"7px 3px",borderRadius:9,transition:"all .18s",
                                 border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
@@ -3114,7 +3134,7 @@ export default function CustomizePage() {
 
           {mvReady&&displayProduct?.modelUrl&&webglAvailable&&(
             <model-viewer ref={mvRef} src={toProxiedUrl(displayProduct.modelUrl)}
-              camera-controls {...(step===3?{}:{"auto-rotate":true,"rotation-per-second":"8deg"})}
+              camera-controls {...(step===3||modelPaused?{}:{"auto-rotate":true,"rotation-per-second":"8deg"})}
               shadow-intensity="1" environment-image="neutral" exposure="1.0"
               camera-orbit="0deg 75deg 2.5m" min-camera-orbit="auto auto 1.5m" max-camera-orbit="auto auto 5m"
               interaction-prompt="none"
@@ -3253,18 +3273,18 @@ export default function CustomizePage() {
           position:"fixed",inset:0,zIndex:200,
           background:"rgba(26,26,24,0.55)",backdropFilter:"blur(6px)",
           display:"flex",alignItems:"center",justifyContent:"center",
-        }} onClick={()=>setColorModalFor(null)}>
+        }} onClick={()=>{setColorModalFor(null);setPendingColorPick(null);}}>
           <div onClick={e=>e.stopPropagation()} style={{
             background:V.bg,borderRadius:20,padding:"28px 28px 24px",
             width:340,maxHeight:"80vh",overflowY:"auto",
             boxShadow:"0 32px 80px rgba(26,26,24,0.32)",
             border:`1px solid rgba(201,168,76,0.18)`,
           }}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
               <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
                 Choose Colour
               </div>
-              <button onClick={()=>setColorModalFor(null)} style={{
+              <button onClick={()=>{setColorModalFor(null);setPendingColorPick(null);}} style={{
                 background:"transparent",border:"none",cursor:"pointer",
                 fontSize:18,color:V.mu,lineHeight:1,padding:"2px 6px",
                 borderRadius:99,transition:"all .2s",
@@ -3273,9 +3293,15 @@ export default function CustomizePage() {
               onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=V.mu;}}>✕</button>
             </div>
 
+            {/* Instruction */}
+            <div style={{fontFamily:"'Jost',sans-serif",fontSize:10,color:V.mu,letterSpacing:".04em",marginBottom:16,padding:"8px 12px",background:V.sf2,borderRadius:8,border:`1px solid ${V.bd}`}}>
+              Select a colour, then click <strong style={{color:V.ac}}>Apply</strong>.
+            </div>
+
             {/* Preset swatches */}
             {(()=>{
               const pickedVal = colorModalFor==="pattern" ? patColorB : colorModalFor==="base" ? patColorA : primaryColor;
+              const displayCol = pendingColorPick ?? pickedVal;
               const applyCol = (col: string) => {
                 if(colorModalFor==="all"){
                   applyPrimary(col);
@@ -3283,15 +3309,14 @@ export default function CustomizePage() {
                   setPatColorA(col);
                   applyPatternColors(col, patColorB);
                 } else if(colorModalFor==="base-body"){
-                  // Apply to body zones, excluding collar
                   (["front","back","leftSleeve","rightSleeve"] as const).forEach(z=>applyZoneColor(z,col));
                 } else if(colorModalFor==="collar"){
                   applyZoneColor("collar",col);
                 } else {
-                  // "pattern" — pattern layer color B
                   setPatColorB(col);
                   applyPatternColors(patColorA, col);
                 }
+                setPendingColorPick(null);
                 setColorModalFor(null);
               };
               return(<>
@@ -3306,32 +3331,25 @@ export default function CustomizePage() {
                     "#6B1A8B","#9B3AC0","#C060E0","#D890F0","#ECC0F8","#F5E0FF",
                     "#8B4A1A","#C47030","#E09050","#F0B880","#F8D8B0","#FFF0E0",
                   ].map(col=>(
-                    <button key={col} onClick={()=>applyCol(col)} style={{
+                    <button key={col} onClick={()=>setPendingColorPick(col)} style={{
                       width:"100%",aspectRatio:"1",borderRadius:8,cursor:"pointer",
                       background:col,
-                      border:pickedVal===col?`2.5px solid ${V.ac}`:`1px solid rgba(26,26,24,0.15)`,
+                      border:displayCol===col?`2.5px solid ${V.ac}`:`1px solid rgba(26,26,24,0.15)`,
                       transition:"all .15s",
-                      boxShadow:pickedVal===col?`0 2px 8px rgba(201,168,76,0.35)`:"none",
+                      boxShadow:displayCol===col?`0 2px 8px rgba(201,168,76,0.35)`:"none",
                     }} title={col}/>
                   ))}
                 </div>
-                {/* Custom colour input */}
-                <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                  <div style={{width:40,height:40,borderRadius:10,background:pickedVal,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
-                  <input type="color" value={pickedVal}
-                    onChange={e=>{
-                      const col=e.target.value;
-                      if(colorModalFor==="all"){applyPrimary(col);}
-                      else if(colorModalFor==="base"){setPatColorA(col);applyPatternColors(col,patColorB);}
-                      else if(colorModalFor==="base-body"){(["front","back","leftSleeve","rightSleeve"] as const).forEach(z=>applyZoneColor(z,col));}
-                      else if(colorModalFor==="collar"){applyZoneColor("collar",col);}
-                      else{setPatColorB(col);applyPatternColors(patColorA,col);}
-                    }}
+                {/* Custom colour picker */}
+                <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:18}}>
+                  <div style={{width:40,height:40,borderRadius:10,background:displayCol,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
+                  <input type="color" value={displayCol}
+                    onChange={e=>setPendingColorPick(e.target.value)}
                     style={{width:48,height:40,padding:2,border:`1.5px solid ${V.bd}`,borderRadius:8,cursor:"pointer",background:V.sf2}}/>
-                  <input type="text" value={pickedVal}
+                  <input type="text" value={displayCol}
                     onChange={e=>{
                       const v=e.target.value.trim();
-                      if(/^#[0-9A-Fa-f]{6}$/.test(v)) applyCol(v);
+                      if(/^#[0-9A-Fa-f]{6}$/.test(v)) setPendingColorPick(v);
                     }}
                     placeholder="#c9a84c"
                     style={{
@@ -3343,6 +3361,16 @@ export default function CustomizePage() {
                     onFocus={e=>e.target.style.borderColor=V.ac}
                     onBlur={e=>e.target.style.borderColor=V.bd}/>
                 </div>
+                {/* Apply button */}
+                <button onClick={()=>applyCol(displayCol)} style={{
+                  width:"100%",padding:"12px 0",borderRadius:10,
+                  background:`linear-gradient(135deg,${V.ac},#b8943e)`,
+                  border:"none",cursor:"pointer",
+                  fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:700,
+                  color:"#fff",letterSpacing:".12em",textTransform:"uppercase",
+                  boxShadow:"0 4px 16px rgba(201,168,76,0.35)",
+                  transition:"all .2s",
+                }}>Apply Colour</button>
               </>);
             })()}
           </div>
@@ -3355,18 +3383,18 @@ export default function CustomizePage() {
           position:"fixed",inset:0,zIndex:200,
           background:"rgba(26,26,24,0.55)",backdropFilter:"blur(6px)",
           display:"flex",alignItems:"center",justifyContent:"center",
-        }} onClick={()=>setPrintModalFor(null)}>
+        }} onClick={()=>{setPrintModalFor(null);setPendingPrintKey(null);}}>
           <div onClick={e=>e.stopPropagation()} style={{
             background:V.bg,borderRadius:20,padding:"28px 28px 24px",
             width:420,maxHeight:"80vh",overflowY:"auto",
             boxShadow:"0 32px 80px rgba(26,26,24,0.32)",
             border:`1px solid rgba(201,168,76,0.18)`,
           }}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
               <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
                 Choose Print
               </div>
-              <button onClick={()=>setPrintModalFor(null)} style={{
+              <button onClick={()=>{setPrintModalFor(null);setPendingPrintKey(null);}} style={{
                 background:"transparent",border:"none",cursor:"pointer",
                 fontSize:18,color:V.mu,lineHeight:1,padding:"2px 6px",
                 borderRadius:99,transition:"all .2s",
@@ -3375,26 +3403,16 @@ export default function CustomizePage() {
               onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=V.mu;}}>✕</button>
             </div>
 
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+            {/* Instruction */}
+            <div style={{fontFamily:"'Jost',sans-serif",fontSize:10,color:V.mu,letterSpacing:".04em",marginBottom:16,padding:"8px 12px",background:V.sf2,borderRadius:8,border:`1px solid ${V.bd}`}}>
+              Select a print, then click <strong style={{color:V.ac}}>Apply</strong>.
+            </div>
+
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
               {visiblePatterns.map(p=>{
-                const isActive=allOverPrintId===p.id;
+                const isActive=(pendingPrintKey??allOverPrintId)===p.id;
                 return(
-                  <div key={p.id} onClick={()=>{
-                    // Route print to the correct zone based on which TargetRow opened this modal
-                    if(printModalFor==="base-body"){
-                      applyZonePrint("front",p); applyZonePrint("back",p);
-                      applyZonePrint("leftSleeve",p); applyZonePrint("rightSleeve",p);
-                    } else if(printModalFor==="collar"){
-                      applyZonePrint("collar",p);
-                    } else if(printModalFor==="accent"){
-                      // Pattern Design — tile print into the exact same shaped zones
-                      // that applyPatternColors colours (fetch-based, no CORS taint)
-                      applyPatternDesignPrint(p);
-                    } else {
-                      applyAllOverPrint(p); // "all" — full garment
-                    }
-                    saveHistory(); setPrintModalFor(null);
-                  }} style={{
+                  <div key={p.id} onClick={()=>setPendingPrintKey(p.id)} style={{
                     cursor:"pointer",borderRadius:12,overflow:"hidden",
                     border:`2px solid ${isActive?V.ac:V.bd}`,
                     transition:"all .2s",
@@ -3416,9 +3434,36 @@ export default function CustomizePage() {
               })}
             </div>
 
+            {/* Apply button */}
+            <button onClick={()=>{
+              const chosen=pendingPrintKey? visiblePatterns.find(p=>p.id===pendingPrintKey):null;
+              if(chosen){
+                if(printModalFor==="base-body"){
+                  applyZonePrint("front",chosen); applyZonePrint("back",chosen);
+                  applyZonePrint("leftSleeve",chosen); applyZonePrint("rightSleeve",chosen);
+                } else if(printModalFor==="collar"){
+                  applyZonePrint("collar",chosen);
+                } else if(printModalFor==="accent"){
+                  applyPatternDesignPrint(chosen);
+                } else {
+                  applyAllOverPrint(chosen);
+                }
+                saveHistory();
+              }
+              setPendingPrintKey(null); setPrintModalFor(null);
+            }} disabled={!pendingPrintKey} style={{
+              display:"block",width:"100%",padding:"12px 0",borderRadius:10,
+              background:pendingPrintKey?`linear-gradient(135deg,${V.ac},#b8943e)`:"rgba(26,26,24,0.08)",
+              border:"none",cursor:pendingPrintKey?"pointer":"default",
+              fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:700,
+              color:pendingPrintKey?"#fff":V.mu,letterSpacing:".12em",textTransform:"uppercase",
+              boxShadow:pendingPrintKey?"0 4px 16px rgba(201,168,76,0.35)":"none",
+              transition:"all .2s",
+            }}>Apply Print</button>
+
             {allOverPrintId&&(
-              <button onClick={()=>{clearAllOverPrint();saveHistory();setPrintModalFor(null);}} style={{
-                display:"block",width:"100%",marginTop:16,padding:"10px 0",
+              <button onClick={()=>{clearAllOverPrint();saveHistory();setPrintModalFor(null);setPendingPrintKey(null);}} style={{
+                display:"block",width:"100%",marginTop:10,padding:"10px 0",
                 borderRadius:99,border:`1px solid rgba(196,92,92,.35)`,
                 background:"transparent",color:"#c45c5c",fontSize:11,
                 cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".05em",

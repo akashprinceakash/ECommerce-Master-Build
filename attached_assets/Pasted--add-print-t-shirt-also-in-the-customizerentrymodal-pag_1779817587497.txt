@@ -1,0 +1,31 @@
+-> add print t-shirt also in the customizerentrymodal page display the solid t-shirt also as same the prints and patterns (it will be better if you diplay it as a carousel with left and right arrows where it will show ,solid,pattern,print t-shirts )
+-> add thumbnail images in customuization page -> Choose Your Style ... here also display all t-shirts in the same way
+-> hide change option hide style as for now because client mentioned this As mentioned - if we are showing solid and print, then pattern 001 should not be solid again
+-> The customer should be able to enter his number in inches/cms in the yellow column but if the figure he inputs clashes with the next size he should be given an alter.
+i.e. if he in L puts in chest as 43 then he need to be told that the chest for XL is already 43 therefore he should pick that size
+->Total figure (under size) not required nor is the Rs 2000 figure. The lower section of custom measurements is fine.
+But in block letter we need to mention that our sizes are body measurements and not garment measurement and therefore the customer also needs to be careful to specify garment measurement or body measurement
+->Customise your design -
+as mentioned earlier and shown in sketch - need Apply button on pop-up window for colour and print - and instruction above - Select colour and click Apply. or Select print and click Apply.
+Is it not possible to highlight on 3d image the areas that will change colour.
+There is some broken link at bottom of the page.
+Cart should be Add to Cart
+Clear should be Reset
+
+3 d is still revolving - for logo and text it should not revolve.
+clicking different placement opitons on the left should show that side in the 3 d model.
+we should go back to earlier ui - placement options on right, and upload and alignment on left - this way they can upload backa nd front. now only view changes,
+[More than 4 items should go to Bulk enwuiry form
+
+4.Remarks box should be added before Place Order
+
+see upon clicking this options Chest Left
+Chest Right
+Left Sleeve
+Right Sleeve
+back
+Centre Back
+Collar Centre
+Collar Left
+Collar Right
+it should stop revolving and it should that part later if user wants they resume revoloving

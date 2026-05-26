@@ -1,9 +1,9 @@
 /**
- * CustomizeEntryModal — shown when "Custom Studio" is clicked from the navbar.
- * Presents 7 style options: Solid, Print, and the 5 KA.SHA Signature Patterns.
- * Each card shows an actual product thumbnail and navigates directly to that
- * product's Bespoke Studio with the correct design pre-loaded from its SKU.
+ * CustomizeEntryModal — Bespoke Studio entry point.
+ * Gender selector (Men / Women / Boys / Girls) then a carousel of all
+ * available styles (Solid Polo, Print Polo, KA.SHA Signature Patterns).
  */
+import { useState } from "react";
 import { useLocation } from "wouter";
 
 interface Props {
@@ -11,68 +11,110 @@ interface Props {
   onClose: () => void;
 }
 
-// ── Curated style entries — each maps to a specific product & design ──────────
-const WIDE_OPTIONS = [
+const GENDERS = ["Men", "Women", "Boys", "Girls"] as const;
+type Gender = typeof GENDERS[number];
+
+interface CarouselItem {
+  key: string;
+  label: string;
+  tag: string;
+  thumbnail: string;
+  href: string;
+}
+
+// Items shown in the carousel — first two (Solid, Print) then all KA.SHA patterns.
+// When the client adds women's / boys' / girls' products they can be swapped in
+// via a gender-keyed lookup. For now all genders share the same men's styles.
+const MEN_ITEMS: CarouselItem[] = [
   {
     key: "solid",
-    label: "Solid",
-    title: "Solid Polo",
-    subtitle: "Pure colour, infinite expression",
-    desc: "Start from a clean canvas — choose your base colour, add zone accents, prints, logos and text.",
+    label: "Solid Polo",
+    tag: "Solid",
     thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/Solid-t-shirt (1).png",
     href: "/products/34/customize?style=solid",
   },
-];
-
-const PATTERN_OPTIONS = [
+  {
+    key: "print",
+    label: "Print Polo",
+    tag: "Print",
+    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/KS1000BGP001-01.png",
+    href: "/products/34/customize?style=print",
+  },
   {
     key: "pattern-1001",
     label: "Pattern 1001",
+    tag: "Pattern",
     thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1779449525478-157065178.webp",
     href: "/products/34/customize?style=pattern&design=KS1001B",
   },
   {
     key: "pattern-1002",
     label: "Pattern 1002",
+    tag: "Pattern",
     thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1779449004280-642782439.webp",
     href: "/products/31/customize?style=pattern&design=KS1002B",
   },
   {
     key: "pattern-1003",
     label: "Pattern 1003",
+    tag: "Pattern",
     thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1779449254970-226857725.webp",
     href: "/products/35/customize?style=pattern&design=KS1003B",
   },
   {
     key: "pattern-1004",
     label: "Pattern 1004",
+    tag: "Pattern",
     thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1779449327778-896276668.webp",
     href: "/products/36/customize?style=pattern&design=KS1004B",
   },
   {
     key: "pattern-1005",
     label: "Pattern 1005",
+    tag: "Pattern",
     thumbnail: "/api/public/thumbnails/KS1001BBeige-Brown-1.png",
     href: "/products/32/customize?style=pattern&design=KS1005B",
   },
 ];
 
+// Placeholder items for genders not yet stocked — copy from Men for now
+const GENDER_ITEMS: Record<Gender, CarouselItem[]> = {
+  Men: MEN_ITEMS,
+  Women: MEN_ITEMS,
+  Boys: MEN_ITEMS,
+  Girls: MEN_ITEMS,
+};
+
+const VISIBLE = 3; // cards visible at once on desktop
+
 export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   const [, navigate] = useLocation();
+  const [gender, setGender] = useState<Gender>("Men");
+  const [startIdx, setStartIdx] = useState(0);
 
   if (!isOpen) return null;
+
+  const items = GENDER_ITEMS[gender];
+  const total = items.length;
+  const canPrev = startIdx > 0;
+  const canNext = startIdx + VISIBLE < total;
 
   function handleSelect(href: string) {
     onClose();
     navigate(href);
   }
 
+  function prev() { setStartIdx(i => Math.max(0, i - 1)); }
+  function next() { setStartIdx(i => Math.min(total - VISIBLE, i + 1)); }
+
+  const visible = items.slice(startIdx, startIdx + VISIBLE);
+
   return (
     <div
       style={{
         position: "fixed", inset: 0, zIndex: 9999,
         display: "flex", alignItems: "center", justifyContent: "center",
-        background: "rgba(26,26,24,0.6)",
+        background: "rgba(26,26,24,0.62)",
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
         animation: "cemFadeIn 0.28s cubic-bezier(0.16,1,0.3,1)",
@@ -82,11 +124,11 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
       <div className="cem-sheet" style={{
         background: "#fafaf7",
         borderRadius: 20,
-        maxWidth: 860,
+        maxWidth: 780,
         width: "calc(100vw - 32px)",
         maxHeight: "calc(100vh - 40px)",
         overflowY: "auto",
-        padding: "36px 28px 40px",
+        padding: "34px 28px 38px",
         position: "relative",
         animation: "cemSlideUp 0.32s cubic-bezier(0.16,1,0.3,1)",
         boxShadow: "0 32px 80px rgba(26,26,24,0.24), 0 8px 24px rgba(26,26,24,0.12)",
@@ -108,7 +150,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         >×</button>
 
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <div style={{ textAlign: "center", marginBottom: 22 }}>
           <div style={{
             fontFamily: "'Jost', sans-serif",
             fontSize: 10, letterSpacing: ".2em", textTransform: "uppercase",
@@ -116,14 +158,14 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           }}>KA.SHA Bespoke Studio</div>
           <h2 style={{
             fontFamily: "'Cormorant Garamond', serif",
-            fontSize: 28, fontWeight: 600, color: "#1a1a18",
+            fontSize: 26, fontWeight: 600, color: "#1a1a18",
             letterSpacing: ".02em", margin: 0, lineHeight: 1.2,
           }}>Choose Your Style</h2>
           <p style={{
             fontFamily: "'Jost', sans-serif",
             fontSize: 11, color: "#8a8780", marginTop: 6,
             letterSpacing: ".04em", fontStyle: "italic",
-          }}>Select a t-shirt — the design loads instantly, ready for you to personalise</p>
+          }}>Select a style — it loads instantly in the studio, ready to personalise</p>
         </div>
 
         {/* Gold divider */}
@@ -133,154 +175,130 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           opacity: 0.4, marginBottom: 20,
         }} />
 
-        {/* Solid card — full width */}
-        <div style={{ marginBottom: 20 }}>
-          {WIDE_OPTIONS.map(opt => (
-            <WideCard key={opt.key} opt={opt} onSelect={handleSelect} />
+        {/* Gender selector */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 24 }}>
+          {GENDERS.map(g => (
+            <button
+              key={g}
+              onClick={() => { setGender(g); setStartIdx(0); }}
+              style={{
+                padding: "6px 18px",
+                borderRadius: 99,
+                border: `1.5px solid ${gender === g ? "#c9a84c" : "rgba(26,26,24,0.14)"}`,
+                background: gender === g ? "rgba(201,168,76,0.1)" : "transparent",
+                color: gender === g ? "#c9a84c" : "#6b6b68",
+                fontFamily: "'Jost', sans-serif",
+                fontSize: 11, letterSpacing: ".08em", textTransform: "uppercase",
+                fontWeight: gender === g ? 700 : 400,
+                cursor: "pointer", transition: "all .18s",
+              }}
+            >{g}</button>
           ))}
         </div>
 
-        {/* Pattern section label */}
-        <div style={{
-          fontFamily: "'Jost', sans-serif",
-          fontSize: 9, letterSpacing: ".18em", textTransform: "uppercase",
-          color: "#c9a84c", fontWeight: 600, marginBottom: 10,
-        }}>
-          Choose Your Print Design
+        {/* Carousel */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* Prev arrow */}
+          <button
+            onClick={prev}
+            disabled={!canPrev}
+            style={{
+              flexShrink: 0, width: 36, height: 36, borderRadius: "50%",
+              border: "1.5px solid rgba(26,26,24,0.15)",
+              background: canPrev ? "#fff" : "rgba(26,26,24,0.04)",
+              cursor: canPrev ? "pointer" : "default",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 16, color: canPrev ? "#1a1a18" : "#c8c8c4",
+              transition: "all .2s", boxShadow: canPrev ? "0 2px 8px rgba(26,26,24,0.08)" : "none",
+            }}
+          >‹</button>
+
+          {/* Cards */}
+          <div className="cem-carousel" style={{
+            flex: 1, display: "grid",
+            gridTemplateColumns: `repeat(${VISIBLE}, 1fr)`,
+            gap: 12,
+          }}>
+            {visible.map(item => (
+              <CarouselCard key={item.key} item={item} onSelect={handleSelect} />
+            ))}
+          </div>
+
+          {/* Next arrow */}
+          <button
+            onClick={next}
+            disabled={!canNext}
+            style={{
+              flexShrink: 0, width: 36, height: 36, borderRadius: "50%",
+              border: "1.5px solid rgba(26,26,24,0.15)",
+              background: canNext ? "#fff" : "rgba(26,26,24,0.04)",
+              cursor: canNext ? "pointer" : "default",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 16, color: canNext ? "#1a1a18" : "#c8c8c4",
+              transition: "all .2s", boxShadow: canNext ? "0 2px 8px rgba(26,26,24,0.08)" : "none",
+            }}
+          >›</button>
         </div>
 
-        {/* Pattern cards — scrollable row, 5 columns min, wraps/scrolls if more */}
-        <div className="cem-pattern-grid" style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
-          gap: 10,
-          maxHeight: 340,
-          overflowY: "auto",
-          paddingRight: 4,
-        }}>
-          {PATTERN_OPTIONS.map(opt => (
-            <PatternCard key={opt.key} opt={opt} onSelect={handleSelect} />
+        {/* Dot indicators */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 5, marginTop: 16 }}>
+          {Array.from({ length: total - VISIBLE + 1 }).map((_, i) => (
+            <div
+              key={i}
+              onClick={() => setStartIdx(i)}
+              style={{
+                width: i === startIdx ? 18 : 6, height: 6, borderRadius: 99,
+                background: i === startIdx ? "#c9a84c" : "#d4cfc6",
+                cursor: "pointer", transition: "all .2s",
+              }}
+            />
           ))}
         </div>
 
         {/* Footer note */}
         <p style={{
-          textAlign: "center", marginTop: 20,
+          textAlign: "center", marginTop: 18,
           fontFamily: "'Jost', sans-serif",
           fontSize: 10, color: "#b8b5ae",
           letterSpacing: ".08em", fontStyle: "italic",
         }}>
-          Your design is pre-loaded from the product SKU — customise colours, prints and logos in the studio
+          Your design pre-loads from the product — personalise colours, prints and logos in the studio
         </p>
       </div>
 
       <style>{`
-        @keyframes cemFadeIn { from { opacity: 0 } to { opacity: 1 } }
-        @keyframes cemSlideUp { from { opacity: 0; transform: translateY(24px) } to { opacity: 1; transform: translateY(0) } }
+        @keyframes cemFadeIn  { from { opacity:0 } to { opacity:1 } }
+        @keyframes cemSlideUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:translateY(0) } }
         @media (max-width: 620px) {
-          .cem-sheet { padding: 20px 12px 24px !important; border-radius: 14px !important; width: calc(100vw - 16px) !important; }
-          .cem-wide-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
-          .cem-pattern-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
+          .cem-sheet { padding:18px 10px 24px !important; border-radius:14px !important; width:calc(100vw - 16px) !important; }
+          .cem-carousel { grid-template-columns:repeat(2,1fr) !important; gap:8px !important; }
         }
         @media (max-width: 380px) {
-          .cem-pattern-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .cem-carousel { grid-template-columns:1fr !important; }
         }
       `}</style>
     </div>
   );
 }
 
-// ── Wide card (Solid / Print) — horizontal: image left, text right ────────────
-interface WideOpt { key: string; label: string; title: string; subtitle: string; desc: string; thumbnail: string; href: string; }
-function WideCard({ opt, onSelect }: { opt: WideOpt; onSelect: (h: string) => void }) {
+// ── Carousel card ─────────────────────────────────────────────────────────────
+function CarouselCard({ item, onSelect }: { item: CarouselItem; onSelect: (h: string) => void }) {
   return (
     <button
-      onClick={() => onSelect(opt.href)}
+      onClick={() => onSelect(item.href)}
       style={{
         padding: 0, border: "1.5px solid rgba(26,26,24,0.09)",
-        borderRadius: 12, cursor: "pointer", background: "#ffffff",
-        textAlign: "left", overflow: "hidden",
-        transition: "border-color 0.22s, box-shadow 0.22s",
-        boxShadow: "0 2px 8px rgba(26,26,24,0.05)",
-        display: "flex", flexDirection: "row",
-        height: 140,
-        width: "100%",
-      }}
-      onMouseEnter={e => {
-        const el = e.currentTarget as HTMLElement;
-        el.style.borderColor = "#c9a84c";
-        el.style.boxShadow = "0 4px 20px rgba(201,168,76,0.18), 0 2px 8px rgba(26,26,24,0.06)";
-      }}
-      onMouseLeave={e => {
-        const el = e.currentTarget as HTMLElement;
-        el.style.borderColor = "rgba(26,26,24,0.09)";
-        el.style.boxShadow = "0 2px 8px rgba(26,26,24,0.05)";
-      }}
-    >
-      {/* Image — fixed square, centred + contained, no cropping */}
-      <div style={{
-        width: 140, minWidth: 140, height: "100%",
-        background: "#f2efe9",
-        borderRight: "1px solid rgba(26,26,24,0.06)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: 10, boxSizing: "border-box", overflow: "hidden",
-      }}>
-        <img
-          src={opt.thumbnail}
-          alt={opt.title}
-          style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
-          onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.3"; }}
-        />
-      </div>
-
-      {/* Text */}
-      <div style={{ padding: "14px 16px 14px", flex: 1, display: "flex", flexDirection: "column", gap: 3, minWidth: 0, overflow: "hidden" }}>
-        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 8, letterSpacing: ".16em", textTransform: "uppercase" as const, color: "#c9a84c", fontWeight: 700 }}>
-          {opt.label}
-        </div>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 600, color: "#1a1a18", letterSpacing: ".02em", lineHeight: 1.15 }}>
-          {opt.title}
-        </div>
-        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 11.5, color: "#8a8780", fontStyle: "italic", lineHeight: 1.35 }}>
-          {opt.subtitle}
-        </div>
-        <div style={{
-          fontFamily: "'Jost', sans-serif", fontSize: 10, color: "#aaa8a3",
-          lineHeight: 1.5, marginTop: 3,
-          overflow: "hidden", display: "-webkit-box",
-          WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
-        }}>
-          {opt.desc}
-        </div>
-        <div style={{ marginTop: "auto" }}>
-          <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 8, letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#c9a84c", fontWeight: 600 }}>
-            Customise →
-          </span>
-        </div>
-      </div>
-    </button>
-  );
-}
-
-// ── Pattern card (compact) ────────────────────────────────────────────────────
-interface PatOpt { key: string; label: string; thumbnail: string; href: string; }
-function PatternCard({ opt, onSelect }: { opt: PatOpt; onSelect: (h: string) => void }) {
-  return (
-    <button
-      onClick={() => onSelect(opt.href)}
-      style={{
-        padding: 0, border: "1.5px solid rgba(26,26,24,0.09)",
-        borderRadius: 12, cursor: "pointer", background: "#ffffff",
-        textAlign: "left", overflow: "hidden",
-        transition: "all 0.28s cubic-bezier(0.16,1,0.3,1)",
+        borderRadius: 14, cursor: "pointer", background: "#ffffff",
+        overflow: "hidden", textAlign: "left",
+        transition: "all 0.26s cubic-bezier(0.16,1,0.3,1)",
         boxShadow: "0 2px 10px rgba(26,26,24,0.05)",
         display: "flex", flexDirection: "column",
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement;
         el.style.borderColor = "#c9a84c";
-        el.style.transform = "translateY(-3px)";
-        el.style.boxShadow = "0 8px 28px rgba(201,168,76,0.16), 0 3px 10px rgba(26,26,24,0.06)";
+        el.style.transform = "translateY(-4px)";
+        el.style.boxShadow = "0 10px 32px rgba(201,168,76,0.18), 0 4px 12px rgba(26,26,24,0.07)";
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLElement;
@@ -289,25 +307,35 @@ function PatternCard({ opt, onSelect }: { opt: PatOpt; onSelect: (h: string) => 
         el.style.boxShadow = "0 2px 10px rgba(26,26,24,0.05)";
       }}
     >
-      {/* Image — contained within frame, no cropping */}
+      {/* Image */}
       <div style={{
         width: "100%", aspectRatio: "3/4", overflow: "hidden",
-        flexShrink: 0, background: "#f2efe9",
+        background: "#f2efe9", flexShrink: 0,
         display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "8px 6px", boxSizing: "border-box",
+        padding: "10px 8px", boxSizing: "border-box",
       }}>
-        <img src={opt.thumbnail} alt={opt.label}
+        <img
+          src={item.thumbnail}
+          alt={item.label}
           style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
-          onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.3"; }}
+          onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.25"; }}
         />
       </div>
-      <div style={{ padding: "7px 8px 9px" }}>
-        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, letterSpacing: ".06em", textTransform: "uppercase" as const, color: "#1a1a18", fontWeight: 600, lineHeight: 1.3 }}>
-          {opt.label}
-        </div>
-        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 8, color: "#c9a84c", marginTop: 3, letterSpacing: ".08em" }}>
-          Customise →
-        </div>
+
+      {/* Label */}
+      <div style={{ padding: "9px 10px 11px" }}>
+        <div style={{
+          fontFamily: "'Jost', sans-serif", fontSize: 8, letterSpacing: ".14em",
+          textTransform: "uppercase", color: "#c9a84c", fontWeight: 700, marginBottom: 2,
+        }}>{item.tag}</div>
+        <div style={{
+          fontFamily: "'Cormorant Garamond', serif", fontSize: 14, fontWeight: 600,
+          color: "#1a1a18", lineHeight: 1.2,
+        }}>{item.label}</div>
+        <div style={{
+          fontFamily: "'Jost', sans-serif", fontSize: 8, color: "#c9a84c",
+          marginTop: 5, letterSpacing: ".08em",
+        }}>Customise →</div>
       </div>
     </button>
   );
