@@ -103,7 +103,8 @@ export default function CheckoutPage() {
     shippingCity: "",
     shippingState: "",
     shippingPostalCode: "",
-    shippingPhone: ""
+    shippingPhone: "",
+    remarks: "",
   });
 
   useEffect(() => {
@@ -565,6 +566,19 @@ export default function CheckoutPage() {
                   </SelectContent>
                 </Select>
                 {errors.shippingState && <p className="text-xs text-destructive mt-1">{errors.shippingState}</p>}
+              </div>
+
+              {/* Remarks / special instructions */}
+              <div className="space-y-2">
+                <Label htmlFor="remarks">Remarks / Special Instructions <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <textarea
+                  id="remarks"
+                  rows={3}
+                  value={formData.remarks}
+                  onChange={e => handleChange("remarks", e.target.value)}
+                  placeholder="Any special requests, gifting notes, or delivery instructions…"
+                  className="w-full px-3 py-2 text-sm border border-input bg-background rounded-none resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                />
               </div>
 
               <div className="pt-8">

@@ -22,15 +22,6 @@ const WIDE_OPTIONS = [
     thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/Solid-t-shirt (1).png",
     href: "/products/34/customize?style=solid",
   },
-  {
-    key: "print",
-    label: "Print",
-    title: "Printed Polo",
-    subtitle: "Artistry meets athleticism",
-    desc: "Begin with a signature KA.SHA print. Personalise with zone prints, custom text and logos.",
-    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/KS1000BGP001-01.png",
-    href: "/products/26/customize?style=print",
-  },
 ];
 
 const PATTERN_OPTIONS = [
@@ -142,8 +133,8 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           opacity: 0.4, marginBottom: 20,
         }} />
 
-        {/* Wide cards: Solid + Print — horizontal layout */}
-        <div className="cem-wide-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+        {/* Solid card — full width */}
+        <div style={{ marginBottom: 20 }}>
           {WIDE_OPTIONS.map(opt => (
             <WideCard key={opt.key} opt={opt} onSelect={handleSelect} />
           ))}
@@ -155,11 +146,18 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           fontSize: 9, letterSpacing: ".18em", textTransform: "uppercase",
           color: "#c9a84c", fontWeight: 600, marginBottom: 10,
         }}>
-          KA.SHA Signature Patterns
+          Choose Your Print Design
         </div>
 
-        {/* Pattern cards: 5 across */}
-        <div className="cem-pattern-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+        {/* Pattern cards — scrollable row, 5 columns min, wraps/scrolls if more */}
+        <div className="cem-pattern-grid" style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(5, 1fr)",
+          gap: 10,
+          maxHeight: 340,
+          overflowY: "auto",
+          paddingRight: 4,
+        }}>
           {PATTERN_OPTIONS.map(opt => (
             <PatternCard key={opt.key} opt={opt} onSelect={handleSelect} />
           ))}

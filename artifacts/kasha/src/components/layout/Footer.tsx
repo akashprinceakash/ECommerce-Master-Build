@@ -165,20 +165,20 @@ export function Footer() {
                 </button>
               </li>
               <li>
-                <FooterLink href="#">
+                <FooterLink href="/contact?subject=bulk">
                   Bulk Orders
                 </FooterLink>
               </li>
               <li>
-                <FooterLink href="#">Corporate</FooterLink>
+                <FooterLink href="/contact?subject=corporate">Corporate</FooterLink>
               </li>
               <li>
-                <FooterLink href="#">
+                <FooterLink href="/contact?subject=tournaments">
                   Tournaments
                 </FooterLink>
               </li>
               <li>
-                <FooterLink href="#">
+                <FooterLink href="/contact?subject=academies">
                   Golf Academies
                 </FooterLink>
               </li>
