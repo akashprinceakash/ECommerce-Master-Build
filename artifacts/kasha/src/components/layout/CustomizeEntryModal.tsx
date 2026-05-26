@@ -37,7 +37,7 @@ const PATTERN_OPTIONS = [
   {
     key: "pattern-1001",
     label: "Pattern 1001",
-    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/Solid-t-shirt (1).png",
+    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1779449525478-157065178.webp",
     href: "/products/34/customize?style=pattern&design=KS1001B",
   },
   {
