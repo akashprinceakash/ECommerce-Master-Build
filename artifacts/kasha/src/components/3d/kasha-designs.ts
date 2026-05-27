@@ -219,8 +219,6 @@ export async function applyKashaDesign(
     { key: 'collar',      zone: 'collar'      },
     { key: 'leftSleeve',  zone: 'leftSleeve'  },
     { key: 'rightSleeve', zone: 'rightSleeve' },
-    // Placket uses the same texture as front — fills the button-strip UV island
-    { key: 'front',       zone: 'placket'     },
   ];
 
   const imgs: fabric.FabricImage[] = [];

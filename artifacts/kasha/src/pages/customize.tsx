@@ -333,7 +333,7 @@ export default function CustomizePage() {
   const [allOverPrintId, setAllOverPrintId] = useState<string|null>(null);
   const baseBgRef = useRef("#ffffff");
   const [zonePrintIds, setZonePrintIds] = useState<Record<Exclude<PatternZone,"all">,string|null>>({
-    front:null, back:null, collar:null, leftSleeve:null, rightSleeve:null, placket:null,
+    front:null, back:null, collar:null, leftSleeve:null, rightSleeve:null,
   });
   const [printMode, setPrintMode] = useState<"fullBody"|"parts">("fullBody");
 
@@ -345,7 +345,7 @@ export default function CustomizePage() {
   // ── Parts step state ─────────────────────────────────────────────────────
   const [activePartZone, setActivePartZone] = useState<Exclude<PatternZone,"all">>("collar");
   const [zoneColors, setZoneColors] = useState<Record<Exclude<PatternZone,"all">,string>>({
-    collar:"", front:"", back:"", leftSleeve:"", rightSleeve:"", placket:"",
+    collar:"", front:"", back:"", leftSleeve:"", rightSleeve:"",
   });
 
   // ── Logo step state ──────────────────────────────────────────────────────
@@ -800,7 +800,7 @@ export default function CustomizePage() {
   const clearAllZonePrints = useCallback(()=>{
     const fc=fcRef.current; if(!fc) return;
     fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint).forEach((o:any)=>fc.remove(o));
-    setZonePrintIds({front:null,back:null,collar:null,leftSleeve:null,rightSleeve:null,placket:null});
+    setZonePrintIds({front:null,back:null,collar:null,leftSleeve:null,rightSleeve:null});
     fc.renderAll(); syncTexture();
   }, [syncTexture]);
 
