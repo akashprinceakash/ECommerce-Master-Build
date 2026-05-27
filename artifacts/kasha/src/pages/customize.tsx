@@ -1193,14 +1193,20 @@ export default function CustomizePage() {
           {n:4,label:"Sizing"},
         ] as const).map((s,i)=>{
           const active=step===s.n; const done=step>s.n;
+          // Style step is locked when the user arrived with a pre-selected style
+          // (e.g. from a product page). Clicking it does nothing to prevent
+          // accidentally switching styles and breaking the current design.
+          const locked = s.n===1 && _entryStyle!==null;
           return (
             <React.Fragment key={s.n}>
               {i>0&&<div style={{flex:1,height:2,borderRadius:2,background:done?V.ac:"rgba(26,26,24,0.14)",transition:"background .3s",margin:"0 4px"}}/>}
-              <div onClick={()=>setStep(s.n)} style={{
-                display:"flex",alignItems:"center",gap:7,cursor:"pointer",
+              <div onClick={locked?undefined:()=>setStep(s.n)} style={{
+                display:"flex",alignItems:"center",gap:7,
+                cursor:locked?"default":"pointer",
                 padding:"5px 10px",borderRadius:99,
                 background:active?V.aclt:"transparent",
                 transition:"all .25s cubic-bezier(.16,1,.3,1)",
+                opacity:locked?0.5:1,
               }}>
                 <div style={{
                   width:24,height:24,borderRadius:"50%",flexShrink:0,
