@@ -702,10 +702,12 @@ export default function CustomizePage() {
   // SKU and immediately apply the correct design so the 3D model matches the
   // product the customer selected — no manual selection needed.
 
-  // PATTERN auto-apply: apply zone textures + colorway derived from SKU suffix
+  // PATTERN auto-apply: apply zone textures + colorway derived from SKU suffix.
+  // Gated on mats.length > 0 so syncTexture can actually push to the model;
+  // the effect re-fires automatically when mats loads (via handleSelectKashaDesign dep).
   useEffect(() => {
     if (!canvasReady || productType !== "pattern" || autoAppliedRef.current) return;
-    if (!product) return;
+    if (!product || !mats.length) return; // wait for model materials to be ready
     autoAppliedRef.current = true;
 
     // Parse the product's own SKU for colors (may have suffix like KS1002B-BB)
@@ -741,9 +743,10 @@ export default function CustomizePage() {
     }
 
     const design = KASHA_DESIGNS.find(d => d.id === designId) ?? KASHA_DESIGNS[0];
-    // Pass colorOverride directly to avoid stale-closure issue with applyPatternColors
+    // Pass colorOverride directly so colors are applied atomically with the design,
+    // and syncTexture fires with mats already populated (guaranteed by guard above).
     handleSelectKashaDesign(design, colorOverride);
-  }, [canvasReady, productType, handleSelectKashaDesign, product]);
+  }, [canvasReady, productType, handleSelectKashaDesign, product, mats]);
 
   // PRINT auto-apply: select the correct print from the library based on SKU
   const autoAppliedPrintRef = useRef(false);
