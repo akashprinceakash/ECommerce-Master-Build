@@ -54,7 +54,7 @@ export const PATTERNS: PatternDef[] = [
   { id: "KS1000BGP034", label: "GP 034", file: "KS1000BGP034.jpeg", swatchColors: ["#6b4a4a", "#39b6c7"] },
 ];
 
-export type PatternZone = "all" | "front" | "back" | "leftSleeve" | "rightSleeve" | "collar";
+export type PatternZone = "all" | "front" | "back" | "leftSleeve" | "rightSleeve" | "collar" | "placket";
 
 export const ZONE_LABEL: Record<PatternZone, string> = {
   all:         "All-Over Print",
@@ -63,6 +63,7 @@ export const ZONE_LABEL: Record<PatternZone, string> = {
   leftSleeve:  "Left Sleeve",
   rightSleeve: "Right Sleeve",
   collar:      "Collar",
+  placket:     "Placket",
 };
 
 export interface ZonePreset { left: number; top: number; w: number; h: number; }
@@ -73,6 +74,8 @@ export const ZONE_PRESETS: Record<Exclude<PatternZone, "all">, ZonePreset> = {
   collar:      { left:  12, top: 183, w: 507, h: 166 },
   leftSleeve:  { left: 210, top:   4, w: 398, h: 170 },
   rightSleeve: { left: 617, top:   2, w: 398, h: 171 },
+  // Placket: the narrow button-strip UV island, sits between collar and front body
+  placket:     { left: 316, top: 295, w: 62,  h: 430 },
 };
 
 export const ALL_OVER_TILE_PX = 384;

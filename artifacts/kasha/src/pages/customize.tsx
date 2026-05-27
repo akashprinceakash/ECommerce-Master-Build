@@ -103,10 +103,10 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "collar-left":   { left: 140, top: 240 },  // left side of collar band
   "collar-right":  { left: 390, top: 240 },  // right side of collar band
 };
-// For right-sleeve placement the client wants text to appear reversed.
-// All other placements use flipX:true to counteract the UV horizontal mirror.
-function placementFlipX(placement: string): boolean {
-  return placement !== "right-sleeve";
+// All placements use flipX:true to counteract the UV horizontal mirror so
+// text and logos read correctly on every zone including the right sleeve.
+function placementFlipX(_placement: string): boolean {
+  return true;
 }
 // Which 3-D view to jump to when a placement is selected
 const PLACEMENT_VIEW: Record<string, "front"|"back"|"left"|"right"> = {
@@ -333,7 +333,7 @@ export default function CustomizePage() {
   const [allOverPrintId, setAllOverPrintId] = useState<string|null>(null);
   const baseBgRef = useRef("#ffffff");
   const [zonePrintIds, setZonePrintIds] = useState<Record<Exclude<PatternZone,"all">,string|null>>({
-    front:null, back:null, collar:null, leftSleeve:null, rightSleeve:null,
+    front:null, back:null, collar:null, leftSleeve:null, rightSleeve:null, placket:null,
   });
   const [printMode, setPrintMode] = useState<"fullBody"|"parts">("fullBody");
 
@@ -345,7 +345,7 @@ export default function CustomizePage() {
   // ── Parts step state ─────────────────────────────────────────────────────
   const [activePartZone, setActivePartZone] = useState<Exclude<PatternZone,"all">>("collar");
   const [zoneColors, setZoneColors] = useState<Record<Exclude<PatternZone,"all">,string>>({
-    collar:"", front:"", back:"", leftSleeve:"", rightSleeve:"",
+    collar:"", front:"", back:"", leftSleeve:"", rightSleeve:"", placket:"",
   });
 
   // ── Logo step state ──────────────────────────────────────────────────────
@@ -800,7 +800,7 @@ export default function CustomizePage() {
   const clearAllZonePrints = useCallback(()=>{
     const fc=fcRef.current; if(!fc) return;
     fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint).forEach((o:any)=>fc.remove(o));
-    setZonePrintIds({front:null,back:null,collar:null,leftSleeve:null,rightSleeve:null});
+    setZonePrintIds({front:null,back:null,collar:null,leftSleeve:null,rightSleeve:null,placket:null});
     fc.renderAll(); syncTexture();
   }, [syncTexture]);
 
@@ -3353,6 +3353,9 @@ export default function CustomizePage() {
                   ))}
                 </div>
                 {/* Custom colour picker */}
+                <div style={{fontFamily:"'Jost',sans-serif",fontSize:9,color:V.mu,letterSpacing:".06em",textTransform:"uppercase",marginBottom:6,fontWeight:600}}>
+                  Pick your color from color picker
+                </div>
                 <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:18}}>
                   <div style={{width:40,height:40,borderRadius:10,background:displayCol,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
                   <input type="color" value={displayCol}
