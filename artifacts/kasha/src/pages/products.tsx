@@ -329,6 +329,14 @@ export default function ProductsPage() {
           {/* Sidebar */}
           <aside className="lg:sticky lg:top-24 self-start">
             <nav aria-label="Shop categories" className="text-sm">
+              {/* Filter heading */}
+              <div
+                className="py-2 text-[10px] tracking-[0.32em] uppercase font-semibold text-neutral-900/40"
+                style={{ fontFamily: "'Josefin Sans', sans-serif", borderBottom: "1px solid rgba(0,0,0,0.08)", marginBottom: 2 }}
+              >
+                Filter
+              </div>
+
               {/* All Products */}
               <Link
                 href="/products"
@@ -357,8 +365,8 @@ export default function ProductsPage() {
                       {section.label}
                     </Link>
 
-                    {/* Parent items (T-shirts, Bottoms) */}
-                    <ul className="pb-2">
+                    {/* Parent items (T-shirts, Bottoms) — only show when this gender is active */}
+                    {sectionActive && <ul className="pb-2">
                       {section.parents.map((parent) => {
                         const accordionKey = `${section.gender}-${parent.type}`;
                         const isOpen = expanded.has(accordionKey);
@@ -412,7 +420,7 @@ export default function ProductsPage() {
                           </li>
                         );
                       })}
-                    </ul>
+                    </ul>}
                   </div>
                 );
               })}

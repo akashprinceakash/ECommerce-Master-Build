@@ -608,7 +608,7 @@ export default function CheckoutPage() {
           <div className="bg-secondary/30 p-8 sticky top-24">
             <h2 className="font-serif text-xl font-medium mb-6">In Your Bag</h2>
             
-            <div className="space-y-6 mb-8 max-h-[40vh] overflow-y-auto pr-2">
+            <div className="space-y-6 mb-8 max-h-[70vh] overflow-y-auto pr-2">
               {cart.items.map(item => (
                 <div key={item.id} className="flex gap-4">
                   <div className="w-16 aspect-[3/4] bg-secondary flex-shrink-0 relative">

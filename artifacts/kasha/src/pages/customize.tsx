@@ -521,6 +521,22 @@ export default function CustomizePage() {
     else if (productType==="print") setStyleTab("print");
   }, [productType]);
 
+  // Clear any applied KA.SHA pattern design when user is in solid or print mode
+  useEffect(() => {
+    if (effectiveSkuType === "solid" || effectiveSkuType === "print") {
+      const fc = fcRef.current;
+      if (!fc) return;
+      const patternObjs = fc.getObjects().filter((o: any) => o?.data?.kashaDesign || o?.data?.kashaZonePrint);
+      if (patternObjs.length > 0) {
+        patternObjs.forEach((o: any) => fc.remove(o));
+        setActiveKashaDesign(null);
+        fc.renderAll();
+        syncTexture();
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveSkuType]);
+
   // All users start at Step 1 to choose their style (no auto-advance)
 
   // Responsive layout listener
@@ -1826,7 +1842,7 @@ export default function CustomizePage() {
 
                   {logoPreview&&(
                     <div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px",borderRadius:12,background:V.sf2,border:`1px solid ${V.bd}`}}>
-                      {logoPlaced&&(<div>
+                      {(<div>
                         <div style={{...sb,marginBottom:8}}>Position</div>
                         {(()=>{
                           const chips=[
@@ -2417,16 +2433,17 @@ export default function CustomizePage() {
                     <div style={{fontSize:10,color:"#4a4a42",marginBottom:10,letterSpacing:".07em",textTransform:"uppercase",fontWeight:600,fontFamily:"'Jost',sans-serif"}}>
                       {activeKashaDesign ? "Base Colour" : colorTarget==="all" ? "Colour — All Parts" : `Colour — ${["front","back","leftSleeve","rightSleeve"].includes(colorTarget)?{front:"Front",back:"Back",leftSleeve:"Left Sleeve",rightSleeve:"Right Sleeve"}[colorTarget as string]:"Part"}`}
                     </div>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:4}}>
                       {(activeKashaDesign||colorTarget==="all")
                         ? MAIN_PALETTE.map(hex=>swatch(hex,primaryColor===hex,()=>applyPrimary(hex)))
                         : MAIN_PALETTE.map(hex=>swatch(hex,zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]===hex,()=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,hex)))}
-                      <label title="Custom" style={{width:30,height:30,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.bd2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:V.tx,flexShrink:0}}>
+                      <label title="Custom colour" style={{width:30,height:30,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.ac}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:V.ac,flexShrink:0}} aria-label="Pick a custom colour">
                         +{(activeKashaDesign||colorTarget==="all")
                           ?<input type="color" value={primaryColor} onChange={e=>applyPrimary(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
                           :<input type="color" value={zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]||primaryColor} onChange={e=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>}
                       </label>
                     </div>
+                    <div style={{fontSize:9,color:V.mu,letterSpacing:".05em",fontFamily:"'Jost',sans-serif",marginBottom:6}}>Click the + icon above to select a specific colour</div>
                     {!activeKashaDesign&&colorTarget!=="all"&&zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]&&(
                       <button onClick={()=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,"")} style={{fontSize:10,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Reset this zone</button>
                     )}
@@ -3360,7 +3377,7 @@ export default function CustomizePage() {
                 </div>
                 {/* Custom colour picker */}
                 <div style={{fontFamily:"'Jost',sans-serif",fontSize:9,color:V.mu,letterSpacing:".06em",textTransform:"uppercase",marginBottom:6,fontWeight:600}}>
-                  Pick your color from color picker
+                  Click the icon below to select a specific colour
                 </div>
                 <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:18}}>
                   <div style={{width:40,height:40,borderRadius:10,background:displayCol,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
