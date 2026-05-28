@@ -109,15 +109,16 @@ function placementFlipX(_placement: string): boolean {
   return true;
 }
 // Which 3-D view to jump to when a placement is selected
-const PLACEMENT_VIEW: Record<string, "front"|"back"|"left"|"right"> = {
+type CameraView = "front"|"back"|"right"|"left"|"collar-center"|"collar-left"|"collar-right";
+const PLACEMENT_VIEW: Record<string, CameraView> = {
   "front-left":    "front",
   "front-right":   "front",
   "back-center":   "back",
   "left-sleeve":   "left",
   "right-sleeve":  "right",
-  "collar-edge":   "front",
-  "collar-left":   "front",
-  "collar-right":  "front",
+  "collar-edge":   "collar-center",
+  "collar-left":   "collar-left",
+  "collar-right":  "collar-right",
 };
 const PLACEMENT_GROUPS = [
   { label:"FRONT",  items:[{key:"front-left",label:"Left"},{key:"front-right",label:"Right"},{key:"front-center",label:"Center"}] },
@@ -375,7 +376,7 @@ export default function CustomizePage() {
 
   // ── Studio UI state ───────────────────────────────────────────────────────
   const [activeTool, setActiveTool] = useState<"products"|"colors"|"prints"|"patterns"|"text"|"image"|"order"|null>("products");
-  const [cameraView, setCameraView] = useState<"front"|"back"|"right"|"left">("front");
+  const [cameraView, setCameraView] = useState<CameraView>("front");
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [colorTarget, setColorTarget] = useState<"all"|"front"|"back"|"leftSleeve"|"rightSleeve">("all");
@@ -514,6 +515,9 @@ export default function CustomizePage() {
       clearTimeout(fallback);
     };
   }, [mvReady, displayProduct?.modelUrl, webglAvailable]);
+
+  // Sync userStyle when the URL param changes (e.g. navigating from pattern → solid via modal)
+  useEffect(() => { setUserStyle(_entryStyle); }, [_entryStyle]);
 
   // Update styleTab when productType resolves (after data fetch)
   useEffect(() => {
@@ -1048,14 +1052,26 @@ export default function CustomizePage() {
   // Camera view effect
   useEffect(() => {
     const mv: any = mvRef.current; if (!mv) return;
-    const orbits: Record<string, string> = {
-      front: "0deg 75deg 2.5m",
-      back:  "180deg 75deg 2.5m",
-      right: "90deg 75deg 2.5m",
-      left:  "-90deg 75deg 2.5m",
+    const orbits: Record<CameraView, string> = {
+      front:          "0deg 75deg 2.5m",
+      back:           "180deg 75deg 2.5m",
+      right:          "90deg 75deg 2.5m",
+      left:           "-90deg 75deg 2.5m",
+      "collar-center": "0deg 52deg 1.9m",
+      "collar-left":   "-40deg 58deg 1.9m",
+      "collar-right":  "40deg 58deg 1.9m",
     };
-    mv.cameraOrbit = orbits[cameraView] || "0deg 75deg 2.5m";
+    mv.cameraOrbit = orbits[cameraView] ?? "0deg 75deg 2.5m";
   }, [cameraView, modelLoaded]);
+
+  // Imperatively stop auto-rotate when entering step 3 (logo/text)
+  useEffect(() => {
+    const mv: any = mvRef.current; if (!mv || !modelLoaded) return;
+    if (step === 3) {
+      mv.removeAttribute("auto-rotate");
+      mv.removeAttribute("auto-rotate-delay");
+    }
+  }, [step, modelLoaded]);
 
   // ── Tool definitions ──────────────────────────────────────────────────────
   const TOOLS = [
@@ -1108,7 +1124,7 @@ export default function CustomizePage() {
       }}>
         {/* Left: back + logo */}
         <div style={{display:"flex",alignItems:"center",gap:14,minWidth:180}}>
-          <Link href={id ? `/products/${id}` : "/"} style={{
+          <Link href={id ? `/products/${id}?openStudio=1` : "/"} style={{
             color:V.mu,fontSize:11,textDecoration:"none",
             display:"flex",alignItems:"center",gap:5,
             padding:"5px 12px",borderRadius:40,
@@ -1842,39 +1858,6 @@ export default function CustomizePage() {
 
                   {logoPreview&&(
                     <div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px",borderRadius:12,background:V.sf2,border:`1px solid ${V.bd}`}}>
-                      {(<div>
-                        <div style={{...sb,marginBottom:8}}>Position</div>
-                        {(()=>{
-                          const chips=[
-                            {key:"front-left",   label:"Chest Left",   cx:21,cy:40,back:false},
-                            {key:"front-right",  label:"Chest Right",  cx:39,cy:40,back:false},
-                            {key:"left-sleeve",  label:"Left Sleeve",  cx:7, cy:23,back:false},
-                            {key:"right-sleeve", label:"Right Sleeve", cx:53,cy:23,back:false},
-                            {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
-                            {key:"collar-edge",  label:"Collar Centre", cx:30,cy:9, back:false},
-                            {key:"collar-left",  label:"Collar Left",  cx:22,cy:9, back:false},
-                            {key:"collar-right", label:"Collar Right", cx:38,cy:9, back:false},
-                          ];
-                          return(
-                            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5}}>
-                              {chips.map(c=>{
-                                const isA=logoPosition===c.key;
-                                const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
-                                return(
-                                  <div key={c.key} onClick={()=>{setLogoPosition(c.key as any);setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
-                                    display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
-                                    padding:"7px 3px",borderRadius:9,transition:"all .18s",
-                                    border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
-                                  }}>
-                                    <div style={{width:36,height:41}} dangerouslySetInnerHTML={{__html:svg}}/>
-                                    <span style={{fontSize:7,textTransform:"uppercase",letterSpacing:".05em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:V.mu,fontWeight:isA?700:400,textAlign:"center",lineHeight:1.2}}>{c.label}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          );
-                        })()}
-                      </div>)}
                       <div>
                         <div style={{...sb}}>Size — <span style={{color:V.ac}}>{(logoSize*0.376).toFixed(1)}&Prime;</span> <span style={{color:V.mu,fontWeight:400}}>({logoSize}%)</span></div>
                         <input type="range" min={5} max={60} value={logoSize} onChange={e=>{const v=+e.target.value;setLogoSize(v);if(logoObjRef.current){logoObjRef.current.scaleToWidth(Math.round(v*(1024/100)));logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
@@ -1941,40 +1924,7 @@ export default function CustomizePage() {
                       }}>{label}</button>
                     ))}
                   </div>
-                  {/* Text placement chips — only shown after text has been placed */}
-                  {textPlaced&&<div>
-                    <div style={{...sb,marginBottom:8}}>Placement</div>
-                    {(()=>{
-                      const chips=[
-                        {key:"front-left",   label:"Chest Left",   cx:21,cy:40,back:false},
-                        {key:"front-right",  label:"Chest Right",  cx:39,cy:40,back:false},
-                        {key:"left-sleeve",  label:"Left Sleeve",  cx:7, cy:23,back:false},
-                        {key:"right-sleeve", label:"Right Sleeve", cx:53,cy:23,back:false},
-                        {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
-                        {key:"collar-edge",  label:"Collar Centre", cx:30,cy:9, back:false},
-                        {key:"collar-left",  label:"Collar Left",  cx:22,cy:9, back:false},
-                        {key:"collar-right", label:"Collar Right", cx:38,cy:9, back:false},
-                      ];
-                      return(
-                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5}}>
-                          {chips.map(c=>{
-                            const isA=textPosition===c.key;
-                            const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
-                            return(
-                              <div key={c.key} onClick={()=>{setTextPosition(c.key as any);setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
-                                display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
-                                padding:"7px 3px",borderRadius:9,transition:"all .18s",
-                                border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
-                              }}>
-                                <div style={{width:36,height:41}} dangerouslySetInnerHTML={{__html:svg}}/>
-                                <span style={{fontSize:7,textTransform:"uppercase",letterSpacing:".05em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:V.mu,fontWeight:isA?700:400,textAlign:"center",lineHeight:1.2}}>{c.label}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
-                  </div>}
+                  {/* Text placement chips moved to right panel */}
                   <button onClick={()=>{
                     if(!textInput.trim())return;
                     applyText();
@@ -3299,6 +3249,78 @@ export default function CustomizePage() {
             </div>
           )}
         </div>
+
+        {/* ── RIGHT PANEL: Placement chips (step 3 desktop only) ─────────── */}
+        {step===3&&screenW>=768&&(
+          <div style={{
+            width:200,flexShrink:0,overflowY:"auto",
+            background:V.bg,
+            borderLeft:`1px solid rgba(26,26,24,0.07)`,
+            display:"flex",flexDirection:"column",
+            order:3,
+          }}>
+            <div style={{padding:"20px 14px",display:"flex",flexDirection:"column",gap:18}}>
+              <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:15,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>Placement</div>
+              {(()=>{
+                const CHIPS=[
+                  {key:"front-left",   label:"Chest Left",   cx:21,cy:40,back:false},
+                  {key:"front-right",  label:"Chest Right",  cx:39,cy:40,back:false},
+                  {key:"left-sleeve",  label:"Left Sleeve",  cx:7, cy:23,back:false},
+                  {key:"right-sleeve", label:"Right Sleeve", cx:53,cy:23,back:false},
+                  {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
+                  {key:"collar-edge",  label:"Collar Centre",cx:30,cy:9, back:false},
+                  {key:"collar-left",  label:"Collar Left",  cx:22,cy:9, back:false},
+                  {key:"collar-right", label:"Collar Right", cx:38,cy:9, back:false},
+                ];
+                const chipGrid=(isActive:(k:string)=>boolean, onSelect:(k:string)=>void)=>(
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:5}}>
+                    {CHIPS.map(c=>{
+                      const isA=isActive(c.key);
+                      const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
+                      return(
+                        <div key={c.key} onClick={()=>onSelect(c.key)} style={{
+                          display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
+                          padding:"8px 4px",borderRadius:9,transition:"all .18s",
+                          border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
+                        }}>
+                          <div style={{width:38,height:43}} dangerouslySetInnerHTML={{__html:svg}}/>
+                          <span style={{fontSize:7,textTransform:"uppercase",letterSpacing:".05em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:V.mu,fontWeight:isA?700:400,textAlign:"center",lineHeight:1.2}}>{c.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+                return(
+                  <>
+                    {logoPreview&&(
+                      <div>
+                        <div style={{...sb,marginBottom:8}}>Logo</div>
+                        {chipGrid(
+                          k=>logoPosition===k,
+                          k=>{setLogoPosition(k as any);setCameraView(PLACEMENT_VIEW[k]??"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(logoObjRef.current){const pos=LOGO_POSITIONS[k]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(k)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}
+                        )}
+                      </div>
+                    )}
+                    {textPlaced&&(
+                      <div>
+                        <div style={{...sb,marginBottom:8}}>Text</div>
+                        {chipGrid(
+                          k=>textPosition===k,
+                          k=>{setTextPosition(k as any);setCameraView(PLACEMENT_VIEW[k]??"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(textObjRef.current){const pos=LOGO_POSITIONS[k]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(k)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}
+                        )}
+                      </div>
+                    )}
+                    {!logoPreview&&!textPlaced&&(
+                      <div style={{fontSize:11,color:V.mu,fontFamily:"'Jost',sans-serif",lineHeight:1.7,textAlign:"center",paddingTop:8}}>
+                        Upload a logo or add text to see placement options.
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )}
 
       </div>
 
