@@ -1,10 +1,14 @@
 /**
  * CustomizeEntryModal — Bespoke Studio entry point.
- * Gender selector (Men / Women / Boys / Girls) then a carousel of all
- * available styles (Solid Polo, Print Polo, KA.SHA Signature Patterns).
+ * Gender selector (Men / Women) then a carousel of all available styles
+ * (Solid Polo, Print Polo, KA.SHA Signature Patterns).
+ * Solid and Print thumbnails are fetched live from the product API so they
+ * always match the actual product photo — same approach as the product listing.
  */
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useGetProduct, getGetProductQueryKey } from "@workspace/api-client-react";
+import { getAssetUrl } from "@/lib/api";
 
 interface Props {
   isOpen: boolean;
@@ -22,24 +26,11 @@ interface CarouselItem {
   href: string;
 }
 
-// Items shown in the carousel — first two (Solid, Print) then all KA.SHA patterns.
-// When the client adds women's / boys' / girls' products they can be swapped in
-// via a gender-keyed lookup. For now all genders share the same men's styles.
-const MEN_ITEMS: CarouselItem[] = [
-  {
-    key: "solid",
-    label: "Solid Polo",
-    tag: "Solid",
-    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/Solid-t-shirt (1).png",
-    href: "/products/34/customize?style=solid",
-  },
-  {
-    key: "print",
-    label: "Print Polo",
-    tag: "Print",
-    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/KS1000BGP001-01.png",
-    href: "/products/34/customize?style=print",
-  },
+// Product IDs
+// 34 = base polo tee (solid studio entry point)
+// 26 = KS1000BGP001 printed golf tee
+// Patterns use their own product IDs with R2 thumbnail previews
+const PATTERN_ITEMS: CarouselItem[] = [
   {
     key: "pattern-1001",
     label: "Pattern 1001",
@@ -77,12 +68,6 @@ const MEN_ITEMS: CarouselItem[] = [
   },
 ];
 
-// Women's collection coming soon — carousel replaced with a placeholder
-const GENDER_ITEMS: Record<Gender, CarouselItem[] | null> = {
-  Men: MEN_ITEMS,
-  Women: null, // Coming soon
-};
-
 const VISIBLE = 3; // cards visible at once on desktop
 
 export function CustomizeEntryModal({ isOpen, onClose }: Props) {
@@ -90,7 +75,41 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   const [gender, setGender] = useState<Gender>("Men");
   const [startIdx, setStartIdx] = useState(0);
 
+  // Fetch real product data so thumbnails always match the product listing page
+  const { data: solidProduct } = useGetProduct(34, {
+    query: { queryKey: getGetProductQueryKey(34), enabled: isOpen },
+  });
+  const { data: printProduct } = useGetProduct(26, {
+    query: { queryKey: getGetProductQueryKey(26), enabled: isOpen },
+  });
+
   if (!isOpen) return null;
+
+  const solidThumb = getAssetUrl(solidProduct?.thumbnailUrl) ?? "";
+  const printThumb  = getAssetUrl(printProduct?.thumbnailUrl)  ?? "";
+
+  const MEN_ITEMS: CarouselItem[] = [
+    {
+      key: "solid",
+      label: "Solid Polo",
+      tag: "Solid",
+      thumbnail: solidThumb,
+      href: "/products/34/customize?style=solid",
+    },
+    {
+      key: "print",
+      label: "Print Polo",
+      tag: "Print",
+      thumbnail: printThumb,
+      href: "/products/26/customize?style=print",
+    },
+    ...PATTERN_ITEMS,
+  ];
+
+  const GENDER_ITEMS: Record<Gender, CarouselItem[] | null> = {
+    Men: MEN_ITEMS,
+    Women: null,
+  };
 
   const items = GENDER_ITEMS[gender]; // null means "coming soon"
   const total = items ? items.length : 0;
