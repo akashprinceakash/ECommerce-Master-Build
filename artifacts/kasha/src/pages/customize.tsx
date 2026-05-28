@@ -2399,13 +2399,13 @@ export default function CustomizePage() {
                       {(activeKashaDesign||colorTarget==="all")
                         ? MAIN_PALETTE.map(hex=>swatch(hex,primaryColor===hex,()=>applyPrimary(hex)))
                         : MAIN_PALETTE.map(hex=>swatch(hex,zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]===hex,()=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,hex)))}
-                      <label title="Custom colour" style={{width:30,height:30,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`1.5px dashed ${V.ac}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:V.ac,flexShrink:0}} aria-label="Pick a custom colour">
+                      <label title="Custom colour" style={{width:40,height:40,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`2px dashed ${V.ac}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:V.ac,flexShrink:0}} aria-label="Pick a custom colour">
                         +{(activeKashaDesign||colorTarget==="all")
                           ?<input type="color" value={primaryColor} onChange={e=>applyPrimary(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
                           :<input type="color" value={zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]||primaryColor} onChange={e=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>}
                       </label>
                     </div>
-                    <div style={{fontSize:9,color:V.mu,letterSpacing:".05em",fontFamily:"'Jost',sans-serif",marginBottom:6}}>Click the + icon above to select a specific colour</div>
+                    <div style={{fontSize:9,color:V.mu,letterSpacing:".05em",fontFamily:"'Jost',sans-serif",marginBottom:6}}>Pick your colour from the colour picker (+) above</div>
                     {!activeKashaDesign&&colorTarget!=="all"&&zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]&&(
                       <button onClick={()=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,"")} style={{fontSize:10,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Reset this zone</button>
                     )}
@@ -2766,10 +2766,11 @@ export default function CustomizePage() {
                     </div>
                     <div>
                       <div style={{fontSize:9,letterSpacing:".12em",textTransform:"uppercase",color:V.mu,fontFamily:"'Jost',sans-serif",marginBottom:6}}>Color</div>
-                      <label style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",height:38,borderRadius:8,border:`1.5px solid ${V.bd}`,background:"#fff",cursor:"pointer",overflow:"hidden",position:"relative"}}>
-                        <div style={{width:26,height:26,borderRadius:4,background:textColor,border:"1.5px solid rgba(0,0,0,.12)"}}/>
+                      <label style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",height:56,borderRadius:8,border:`1.5px solid ${V.bd}`,background:"#fff",cursor:"pointer",overflow:"hidden",position:"relative"}}>
+                        <div style={{width:40,height:40,borderRadius:6,background:textColor,border:"1.5px solid rgba(0,0,0,.12)"}}/>
                         <input type="color" value={textColor} onChange={e=>{const v=e.target.value;setTextColor(v);if(textObjRef.current){textObjRef.current.set({fill:v});fcRef.current?.renderAll();syncTexture();}}} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer",width:"100%",height:"100%"}}/>
                       </label>
+                      <div style={{fontSize:8,color:V.mu,letterSpacing:".05em",fontFamily:"'Jost',sans-serif",marginTop:4,textAlign:"center"}}>Pick your colour from the colour picker</div>
                     </div>
                   </div>
 
@@ -3181,16 +3182,16 @@ export default function CustomizePage() {
               }}
               style={{
                 position:"absolute",top:14,right:14,zIndex:10,
-                width:34,height:34,borderRadius:"50%",
-                background:"rgba(250,250,247,0.90)",backdropFilter:"blur(10px)",
-                border:"1px solid rgba(201,168,76,0.28)",
+                width:52,height:52,borderRadius:"50%",
+                background:"rgba(250,250,247,0.95)",backdropFilter:"blur(12px)",
+                border:"2px solid rgba(201,168,76,0.45)",
                 display:"flex",alignItems:"center",justifyContent:"center",
-                cursor:"pointer",fontSize:13,color:V.tx,
-                boxShadow:"0 2px 12px rgba(26,26,24,0.10)",
+                cursor:"pointer",fontSize:20,color:V.tx,
+                boxShadow:"0 4px 20px rgba(26,26,24,0.18), 0 1px 4px rgba(201,168,76,0.20)",
                 transition:"all .2s",
               }}
-              onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.background="rgba(250,250,247,0.98)";}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(201,168,76,0.28)";e.currentTarget.style.background="rgba(250,250,247,0.90)";}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.background="rgba(250,250,247,1)";e.currentTarget.style.boxShadow="0 6px 24px rgba(201,168,76,0.28), 0 2px 6px rgba(26,26,24,0.12)";}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(201,168,76,0.45)";e.currentTarget.style.background="rgba(250,250,247,0.95)";e.currentTarget.style.boxShadow="0 4px 20px rgba(26,26,24,0.18), 0 1px 4px rgba(201,168,76,0.20)";}}
             >{modelPaused?"▶":"⏸"}</button>
           )}
 
