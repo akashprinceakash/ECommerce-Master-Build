@@ -769,6 +769,14 @@ export default function CustomizePage() {
     }
 
     const design = KASHA_DESIGNS.find(d => d.id === designId) ?? KASHA_DESIGNS[0];
+    // Apply colorB as the body/primary garment colour *before* zone textures are placed
+    // on top, so any UV area not covered by a zone still shows the correct body colour.
+    if (colorOverride) {
+      baseBgRef.current = colorOverride.colorB;
+      const fc = fcRef.current;
+      if (fc) setFabricBg(fc, colorOverride.colorB);
+      setPrimaryColor(colorOverride.colorB);
+    }
     // Pass colorOverride directly so colors are applied atomically with the design,
     // and syncTexture fires with mats already populated (guaranteed by guard above).
     handleSelectKashaDesign(design, colorOverride);

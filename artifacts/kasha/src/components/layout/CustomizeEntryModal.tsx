@@ -84,11 +84,15 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   const { data: printProduct } = useGetProduct(26, {
     query: { queryKey: getGetProductQueryKey(26), enabled: isOpen },
   });
+  const { data: solidBlkProduct } = useGetProduct(59, {
+    query: { queryKey: getGetProductQueryKey(59), enabled: isOpen },
+  });
 
   if (!isOpen) return null;
 
-  const solidThumb = getAssetUrl(solidProduct?.thumbnailUrl) ?? "";
-  const printThumb  = getAssetUrl(printProduct?.thumbnailUrl)  ?? "";
+  const solidThumb    = getAssetUrl(solidProduct?.thumbnailUrl) ?? "";
+  const printThumb    = getAssetUrl(printProduct?.thumbnailUrl)  ?? "";
+  const solidBlkThumb = getAssetUrl(solidBlkProduct?.thumbnailUrl) ?? "";
 
   const MEN_ITEMS: CarouselItem[] = [
     {
@@ -98,6 +102,14 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
       thumbnail: solidThumb,
       modelUrl: solidProduct?.modelUrl ?? undefined,
       href: "/products/34/customize?style=solid",
+    },
+    {
+      key: "solid-black",
+      label: "Solid Polo — Black",
+      tag: "Solid",
+      thumbnail: solidBlkThumb,
+      modelUrl: solidBlkProduct?.modelUrl ?? undefined,
+      href: "/products/59/customize?style=solid",
     },
     {
       key: "print",

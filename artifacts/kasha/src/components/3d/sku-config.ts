@@ -204,6 +204,20 @@ export function parseSku(sku: string): SkuResult {
     return { type: "solid", sku: upper, colorCode: code, hex };
   }
 
+  // ── Solid (long-name format): KS-{COLOR}-{NNN}  e.g. KS-BLK-001
+  //    Allows admin-friendly color names without requiring the canonical KS1000B- prefix.
+  const SOLID_LONGNAME_MAP: Record<string, string> = {
+    BLK: "#1a1a1a", WHT: "#f5f5f5", NVY: "#1a2c5e", RED: "#c0392b",
+    GRN: "#1f7a45", ORN: "#d4600a", GLD: "#c9a84c", PRP: "#6b2fa0",
+    MRN: "#7b241c", GRY: "#5a5a5a", SKB: "#4a8fd4",
+  };
+  const solidLongMatch = upper.match(/^KS-([A-Z]{2,4})-(\d+)$/);
+  if (solidLongMatch) {
+    const code = solidLongMatch[1];
+    const hex = SOLID_LONGNAME_MAP[code] ?? SOLID_COLOR_MAP[code] ?? "#1a1a1a";
+    return { type: "solid", sku: upper, colorCode: code, hex };
+  }
+
   // ── Pattern: KS1001B-XX … KS1005B-XX  (also accept without suffix → use default colors)
   const patternMatch = upper.match(/^KS(100[1-5])B(?:-([A-Z]{2,3}))?$/);
   if (patternMatch) {
