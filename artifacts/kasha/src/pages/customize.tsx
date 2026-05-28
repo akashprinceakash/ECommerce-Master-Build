@@ -467,8 +467,8 @@ export default function CustomizePage() {
       for (const entry of mats) {
         const pbr=entry?.mat?.pbrMetallicRoughness; if(!pbr) continue;
         const slot=pbr.baseColorTexture;
-        try { slot?.setTexture?.(tex); try{pbr.setBaseColorFactor([1,1,1,1]);}catch{}; break; }
-        catch { try { if(slot&&typeof slot.texture!=="undefined"){slot.texture=tex;try{pbr.setBaseColorFactor([1,1,1,1]);}catch{};break;} }catch{} }
+        try { slot?.setTexture?.(tex); try{pbr.setBaseColorFactor([1,1,1,1]);}catch{}; }
+        catch { try { if(slot&&typeof slot.texture!=="undefined"){slot.texture=tex;try{pbr.setBaseColorFactor([1,1,1,1]);}catch{};} }catch{} }
       }
     } catch (e) { console.error("[customize] syncTexture failed:",e); }
   }, [mats]);
@@ -674,7 +674,7 @@ export default function CustomizePage() {
       (fc as any).backgroundColor=pattern;
       fc.renderAll();
       setAllOverPrintId(p.id); setActivePrintId(p.id);
-      try{mats[0]?.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]);}catch{}
+      for (const entry of mats) { try{entry?.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]);}catch{} }
       syncTexture();
       toast({
         title: hasDesign ? "Print applied as base texture" : "Print applied",
