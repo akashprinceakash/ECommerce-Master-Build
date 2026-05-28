@@ -24,6 +24,8 @@ interface CarouselItem {
   tag: string;
   thumbnail: string;
   href: string;
+  /** When provided, a live 3D model-viewer is shown instead of the static thumbnail */
+  modelUrl?: string;
 }
 
 // Product IDs
@@ -94,6 +96,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
       label: "Solid Polo",
       tag: "Solid",
       thumbnail: solidThumb,
+      modelUrl: solidProduct?.modelUrl ?? undefined,
       href: "/products/34/customize?style=solid",
     },
     {
@@ -364,19 +367,41 @@ function CarouselCard({ item, onSelect }: { item: CarouselItem; onSelect: (h: st
         el.style.boxShadow = "0 2px 10px rgba(26,26,24,0.05)";
       }}
     >
-      {/* Image */}
+      {/* Image / 3-D preview */}
       <div style={{
         width: "100%", aspectRatio: "3/4", overflow: "hidden",
-        background: "#f2efe9", flexShrink: 0,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "10px 8px", boxSizing: "border-box",
+        background: "linear-gradient(160deg, #f7f4ee 0%, #edeae3 100%)",
+        flexShrink: 0, position: "relative",
       }}>
-        <img
-          src={item.thumbnail}
-          alt={item.label}
-          style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
-          onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.25"; }}
-        />
+        {item.modelUrl ? (
+          /* Live 3-D polo — pointer-events:none so clicks fall through to the button */
+          <model-viewer
+            src={item.modelUrl}
+            alt={item.label}
+            camera-orbit="0deg 80deg 2.2m"
+            field-of-view="22deg"
+            shadow-intensity="0.6"
+            exposure="1.05"
+            interaction-prompt="none"
+            style={{
+              width: "100%", height: "100%",
+              display: "block", pointerEvents: "none",
+            }}
+          />
+        ) : (
+          <div style={{
+            width: "100%", height: "100%",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "10px 8px", boxSizing: "border-box",
+          }}>
+            <img
+              src={item.thumbnail}
+              alt={item.label}
+              style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
+              onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.25"; }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Label */}

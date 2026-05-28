@@ -15,6 +15,11 @@ declare module "react" {
         exposure?: string | number;
         scale?: string;
         "poster-color"?: string;
+        "camera-orbit"?: string;
+        "field-of-view"?: string;
+        "min-camera-orbit"?: string;
+        "max-camera-orbit"?: string;
+        poster?: string;
         id?: string;
         style?: React.CSSProperties;
         ref?: React.Ref<any>;
