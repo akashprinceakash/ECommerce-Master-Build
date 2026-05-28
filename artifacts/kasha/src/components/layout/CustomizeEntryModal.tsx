@@ -108,21 +108,6 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
       href: "/products/34/customize?style=solid",
     },
     {
-      key: "solid-black",
-      label: "Solid Polo — Black",
-      tag: "Solid",
-      thumbnail: solidBlkThumb,
-      modelUrl: solidBlkProduct?.modelUrl ?? undefined,
-      href: "/products/59/customize?style=solid",
-    },
-    {
-      key: "print",
-      label: "GP001 — Paisley Print",
-      tag: "Print Polo",
-      thumbnail: printThumb,
-      href: "/products/26/customize?style=print",
-    },
-    {
       key: "print-003",
       label: "GP003 — Floral Print",
       tag: "Print Polo",
