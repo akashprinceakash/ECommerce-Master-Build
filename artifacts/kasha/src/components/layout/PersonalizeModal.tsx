@@ -38,7 +38,7 @@ export function PersonalizeModal({ isOpen, onClose, productId, productName, prod
             quickStyleParam = "&style=print";
           }
         }
-        navigate(`/products/${productId}/customize?mode=quick${quickStyleParam}${quickDesignParam}`);
+        navigate(`/products/${productId}/customize?mode=quick${quickStyleParam}${quickDesignParam}&from=product`);
       } else {
         // Derive style + design from SKU so the customizer skips Step 1
         let styleParam = "";
@@ -55,7 +55,7 @@ export function PersonalizeModal({ isOpen, onClose, productId, productName, prod
             styleParam = "&style=solid";
           }
         }
-        navigate(`/products/${productId}/customize?entry=1${styleParam}${designParam}`);
+        navigate(`/products/${productId}/customize?entry=1${styleParam}${designParam}&from=product`);
       }
     }, 160);
   }

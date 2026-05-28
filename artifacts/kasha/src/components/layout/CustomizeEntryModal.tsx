@@ -99,7 +99,8 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
 
   function handleSelect(href: string) {
     onClose();
-    navigate(href);
+    const sep = href.includes("?") ? "&" : "?";
+    navigate(href + sep + "from=modal");
   }
 
   function prev() { setStartIdx(i => Math.max(0, i - 1)); }

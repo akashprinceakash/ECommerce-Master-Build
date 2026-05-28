@@ -103,10 +103,11 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "collar-left":   { left: 140, top: 240 },  // left side of collar band
   "collar-right":  { left: 390, top: 240 },  // right side of collar band
 };
-// All placements use flipX:true to counteract the UV horizontal mirror so
-// text and logos read correctly on every zone including the right sleeve.
-function placementFlipX(_placement: string): boolean {
-  return true;
+// The body UV is horizontally mirrored, so flipX:true corrects text/logos on
+// most zones. The right-sleeve UV island is NOT mirrored the same way —
+// flipX:false lets it render correctly there.
+function placementFlipX(placement: string): boolean {
+  return placement !== "right-sleeve";
 }
 // Which 3-D view to jump to when a placement is selected
 type CameraView = "front"|"back"|"right"|"left"|"collar-center"|"collar-left"|"collar-right";
@@ -209,6 +210,8 @@ export default function CustomizePage() {
   // pre-initialise userStyle + userChosenDesignId and skip Step 1 automatically.
   const _entryStyle = (new URLSearchParams(searchStr).get("style") ?? null) as "solid"|"print"|"pattern"|null;
   const _entryDesign = new URLSearchParams(searchStr).get("design");
+  // Source of navigation: "modal" = came from CustomizeEntryModal, "product" = came from PDP
+  const _fromSource = new URLSearchParams(searchStr).get("from") ?? null;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const entryDesignRef = useRef(_entryDesign); // stable ref — captured once at mount
 
@@ -1124,7 +1127,7 @@ export default function CustomizePage() {
       }}>
         {/* Left: back + logo */}
         <div style={{display:"flex",alignItems:"center",gap:14,minWidth:180}}>
-          <Link href={id ? `/products/${id}?openStudio=1` : "/"} style={{
+          <Link href={_fromSource === "modal" ? "/" : id ? `/products/${id}` : "/"} style={{
             color:V.mu,fontSize:11,textDecoration:"none",
             display:"flex",alignItems:"center",gap:5,
             padding:"5px 12px",borderRadius:40,
@@ -2022,54 +2025,63 @@ export default function CustomizePage() {
                     Leave blank to use standard sizing above. Fill in for a tailored fit.
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                    {([
-                      {key:"chest",   label:"Chest"},
-                      {key:"waist",   label:"Waist"},
-                      {key:"hip",     label:"Hip"},
-                      {key:"shoulder",label:"Shoulder Width"},
-                      {key:"length",  label:"Garment Length"},
-                      {key:"sleeve",  label:"Sleeve Length"},
-                    ] as {key:string;label:string}[]).map(({key,label})=>{
-                      // Chest clash check: warn if value matches a standard size range
-                      const chestSizes=[{s:"S",lo:36,hi:37},{s:"M",lo:38,hi:39},{s:"L",lo:40,hi:41},{s:"XL",lo:42,hi:43},{s:"XXL",lo:44,hi:46}];
-                      return(
-                      <div key={key}>
-                        <div style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".07em",textTransform:"uppercase",color:V.mu,marginBottom:4}}>{label}</div>
-                        <input
-                          type="number"
-                          min={0}
-                          step={0.5}
-                          placeholder="—"
-                          style={{
-                            width:"100%",padding:"8px 10px",borderRadius:8,
-                            border:`1px solid ${V.bd}`,background:V.sf2,
-                            fontFamily:"'Jost',sans-serif",fontSize:12,color:V.tx,
-                            outline:"none",boxSizing:"border-box" as const,
-                          }}
-                          onFocus={e=>e.target.style.borderColor=V.ac}
-                          onBlur={e=>{
-                            e.target.style.borderColor=V.bd;
-                            if(key==="chest"){
+                    {(()=>{
+                      const SIZE_CLASH: Record<string,{s:string;lo:number;hi:number}[]> = {
+                        chest:    [{s:"S",lo:36,hi:37},{s:"M",lo:38,hi:39},{s:"L",lo:40,hi:41},{s:"XL",lo:42,hi:43},{s:"XXL",lo:44,hi:46}],
+                        shoulder: [{s:"S",lo:16,hi:17},{s:"M",lo:17,hi:18},{s:"L",lo:18,hi:19},{s:"XL",lo:19,hi:20},{s:"XXL",lo:20,hi:21}],
+                        length:   [{s:"S",lo:27,hi:28},{s:"M",lo:28,hi:29},{s:"L",lo:29,hi:30},{s:"XL",lo:30,hi:31},{s:"XXL",lo:31,hi:32}],
+                        sleeve:   [{s:"S",lo:8, hi:9}, {s:"M",lo:9, hi:10},{s:"L",lo:10,hi:11},{s:"XL",lo:11,hi:12},{s:"XXL",lo:12,hi:13}],
+                        waist:    [{s:"S",lo:30,hi:31},{s:"M",lo:32,hi:33},{s:"L",lo:34,hi:35},{s:"XL",lo:36,hi:37},{s:"XXL",lo:38,hi:40}],
+                        hip:      [{s:"S",lo:34,hi:35},{s:"M",lo:36,hi:37},{s:"L",lo:38,hi:39},{s:"XL",lo:40,hi:41},{s:"XXL",lo:42,hi:44}],
+                      };
+                      return ([
+                        {key:"chest",   label:"Chest"},
+                        {key:"waist",   label:"Waist"},
+                        {key:"hip",     label:"Hip"},
+                        {key:"shoulder",label:"Shoulder Width"},
+                        {key:"length",  label:"Garment Length"},
+                        {key:"sleeve",  label:"Sleeve Length"},
+                      ] as {key:string;label:string}[]).map(({key,label})=>(
+                        <div key={key}>
+                          <div style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".07em",textTransform:"uppercase",color:V.mu,marginBottom:4}}>{label}</div>
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.5}
+                            placeholder="—"
+                            style={{
+                              width:"100%",padding:"8px 10px",borderRadius:8,
+                              border:`1px solid ${V.bd}`,background:V.sf2,
+                              fontFamily:"'Jost',sans-serif",fontSize:12,color:V.tx,
+                              outline:"none",boxSizing:"border-box" as const,
+                            }}
+                            onFocus={e=>e.target.style.borderColor=V.ac}
+                            onBlur={e=>{
+                              e.target.style.borderColor=V.bd;
                               const v=parseFloat(e.target.value);
-                              if(!isNaN(v)){
-                                const match=chestSizes.find(sz=>v>=sz.lo&&v<=sz.hi);
-                                if(match){
-                                  const warn=e.target.nextElementSibling as HTMLElement|null;
-                                  if(warn){warn.textContent=`${v}" matches our standard ${match.s} size (${match.lo}–${match.hi}"). Consider selecting ${match.s} above.`;warn.style.display="block";}
+                              const ranges=SIZE_CLASH[key];
+                              if(!isNaN(v)&&ranges){
+                                const match=ranges.find(sz=>v>=sz.lo&&v<=sz.hi);
+                                const warn=e.target.nextElementSibling as HTMLElement|null;
+                                if(warn){
+                                  if(match){
+                                    warn.textContent=`${v}" matches our standard ${match.s} size (${match.lo}–${match.hi}"). Consider selecting ${match.s} above instead.`;
+                                    warn.style.display="block";
+                                  } else {
+                                    warn.style.display="none";
+                                  }
                                 }
                               }
-                            }
-                          }}
-                          onChange={e=>{
-                            if(key==="chest"){
+                            }}
+                            onChange={e=>{
                               const warn=e.target.nextElementSibling as HTMLElement|null;
                               if(warn){warn.style.display="none";}
-                            }
-                          }}
-                        />
-                        <div style={{display:"none",marginTop:4,fontSize:9,color:"#b87a14",fontFamily:"'Jost',sans-serif",lineHeight:1.4,padding:"5px 8px",background:"rgba(201,168,76,0.08)",borderRadius:6}}/>
-                      </div>
-                    );})}
+                            }}
+                          />
+                          <div style={{display:"none",marginTop:4,fontSize:9,color:"#b87a14",fontFamily:"'Jost',sans-serif",lineHeight:1.4,padding:"5px 8px",background:"rgba(201,168,76,0.08)",borderRadius:6}}/>
+                        </div>
+                      ));
+                    })()}
                   </div>
                   <div style={{marginTop:8,fontSize:9,color:V.mu,fontFamily:"'Jost',sans-serif",fontStyle:"italic"}}>
                     Our team will contact you to confirm measurements before production.
@@ -2127,7 +2139,7 @@ export default function CustomizePage() {
               }}
               onMouseEnter={e=>{if(step>initialStep){e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.ac;}}}
               onMouseLeave={e=>{e.currentTarget.style.borderColor=step===initialStep?"rgba(26,26,24,0.12)":V.bd;e.currentTarget.style.color=step===initialStep?V.mu:V.tx;}}>
-              ← Back
+              ← Previous Step
             </button>
 
             {/* Continue / Add to Cart */}
@@ -3261,6 +3273,26 @@ export default function CustomizePage() {
           }}>
             <div style={{padding:"20px 14px",display:"flex",flexDirection:"column",gap:18}}>
               <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:15,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>Placement</div>
+              {/* ── Customisation charge: Rs 1 per sq inch ── */}
+              {(logoPreview||textPlaced)&&(()=>{
+                const logoW = logoSize * 0.376; // width in inches
+                const logoArea = logoW * logoW * 0.75; // ~3:4 aspect ratio estimate
+                const logoCharge = logoPreview ? Math.ceil(logoArea) : 0;
+                const textH = textFontSize * (22/1024); // canvas 1024px ≈ 22" wide
+                const textW = Math.max(1, textInput.length) * textFontSize * 0.55 * (22/1024);
+                const textArea = textH * textW;
+                const textCharge = textPlaced ? Math.ceil(textArea) : 0;
+                const total = logoCharge + textCharge;
+                return(
+                  <div style={{padding:"10px 12px",borderRadius:10,background:V.sf2,border:`1px solid ${V.bd}`}}>
+                    <div style={{fontFamily:"'Jost',sans-serif",fontSize:9,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:V.mu,marginBottom:8}}>Customisation Charge</div>
+                    {logoPreview&&<div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>Logo</span><span style={{color:V.ac,fontWeight:600}}>₹{logoCharge}</span></div>}
+                    {textPlaced&&<div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>Text</span><span style={{color:V.ac,fontWeight:600}}>₹{textCharge}</span></div>}
+                    <div style={{borderTop:`1px solid ${V.bd}`,marginTop:6,paddingTop:6,display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:12,fontWeight:700,color:V.tx}}><span>Total</span><span style={{color:V.ac}}>₹{total}</span></div>
+                    <div style={{fontFamily:"'Jost',sans-serif",fontSize:8,color:V.mu,marginTop:5,fontStyle:"italic"}}>@ ₹1 per sq inch</div>
+                  </div>
+                );
+              })()}
               {(()=>{
                 const CHIPS=[
                   {key:"front-left",   label:"Chest Left",   cx:21,cy:40,back:false},
