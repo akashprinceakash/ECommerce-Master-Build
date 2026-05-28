@@ -694,7 +694,7 @@ export default function CustomizePage() {
     const fc=fcRef.current; if(!fc) return;
     const preset=ZONE_PRESETS[zone];
     // Use a consistent tile size — canvas clips overflow, so edges are never squished
-    const tileSize=192;
+    const tileSize=128;
     try {
       const img=await loadHTMLImage(patternUrl(p.file));
       const off=document.createElement("canvas");
@@ -1561,33 +1561,97 @@ export default function CustomizePage() {
               );
 
               // Print gallery (shared between print-product and pattern→print sub-mode)
-              const PrintGallery = ()=>(
-                <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                  <div style={{...sb}}>Choose your print</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                    {visiblePatterns.filter(p=>p.label.startsWith("GP")).map(p=>{
-                      const sel=allOverPrintId===p.id;
-                      return (
-                        <div key={p.id} onClick={()=>{applyAllOverPrint(p);}} style={{
-                          borderRadius:10,overflow:"hidden",cursor:"pointer",
-                          border:`2px solid ${sel?V.ac:V.bd}`,transition:"all .2s",
-                          boxShadow:sel?`0 2px 12px rgba(201,168,76,.3)`:"none",
-                        }}>
-                          <img src={patternUrl(p.file)} alt={p.label} loading="lazy" decoding="async"
-                            style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}
-                            onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
-                          <div style={{padding:"5px 8px",background:sel?V.aclt:V.sf2}}>
-                            <div style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",color:sel?V.ac:V.mu,fontWeight:sel?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.label}</div>
+              // Two-step flow: 1) click thumbnail to select  2) choose placement → Apply
+              const PrintGallery = ()=>{
+                const gp=visiblePatterns.filter(p=>p.label.startsWith("GP"));
+                const selPrint=PATTERNS.find(x=>x.id===activePrintId);
+                return(
+                  <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                    <div style={{...sb}}>Choose your print</div>
+
+                    {/* ── grid: click to select, not to apply ── */}
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+                      {gp.map(p=>{
+                        const sel=activePrintId===p.id;
+                        const applied=allOverPrintId===p.id||Object.values(zonePrintIds).includes(p.id);
+                        return(
+                          <div key={p.id} onClick={()=>setActivePrintId(sel?null:p.id)} style={{
+                            borderRadius:10,overflow:"hidden",cursor:"pointer",
+                            border:`2px solid ${sel?V.ac:applied?"rgba(201,168,76,0.45)":V.bd}`,
+                            transition:"all .2s",
+                            boxShadow:sel?`0 2px 12px rgba(201,168,76,.35)`:"none",
+                          }}>
+                            <img src={patternUrl(p.file)} alt={p.label} loading="lazy" decoding="async"
+                              style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}
+                              onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
+                            <div style={{padding:"5px 8px",background:sel?V.aclt:applied?"rgba(201,168,76,0.07)":V.sf2,display:"flex",alignItems:"center",justifyContent:"space-between",gap:4}}>
+                              <div style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",color:sel?V.ac:V.mu,fontWeight:sel?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.label}</div>
+                              {applied&&!sel&&<span style={{fontSize:7,fontWeight:800,background:V.ac,color:V.tx,padding:"1px 4px",borderRadius:3,flexShrink:0,lineHeight:1.4}}>ON</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* ── placement panel: shown once a print is selected ── */}
+                    {selPrint&&(
+                      <div style={{background:V.sf2,border:`1.5px solid rgba(201,168,76,0.4)`,borderRadius:12,padding:14,display:"flex",flexDirection:"column",gap:10}}>
+                        {/* selected print preview */}
+                        <div style={{display:"flex",alignItems:"center",gap:10}}>
+                          <div style={{width:40,height:40,borderRadius:8,flexShrink:0,background:`url(${patternUrl(selPrint.file)}) center/cover`,border:`1px solid ${V.bd}`}}/>
+                          <div>
+                            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:14,fontWeight:600,color:V.tx}}>{selPrint.label}</div>
+                            <div style={{fontSize:10,color:V.mu,fontFamily:"'Jost',sans-serif",marginTop:1,letterSpacing:".04em"}}>Where would you like to apply this print?</div>
                           </div>
                         </div>
-                      );
-                    })}
+
+                        {/* placement buttons */}
+                        <div style={{display:"flex",flexDirection:"column",gap:7}}>
+                          {/* All-Over */}
+                          <button onClick={()=>{applyAllOverPrint(selPrint);saveHistory();setActivePrintId(null);}} style={{
+                            display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,
+                            border:`1.5px solid ${allOverPrintId===selPrint.id?V.ac:V.bd}`,
+                            background:allOverPrintId===selPrint.id?V.aclt:"transparent",
+                            cursor:"pointer",fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:600,
+                            color:allOverPrintId===selPrint.id?V.tx:V.mu,letterSpacing:".05em",textTransform:"uppercase",
+                            textAlign:"left",transition:"all .2s",
+                          }}>
+                            <span style={{fontSize:16}}>❋</span>
+                            <span>All-Over — Full Shirt</span>
+                            {allOverPrintId===selPrint.id&&<span style={{marginLeft:"auto",color:V.ac,fontSize:10}}>✓ Applied</span>}
+                          </button>
+
+                          {/* Body Only */}
+                          <button onClick={()=>{
+                            applyZonePrint("front",selPrint);applyZonePrint("back",selPrint);
+                            applyZonePrint("leftSleeve",selPrint);applyZonePrint("rightSleeve",selPrint);
+                            saveHistory();setActivePrintId(null);
+                          }} style={{
+                            display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,
+                            border:`1.5px solid ${V.bd}`,background:"transparent",
+                            cursor:"pointer",fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:600,
+                            color:V.mu,letterSpacing:".05em",textTransform:"uppercase",
+                            textAlign:"left",transition:"all .2s",
+                          }}>
+                            <span style={{fontSize:16}}>◼</span>
+                            <span>Body Only — Front + Back + Sleeves</span>
+                          </button>
+                        </div>
+
+                        {/* remove */}
+                        {(allOverPrintId||Object.values(zonePrintIds).some(Boolean))&&(
+                          <button onClick={()=>{clearAllOverPrint();clearAllZonePrints();saveHistory();setActivePrintId(null);}} style={{
+                            padding:"7px 0",borderRadius:99,
+                            border:`1px solid rgba(196,92,92,.35)`,background:"transparent",
+                            color:"#c45c5c",fontSize:10,fontWeight:500,cursor:"pointer",
+                            fontFamily:"'Jost',sans-serif",letterSpacing:".04em",
+                          }}>✕ Remove current print</button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {allOverPrintId&&(
-                    <button onClick={()=>clearAllOverPrint()} style={{padding:"8px 16px",borderRadius:8,border:`1px solid ${V.bd}`,background:"transparent",cursor:"pointer",fontFamily:"'Jost',sans-serif",fontSize:10,color:V.mu,letterSpacing:".06em"}}>✕ Remove print</button>
-                  )}
-                </div>
-              );
+                );
+              };
 
               // KA.SHA design gallery + recolour (shared)
               // Renders a design card with thumbnail

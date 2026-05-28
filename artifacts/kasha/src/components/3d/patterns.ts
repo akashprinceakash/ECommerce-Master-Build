@@ -75,7 +75,7 @@ export const ZONE_PRESETS: Record<Exclude<PatternZone, "all">, ZonePreset> = {
   rightSleeve: { left: 617, top:   2, w: 398, h: 171 },
 };
 
-export const ALL_OVER_TILE_PX = 384;
+export const ALL_OVER_TILE_PX = 256;
 
 export function patternUrl(file: string): string {
   const base = (import.meta as any).env?.BASE_URL ?? "/";
