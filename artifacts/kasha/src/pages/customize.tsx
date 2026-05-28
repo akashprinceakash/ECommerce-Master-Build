@@ -103,11 +103,16 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "collar-left":   { left: 140, top: 240 },  // left side of collar band
   "collar-right":  { left: 390, top: 240 },  // right side of collar band
 };
-// The body UV is horizontally mirrored, so flipX:true corrects text/logos on
-// most zones. The right-sleeve UV island is NOT mirrored the same way —
-// flipX:false lets it render correctly there.
-function placementFlipX(placement: string): boolean {
-  return placement !== "right-sleeve";
+// All UV zones are horizontally mirrored, so flipX:true corrects text/logos
+// everywhere. The right-sleeve island is also vertically flipped, requiring
+// an additional flipY:true (handled by placementFlipY).
+function placementFlipX(_placement: string): boolean {
+  return true; // all UV zones are horizontally mirrored
+}
+// The right-sleeve UV island is also flipped vertically relative to the left sleeve,
+// so text/logos placed there need flipY:true as well to appear right-side up.
+function placementFlipY(placement: string): boolean {
+  return placement === "right-sleeve";
 }
 // Which 3-D view to jump to when a placement is selected
 type CameraView = "front"|"back"|"right"|"left"|"collar-center"|"collar-left"|"collar-right";
@@ -616,7 +621,7 @@ export default function CustomizePage() {
         const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};
         const maxW=Math.round(logoSize*(1024/100));
         if(ni.width&&ni.width>maxW) ni.scaleToWidth(maxW);
-        ni.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition)});
+        ni.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition),flipY:placementFlipY(logoPosition)});
         fc.add(ni); fc.setActiveObject(ni); logoObjRef.current=ni;
         fc.renderAll(); syncTexture();
       }
@@ -852,7 +857,7 @@ export default function CustomizePage() {
       const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};
       const maxW=Math.round(logoSize*(1024/100));
       if (img.width&&img.width>maxW) img.scaleToWidth(maxW);
-      img.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition)});
+      img.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition),flipY:placementFlipY(logoPosition)});
       const fc=fcRef.current; if(!fc) return;
       if (logoObjRef.current) fc.remove(logoObjRef.current);
       fc.add(img); fc.setActiveObject(img); logoObjRef.current=img;
@@ -868,7 +873,7 @@ export default function CustomizePage() {
     const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};
     const maxW=Math.round(logoSize*(1024/100));
     o.scaleToWidth(maxW);
-    o.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition)});
+    o.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition),flipY:placementFlipY(logoPosition)});
     o.setCoords();
     fcRef.current?.renderAll(); syncTexture();
   };
@@ -893,7 +898,7 @@ export default function CustomizePage() {
       fontStyle:textItalic?"italic":"normal",
       underline:textUnderline,
       textAlign:textAlign,
-      flipX:placementFlipX(textPosition),
+      flipX:placementFlipX(textPosition),flipY:placementFlipY(textPosition),
       selectable:true, evented:true,
       data:{tag:"user-text"},
     });
@@ -906,7 +911,7 @@ export default function CustomizePage() {
   const repositionText = () => {
     const o=textObjRef.current; if(!o) return;
     const pos=LOGO_POSITIONS[textPosition]||{left:512,top:512};
-    o.set({left:pos.left, top:pos.top, originX:"center", originY:"center", flipX:placementFlipX(textPosition), fontSize:textFontSize, fill:textColor, fontFamily:textFont, fontWeight:textBold?"700":"400", fontStyle:textItalic?"italic":"normal"});
+    o.set({left:pos.left, top:pos.top, originX:"center", originY:"center", flipX:placementFlipX(textPosition),flipY:placementFlipY(textPosition), fontSize:textFontSize, fill:textColor, fontFamily:textFont, fontWeight:textBold?"700":"400", fontStyle:textItalic?"italic":"normal"});
     o.setCoords();
     fcRef.current?.renderAll(); syncTexture();
   };
@@ -1561,93 +1566,37 @@ export default function CustomizePage() {
               );
 
               // Print gallery (shared between print-product and pattern→print sub-mode)
-              // Two-step flow: 1) click thumbnail to select  2) choose placement → Apply
+              // Click any thumbnail → immediately apply all-over
               const PrintGallery = ()=>{
                 const gp=visiblePatterns.filter(p=>p.label.startsWith("GP"));
-                const selPrint=PATTERNS.find(x=>x.id===activePrintId);
                 return(
                   <div style={{display:"flex",flexDirection:"column",gap:12}}>
                     <div style={{...sb}}>Choose your print</div>
-
-                    {/* ── grid: click to select, not to apply ── */}
                     <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
                       {gp.map(p=>{
-                        const sel=activePrintId===p.id;
-                        const applied=allOverPrintId===p.id||Object.values(zonePrintIds).includes(p.id);
+                        const active=allOverPrintId===p.id;
                         return(
-                          <div key={p.id} onClick={()=>setActivePrintId(sel?null:p.id)} style={{
+                          <div key={p.id} onClick={()=>{applyAllOverPrint(p);saveHistory();}} style={{
                             borderRadius:10,overflow:"hidden",cursor:"pointer",
-                            border:`2px solid ${sel?V.ac:applied?"rgba(201,168,76,0.45)":V.bd}`,
-                            transition:"all .2s",
-                            boxShadow:sel?`0 2px 12px rgba(201,168,76,.35)`:"none",
+                            border:`2px solid ${active?V.ac:V.bd}`,transition:"all .2s",
+                            boxShadow:active?`0 2px 12px rgba(201,168,76,.3)`:"none",
                           }}>
                             <img src={patternUrl(p.file)} alt={p.label} loading="lazy" decoding="async"
                               style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}
                               onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
-                            <div style={{padding:"5px 8px",background:sel?V.aclt:applied?"rgba(201,168,76,0.07)":V.sf2,display:"flex",alignItems:"center",justifyContent:"space-between",gap:4}}>
-                              <div style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",color:sel?V.ac:V.mu,fontWeight:sel?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.label}</div>
-                              {applied&&!sel&&<span style={{fontSize:7,fontWeight:800,background:V.ac,color:V.tx,padding:"1px 4px",borderRadius:3,flexShrink:0,lineHeight:1.4}}>ON</span>}
+                            <div style={{padding:"5px 8px",background:active?V.aclt:V.sf2}}>
+                              <div style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",color:active?V.ac:V.mu,fontWeight:active?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.label}</div>
                             </div>
                           </div>
                         );
                       })}
                     </div>
-
-                    {/* ── placement panel: shown once a print is selected ── */}
-                    {selPrint&&(
-                      <div style={{background:V.sf2,border:`1.5px solid rgba(201,168,76,0.4)`,borderRadius:12,padding:14,display:"flex",flexDirection:"column",gap:10}}>
-                        {/* selected print preview */}
-                        <div style={{display:"flex",alignItems:"center",gap:10}}>
-                          <div style={{width:40,height:40,borderRadius:8,flexShrink:0,background:`url(${patternUrl(selPrint.file)}) center/cover`,border:`1px solid ${V.bd}`}}/>
-                          <div>
-                            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:14,fontWeight:600,color:V.tx}}>{selPrint.label}</div>
-                            <div style={{fontSize:10,color:V.mu,fontFamily:"'Jost',sans-serif",marginTop:1,letterSpacing:".04em"}}>Where would you like to apply this print?</div>
-                          </div>
-                        </div>
-
-                        {/* placement buttons */}
-                        <div style={{display:"flex",flexDirection:"column",gap:7}}>
-                          {/* All-Over */}
-                          <button onClick={()=>{applyAllOverPrint(selPrint);saveHistory();setActivePrintId(null);}} style={{
-                            display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,
-                            border:`1.5px solid ${allOverPrintId===selPrint.id?V.ac:V.bd}`,
-                            background:allOverPrintId===selPrint.id?V.aclt:"transparent",
-                            cursor:"pointer",fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:600,
-                            color:allOverPrintId===selPrint.id?V.tx:V.mu,letterSpacing:".05em",textTransform:"uppercase",
-                            textAlign:"left",transition:"all .2s",
-                          }}>
-                            <span style={{fontSize:16}}>❋</span>
-                            <span>All-Over — Full Shirt</span>
-                            {allOverPrintId===selPrint.id&&<span style={{marginLeft:"auto",color:V.ac,fontSize:10}}>✓ Applied</span>}
-                          </button>
-
-                          {/* Body Only */}
-                          <button onClick={()=>{
-                            applyZonePrint("front",selPrint);applyZonePrint("back",selPrint);
-                            applyZonePrint("leftSleeve",selPrint);applyZonePrint("rightSleeve",selPrint);
-                            saveHistory();setActivePrintId(null);
-                          }} style={{
-                            display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,
-                            border:`1.5px solid ${V.bd}`,background:"transparent",
-                            cursor:"pointer",fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:600,
-                            color:V.mu,letterSpacing:".05em",textTransform:"uppercase",
-                            textAlign:"left",transition:"all .2s",
-                          }}>
-                            <span style={{fontSize:16}}>◼</span>
-                            <span>Body Only — Front + Back + Sleeves</span>
-                          </button>
-                        </div>
-
-                        {/* remove */}
-                        {(allOverPrintId||Object.values(zonePrintIds).some(Boolean))&&(
-                          <button onClick={()=>{clearAllOverPrint();clearAllZonePrints();saveHistory();setActivePrintId(null);}} style={{
-                            padding:"7px 0",borderRadius:99,
-                            border:`1px solid rgba(196,92,92,.35)`,background:"transparent",
-                            color:"#c45c5c",fontSize:10,fontWeight:500,cursor:"pointer",
-                            fontFamily:"'Jost',sans-serif",letterSpacing:".04em",
-                          }}>✕ Remove current print</button>
-                        )}
-                      </div>
+                    {allOverPrintId&&(
+                      <button onClick={()=>{clearAllOverPrint();clearAllZonePrints();saveHistory();}} style={{
+                        padding:"7px 0",borderRadius:99,border:`1px solid rgba(196,92,92,.35)`,
+                        background:"transparent",color:"#c45c5c",fontSize:10,fontWeight:500,
+                        cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",
+                      }}>✕ Remove print</button>
                     )}
                   </div>
                 );
@@ -2518,7 +2467,7 @@ export default function CustomizePage() {
                       const allApplied=allOverPrintId===p.id;
                       const inZone=Object.values(zonePrintIds).includes(p.id);
                       return(
-                        <button key={p.id} onClick={()=>{setActivePrintId(p.id);}} title={p.label}
+                        <button key={p.id} onClick={()=>{applyAllOverPrint(p);setActivePrintId(p.id);saveHistory();}} title={p.label}
                           style={{
                             position:"relative",padding:0,aspectRatio:"1/1",
                             borderRadius:8,overflow:"hidden",cursor:"pointer",
@@ -2939,7 +2888,7 @@ export default function CustomizePage() {
                             const isA=textPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                             return(
-                              <div key={c.key} onClick={()=>{setTextPosition(c.key);setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
+                              <div key={c.key} onClick={()=>{setTextPosition(c.key);setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key),flipY:placementFlipY(c.key)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
                                 display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
                                 padding:"7px 3px",borderRadius:9,transition:"all .18s",
                                 border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
@@ -3018,7 +2967,7 @@ export default function CustomizePage() {
                             const isA=logoPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                             return(
-                              <div key={c.key} onClick={()=>{setLogoPosition(c.key);setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
+                              <div key={c.key} onClick={()=>{setLogoPosition(c.key);setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key),flipY:placementFlipY(c.key)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
                                 display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
                                 padding:"7px 3px",borderRadius:9,transition:"all .18s",
                                 border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
@@ -3408,7 +3357,7 @@ export default function CustomizePage() {
                         <div style={{...sb,marginBottom:8}}>Logo</div>
                         {chipGrid(
                           k=>logoPosition===k,
-                          k=>{setLogoPosition(k as any);setCameraView(PLACEMENT_VIEW[k]??"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(logoObjRef.current){const pos=LOGO_POSITIONS[k]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(k)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}
+                          k=>{setLogoPosition(k as any);setCameraView(PLACEMENT_VIEW[k]??"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(logoObjRef.current){const pos=LOGO_POSITIONS[k]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(k),flipY:placementFlipY(k)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}
                         )}
                       </div>
                     )}
@@ -3417,7 +3366,7 @@ export default function CustomizePage() {
                         <div style={{...sb,marginBottom:8}}>Text</div>
                         {chipGrid(
                           k=>textPosition===k,
-                          k=>{setTextPosition(k as any);setCameraView(PLACEMENT_VIEW[k]??"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(textObjRef.current){const pos=LOGO_POSITIONS[k]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(k)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}
+                          k=>{setTextPosition(k as any);setCameraView(PLACEMENT_VIEW[k]??"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(textObjRef.current){const pos=LOGO_POSITIONS[k]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(k),flipY:placementFlipY(k)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}
                         )}
                       </div>
                     )}
@@ -3612,6 +3561,7 @@ export default function CustomizePage() {
                 if(printModalFor==="base-body"){
                   applyZonePrint("front",chosen); applyZonePrint("back",chosen);
                   applyZonePrint("leftSleeve",chosen); applyZonePrint("rightSleeve",chosen);
+                  applyZonePrint("collar",chosen);
                 } else if(printModalFor==="collar"){
                   applyZonePrint("collar",chosen);
                 } else if(printModalFor==="accent"){

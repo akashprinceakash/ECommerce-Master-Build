@@ -381,7 +381,7 @@ function CarouselCard({ item, onSelect }: { item: CarouselItem; onSelect: (h: st
     >
       {/* Image / 3-D preview */}
       <div style={{
-        width: "100%", aspectRatio: "3/4", overflow: "hidden",
+        width: "100%", aspectRatio: "1/1", overflow: "hidden",
         background: "linear-gradient(160deg, #f7f4ee 0%, #edeae3 100%)",
         flexShrink: 0, position: "relative",
       }}>
@@ -401,18 +401,12 @@ function CarouselCard({ item, onSelect }: { item: CarouselItem; onSelect: (h: st
             }}
           />
         ) : (
-          <div style={{
-            width: "100%", height: "100%",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            padding: "10px 8px", boxSizing: "border-box",
-          }}>
-            <img
-              src={item.thumbnail}
-              alt={item.label}
-              style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
-              onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.25"; }}
-            />
-          </div>
+          <img
+            src={item.thumbnail}
+            alt={item.label}
+            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }}
+            onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.25"; }}
+          />
         )}
       </div>
 
