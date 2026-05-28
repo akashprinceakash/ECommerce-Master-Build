@@ -84,6 +84,9 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   const { data: printProduct } = useGetProduct(26, {
     query: { queryKey: getGetProductQueryKey(26), enabled: isOpen },
   });
+  const { data: print003Product } = useGetProduct(27, {
+    query: { queryKey: getGetProductQueryKey(27), enabled: isOpen },
+  });
   const { data: solidBlkProduct } = useGetProduct(59, {
     query: { queryKey: getGetProductQueryKey(59), enabled: isOpen },
   });
@@ -92,6 +95,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
 
   const solidThumb    = getAssetUrl(solidProduct?.thumbnailUrl) ?? "";
   const printThumb    = getAssetUrl(printProduct?.thumbnailUrl)  ?? "";
+  const print003Thumb = getAssetUrl(print003Product?.thumbnailUrl) ?? "";
   const solidBlkThumb = getAssetUrl(solidBlkProduct?.thumbnailUrl) ?? "";
 
   const MEN_ITEMS: CarouselItem[] = [
@@ -113,10 +117,17 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
     },
     {
       key: "print",
-      label: "Print Polo",
+      label: "Print Polo — GP001",
       tag: "Print",
       thumbnail: printThumb,
       href: "/products/26/customize?style=print",
+    },
+    {
+      key: "print-003",
+      label: "Print Polo — GP003",
+      tag: "Print",
+      thumbnail: print003Thumb,
+      href: "/products/27/customize?style=print",
     },
     ...PATTERN_ITEMS,
   ];

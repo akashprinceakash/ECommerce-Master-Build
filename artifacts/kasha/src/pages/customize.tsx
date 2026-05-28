@@ -106,8 +106,10 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
 // All UV zones are horizontally mirrored, so flipX:true corrects text/logos
 // everywhere. The right-sleeve island is also vertically flipped, requiring
 // an additional flipY:true (handled by placementFlipY).
-function placementFlipX(_placement: string): boolean {
-  return true; // all UV zones are horizontally mirrored
+function placementFlipX(placement: string): boolean {
+  // The right-sleeve UV island is NOT horizontally mirrored like the rest of the body,
+  // so flipX must stay false — the vertical flip (flipY) alone corrects the orientation.
+  return placement !== "right-sleeve";
 }
 // The right-sleeve UV island is also flipped vertically relative to the left sleeve,
 // so text/logos placed there need flipY:true as well to appear right-side up.
@@ -1159,11 +1161,13 @@ export default function CustomizePage() {
             ← Back
           </Link>
           <div style={{width:1,height:18,background:`rgba(26,26,24,0.1)`}}/>
-          <img
-            src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Horizontal%20logo%20coloured%20(350%20by%2075)%20(1).svg"
-            alt="KA.SHA"
-            style={{height:28,width:"auto",objectFit:"contain"}}
-          />
+          <Link href="/" style={{display:"inline-flex",alignItems:"center"}}>
+            <img
+              src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Horizontal%20logo%20coloured%20(350%20by%2075)%20(1).svg"
+              alt="KA.SHA — Home"
+              style={{height:28,width:"auto",objectFit:"contain"}}
+            />
+          </Link>
         </div>
 
         {/* Center: studio name */}
@@ -1290,7 +1294,7 @@ export default function CustomizePage() {
         {/* ── LEFT STEP PANEL ──────────────────────────────────────────────── */}
         <div style={{
           width:screenW<768?"100%":"40%",
-          minWidth:screenW<768?undefined:280,
+          minWidth:screenW<768?undefined:340,
           maxWidth:screenW<768?undefined:560,
           height:screenW>=768?"100%":undefined,
           flex:screenW<768?"1 1 0":"0 0 40%",
@@ -2426,13 +2430,29 @@ export default function CustomizePage() {
                       {(activeKashaDesign||colorTarget==="all")
                         ? MAIN_PALETTE.map(hex=>swatch(hex,primaryColor===hex,()=>applyPrimary(hex)))
                         : MAIN_PALETTE.map(hex=>swatch(hex,zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]===hex,()=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,hex)))}
-                      <label title="Custom colour" style={{width:40,height:40,borderRadius:"50%",cursor:"pointer",overflow:"hidden",position:"relative",border:`2px dashed ${V.ac}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:V.ac,flexShrink:0}} aria-label="Pick a custom colour">
-                        +{(activeKashaDesign||colorTarget==="all")
-                          ?<input type="color" value={primaryColor} onChange={e=>applyPrimary(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
-                          :<input type="color" value={zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]||primaryColor} onChange={e=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>}
-                      </label>
                     </div>
-                    <div style={{fontSize:9,color:V.mu,letterSpacing:".05em",fontFamily:"'Jost',sans-serif",marginBottom:6}}>Pick your colour from the colour picker (+) above</div>
+                    <div style={{fontSize:9,color:V.mu,letterSpacing:".06em",fontFamily:"'Jost',sans-serif",marginBottom:6,textTransform:"uppercase",fontWeight:600}}>Click the icon below to select a specific colour</div>
+                    <label title="Pick a custom colour" aria-label="Pick a custom colour" style={{
+                      display:"inline-flex",alignItems:"center",gap:8,cursor:"pointer",
+                      padding:"8px 14px",borderRadius:10,
+                      border:`1.5px solid ${V.ac}`,background:V.aclt,
+                      position:"relative",overflow:"hidden",
+                      fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:600,
+                      color:V.tx,letterSpacing:".05em",
+                    }}>
+                      <span style={{
+                        width:28,height:28,borderRadius:6,
+                        background:(activeKashaDesign||colorTarget==="all")
+                          ?primaryColor
+                          :zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]||primaryColor,
+                        border:`1.5px solid rgba(26,26,24,0.18)`,
+                        display:"inline-block",flexShrink:0,
+                      }}/>
+                      <span>🎨 Custom Colour Picker</span>
+                      {(activeKashaDesign||colorTarget==="all")
+                        ?<input type="color" value={primaryColor} onChange={e=>applyPrimary(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
+                        :<input type="color" value={zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]||primaryColor} onChange={e=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>}
+                    </label>
                     {!activeKashaDesign&&colorTarget!=="all"&&zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]&&(
                       <button onClick={()=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,"")} style={{fontSize:10,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Reset this zone</button>
                     )}
