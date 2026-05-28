@@ -730,6 +730,9 @@ export default function CustomizePage() {
   // the effect re-fires automatically when mats loads (via handleSelectKashaDesign dep).
   useEffect(() => {
     if (!canvasReady || productType !== "pattern" || autoAppliedRef.current) return;
+    // Respect user's explicit style choice — don't force a pattern when the user
+    // picked "solid" or "print" via the CustomizeEntryModal (?style= param).
+    if (userStyle === "solid" || userStyle === "print") return;
     if (!product || !mats.length) return; // wait for model materials to be ready
     autoAppliedRef.current = true;
 
@@ -771,11 +774,14 @@ export default function CustomizePage() {
     handleSelectKashaDesign(design, colorOverride);
   }, [canvasReady, productType, handleSelectKashaDesign, product, mats]);
 
-  // PRINT auto-apply: select the correct print from the library based on SKU
+  // PRINT auto-apply: select the correct print from the library based on SKU.
+  // We only need canvasReady here — NOT mats.length. The print is applied to the
+  // Fabric canvas immediately; the existing `useEffect([mats])` further down will
+  // call syncTexture() once model materials arrive, pushing the texture to the model.
   const autoAppliedPrintRef = useRef(false);
   useEffect(() => {
     if (autoAppliedPrintRef.current) return;
-    if (!canvasReady || !mats.length) return;
+    if (!canvasReady) return;
 
     let targetPatternId: string | null = null;
 
@@ -795,7 +801,7 @@ export default function CustomizePage() {
     if (!pattern) return;
     autoAppliedPrintRef.current = true;
     applyAllOverPrint(pattern);
-  }, [product, isTypeMode, garmentType, canvasReady, mats, applyAllOverPrint]);
+  }, [product, isTypeMode, garmentType, canvasReady, applyAllOverPrint]);
 
   // SOLID auto-apply: apply the correct base color from SKU when arriving on a solid product
   const autoAppliedSolidRef = useRef(false);
