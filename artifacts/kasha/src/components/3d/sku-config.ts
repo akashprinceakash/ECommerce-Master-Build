@@ -29,6 +29,19 @@ export const SOLID_COLOR_MAP: Record<string, string> = {
   MR: "#7b241c",  // Maroon
   GR: "#5a5a5a",  // Grey
   WT: "#f5f5f5",  // White (alt code)
+  // Full-name color codes (used in KS1000B{COLORNAME} format)
+  POWDERBLUE: "#B0C4DE",
+  NAVY:       "#1a2c5e",
+  WHITE:      "#f5f5f5",
+  BLACK:      "#1a1a1a",
+  RED:        "#c0392b",
+  GREEN:      "#1f7a45",
+  GREY:       "#5a5a5a",
+  MAROON:     "#7b241c",
+  PURPLE:     "#6b2fa0",
+  GOLD:       "#c9a84c",
+  ORANGE:     "#d4600a",
+  SKYBLUE:    "#4a8fd4",
 };
 
 // ── Pattern colorway suffix → channel colors ─────────────────────────────────
@@ -200,6 +213,14 @@ export function parseSku(sku: string): SkuResult {
   const solidMatch = upper.match(/^KS1000B-([A-Z]{2,3})$/);
   if (solidMatch) {
     const code = solidMatch[1];
+    const hex = SOLID_COLOR_MAP[code] ?? "#f5f5f5";
+    return { type: "solid", sku: upper, colorCode: code, hex };
+  }
+
+  // ── Solid (full color name, no hyphen): KS1000B{COLORNAME} e.g. KS1000BPOWDERBLUE
+  const solidFullMatch = upper.match(/^KS1000B([A-Z]{4,})$/);
+  if (solidFullMatch) {
+    const code = solidFullMatch[1];
     const hex = SOLID_COLOR_MAP[code] ?? "#f5f5f5";
     return { type: "solid", sku: upper, colorCode: code, hex };
   }

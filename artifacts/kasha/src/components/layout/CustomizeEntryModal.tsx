@@ -6,6 +6,7 @@
  */
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useUser } from "@clerk/react";
 import { useGetProduct, getGetProductQueryKey } from "@workspace/api-client-react";
 import { getAssetUrl } from "@/lib/api";
 
@@ -67,6 +68,7 @@ const PATTERN_ITEMS: CarouselItem[] = [
 export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   const [, navigate] = useLocation();
   const [gender, setGender] = useState<Gender>("Men");
+  const { user, isLoaded } = useUser();
 
   const { data: solidProduct } = useGetProduct(34, {
     query: { queryKey: getGetProductQueryKey(34), enabled: isOpen },
@@ -76,6 +78,116 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   });
 
   if (!isOpen) return null;
+
+  // ── Auth gate: prompt sign-in/sign-up before entering the studio ─────────
+  if (isLoaded && !user) {
+    return (
+      <div
+        style={{
+          position: "fixed", inset: 0, zIndex: 9999,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: "rgba(26,26,24,0.62)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          animation: "cemFadeIn 0.28s cubic-bezier(0.16,1,0.3,1)",
+        }}
+        onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      >
+        <div style={{
+          background: "#fafaf7", borderRadius: 20,
+          maxWidth: 420, width: "calc(100vw - 32px)",
+          padding: "40px 32px 38px",
+          position: "relative",
+          animation: "cemSlideUp 0.32s cubic-bezier(0.16,1,0.3,1)",
+          boxShadow: "0 32px 80px rgba(26,26,24,0.24), 0 8px 24px rgba(26,26,24,0.12)",
+          textAlign: "center",
+        }}>
+          <button
+            onClick={onClose}
+            style={{
+              position: "absolute", top: 16, right: 18,
+              width: 32, height: 32, borderRadius: "50%",
+              border: "1px solid rgba(26,26,24,0.12)",
+              background: "transparent", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 16, color: "#8a8780",
+            }}
+          >×</button>
+
+          {/* Icon */}
+          <div style={{
+            width: 56, height: 56, borderRadius: "50%",
+            background: "linear-gradient(135deg, #fdf6e3, #f5e9c4)",
+            border: "1.5px solid rgba(201,168,76,0.3)",
+            margin: "0 auto 20px",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <span style={{ fontSize: 24 }}>✦</span>
+          </div>
+
+          <div style={{
+            fontFamily: "'Jost', sans-serif", fontSize: 10,
+            letterSpacing: ".2em", textTransform: "uppercase",
+            color: "#c9a84c", marginBottom: 10, fontWeight: 500,
+          }}>KA.SHA Bespoke Studio</div>
+
+          <h2 style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: 24, fontWeight: 600, color: "#1a1a18",
+            letterSpacing: ".02em", margin: "0 0 12px", lineHeight: 1.25,
+          }}>Sign in to design<br />your garment</h2>
+
+          <p style={{
+            fontFamily: "'Jost', sans-serif",
+            fontSize: 12, color: "#6b6b68", lineHeight: 1.7,
+            letterSpacing: ".02em", marginBottom: 28,
+          }}>
+            Create an account or sign in so we can save your design choices and customisations for you to revisit anytime.
+          </p>
+
+          <div style={{ height: 1, background: "linear-gradient(90deg, transparent, #c9a84c, transparent)", opacity: 0.3, marginBottom: 24 }} />
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <a
+              href="/sign-up"
+              onClick={onClose}
+              style={{
+                display: "block", padding: "13px 24px", borderRadius: 99,
+                background: "linear-gradient(135deg, #c9a84c, #b8925a)",
+                color: "#fff", fontFamily: "'Jost', sans-serif",
+                fontSize: 11, fontWeight: 700, letterSpacing: ".1em",
+                textTransform: "uppercase", textDecoration: "none",
+                boxShadow: "0 4px 16px rgba(201,168,76,0.3)",
+              }}
+            >Create Account</a>
+            <a
+              href="/sign-in"
+              onClick={onClose}
+              style={{
+                display: "block", padding: "12px 24px", borderRadius: 99,
+                background: "transparent",
+                border: "1.5px solid rgba(26,26,24,0.18)",
+                color: "#1a1a18", fontFamily: "'Jost', sans-serif",
+                fontSize: 11, fontWeight: 600, letterSpacing: ".1em",
+                textTransform: "uppercase", textDecoration: "none",
+              }}
+            >Sign In</a>
+          </div>
+
+          <p style={{
+            marginTop: 20,
+            fontFamily: "'Jost', sans-serif",
+            fontSize: 10, color: "#b8b5ae", letterSpacing: ".05em",
+            fontStyle: "italic",
+          }}>Your designs are saved securely to your account</p>
+        </div>
+        <style>{`
+          @keyframes cemFadeIn  { from { opacity:0 } to { opacity:1 } }
+          @keyframes cemSlideUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:translateY(0) } }
+        `}</style>
+      </div>
+    );
+  }
 
   const solidThumb    = getAssetUrl(solidProduct?.thumbnailUrl) ?? "";
   const print003Thumb = getAssetUrl(print003Product?.thumbnailUrl) ?? "";
@@ -87,7 +199,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
       tag: "Solid",
       thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1780122689994-89671772.webp",
       modelUrl: solidProduct?.modelUrl ?? undefined,
-      href: "/products/34/customize?style=solid",
+      href: "/products/34/customize?style=solid&design=KS1000BPOWDERBLUE",
     },
     {
       key: "print-003",

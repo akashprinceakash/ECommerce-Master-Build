@@ -820,13 +820,23 @@ export default function CustomizePage() {
     applyAllOverPrint(pattern);
   }, [product, isTypeMode, garmentType, canvasReady, applyAllOverPrint]);
 
-  // SOLID auto-apply: apply the correct base color from SKU when arriving on a solid product
+  // SOLID auto-apply: apply the correct base color from SKU when arriving on a solid product.
+  // Priority: 1) ?design= URL param (e.g. KS1000BPOWDERBLUE from modal)  2) product.sku
   const autoAppliedSolidRef = useRef(false);
   useEffect(() => {
     if (autoAppliedSolidRef.current) return;
     if (!canvasReady) return;
-    if (!product?.sku) return;
 
+    // Try the entry design param first (e.g. KS1000BPOWDERBLUE passed from the modal)
+    const entryResult = parseSku(entryDesignRef.current ?? "");
+    if (entryResult.type === "solid") {
+      autoAppliedSolidRef.current = true;
+      applyPrimary(entryResult.hex);
+      return;
+    }
+
+    // Fall back to the product's own SKU
+    if (!product?.sku) return;
     const skuResult = parseSku(product.sku);
     if (skuResult.type !== "solid") return;
 
