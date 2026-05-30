@@ -109,40 +109,6 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
 function placementFlipX(placement: string): boolean {
   // The right-sleeve UV island is NOT horizontally mirrored like the rest of the body,
   // so flipX must stay false — the vertical flip (flipY) alone corrects the orientation.
-  return placement !== "right-sleeve"const applyCol = (col: string) => {
-                if(colorModalFor==="all"){
-                  applyPrimary(col);
-                } else if(colorModalFor==="base"){
-                  setPatColorA(col);
-                  applyPatternColors(col, patColorB);
-                } else if(colorModalFor==="base-body"){
-                  (["front","back","leftSleeve","rightSleeve"] as const).forEach(z=>applyZoneColor(z,col));
-                } else if(colorModalFor==="collar"){
-                  applyZoneColor("collar",col);
-                } else {
-                  setPatColorB(col);
-                  applyPatternColors(patColorA, col);
-                }
-                setPendingColorPick(nulplacement: string): boolean {
-  // The right-sleeve UV island is NOT horizontally mirrored like the rest of the body,
-  // so flipX must stay false — the vertical flip (flipY) alone corrects the orientation.
-  return placement !== "right-sleeve"const applyCol = (col: string) => {
-                if(colorModalFor==="all"){
-                  applyPrimary(col);
-                } else if(colorModalFor==="base"){
-                  setPatColorA(col);
-                  applyPatternColors(col, patColorB);
-                } else if(colorModalFor==="base-body"){
-                  (["front","back","leftSleeve","rightSleeve"] as const).forEach(z=>applyZoneColor(z,col));
-                } else if(colorModalFor==="collar"){
-                  applyZoneColor("collar",col);
-                } else {
-                  setPatColorB(col);
-                  applyPatternColors(patColorA, col);
-                }
-                setPendingColorPick(nulplacement: string): boolean {
-  // The right-sleeve UV island is NOT horizontally mirrored like the rest of the body,
-  // so flipX must stay false — the vertical flip (flipY) alone corrects the orientation.
   return placement !== "right-sleeve";
 }
 // The right-sleeve UV island is also flipped vertically relative to the left sleeve,
