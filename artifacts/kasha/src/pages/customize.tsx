@@ -100,8 +100,8 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "back-top":      { left: 765, top: 390 },  // back yoke / top of back (near collar back)
   "left-sleeve":   { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
   "right-sleeve":  { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve
-  "collar-left":   { left: 140, top: 310 },  // left collar tip (wearer's left) — lower y = closer to tip
-  "collar-right":  { left: 390, top: 310 },  // right collar tip (wearer's right)
+  "collar-left":   { left: 390, top: 240 },  // wearer's left tip → UV RIGHT (mirror flips it to left side on garment)
+  "collar-right":  { left: 140, top: 240 },  // wearer's right tip → UV LEFT (mirror flips it to right side on garment)
 };
 // All UV zones are horizontally mirrored, so flipX:true corrects text/logos
 // everywhere. The right-sleeve island is also vertically flipped, requiring
