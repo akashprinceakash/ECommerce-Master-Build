@@ -106,10 +106,10 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
 // All UV zones are horizontally mirrored, so flipX:true corrects text/logos
 // everywhere. The right-sleeve island is also vertically flipped, requiring
 // an additional flipY:true (handled by placementFlipY).
-function placementFlipX(_placement: string): boolean {
-  // All UV zones (including right-sleeve) are horizontally mirrored on this model,
-  // so flipX:true corrects text/logos everywhere so they read correctly.
-  return true;
+function placementFlipX(placement: string): boolean {
+  // The right-sleeve UV island is NOT horizontally mirrored like the rest of the body,
+  // so flipX must stay false — the vertical flip (flipY) alone corrects the orientation.
+  return placement !== "right-sleeve";
 }
 // The right-sleeve UV island is also flipped vertically relative to the left sleeve,
 // so text/logos placed there need flipY:true as well to appear right-side up.
@@ -3444,8 +3444,7 @@ export default function CustomizePage() {
             {(()=>{
               const pickedVal = colorModalFor==="pattern" ? patColorB : colorModalFor==="base" ? patColorA : primaryColor;
               const displayCol = pendingColorPick ?? pickedVal;
-              // applyColOnly — applies the colour to the garment but keeps the modal open
-              const applyColOnly = (col: string) => {
+              const applyCol = (col: string) => {
                 if(colorModalFor==="all"){
                   applyPrimary(col);
                 } else if(colorModalFor==="base"){
@@ -3460,10 +3459,6 @@ export default function CustomizePage() {
                   applyPatternColors(patColorA, col);
                 }
                 setPendingColorPick(null);
-              };
-              // applyCol — applies + closes modal (used by swatch clicks)
-              const applyCol = (col: string) => {
-                applyColOnly(col);
                 setColorModalFor(null);
               };
               return(<>
@@ -3494,7 +3489,7 @@ export default function CustomizePage() {
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   <div style={{width:36,height:36,borderRadius:8,background:displayCol,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
                   <input type="color" value={displayCol}
-                    onChange={e=>applyColOnly(e.target.value)}
+                    onChange={e=>applyCol(e.target.value)}
                     style={{width:44,height:36,padding:2,border:`1.5px solid ${V.bd}`,borderRadius:8,cursor:"pointer",background:V.sf2}}/>
                   <input type="text" defaultValue={displayCol}
                     onBlur={e=>{
@@ -3562,7 +3557,7 @@ export default function CustomizePage() {
                   }
                   saveHistory();
                   setPendingPrintKey(null);
-                  // modal stays open so user can keep selecting / changing prints
+                  setPrintModalFor(null);
                 };
                 return(
                   <div key={p.id} onClick={()=>applyPrint(p)} style={{
