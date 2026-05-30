@@ -107,42 +107,9 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
 // everywhere. The right-sleeve island is also vertically flipped, requiring
 // an additional flipY:true (handled by placementFlipY).
 function placementFlipX(placement: string): boolean {
-  // The right-sleeve UV island is NOT horizontally mirrored like the rest of the body,
-  // so flipX must stay false — the vertical flip (flipY) alone corrects the orientation.
-  return placement !== "right-sleeve"const applyCol = (col: string) => {
-                if(colorModalFor==="all"){
-                  applyPrimary(col);
-                } else if(colorModalFor==="base"){
-                  setPatColorA(col);
-                  applyPatternColors(col, patColorB);
-                } else if(colorModalFor==="base-body"){
-                  (["front","back","leftSleeve","rightSleeve"] as const).forEach(z=>applyZoneColor(z,col));
-                } else if(colorModalFor==="collar"){
-                  applyZoneColor("collar",col);
-                } else {
-                  setPatColorB(col);
-                  applyPatternColors(patColorA, col);
-                }
-                setPendingColorPick(nulplacement: string): boolean {
-  // The right-sleeve UV island is NOT horizontally mirrored like the rest of the body,
-  // so flipX must stay false — the vertical flip (flipY) alone corrects the orientation.
-  return placement !== "right-sleeve"const applyCol = (col: string) => {
-                if(colorModalFor==="all"){
-                  applyPrimary(col);
-                } else if(colorModalFor==="base"){
-                  setPatColorA(col);
-                  applyPatternColors(col, patColorB);
-                } else if(colorModalFor==="base-body"){
-                  (["front","back","leftSleeve","rightSleeve"] as const).forEach(z=>applyZoneColor(z,col));
-                } else if(colorModalFor==="collar"){
-                  applyZoneColor("collar",col);
-                } else {
-                  setPatColorB(col);
-                  applyPatternColors(patColorA, col);
-                }
-                setPendingColorPick(nulplacement: string): boolean {
-  // The right-sleeve UV island is NOT horizontally mirrored like the rest of the body,
-  // so flipX must stay false — the vertical flip (flipY) alone corrects the orientation.
+  // The body UV is horizontally mirrored, so flipX:true corrects text/logos everywhere.
+  // The right-sleeve UV island is NOT horizontally mirrored (only vertically flipped),
+  // so it must stay false — only flipY corrects its orientation.
   return placement !== "right-sleeve";
 }
 // The right-sleeve UV island is also flipped vertically relative to the left sleeve,
@@ -3523,7 +3490,7 @@ export default function CustomizePage() {
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   <div style={{width:36,height:36,borderRadius:8,background:displayCol,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
                   <input type="color" value={displayCol}
-                    onChange={e=>applyCol(e.target.value)}
+                    onChange={e=>{if(colorModalFor==='all'){applyPrimary(e.target.value);}else if(colorModalFor==='base'){setPatColorA(e.target.value);applyPatternColors(e.target.value,patColorB);}else if(colorModalFor==='base-body'){(['front','back','leftSleeve','rightSleeve'] as const).forEach(z=>applyZoneColor(z,e.target.value));}else if(colorModalFor==='collar'){applyZoneColor('collar',e.target.value);}else{setPatColorB(e.target.value);applyPatternColors(patColorA,e.target.value);}setPendingColorPick(null);}}
                     style={{width:44,height:36,padding:2,border:`1.5px solid ${V.bd}`,borderRadius:8,cursor:"pointer",background:V.sf2}}/>
                   <input type="text" defaultValue={displayCol}
                     onBlur={e=>{
@@ -3591,7 +3558,6 @@ export default function CustomizePage() {
                   }
                   saveHistory();
                   setPendingPrintKey(null);
-                  setPrintModalFor(null);setPrintModalFor(null);setPrintModalFor(null);
                 };
                 return(
                   <div key={p.id} onClick={()=>applyPrint(p)} style={{
