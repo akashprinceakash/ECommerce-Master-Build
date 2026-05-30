@@ -106,11 +106,10 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
 // All UV zones are horizontally mirrored, so flipX:true corrects text/logos
 // everywhere. The right-sleeve island is also vertically flipped, requiring
 // an additional flipY:true (handled by placementFlipY).
-function placementFlipX(placement: string): boolean {
-  // The body UV is horizontally mirrored, so flipX:true corrects text/logos everywhere.
-  // The right-sleeve UV island is NOT horizontally mirrored (only vertically flipped),
-  // so it must stay false — only flipY corrects its orientation.
-  return placement !== "right-sleeve";
+function placementFlipX(_placement: string): boolean {
+  // All UV zones including right-sleeve need horizontal mirroring.
+  // Right-sleeve also gets flipY:true (handled by placementFlipY).
+  return true;
 }
 // The right-sleeve UV island is also flipped vertically relative to the left sleeve,
 // so text/logos placed there need flipY:true as well to appear right-side up.
