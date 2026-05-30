@@ -97,11 +97,12 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "front-left":    { left: 147, top: 490 },  // left chest zone
   "front-right":   { left: 363, top: 490 },  // right chest zone
   "back-center":   { left: 765, top: 604 },  // centre across back
+  "back-top":      { left: 765, top: 210 },  // back yoke / top of back (near collar back)
   "left-sleeve":   { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
-  "right-sleeve":  { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve (UV is horizontally mirrored)
+  "right-sleeve":  { left: 409, top: 58  },  // leftSleeve UV zone → appears on right sleeve; top adjusted for flipY so it sits at same sleeve height as left-sleeve
   "collar-edge":   { left: 265, top: 240 },  // collar UV zone center: { left:12, top:183, w:507, h:166 }
-  "collar-left":   { left: 140, top: 240 },  // left side of collar band
-  "collar-right":  { left: 390, top: 240 },  // right side of collar band
+  "collar-left":   { left: 140, top: 240 },  // left collar tip (wearer's left)
+  "collar-right":  { left: 390, top: 240 },  // right collar tip (wearer's right)
 };
 // All UV zones are horizontally mirrored, so flipX:true corrects text/logos
 // everywhere. The right-sleeve island is also vertically flipped, requiring
@@ -122,6 +123,7 @@ const PLACEMENT_VIEW: Record<string, CameraView> = {
   "front-left":    "front",
   "front-right":   "front",
   "back-center":   "back",
+  "back-top":      "back",
   "left-sleeve":   "left",
   "right-sleeve":  "right",
   "collar-edge":   "collar-center",
@@ -1150,7 +1152,7 @@ export default function CustomizePage() {
       }}>
         {/* Left: back + logo */}
         <div style={{display:"flex",alignItems:"center",gap:14,minWidth:180}}>
-          <Link href={_fromSource === "modal" ? "/" : id ? `/products/${id}` : "/"} style={{
+          <Link href={_fromSource === "modal" ? "/products" : id ? `/products/${id}` : "/products"} style={{
             color:V.mu,fontSize:11,textDecoration:"none",
             display:"flex",alignItems:"center",gap:5,
             padding:"5px 12px",borderRadius:40,
@@ -2193,18 +2195,17 @@ export default function CustomizePage() {
                 </button>
                 {!isTypeMode&&(
                   <button
-                    onClick={handleAddToCart}
-                    disabled={cartMut.isPending}
+                    onClick={()=>setStep(4)}
                     style={{
                       flex:1,padding:"11px 0",borderRadius:99,
                       border:`1.5px solid ${V.ac}`,background:V.aclt,color:V.tx,
                       fontSize:10,fontWeight:600,cursor:"pointer",
                       fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",
-                      opacity:cartMut.isPending?.6:1,transition:"all 0.25s",
+                      transition:"all 0.25s",
                     }}
-                    onMouseEnter={e=>{if(!cartMut.isPending){e.currentTarget.style.background=V.ac;}}}
+                    onMouseEnter={e=>{e.currentTarget.style.background=V.ac;}}
                     onMouseLeave={e=>{e.currentTarget.style.background=V.aclt;}}>
-                    {cartMut.isPending?"Adding…":"🛒 Cart"}
+                    🛒 Sizing
                   </button>
                 )}
               </>
@@ -2483,13 +2484,14 @@ export default function CustomizePage() {
                       Pre-printed garment — select a print to change the design.
                     </div>
                   )}
+                  <div style={{fontSize:9,color:V.mu,fontFamily:"'Jost',sans-serif",letterSpacing:".04em",marginBottom:4,fontStyle:"italic"}}>Single-click to preview · Double-click to apply</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
                     {visiblePatterns.map(p=>{
                       const sel=activePrintId===p.id;
                       const allApplied=allOverPrintId===p.id;
                       const inZone=Object.values(zonePrintIds).includes(p.id);
                       return(
-                        <button key={p.id} onClick={()=>{applyAllOverPrint(p);setActivePrintId(p.id);saveHistory();}} title={p.label}
+                        <button key={p.id} onClick={()=>setActivePrintId(p.id)} onDoubleClick={()=>{applyAllOverPrint(p);saveHistory();}} title={`Single-click to select · Double-click to apply\n${p.label}`}
                           style={{
                             position:"relative",padding:0,aspectRatio:"1/1",
                             borderRadius:8,overflow:"hidden",cursor:"pointer",
@@ -2899,10 +2901,11 @@ export default function CustomizePage() {
                         {key:"front-right",  label:"Chest Right",  cx:21,cy:40},
                         {key:"left-sleeve",  label:"Left Sleeve",  cx:53,cy:23},
                         {key:"right-sleeve", label:"Right Sleeve", cx:7, cy:23},
+                        {key:"back-top",     label:"Back Top",     cx:30,cy:24,back:true},
                         {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
-                        {key:"collar-edge",  label:"Collar Centre", cx:30,cy:9},
-                        {key:"collar-left",  label:"Collar Left",  cx:38,cy:9},
-                        {key:"collar-right", label:"Collar Right", cx:22,cy:9},
+                        {key:"collar-edge",  label:"Collar Centre", cx:30,cy:12},
+                        {key:"collar-left",  label:"Collar Left",  cx:36,cy:14},
+                        {key:"collar-right", label:"Collar Right", cx:24,cy:14},
                       ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
                       return(
                         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5}}>
@@ -2916,7 +2919,7 @@ export default function CustomizePage() {
                                 border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
                               }}>
                                 <div style={{width:40,height:45}} dangerouslySetInnerHTML={{__html:svg}}/>
-                                <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:".04em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:V.mu,fontWeight:isA?700:500,textAlign:"center",lineHeight:1.25}}>{c.label}</span>
+                                <span style={{fontSize:11,textTransform:"uppercase",letterSpacing:".04em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:"#4a4a48",fontWeight:isA?700:500,textAlign:"center",lineHeight:1.25}}>{c.label}</span>
                               </div>
                             );
                           })}
@@ -2978,10 +2981,11 @@ export default function CustomizePage() {
                         {key:"front-right",  label:"Chest Right",  cx:21,cy:40},
                         {key:"left-sleeve",  label:"Left Sleeve",  cx:53,cy:23},
                         {key:"right-sleeve", label:"Right Sleeve", cx:7, cy:23},
+                        {key:"back-top",     label:"Back Top",     cx:30,cy:24,back:true},
                         {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
-                        {key:"collar-edge",  label:"Collar Centre", cx:30,cy:9},
-                        {key:"collar-left",  label:"Collar Left",  cx:38,cy:9},
-                        {key:"collar-right", label:"Collar Right", cx:22,cy:9},
+                        {key:"collar-edge",  label:"Collar Centre", cx:30,cy:12},
+                        {key:"collar-left",  label:"Collar Left",  cx:36,cy:14},
+                        {key:"collar-right", label:"Collar Right", cx:24,cy:14},
                       ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
                       return(
                         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5}}>
@@ -2995,7 +2999,7 @@ export default function CustomizePage() {
                                 border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
                               }}>
                                 <div style={{width:40,height:45}} dangerouslySetInnerHTML={{__html:svg}}/>
-                                <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:".04em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:V.mu,fontWeight:isA?700:500,textAlign:"center",lineHeight:1.25}}>{c.label}</span>
+                                <span style={{fontSize:11,textTransform:"uppercase",letterSpacing:".04em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:"#4a4a48",fontWeight:isA?700:500,textAlign:"center",lineHeight:1.25}}>{c.label}</span>
                               </div>
                             );
                           })}
@@ -3324,18 +3328,25 @@ export default function CustomizePage() {
             <div style={{padding:"20px 14px",display:"flex",flexDirection:"column",gap:18}}>
               <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:15,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>Placement</div>
               {/* ── Customisation charge: Rs 1 per sq inch ── */}
-              {(logoPreview||textPlaced)&&(()=>{
-                const logoW = logoSize * 0.376; // width in inches
-                const logoArea = logoW * logoW * 0.75; // ~3:4 aspect ratio estimate
+              {(()=>{
+                // Print area estimates (sq in) per zone for a size-M polo shirt
+                const ZONE_SQ_IN: Record<string,number> = {front:120,back:150,collar:20,leftSleeve:55,rightSleeve:55};
+                const printedZoneArea = allOverPrintId
+                  ? (ZONE_SQ_IN.front + ZONE_SQ_IN.back)   // all-over = front + back
+                  : Object.entries(zonePrintIds).filter(([,v])=>!!v).reduce((s,[z])=>s+(ZONE_SQ_IN[z]||0),0);
+                const printCharge = printedZoneArea;
+                const logoW = logoSize * 0.376;
+                const logoArea = logoW * logoW * 0.75;
                 const logoCharge = logoPreview ? Math.ceil(logoArea) : 0;
-                const textH = textFontSize * (22/1024); // canvas 1024px ≈ 22" wide
+                const textH = textFontSize * (22/1024);
                 const textW = Math.max(1, textInput.length) * textFontSize * 0.55 * (22/1024);
-                const textArea = textH * textW;
-                const textCharge = textPlaced ? Math.ceil(textArea) : 0;
-                const total = logoCharge + textCharge;
+                const textCharge = textPlaced ? Math.ceil(textH * textW) : 0;
+                const total = printCharge + logoCharge + textCharge;
+                if (!total) return null;
                 return(
                   <div style={{padding:"10px 12px",borderRadius:10,background:V.sf2,border:`1px solid ${V.bd}`}}>
                     <div style={{fontFamily:"'Jost',sans-serif",fontSize:9,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:V.mu,marginBottom:8}}>Customisation Charge</div>
+                    {printCharge>0&&<div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>{allOverPrintId?"All-over Print":"Zone Print"}</span><span style={{color:V.ac,fontWeight:600}}>₹{printCharge}</span></div>}
                     {logoPreview&&<div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>Logo</span><span style={{color:V.ac,fontWeight:600}}>₹{logoCharge}</span></div>}
                     {textPlaced&&<div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>Text</span><span style={{color:V.ac,fontWeight:600}}>₹{textCharge}</span></div>}
                     <div style={{borderTop:`1px solid ${V.bd}`,marginTop:6,paddingTop:6,display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:12,fontWeight:700,color:V.tx}}><span>Total</span><span style={{color:V.ac}}>₹{total}</span></div>
@@ -3349,10 +3360,11 @@ export default function CustomizePage() {
                   {key:"front-right",  label:"Chest Right",  cx:21,cy:40,back:false},
                   {key:"left-sleeve",  label:"Left Sleeve",  cx:53,cy:23,back:false},
                   {key:"right-sleeve", label:"Right Sleeve", cx:7, cy:23,back:false},
+                  {key:"back-top",     label:"Back Top",     cx:30,cy:24,back:true},
                   {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
-                  {key:"collar-edge",  label:"Collar Centre",cx:30,cy:9, back:false},
-                  {key:"collar-left",  label:"Collar Left",  cx:38,cy:9, back:false},
-                  {key:"collar-right", label:"Collar Right", cx:22,cy:9, back:false},
+                  {key:"collar-edge",  label:"Collar Centre",cx:30,cy:12,back:false},
+                  {key:"collar-left",  label:"Collar Left",  cx:36,cy:14,back:false},
+                  {key:"collar-right", label:"Collar Right", cx:24,cy:14,back:false},
                 ];
                 const chipGrid=(isActive:(k:string)=>boolean, onSelect:(k:string)=>void)=>(
                   <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:6}}>
@@ -3366,7 +3378,7 @@ export default function CustomizePage() {
                           border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
                         }}>
                           <div style={{width:42,height:48}} dangerouslySetInnerHTML={{__html:svg}}/>
-                          <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:".04em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:V.mu,fontWeight:isA?700:500,textAlign:"center",lineHeight:1.3}}>{c.label}</span>
+                          <span style={{fontSize:11,textTransform:"uppercase",letterSpacing:".04em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:"#4a4a48",fontWeight:isA?700:500,textAlign:"center",lineHeight:1.3}}>{c.label}</span>
                         </div>
                       );
                     })}
@@ -3409,13 +3421,14 @@ export default function CustomizePage() {
       {/* ── COLOR PICKER MODAL ───────────────────────────────────────────── */}
       {colorModalFor&&(
         <div style={{
-          position:"fixed",inset:0,zIndex:200,
-          background:"rgba(26,26,24,0.55)",backdropFilter:"blur(6px)",
+          position:"fixed",left:0,top:0,bottom:0,right:"auto",zIndex:200,
+          width:"min(520px, 48%)",
+          background:"rgba(26,26,24,0.50)",
           display:"flex",alignItems:"center",justifyContent:"center",
         }} onClick={()=>{setColorModalFor(null);setPendingColorPick(null);}}>
           <div onClick={e=>e.stopPropagation()} style={{
             background:V.bg,borderRadius:20,padding:"28px 28px 24px",
-            width:340,maxHeight:"80vh",overflowY:"auto",
+            width:320,maxHeight:"88vh",overflowY:"auto",
             boxShadow:"0 32px 80px rgba(26,26,24,0.32)",
             border:`1px solid rgba(201,168,76,0.18)`,
           }}>
@@ -3522,13 +3535,14 @@ export default function CustomizePage() {
       {/* ── PRINT PICKER MODAL ───────────────────────────────────────────── */}
       {printModalFor&&(
         <div style={{
-          position:"fixed",inset:0,zIndex:200,
-          background:"rgba(26,26,24,0.55)",backdropFilter:"blur(6px)",
+          position:"fixed",left:0,top:0,bottom:0,right:"auto",zIndex:200,
+          width:"min(520px, 48%)",
+          background:"rgba(26,26,24,0.50)",
           display:"flex",alignItems:"center",justifyContent:"center",
         }} onClick={()=>{setPrintModalFor(null);setPendingPrintKey(null);}}>
           <div onClick={e=>e.stopPropagation()} style={{
             background:V.bg,borderRadius:20,padding:"28px 28px 24px",
-            width:420,maxHeight:"80vh",overflowY:"auto",
+            width:400,maxHeight:"88vh",overflowY:"auto",
             boxShadow:"0 32px 80px rgba(26,26,24,0.32)",
             border:`1px solid rgba(201,168,76,0.18)`,
           }}>

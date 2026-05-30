@@ -1,9 +1,8 @@
 /**
  * CustomizeEntryModal — Bespoke Studio entry point.
- * Gender selector (Men / Women) then a carousel of all available styles
- * (Solid Polo, Print Polo, KA.SHA Signature Patterns).
- * Solid and Print thumbnails are fetched live from the product API so they
- * always match the actual product photo — same approach as the product listing.
+ * Gender selector (Men / Women) then a horizontally-scrollable row of all
+ * available styles (Solid Polo, Print Polo, KA.SHA Signature Patterns).
+ * Solid and Print thumbnails are fetched live from the product API.
  */
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -24,14 +23,9 @@ interface CarouselItem {
   tag: string;
   thumbnail: string;
   href: string;
-  /** When provided, a live 3D model-viewer is shown instead of the static thumbnail */
   modelUrl?: string;
 }
 
-// Product IDs
-// 34 = base polo tee (solid studio entry point)
-// 26 = KS1000BGP001 printed golf tee
-// Patterns use their own product IDs with R2 thumbnail previews
 const PATTERN_ITEMS: CarouselItem[] = [
   {
     key: "pattern-1001",
@@ -70,33 +64,21 @@ const PATTERN_ITEMS: CarouselItem[] = [
   },
 ];
 
-const VISIBLE = 3; // cards visible at once on desktop
-
 export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   const [, navigate] = useLocation();
   const [gender, setGender] = useState<Gender>("Men");
-  const [startIdx, setStartIdx] = useState(0);
 
-  // Fetch real product data so thumbnails always match the product listing page
   const { data: solidProduct } = useGetProduct(34, {
     query: { queryKey: getGetProductQueryKey(34), enabled: isOpen },
   });
-  const { data: printProduct } = useGetProduct(26, {
-    query: { queryKey: getGetProductQueryKey(26), enabled: isOpen },
-  });
   const { data: print003Product } = useGetProduct(27, {
     query: { queryKey: getGetProductQueryKey(27), enabled: isOpen },
-  });
-  const { data: solidBlkProduct } = useGetProduct(59, {
-    query: { queryKey: getGetProductQueryKey(59), enabled: isOpen },
   });
 
   if (!isOpen) return null;
 
   const solidThumb    = getAssetUrl(solidProduct?.thumbnailUrl) ?? "";
-  const printThumb    = getAssetUrl(printProduct?.thumbnailUrl)  ?? "";
   const print003Thumb = getAssetUrl(print003Product?.thumbnailUrl) ?? "";
-  const solidBlkThumb = getAssetUrl(solidBlkProduct?.thumbnailUrl) ?? "";
 
   const MEN_ITEMS: CarouselItem[] = [
     {
@@ -117,26 +99,13 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
     ...PATTERN_ITEMS,
   ];
 
-  const GENDER_ITEMS: Record<Gender, CarouselItem[] | null> = {
-    Men: MEN_ITEMS,
-    Women: null,
-  };
-
-  const items = GENDER_ITEMS[gender]; // null means "coming soon"
-  const total = items ? items.length : 0;
-  const canPrev = startIdx > 0;
-  const canNext = startIdx + VISIBLE < total;
+  const items: CarouselItem[] | null = gender === "Men" ? MEN_ITEMS : null;
 
   function handleSelect(href: string) {
     onClose();
     const sep = href.includes("?") ? "&" : "?";
     navigate(href + sep + "from=modal");
   }
-
-  function prev() { setStartIdx(i => Math.max(0, i - 1)); }
-  function next() { setStartIdx(i => Math.min(total - VISIBLE, i + 1)); }
-
-  const visible = items ? items.slice(startIdx, startIdx + VISIBLE) : [];
 
   return (
     <div
@@ -153,7 +122,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
       <div className="cem-sheet" style={{
         background: "#fafaf7",
         borderRadius: 20,
-        maxWidth: 780,
+        maxWidth: 820,
         width: "calc(100vw - 32px)",
         maxHeight: "calc(100vh - 40px)",
         overflowY: "auto",
@@ -205,11 +174,11 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         }} />
 
         {/* Gender selector */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 24 }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 20 }}>
           {GENDERS.map(g => (
             <button
               key={g}
-              onClick={() => { setGender(g); setStartIdx(0); }}
+              onClick={() => setGender(g)}
               style={{
                 padding: "6px 18px",
                 borderRadius: 99,
@@ -225,9 +194,8 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           ))}
         </div>
 
-        {/* Carousel or Coming Soon */}
+        {/* Styles */}
         {items === null ? (
-          /* ── Women Coming Soon ─────────────────────────────────────── */
           <div style={{
             textAlign: "center", padding: "48px 24px",
             background: "linear-gradient(135deg, #fdfbf6 0%, #f5efe0 100%)",
@@ -248,76 +216,35 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
               Check back shortly — or explore our <strong style={{ color: "#c9a84c" }}>Men's collection</strong> while you wait.
             </p>
             <button
-              onClick={() => { setGender("Men"); setStartIdx(0); }}
+              onClick={() => setGender("Men")}
               style={{
                 marginTop: 24, padding: "10px 28px", borderRadius: 99,
                 border: "1.5px solid #c9a84c", background: "transparent",
                 fontFamily: "'Jost', sans-serif", fontSize: 10,
                 letterSpacing: ".12em", textTransform: "uppercase",
                 color: "#c9a84c", fontWeight: 700, cursor: "pointer",
-                transition: "all .2s",
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(201,168,76,0.08)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
             >View Men's Styles</button>
           </div>
         ) : (
           <>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {/* Prev arrow */}
-              <button
-                onClick={prev}
-                disabled={!canPrev}
-                style={{
-                  flexShrink: 0, width: 36, height: 36, borderRadius: "50%",
-                  border: "1.5px solid rgba(26,26,24,0.15)",
-                  background: canPrev ? "#fff" : "rgba(26,26,24,0.04)",
-                  cursor: canPrev ? "pointer" : "default",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 16, color: canPrev ? "#1a1a18" : "#c8c8c4",
-                  transition: "all .2s", boxShadow: canPrev ? "0 2px 8px rgba(26,26,24,0.08)" : "none",
-                }}
-              >‹</button>
+            {/* Scroll hint */}
+            <div style={{
+              fontFamily: "'Jost', sans-serif", fontSize: 10, color: "#b8b5ae",
+              letterSpacing: ".06em", textAlign: "center", marginBottom: 10,
+              fontStyle: "italic",
+            }}>Scroll to see all styles →</div>
 
-              {/* Cards */}
-              <div className="cem-carousel" style={{
-                flex: 1, display: "grid",
-                gridTemplateColumns: `repeat(${VISIBLE}, 1fr)`,
-                gap: 12,
-              }}>
-                {visible.map(item => (
-                  <CarouselCard key={item.key} item={item} onSelect={handleSelect} />
-                ))}
-              </div>
-
-              {/* Next arrow */}
-              <button
-                onClick={next}
-                disabled={!canNext}
-                style={{
-                  flexShrink: 0, width: 36, height: 36, borderRadius: "50%",
-                  border: "1.5px solid rgba(26,26,24,0.15)",
-                  background: canNext ? "#fff" : "rgba(26,26,24,0.04)",
-                  cursor: canNext ? "pointer" : "default",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 16, color: canNext ? "#1a1a18" : "#c8c8c4",
-                  transition: "all .2s", boxShadow: canNext ? "0 2px 8px rgba(26,26,24,0.08)" : "none",
-                }}
-              >›</button>
-            </div>
-
-            {/* Dot indicators */}
-            <div style={{ display: "flex", justifyContent: "center", gap: 5, marginTop: 16 }}>
-              {Array.from({ length: Math.max(1, total - VISIBLE + 1) }).map((_, i) => (
-                <div
-                  key={i}
-                  onClick={() => setStartIdx(i)}
-                  style={{
-                    width: i === startIdx ? 18 : 6, height: 6, borderRadius: 99,
-                    background: i === startIdx ? "#c9a84c" : "#d4cfc6",
-                    cursor: "pointer", transition: "all .2s",
-                  }}
-                />
+            {/* Horizontally scrollable row */}
+            <div className="cem-scroll" style={{
+              display: "flex", gap: 12, overflowX: "auto",
+              paddingBottom: 12, scrollSnapType: "x mandatory",
+              WebkitOverflowScrolling: "touch",
+            }}>
+              {items.map(item => (
+                <div key={item.key} style={{ scrollSnapAlign: "start", flexShrink: 0, width: 180 }}>
+                  <CarouselCard item={item} onSelect={handleSelect} />
+                </div>
               ))}
             </div>
           </>
@@ -337,19 +264,17 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
       <style>{`
         @keyframes cemFadeIn  { from { opacity:0 } to { opacity:1 } }
         @keyframes cemSlideUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:translateY(0) } }
+        .cem-scroll::-webkit-scrollbar { height: 4px; }
+        .cem-scroll::-webkit-scrollbar-track { background: rgba(26,26,24,0.05); border-radius: 99px; }
+        .cem-scroll::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.4); border-radius: 99px; }
         @media (max-width: 620px) {
           .cem-sheet { padding:18px 10px 24px !important; border-radius:14px !important; width:calc(100vw - 16px) !important; }
-          .cem-carousel { grid-template-columns:repeat(2,1fr) !important; gap:8px !important; }
-        }
-        @media (max-width: 380px) {
-          .cem-carousel { grid-template-columns:1fr !important; }
         }
       `}</style>
     </div>
   );
 }
 
-// ── Carousel card ─────────────────────────────────────────────────────────────
 function CarouselCard({ item, onSelect }: { item: CarouselItem; onSelect: (h: string) => void }) {
   return (
     <button
@@ -357,7 +282,7 @@ function CarouselCard({ item, onSelect }: { item: CarouselItem; onSelect: (h: st
       style={{
         padding: 0, border: "1.5px solid rgba(26,26,24,0.09)",
         borderRadius: 14, cursor: "pointer", background: "#ffffff",
-        overflow: "hidden", textAlign: "left",
+        overflow: "hidden", textAlign: "left", width: "100%",
         transition: "all 0.26s cubic-bezier(0.16,1,0.3,1)",
         boxShadow: "0 2px 10px rgba(26,26,24,0.05)",
         display: "flex", flexDirection: "column",
@@ -380,9 +305,9 @@ function CarouselCard({ item, onSelect }: { item: CarouselItem; onSelect: (h: st
         width: "100%", aspectRatio: "1/1", overflow: "hidden",
         background: "linear-gradient(160deg, #f7f4ee 0%, #edeae3 100%)",
         flexShrink: 0, position: "relative",
+        display: "flex", alignItems: "center", justifyContent: "center",
       }}>
         {item.modelUrl ? (
-          /* Live 3-D polo — pointer-events:none so clicks fall through to the button */
           <model-viewer
             src={item.modelUrl}
             alt={item.label}
@@ -396,13 +321,24 @@ function CarouselCard({ item, onSelect }: { item: CarouselItem; onSelect: (h: st
               display: "block", pointerEvents: "none",
             }}
           />
-        ) : (
+        ) : item.thumbnail ? (
           <img
             src={item.thumbnail}
             alt={item.label}
             style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }}
             onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.25"; }}
           />
+        ) : (
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            gap: 6, width: "100%", height: "100%",
+          }}>
+            <div style={{ fontSize: 28, opacity: 0.35 }}>✦</div>
+            <div style={{
+              fontFamily: "'Jost', sans-serif", fontSize: 9, letterSpacing: ".1em",
+              textTransform: "uppercase", color: "#8a8780", textAlign: "center",
+            }}>{item.label}</div>
+          </div>
         )}
       </div>
 
