@@ -9,9 +9,14 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { type Gender, getLastGender as _getLastGender, setLastGender } from "@/lib/genderPreference";
 import { getAssetUrl } from "@/lib/api";
 import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
+import { useUser, useClerk } from "@clerk/react";
 
-type ItemType = "tshirts" | "bottoms";
+type ItemType = "tshirts" | "bottoms" | "dresses";
 type StyleFilter = "solids" | "patterns" | "prints" | "trousers" | "shorts" | "skorts";
+
+type SidebarChild =
+  | { label: string; style: StyleFilter; isCustomStudio?: false }
+  | { label: string; isCustomStudio: true };
 
 const TSHIRT_CATEGORIES = ["t-shirt", "polo", "fabric-tshirt", "pattern", "shirts"];
 const TROUSER_CATEGORIES = ["pants", "trousers"];
@@ -69,7 +74,7 @@ const KIDS_FALLBACK_IMAGE = "/images/hero/slide-kids.png";
 type SidebarParent = {
   label: string;
   type: ItemType;
-  children: { label: string; style: StyleFilter }[];
+  children: SidebarChild[];
 };
 
 type SidebarSection = {
@@ -84,12 +89,13 @@ const sidebar: SidebarSection[] = [
     gender: "men",
     parents: [
       {
-        label: "T-shirts",
+        label: "Golf T-shirts",
         type: "tshirts",
         children: [
-          { label: "Solid", style: "solids" },
-          { label: "Pattern Design", style: "patterns" },
-          { label: "Printed", style: "prints" },
+          { label: "Solid Polo T-shirts", style: "solids" },
+          { label: "Pattern Polo T-shirts", style: "patterns" },
+          { label: "Print Polo T-shirts", style: "prints" },
+          ...(SHOW_CUSTOMIZATION ? [{ label: "Custom Studio", isCustomStudio: true as const }] : []),
         ],
       },
       {
@@ -107,12 +113,13 @@ const sidebar: SidebarSection[] = [
     gender: "women",
     parents: [
       {
-        label: "T-shirts",
+        label: "Golf T-shirts",
         type: "tshirts",
         children: [
-          { label: "Solid", style: "solids" },
-          { label: "Pattern Design", style: "patterns" },
-          { label: "Printed", style: "prints" },
+          { label: "Solid Polo T-shirts", style: "solids" },
+          { label: "Pattern Polo T-shirts", style: "patterns" },
+          { label: "Print Polo T-shirts", style: "prints" },
+          ...(SHOW_CUSTOMIZATION ? [{ label: "Custom Studio", isCustomStudio: true as const }] : []),
         ],
       },
       {
@@ -121,7 +128,13 @@ const sidebar: SidebarSection[] = [
         children: [
           { label: "Skorts", style: "skorts" },
           { label: "Trousers", style: "trousers" },
+          { label: "Shorts", style: "shorts" },
         ],
+      },
+      {
+        label: "Golf Dresses",
+        type: "dresses",
+        children: [],
       },
     ],
   },
@@ -130,12 +143,12 @@ const sidebar: SidebarSection[] = [
     gender: "kids" as const,
     parents: [
       {
-        label: "T-shirts",
+        label: "Golf T-shirts",
         type: "tshirts" as const,
         children: [
-          { label: "Solid", style: "solids" as const },
-          { label: "Pattern Design", style: "patterns" as const },
-          { label: "Printed", style: "prints" as const },
+          { label: "Solid Polo T-shirts", style: "solids" as const },
+          { label: "Pattern Polo T-shirts", style: "patterns" as const },
+          { label: "Print Polo T-shirts", style: "prints" as const },
         ],
       },
       {
@@ -161,12 +174,17 @@ export default function ProductsPage() {
   const gender: Gender | undefined =
     genderParam === "men" || genderParam === "women" || genderParam === "kids" ? genderParam : undefined;
   const type: ItemType | undefined =
-    typeParam === "tshirts" || typeParam === "bottoms" ? typeParam : undefined;
+    typeParam === "tshirts" || typeParam === "bottoms" || typeParam === "dresses" ? typeParam : undefined;
   const styleFilter: StyleFilter | undefined =
     styleParam === "solids" || styleParam === "patterns" || styleParam === "prints" ||
     styleParam === "trousers" || styleParam === "shorts" || styleParam === "skorts"
       ? (styleParam as StyleFilter)
       : undefined;
+
+  const { isSignedIn } = useUser();
+  const { openSignIn, openSignUp } = useClerk();
+  const [studioModalOpen, setStudioModalOpen] = useState(false);
+  const [studioGender, setStudioGender] = useState<Gender>("men");
 
   // Accordion state — track which `${gender}-${type}` keys are expanded
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -249,6 +267,11 @@ export default function ProductsPage() {
           return TROUSER_CATEGORIES.includes(cat) || SHORTS_CATEGORIES.includes(cat) || SKORT_CATEGORIES.includes(cat);
         });
       }
+    } else if (type === "dresses") {
+      list = list.filter((p) => {
+        const cat = (p.category || "").toLowerCase();
+        return cat === "dress" || cat === "dresses";
+      });
     }
 
     // Sort: gender (men → women → kids), then type (tshirts → bottoms), then subType
@@ -274,7 +297,7 @@ export default function ProductsPage() {
     return q ? `/products?${q}` : "/products";
   };
 
-  const typeLabel = (t?: ItemType) => t === "tshirts" ? "T-shirts" : t === "bottoms" ? "Bottoms" : null;
+  const typeLabel = (t?: ItemType) => t === "tshirts" ? "Golf T-shirts" : t === "bottoms" ? "Bottoms" : t === "dresses" ? "Golf Dresses" : null;
   const styleLabel = (s?: StyleFilter) =>
     s === "solids" ? "Solid" : s === "patterns" ? "Pattern Design" : s === "prints" ? "Printed" :
     s === "trousers" ? "Trousers" : s === "shorts" ? "Shorts" : s === "skorts" ? "Skorts" : null;
@@ -349,7 +372,9 @@ export default function ProductsPage() {
                 All Products
               </Link>
 
-              {sidebar.map((section) => {
+              {sidebar
+                .filter(section => !gender || gender === section.gender)
+                .map((section) => {
                 const sectionActive = gender === section.gender;
                 return (
                   <div key={section.gender} style={{ borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
@@ -365,16 +390,17 @@ export default function ProductsPage() {
                       {section.label}
                     </Link>
 
-                    {/* Parent items (T-shirts, Bottoms) — only show when this gender is active */}
+                    {/* Parent items — only show when this gender is active */}
                     {sectionActive && <ul className="pb-2">
                       {section.parents.map((parent) => {
                         const accordionKey = `${section.gender}-${parent.type}`;
                         const isOpen = expanded.has(accordionKey);
                         const parentActive = sectionActive && type === parent.type;
+                        const hasChildren = parent.children.length > 0;
 
                         return (
                           <li key={parent.type}>
-                            {/* Parent row — clicking navigates + toggles accordion */}
+                            {/* Parent row */}
                             <button
                               className={`w-full flex items-center justify-between py-1.5 pl-3 pr-1 text-[10px] tracking-[0.22em] uppercase border-l-2 text-left ${
                                 parentActive
@@ -383,20 +409,42 @@ export default function ProductsPage() {
                               }`}
                               style={{ fontFamily: "'Josefin Sans', sans-serif" }}
                               onClick={() => {
-                                if (!parentActive) navigate(buildHref(section.gender, parent.type));
-                                toggleExpanded(accordionKey);
+                                navigate(buildHref(section.gender, parent.type));
+                                if (hasChildren) toggleExpanded(accordionKey);
                               }}
                             >
                               <span>{parent.label}</span>
-                              <ChevronDown
-                                className={`w-3 h-3 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-                              />
+                              {hasChildren && (
+                                <ChevronDown
+                                  className={`w-3 h-3 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                                />
+                              )}
                             </button>
 
                             {/* Children */}
-                            {isOpen && (
+                            {hasChildren && isOpen && (
                               <ul className="pb-1">
                                 {parent.children.map((child) => {
+                                  if (child.isCustomStudio) {
+                                    return (
+                                      <li key="custom-studio">
+                                        <button
+                                          onClick={() => {
+                                            if (isSignedIn) {
+                                              navigate("/customize");
+                                            } else {
+                                              setStudioGender(section.gender as Gender);
+                                              setStudioModalOpen(true);
+                                            }
+                                          }}
+                                          className="w-full block py-1 pl-8 text-left text-[9.5px] tracking-[0.22em] uppercase border-l-2 border-transparent text-[#B8925A] hover:border-[#B8925A] font-semibold"
+                                          style={{ fontFamily: "'Josefin Sans', sans-serif" }}
+                                        >
+                                          ✦ {child.label}
+                                        </button>
+                                      </li>
+                                    );
+                                  }
                                   const childActive = parentActive && styleFilter === child.style;
                                   return (
                                     <li key={child.style}>
@@ -498,6 +546,76 @@ export default function ProductsPage() {
           </div>
         </div>
       </div>
+
+      {/* Custom Studio sign-in prompt */}
+      {studioModalOpen && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(26,26,24,0.55)", backdropFilter: "blur(4px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "16px",
+          }}
+          onClick={() => setStudioModalOpen(false)}
+        >
+          <div
+            style={{
+              background: "#FAFAF8", borderRadius: 16, padding: "36px 32px",
+              maxWidth: 400, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
+              border: "1px solid rgba(184,146,90,0.2)",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ textAlign: "center", marginBottom: 24 }}>
+              <div style={{
+                fontFamily: "'Josefin Sans', sans-serif", fontSize: 9,
+                letterSpacing: ".36em", textTransform: "uppercase",
+                color: "#B8925A", marginBottom: 12,
+              }}>Bespoke Studio</div>
+              <h2 style={{
+                fontFamily: "'Cormorant Garamond', serif", fontSize: 28,
+                fontWeight: 400, color: "#1a1a18", marginBottom: 10, lineHeight: 1.2,
+              }}>Sign in to save your designs</h2>
+              <p style={{
+                fontFamily: "'Josefin Sans', sans-serif", fontSize: 11,
+                color: "rgba(26,26,24,0.55)", letterSpacing: ".04em", lineHeight: 1.75,
+              }}>
+                Create an account or log in so your bespoke design choices are saved and ready to order anytime.
+              </p>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <button
+                onClick={() => { setStudioModalOpen(false); openSignUp({ forceRedirectUrl: "/customize" }); }}
+                style={{
+                  background: "#1a1a18", color: "#fff", border: "none",
+                  borderRadius: 8, padding: "13px 20px", cursor: "pointer",
+                  fontFamily: "'Josefin Sans', sans-serif", fontSize: 10,
+                  letterSpacing: ".22em", textTransform: "uppercase", fontWeight: 600,
+                }}
+              >Sign Up — It's Free</button>
+              <button
+                onClick={() => { setStudioModalOpen(false); openSignIn({ forceRedirectUrl: "/customize" }); }}
+                style={{
+                  background: "transparent", color: "#1a1a18",
+                  border: "1.5px solid rgba(26,26,24,0.2)",
+                  borderRadius: 8, padding: "12px 20px", cursor: "pointer",
+                  fontFamily: "'Josefin Sans', sans-serif", fontSize: 10,
+                  letterSpacing: ".22em", textTransform: "uppercase",
+                }}
+              >Log In</button>
+              <button
+                onClick={() => { setStudioModalOpen(false); navigate("/customize"); }}
+                style={{
+                  background: "transparent", color: "rgba(26,26,24,0.4)",
+                  border: "none", padding: "8px",
+                  cursor: "pointer", fontFamily: "'Josefin Sans', sans-serif",
+                  fontSize: 9, letterSpacing: ".18em", textTransform: "uppercase",
+                }}
+              >Continue as Guest</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
