@@ -1346,9 +1346,12 @@ export default function CustomizePage() {
                     if(effectiveSkuType==="pattern"){
                       applyPatternColors(PAT_COLOR_A_DEFAULT,PAT_COLOR_B_DEFAULT);
                     } else if(effectiveSkuType==="solid"){
-                      applyPrimary("#1a1a18");
+                      applyPrimary(product?.defaultColor||"#1a1a18");
                     }
-                    clearAllOverPrint(); clearAllZonePrints(); saveHistory();
+                    clearAllOverPrint();
+                    clearAllZonePrints();
+                    PART_ZONES.forEach(z=>applyZoneColor(z.id,""));
+                    saveHistory();
                   } else if(step===3){
                     if(fc){
                       fc.getObjects()
