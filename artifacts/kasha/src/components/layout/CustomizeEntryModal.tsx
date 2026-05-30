@@ -85,7 +85,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
       key: "solid",
       label: "Solid Polo",
       tag: "Solid",
-      thumbnail: solidThumb,
+      thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1780122689994-89671772.webp",
       modelUrl: solidProduct?.modelUrl ?? undefined,
       href: "/products/34/customize?style=solid",
     },
