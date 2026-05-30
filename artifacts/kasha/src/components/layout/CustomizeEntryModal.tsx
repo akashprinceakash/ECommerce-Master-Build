@@ -228,25 +228,29 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           </div>
         ) : (
           <>
-            {/* Scroll hint */}
-            <div style={{
-              fontFamily: "'Jost', sans-serif", fontSize: 10, color: "#b8b5ae",
-              letterSpacing: ".06em", textAlign: "center", marginBottom: 10,
-              fontStyle: "italic",
-            }}>Scroll to see all styles →</div>
-
             {/* Horizontally scrollable row */}
             <div className="cem-scroll" style={{
-              display: "flex", gap: 12, overflowX: "auto",
-              paddingBottom: 12, scrollSnapType: "x mandatory",
+              display: "flex", gap: 12, overflowX: "auto", overflowY: "hidden",
+              paddingBottom: 16, paddingLeft: 2, paddingRight: 2,
+              scrollSnapType: "x mandatory",
               WebkitOverflowScrolling: "touch",
-            }}>
+              cursor: "grab",
+            }}
+            onMouseDown={e => { e.currentTarget.style.cursor = "grabbing"; }}
+            onMouseUp={e => { e.currentTarget.style.cursor = "grab"; }}
+            onMouseLeave={e => { e.currentTarget.style.cursor = "grab"; }}
+            >
               {items.map(item => (
-                <div key={item.key} style={{ scrollSnapAlign: "start", flexShrink: 0, width: 180 }}>
+                <div key={item.key} style={{ scrollSnapAlign: "start", flexShrink: 0 }} className="cem-card-wrap">
                   <CarouselCard item={item} onSelect={handleSelect} />
                 </div>
               ))}
             </div>
+            <div style={{
+              fontFamily: "'Jost', sans-serif", fontSize: 9, color: "#c9c7c0",
+              letterSpacing: ".06em", textAlign: "center", marginTop: 4,
+              fontStyle: "italic",
+            }}>Swipe to browse all styles →</div>
           </>
         )}
 
@@ -267,8 +271,13 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         .cem-scroll::-webkit-scrollbar { height: 4px; }
         .cem-scroll::-webkit-scrollbar-track { background: rgba(26,26,24,0.05); border-radius: 99px; }
         .cem-scroll::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.4); border-radius: 99px; }
+        .cem-card-wrap { width: 170px; }
         @media (max-width: 620px) {
-          .cem-sheet { padding:18px 10px 24px !important; border-radius:14px !important; width:calc(100vw - 16px) !important; }
+          .cem-sheet { padding:18px 12px 24px !important; border-radius:14px !important; width:calc(100vw - 16px) !important; }
+          .cem-card-wrap { width: 150px; }
+        }
+        @media (max-width: 400px) {
+          .cem-card-wrap { width: 135px; }
         }
       `}</style>
     </div>

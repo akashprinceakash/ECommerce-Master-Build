@@ -1001,7 +1001,7 @@ export default function CustomizePage() {
       } catch { /* non-blocking — cart add will proceed */ }
       return apiFetch("/api/cart/items",{method:"POST",body:JSON.stringify({productId:id,customizationId,quantity:effectiveQty,size:effectiveSize})});
     },
-    onSuccess:()=>{toast({title:"Added to Cart ✓",description:"Your custom design has been added."});setLocation("/cart");},
+    onSuccess:()=>{toast({title:"Added to Cart ✓",description:"Your custom design has been saved to your cart."});},
     onError:(e:any)=>toast({title:"Could not add to cart",description:e.message,variant:"destructive"}),
   });
 
@@ -1174,8 +1174,8 @@ export default function CustomizePage() {
           </Link>
         </div>
 
-        {/* Center: studio name */}
-        <div style={{display:"flex",alignItems:"center",gap:6}}>
+        {/* Center: studio name — hidden on very small screens to avoid overlap */}
+        <div style={{display:"flex",alignItems:"center",gap:6}} className="studio-title-center">
           <span style={{
             fontFamily:"'Jost',sans-serif",fontSize:10,letterSpacing:".14em",
             textTransform:"uppercase",color:V.mu,fontWeight:500,
@@ -1189,16 +1189,17 @@ export default function CustomizePage() {
         </div>
 
         {/* Right: design name + save + order */}
-        <div style={{display:"flex",alignItems:"center",gap:8,minWidth:180,justifyContent:"flex-end"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0,justifyContent:"flex-end",flex:"0 0 auto"}}>
           <input
             value={designName}
             onChange={e=>setDesignName(e.target.value)}
             placeholder="Name your design…"
+            className="design-name-input"
             style={{
               padding:"6px 12px",
               background:V.sf2,border:`1.5px solid ${V.bd}`,
               borderRadius:40,color:V.tx,fontSize:11,
-              outline:"none",width:140,
+              outline:"none",width:130,
               fontFamily:"'Jost',sans-serif",letterSpacing:".02em",
               transition:"border-color 0.2s",
             }}
@@ -1351,12 +1352,16 @@ export default function CustomizePage() {
                     clearAllOverPrint(); clearAllZonePrints(); saveHistory();
                   } else if(step===3){
                     if(fc){
+                      // Explicitly remove tracked objects first (covers all Fabric text types)
+                      if(textObjRef.current){fc.remove(textObjRef.current);textObjRef.current=null;}
+                      if(logoObjRef.current){fc.remove(logoObjRef.current);logoObjRef.current=null;}
+                      // Sweep any stray image/text objects not caught by the refs
                       fc.getObjects()
-                        .filter((o:any)=>!o?.data?.kashaZonePrint&&!o?.data?.kdDesignZone&&(o.type==="image"||o.type==="textbox"))
+                        .filter((o:any)=>!o?.data?.kashaZonePrint&&!o?.data?.kdDesignZone&&(o.type==="image"||o.type==="textbox"||o.type==="i-text"||o.type==="text"))
                         .forEach((o:any)=>fc.remove(o));
                       fc.renderAll(); syncTexture();
                     }
-                    setLogoPreview(null); logoObjRef.current=null;
+                    setLogoPreview(null); setLogoPlaced(false);
                     setTextInput(""); setTextPlaced(false);
                   } else if(step===4){
                     setSizeQty({S:0,M:0,L:0,XL:0,XXL:0});
@@ -1365,10 +1370,10 @@ export default function CustomizePage() {
                 }}
                 style={{
                   flexShrink:0,marginTop:3,
-                  padding:"5px 11px",borderRadius:8,
-                  border:"1px solid rgba(196,92,92,0.3)",
+                  padding:"8px 16px",borderRadius:8,
+                  border:"1.5px solid rgba(196,92,92,0.35)",
                   background:"transparent",cursor:"pointer",
-                  fontFamily:"'Jost',sans-serif",fontSize:9,
+                  fontFamily:"'Jost',sans-serif",fontSize:11,
                   fontWeight:600,letterSpacing:".08em",
                   textTransform:"uppercase" as const,
                   color:"#c45c5c",transition:"all .2s",
@@ -3624,6 +3629,13 @@ export default function CustomizePage() {
         input[type=range]{-webkit-appearance:none;appearance:none}
         details summary{list-style:none}
         details summary::-webkit-details-marker{display:none}
+        @media (max-width: 600px) {
+          .studio-title-center { display: none !important; }
+          .design-name-input { width: 100px !important; font-size: 10px !important; }
+        }
+        @media (max-width: 420px) {
+          .design-name-input { display: none !important; }
+        }
       `}</style>
     </div>
   );

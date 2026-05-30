@@ -670,7 +670,7 @@ function ProductCard({ product, imgSrc, cardIndex = 0 }: ProductCardProps) {
               onClick={goPrev}
               aria-label="Previous image"
               className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center bg-white/80 backdrop-blur-sm hover:bg-white z-10"
-              style={{ border: "1px solid rgba(0,0,0,0.10)", opacity: isHovered ? 1 : 0, transition: "opacity 0.25s", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }}
+              style={{ border: "1px solid rgba(0,0,0,0.10)", opacity: 1, transition: "opacity 0.25s", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }}
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
@@ -678,7 +678,7 @@ function ProductCard({ product, imgSrc, cardIndex = 0 }: ProductCardProps) {
               onClick={goNext}
               aria-label="Next image"
               className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center bg-white/80 backdrop-blur-sm hover:bg-white z-10"
-              style={{ border: "1px solid rgba(0,0,0,0.10)", opacity: isHovered ? 1 : 0, transition: "opacity 0.25s", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }}
+              style={{ border: "1px solid rgba(0,0,0,0.10)", opacity: 1, transition: "opacity 0.25s", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }}
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
