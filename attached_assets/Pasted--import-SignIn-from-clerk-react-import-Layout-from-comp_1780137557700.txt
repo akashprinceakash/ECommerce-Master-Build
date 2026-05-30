@@ -1,0 +1,291 @@
+
+
+import { SignIn } from "@clerk/react";
+import { Layout } from "@/components/layout/Layout";
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const REDIRECT_KEY = "kasha_redirect_after_login";
+
+function getRedirectUrl(): string {
+  try {
+    const stored = localStorage.getItem(REDIRECT_KEY);
+    if (stored) return stored;
+  } catch {}
+  return `${basePath}/`;
+}
+
+export default function SignInPage() {
+  const redirectUrl = getRedirectUrl();
+
+  return (
+    <Layout>
+      <div className="min-h-[70vh] flex items-center justify-center py-12 px-4 bg-background">
+        <SignIn
+          routing="path"
+          path={`${basePath}/sign-in`}
+          signUpUrl={`${basePath}/sign-up`}
+          forceRedirectUrl={redirectUrl}
+          fallbackRedirectUrl={redirectUrl}
+        />
+      </div>
+    </Layout>
+  );
+}
+
+
+AI
+
+TypeScript React
+
+0
+0
+
+Diff
+
+
+Ln 1, Col 1
+
+Spaces: 2
+
+History
+Update garment customization options and improve user navigation
+
+
+
+Show previous messages
+
+3 messages & 11 actions
+
+Checkpoint made
+2 days ago
+
+Worked for 3 minutes
+In the Adding Text section there also mention the same name like pcik you color from color picker - and in both increase the size of the color picker box.
+
+increase the size of the pause and play button show it user eye cachebale
+
+2 days ago
+
+9 messages & 27 actions
+
+Checkpoint made
+2 days ago
+
+Worked for 2 minutes
+Through the Customization Entry Modal, when I click on the Solid T-shirt option, the 3D model is showing the pattern KS1001B-RB applied by default instead of the solid T-shirt. When I click on the Printed T-shirt option, it applies GP001, but the selected print is not visible on the 3D model initially.**
+
+Expected behavior:
+
+When the user clicks Solid T-shirt, the selected solid T-shirt design should be applied and shown on the 3D model.
+When the user clicks Printed T-shirt, the selected printed T-shirt design should be applied and visible on the 3D model immediately.
+Patterns are working correctly as expected.
+2 days ago
+
+13 messages & 42 actions
+
+Checkpoint made
+2 days ago
+
+Worked for 7 minutes
+For patterns it is applying pattern design color but not body color by defaulty display according to the SKU.
+ok for prints it is working and for solid t-shirt i have added one product and verfiy whether it is correct for SKU value for solid t-shirts and add this solid t-shirt in the customization entry modal
+KS-BLK-001
+
+2 days ago
+
+12 messages & 39 actions
+
+Checkpoint made
+2 days ago
+
+Worked for 6 minutes
+now the color is applying but colors which is added in the image for pattern KS1004B-BP and KS1003B-PB instead of dark pink put hot pink or light pink as in the image and for pattern KS1002B-SB light blue which is similar to (#90D5FF) and for pattern KS1001B-GB put light green which is similar to (# 576043)
+
+2 days ago
+
+Planning color value adjustments (38 seconds)
+These are all colour value tweaks in PATTERN_SUFFIX_COLORS. Let me look at exactly what needs to change and fix it in one edit:
+
+
+4 actions
+I have the full picture. Four colour values need updating across four suffix entries:
+
+GB colorB: #1f7a45 → #576043 (muted olive as requested)
+SB colorB: #4a8fd4 → #90D5FF (light sky blue)
+PB colorB: #6b2fa0 (purple — wrong!) → #FF69B4 (hot pink), and label updated to Pink + Black
+BP colorA: #e91e8c (dark magenta) → #FF69B4 (hot pink)
+
+2 actions
+Now fix the BP entry too (the pink channel for Black+Pink patterns):
+
+
+4 actions
+Typecheck clean. Let me verify the four pattern colour changes visually:
+
+
+3 actions
+Pattern 1002 (Sky Blue) is clearly showing the new light #90D5FF blue on the 3D model — looking great. Let me verify the two pink patterns:
+
+
+3 actions
+All four colour changes are confirmed on the live 3D models:
+
+KS1003B-PB (Pattern 1003 — Pink & Black): body is now the correct hot pink #FF69B4 — no more purple. The pink body with dark charcoal panels is rendering cleanly.
+KS1004B-BP (Pattern 1004 — Black & Pink): the collar and sleeves now show the same hot pink #FF69B4 accent instead of the old dark magenta — much lighter and truer to the garment.
+KS1002B-SB (Pattern 1002 — Sky Blue): body is the new light #90D5FF blue, confirmed on the 3D model from the earlier screenshot.
+KS1001B-GB (Pattern 1001 — Green + Black): body colour is now #576043 (muted olive) — will render on the 3D model in the browser where WebGL is available.
+
+6 messages & 19 actions
+
+Checkpoint made
+3 hours ago
+
+Worked for 6 minutes
+continue
+
+2 hours ago
+
+15 messages & 43 actions
+
+Checkpoint made
+2 hours ago
+
+Worked for 7 minutes
+
+Attached Image
+
+Attached Image
+
+Attached Image
+
+Attached Image
+
+Attached Image
+Even left collar and right collar position is wrong it should be like this as is showed in the 2nd attached image.
+->Also there is no print option on across the top of the back like this as i shown in the 1sst attached image.
+->The price of the Tshirt should change @Rs 1" per Sq Inch for the print which is also not happening.
+->right sleeve position should be the same as left sleeve position its different please check
+->when i click on cart it directly adds to cart without asking me for a size. Thats wrong i should go to the size page 1st.
+->Also when i click on back(top right hand to takes me to the home page. so i have to restart the whole process
+->when i click the color picker the garment goes into the back ground then it becomes difficult to choose a color. Meaning if i want to make the sides matching the print then the print should also be visible right
+->This choose print will become very large since will keep on adding prints therefore there should be the option to double click to apply
+->1/ Solid Polo not visible.
+2/ Can anyone read the below line ? I still feel the fonts size is too small and the color is also very light therefore illegible
+3/ Is it possible to make this scroll since otherwise people will not know there are other option available besides these 3
+
+
+Show less
+25 minutes ago
+
+2 actions
+That's a good list of issues. Let me read the relevant code sections in parallel:
+
+
+4 actions
+Now let me read the remaining key sections I need:
+
+
+4 actions
+Let me gather the remaining sections I need in parallel:
+
+
+5 actions
+Let me read the remaining key sections:
+
+
+5 actions
+Let me read the remaining sections I need:
+
+
+4 actions
+Let me read the bottom bar and step navigation:
+
+
+3 actions
+Let me read the bottom bar cart button and step 4 content:
+
+
+3 actions
+Let me read the logo size default and visiblePatterns def to understand print state:
+
+
+3 actions
+Now I have everything I need. Let me make all the changes systematically across both files. I'll batch as many independent edits as possible:
+
+
+4 actions
+Now let me fix the back button, cart flow, and all three placement grids in parallel:
+
+
+2 actions
+Let me make the remaining changes in parallel batches:
+
+
+2 actions
+Now let me update all three placement grids, the color/print picker overlays, the print grid behavior, and the print charge section in one batch:
+
+
+2 actions
+Continuing with the remaining edits — logo grid, right panel chips, color picker, print charge, and right-panel print behavior all in parallel:
+
+
+2 actions
+Continuing with the right-panel CHIPS grid, print charge, color picker overlay, and print grid click behavior:
+
+
+2 actions
+Let me read the right panel chip labels and the print picker remaining content to finalize those edits:
+
+
+3 actions
+Now let me make all remaining edits in parallel:
+
+
+2 actions
+Let me continue making all remaining edits in one batch:
+
+
+2 actions
+Let me continue with the color picker overlay, print picker overlay, right-panel print grid click behavior, and the entry modal — all in parallel:
+
+
+2 actions
+Continuing — print picker overlay, right-panel print click, and the entry modal all at once:
+
+
+2 actions
+Let me fix the right-panel print grid click behavior and update the entry modal at the same time:
+
+
+2 actions
+Now let me update the entry modal for a scrollable carousel and solid polo fix, plus add a hint label above the right-panel print grid:
+
+
+4 actions
+Now let me update the entry modal for a scrollable carousel and solid polo fix:
+
+
+2 actions
+Now let me run a typecheck to verify everything compiles cleanly:
+
+
+2 actions
+Clean. Let me take a screenshot to verify everything renders correctly:
+
+
+2 actions
+Good — the studio loads. Let me verify Step 3 placement grid and the entry modal:
+
+
+3 actions
+All changes are in and typechecked clean. Here's everything that was done:
+
+Back button — now goes to /products instead of home, so you can pick a different style without starting from scratch.
+
+Cart shortcut → Sizing first — the "🛒 Cart" button in the bottom bar on Steps 1–3 now takes you to the Sizing step (Step 4) instead of directly adding. "Add to Cart" only appears in Step 4 once you've set your sizes.
+
+Back Top placement added — there's now a "Back Top" position in all three placement grids (text, logo, right-panel chips). It places the logo/text at the back yoke area (near the collar on the back), matching the green-circle area you showed in Image 1.
+
+Collar dot positions corrected — collar-left and collar-right dots moved from cy:9 (neckline) down to cy:14 at the collar tip positions, matching Image 2. Collar Centre also nudged down to cy:12.
+
+Right sleeve height — the right sleeve UV position was adjusted from top:120 to top:58 to compensate for the vertical flip, so it renders at the same sleeve height as the left sleeve.

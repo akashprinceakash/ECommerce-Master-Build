@@ -14,9 +14,7 @@ import { useUser, useClerk } from "@clerk/react";
 type ItemType = "tshirts" | "bottoms" | "dresses";
 type StyleFilter = "solids" | "patterns" | "prints" | "trousers" | "shorts" | "skorts";
 
-type SidebarChild =
-  | { label: string; style: StyleFilter; isCustomStudio?: false }
-  | { label: string; isCustomStudio: true };
+type SidebarChild = { label: string; style: StyleFilter };
 
 const TSHIRT_CATEGORIES = ["t-shirt", "polo", "fabric-tshirt", "pattern", "shirts"];
 const TROUSER_CATEGORIES = ["pants", "trousers"];
@@ -95,7 +93,6 @@ const sidebar: SidebarSection[] = [
           { label: "Solid Polo T-shirts", style: "solids" },
           { label: "Pattern Polo T-shirts", style: "patterns" },
           { label: "Print Polo T-shirts", style: "prints" },
-          ...(SHOW_CUSTOMIZATION ? [{ label: "Custom Studio", isCustomStudio: true as const }] : []),
         ],
       },
       {
@@ -119,7 +116,6 @@ const sidebar: SidebarSection[] = [
           { label: "Solid Polo T-shirts", style: "solids" },
           { label: "Pattern Polo T-shirts", style: "patterns" },
           { label: "Print Polo T-shirts", style: "prints" },
-          ...(SHOW_CUSTOMIZATION ? [{ label: "Custom Studio", isCustomStudio: true as const }] : []),
         ],
       },
       {
@@ -182,9 +178,6 @@ export default function ProductsPage() {
       : undefined;
 
   const { isSignedIn } = useUser();
-  const { openSignIn, openSignUp } = useClerk();
-  const [studioModalOpen, setStudioModalOpen] = useState(false);
-  const [studioGender, setStudioGender] = useState<Gender>("men");
 
   // Accordion state — track which `${gender}-${type}` keys are expanded
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -425,26 +418,6 @@ export default function ProductsPage() {
                             {hasChildren && isOpen && (
                               <ul className="pb-1">
                                 {parent.children.map((child) => {
-                                  if (child.isCustomStudio) {
-                                    return (
-                                      <li key="custom-studio">
-                                        <button
-                                          onClick={() => {
-                                            if (isSignedIn) {
-                                              navigate("/customize");
-                                            } else {
-                                              setStudioGender(section.gender as Gender);
-                                              setStudioModalOpen(true);
-                                            }
-                                          }}
-                                          className="w-full block py-1 pl-8 text-left text-[9.5px] tracking-[0.22em] uppercase border-l-2 border-transparent text-[#B8925A] hover:border-[#B8925A] font-semibold"
-                                          style={{ fontFamily: "'Josefin Sans', sans-serif" }}
-                                        >
-                                          ✦ {child.label}
-                                        </button>
-                                      </li>
-                                    );
-                                  }
                                   const childActive = parentActive && styleFilter === child.style;
                                   return (
                                     <li key={child.style}>
@@ -547,75 +520,6 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Custom Studio sign-in prompt */}
-      {studioModalOpen && (
-        <div
-          style={{
-            position: "fixed", inset: 0, zIndex: 9999,
-            background: "rgba(26,26,24,0.55)", backdropFilter: "blur(4px)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            padding: "16px",
-          }}
-          onClick={() => setStudioModalOpen(false)}
-        >
-          <div
-            style={{
-              background: "#FAFAF8", borderRadius: 16, padding: "36px 32px",
-              maxWidth: 400, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
-              border: "1px solid rgba(184,146,90,0.2)",
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{
-                fontFamily: "'Josefin Sans', sans-serif", fontSize: 9,
-                letterSpacing: ".36em", textTransform: "uppercase",
-                color: "#B8925A", marginBottom: 12,
-              }}>Bespoke Studio</div>
-              <h2 style={{
-                fontFamily: "'Cormorant Garamond', serif", fontSize: 28,
-                fontWeight: 400, color: "#1a1a18", marginBottom: 10, lineHeight: 1.2,
-              }}>Sign in to save your designs</h2>
-              <p style={{
-                fontFamily: "'Josefin Sans', sans-serif", fontSize: 11,
-                color: "rgba(26,26,24,0.55)", letterSpacing: ".04em", lineHeight: 1.75,
-              }}>
-                Create an account or log in so your bespoke design choices are saved and ready to order anytime.
-              </p>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <button
-                onClick={() => { setStudioModalOpen(false); openSignUp({ forceRedirectUrl: "/customize" }); }}
-                style={{
-                  background: "#1a1a18", color: "#fff", border: "none",
-                  borderRadius: 8, padding: "13px 20px", cursor: "pointer",
-                  fontFamily: "'Josefin Sans', sans-serif", fontSize: 10,
-                  letterSpacing: ".22em", textTransform: "uppercase", fontWeight: 600,
-                }}
-              >Sign Up — It's Free</button>
-              <button
-                onClick={() => { setStudioModalOpen(false); openSignIn({ forceRedirectUrl: "/customize" }); }}
-                style={{
-                  background: "transparent", color: "#1a1a18",
-                  border: "1.5px solid rgba(26,26,24,0.2)",
-                  borderRadius: 8, padding: "12px 20px", cursor: "pointer",
-                  fontFamily: "'Josefin Sans', sans-serif", fontSize: 10,
-                  letterSpacing: ".22em", textTransform: "uppercase",
-                }}
-              >Log In</button>
-              <button
-                onClick={() => { setStudioModalOpen(false); navigate("/customize"); }}
-                style={{
-                  background: "transparent", color: "rgba(26,26,24,0.4)",
-                  border: "none", padding: "8px",
-                  cursor: "pointer", fontFamily: "'Josefin Sans', sans-serif",
-                  fontSize: 9, letterSpacing: ".18em", textTransform: "uppercase",
-                }}
-              >Continue as Guest</button>
-            </div>
-          </div>
-        </div>
-      )}
     </Layout>
   );
 }

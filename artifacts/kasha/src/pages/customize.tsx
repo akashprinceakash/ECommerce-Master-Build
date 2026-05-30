@@ -97,12 +97,11 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "front-left":    { left: 147, top: 490 },  // left chest zone
   "front-right":   { left: 363, top: 490 },  // right chest zone
   "back-center":   { left: 765, top: 604 },  // centre across back
-  "back-top":      { left: 765, top: 210 },  // back yoke / top of back (near collar back)
+  "back-top":      { left: 765, top: 390 },  // back yoke / top of back (near collar back)
   "left-sleeve":   { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
-  "right-sleeve":  { left: 409, top: 58  },  // leftSleeve UV zone → appears on right sleeve; top adjusted for flipY so it sits at same sleeve height as left-sleeve
-  "collar-edge":   { left: 265, top: 240 },  // collar UV zone center: { left:12, top:183, w:507, h:166 }
-  "collar-left":   { left: 140, top: 240 },  // left collar tip (wearer's left)
-  "collar-right":  { left: 390, top: 240 },  // right collar tip (wearer's right)
+  "right-sleeve":  { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve
+  "collar-left":   { left: 140, top: 310 },  // left collar tip (wearer's left) — lower y = closer to tip
+  "collar-right":  { left: 390, top: 310 },  // right collar tip (wearer's right)
 };
 // All UV zones are horizontally mirrored, so flipX:true corrects text/logos
 // everywhere. The right-sleeve island is also vertically flipped, requiring
@@ -126,7 +125,6 @@ const PLACEMENT_VIEW: Record<string, CameraView> = {
   "back-top":      "back",
   "left-sleeve":   "left",
   "right-sleeve":  "right",
-  "collar-edge":   "collar-center",
   "collar-left":   "collar-left",
   "collar-right":  "collar-right",
 };
@@ -2903,7 +2901,6 @@ export default function CustomizePage() {
                         {key:"right-sleeve", label:"Right Sleeve", cx:7, cy:23},
                         {key:"back-top",     label:"Back Top",     cx:30,cy:24,back:true},
                         {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
-                        {key:"collar-edge",  label:"Collar Centre", cx:30,cy:12},
                         {key:"collar-left",  label:"Collar Left",  cx:36,cy:14},
                         {key:"collar-right", label:"Collar Right", cx:24,cy:14},
                       ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
@@ -2983,7 +2980,6 @@ export default function CustomizePage() {
                         {key:"right-sleeve", label:"Right Sleeve", cx:7, cy:23},
                         {key:"back-top",     label:"Back Top",     cx:30,cy:24,back:true},
                         {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
-                        {key:"collar-edge",  label:"Collar Centre", cx:30,cy:12},
                         {key:"collar-left",  label:"Collar Left",  cx:36,cy:14},
                         {key:"collar-right", label:"Collar Right", cx:24,cy:14},
                       ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
@@ -3362,7 +3358,6 @@ export default function CustomizePage() {
                   {key:"right-sleeve", label:"Right Sleeve", cx:7, cy:23,back:false},
                   {key:"back-top",     label:"Back Top",     cx:30,cy:24,back:true},
                   {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
-                  {key:"collar-edge",  label:"Collar Centre",cx:30,cy:12,back:false},
                   {key:"collar-left",  label:"Collar Left",  cx:36,cy:14,back:false},
                   {key:"collar-right", label:"Collar Right", cx:24,cy:14,back:false},
                 ];
@@ -3421,19 +3416,19 @@ export default function CustomizePage() {
       {/* ── COLOR PICKER MODAL ───────────────────────────────────────────── */}
       {colorModalFor&&(
         <div style={{
-          position:"fixed",left:0,top:0,bottom:0,right:"auto",zIndex:200,
-          width:"min(520px, 48%)",
-          background:"rgba(26,26,24,0.50)",
-          display:"flex",alignItems:"center",justifyContent:"center",
+          position:"fixed",inset:0,zIndex:200,
+          background:"rgba(26,26,24,0.45)",
+          display:"flex",alignItems:"center",justifyContent:"flex-start",
+          padding:"0 0 0 16px",
         }} onClick={()=>{setColorModalFor(null);setPendingColorPick(null);}}>
           <div onClick={e=>e.stopPropagation()} style={{
-            background:V.bg,borderRadius:20,padding:"28px 28px 24px",
-            width:320,maxHeight:"88vh",overflowY:"auto",
+            background:V.bg,borderRadius:20,padding:"22px 20px 20px",
+            width:"min(320px, calc(100vw - 32px))",maxHeight:"90vh",overflowY:"auto",
             boxShadow:"0 32px 80px rgba(26,26,24,0.32)",
             border:`1px solid rgba(201,168,76,0.18)`,
           }}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-              <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+              <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
                 Choose Colour
               </div>
               <button onClick={()=>{setColorModalFor(null);setPendingColorPick(null);}} style={{
@@ -3445,12 +3440,7 @@ export default function CustomizePage() {
               onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=V.mu;}}>✕</button>
             </div>
 
-            {/* Instruction */}
-            <div style={{fontFamily:"'Jost',sans-serif",fontSize:10,color:V.mu,letterSpacing:".04em",marginBottom:16,padding:"8px 12px",background:V.sf2,borderRadius:8,border:`1px solid ${V.bd}`}}>
-              Select a colour, then click <strong style={{color:V.ac}}>Apply</strong>.
-            </div>
-
-            {/* Preset swatches */}
+            {/* Preset swatches — click to apply immediately */}
             {(()=>{
               const pickedVal = colorModalFor==="pattern" ? patColorB : colorModalFor==="base" ? patColorA : primaryColor;
               const displayCol = pendingColorPick ?? pickedVal;
@@ -3472,7 +3462,7 @@ export default function CustomizePage() {
                 setColorModalFor(null);
               };
               return(<>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:8,marginBottom:20}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:7,marginBottom:16}}>
                   {[
                     "#1a1a18","#2c2c2a","#4a4a48","#6b6b68","#9b9b98","#c8c8c4",
                     "#ffffff","#faf8f4","#f2ede4","#e8e2d8","#d4cfc6","#c9c4bb",
@@ -3483,8 +3473,8 @@ export default function CustomizePage() {
                     "#6B1A8B","#9B3AC0","#C060E0","#D890F0","#ECC0F8","#F5E0FF",
                     "#8B4A1A","#C47030","#E09050","#F0B880","#F8D8B0","#FFF0E0",
                   ].map(col=>(
-                    <button key={col} onClick={()=>setPendingColorPick(col)} style={{
-                      width:"100%",aspectRatio:"1",borderRadius:8,cursor:"pointer",
+                    <button key={col} onClick={()=>applyCol(col)} style={{
+                      width:"100%",aspectRatio:"1",borderRadius:7,cursor:"pointer",
                       background:col,
                       border:displayCol===col?`2.5px solid ${V.ac}`:`1px solid rgba(26,26,24,0.15)`,
                       transition:"all .15s",
@@ -3492,40 +3482,30 @@ export default function CustomizePage() {
                     }} title={col}/>
                   ))}
                 </div>
-                {/* Custom colour picker */}
+                {/* Custom colour — apply on input change */}
                 <div style={{fontFamily:"'Jost',sans-serif",fontSize:9,color:V.mu,letterSpacing:".06em",textTransform:"uppercase",marginBottom:6,fontWeight:600}}>
-                  Click the icon below to select a specific colour
+                  Pick a custom colour
                 </div>
-                <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:18}}>
-                  <div style={{width:40,height:40,borderRadius:10,background:displayCol,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <div style={{width:36,height:36,borderRadius:8,background:displayCol,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
                   <input type="color" value={displayCol}
-                    onChange={e=>setPendingColorPick(e.target.value)}
-                    style={{width:48,height:40,padding:2,border:`1.5px solid ${V.bd}`,borderRadius:8,cursor:"pointer",background:V.sf2}}/>
-                  <input type="text" value={displayCol}
-                    onChange={e=>{
+                    onChange={e=>applyCol(e.target.value)}
+                    style={{width:44,height:36,padding:2,border:`1.5px solid ${V.bd}`,borderRadius:8,cursor:"pointer",background:V.sf2}}/>
+                  <input type="text" defaultValue={displayCol}
+                    onBlur={e=>{
+                      e.target.style.borderColor=V.bd;
                       const v=e.target.value.trim();
-                      if(/^#[0-9A-Fa-f]{6}$/.test(v)) setPendingColorPick(v);
+                      if(/^#[0-9A-Fa-f]{6}$/.test(v)) applyCol(v);
                     }}
                     placeholder="#c9a84c"
                     style={{
-                      flex:1,padding:"9px 12px",borderRadius:8,
+                      flex:1,padding:"8px 10px",borderRadius:8,
                       border:`1.5px solid ${V.bd}`,background:V.sf2,
                       fontFamily:"'Jost',sans-serif",fontSize:12,color:V.tx,
                       outline:"none",letterSpacing:".04em",
                     }}
-                    onFocus={e=>e.target.style.borderColor=V.ac}
-                    onBlur={e=>e.target.style.borderColor=V.bd}/>
+                    onFocus={e=>e.target.style.borderColor=V.ac}/>
                 </div>
-                {/* Apply button */}
-                <button onClick={()=>applyCol(displayCol)} style={{
-                  width:"100%",padding:"12px 0",borderRadius:10,
-                  background:`linear-gradient(135deg,${V.ac},#b8943e)`,
-                  border:"none",cursor:"pointer",
-                  fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:700,
-                  color:"#fff",letterSpacing:".12em",textTransform:"uppercase",
-                  boxShadow:"0 4px 16px rgba(201,168,76,0.35)",
-                  transition:"all .2s",
-                }}>Apply Colour</button>
               </>);
             })()}
           </div>
@@ -3535,19 +3515,19 @@ export default function CustomizePage() {
       {/* ── PRINT PICKER MODAL ───────────────────────────────────────────── */}
       {printModalFor&&(
         <div style={{
-          position:"fixed",left:0,top:0,bottom:0,right:"auto",zIndex:200,
-          width:"min(520px, 48%)",
-          background:"rgba(26,26,24,0.50)",
-          display:"flex",alignItems:"center",justifyContent:"center",
+          position:"fixed",inset:0,zIndex:200,
+          background:"rgba(26,26,24,0.45)",
+          display:"flex",alignItems:"center",justifyContent:"flex-start",
+          padding:"0 0 0 16px",
         }} onClick={()=>{setPrintModalFor(null);setPendingPrintKey(null);}}>
           <div onClick={e=>e.stopPropagation()} style={{
-            background:V.bg,borderRadius:20,padding:"28px 28px 24px",
-            width:400,maxHeight:"88vh",overflowY:"auto",
+            background:V.bg,borderRadius:20,padding:"22px 20px 20px",
+            width:"min(380px, calc(100vw - 32px))",maxHeight:"90vh",overflowY:"auto",
             boxShadow:"0 32px 80px rgba(26,26,24,0.32)",
             border:`1px solid rgba(201,168,76,0.18)`,
           }}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-              <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+              <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
                 Choose Print
               </div>
               <button onClick={()=>{setPrintModalFor(null);setPendingPrintKey(null);}} style={{
@@ -3559,17 +3539,29 @@ export default function CustomizePage() {
               onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=V.mu;}}>✕</button>
             </div>
 
-            {/* Instruction */}
-            <div style={{fontFamily:"'Jost',sans-serif",fontSize:10,color:V.mu,letterSpacing:".04em",marginBottom:16,padding:"8px 12px",background:V.sf2,borderRadius:8,border:`1px solid ${V.bd}`}}>
-              Select a print, then click <strong style={{color:V.ac}}>Apply</strong>.
-            </div>
-
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
+            {/* Print grid — click to apply immediately */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
               {visiblePatterns.map(p=>{
-                const isActive=(pendingPrintKey??allOverPrintId)===p.id;
+                const isActive=allOverPrintId===p.id;
+                const applyPrint=(chosen:typeof p)=>{
+                  if(printModalFor==="base-body"){
+                    applyZonePrint("front",chosen); applyZonePrint("back",chosen);
+                    applyZonePrint("leftSleeve",chosen); applyZonePrint("rightSleeve",chosen);
+                    applyZonePrint("collar",chosen);
+                  } else if(printModalFor==="collar"){
+                    applyZonePrint("collar",chosen);
+                  } else if(printModalFor==="accent"){
+                    applyPatternDesignPrint(chosen);
+                  } else {
+                    applyAllOverPrint(chosen);
+                  }
+                  saveHistory();
+                  setPendingPrintKey(null);
+                  setPrintModalFor(null);
+                };
                 return(
-                  <div key={p.id} onClick={()=>setPendingPrintKey(p.id)} style={{
-                    cursor:"pointer",borderRadius:12,overflow:"hidden",
+                  <div key={p.id} onClick={()=>applyPrint(p)} style={{
+                    cursor:"pointer",borderRadius:10,overflow:"hidden",
                     border:`2px solid ${isActive?V.ac:V.bd}`,
                     transition:"all .2s",
                     boxShadow:isActive?`0 4px 16px rgba(201,168,76,0.3)`:"none",
@@ -3579,7 +3571,7 @@ export default function CustomizePage() {
                       background:`url(${patternUrl(p.file)}) center/cover`,
                     }}/>
                     <div style={{
-                      padding:"6px 8px",background:isActive?V.aclt:V.sf2,
+                      padding:"5px 6px",background:isActive?V.aclt:V.sf2,
                       fontFamily:"'Jost',sans-serif",fontSize:9,
                       letterSpacing:".06em",textTransform:"uppercase",
                       color:isActive?V.tx:V.mu,fontWeight:isActive?700:400,
@@ -3590,37 +3582,9 @@ export default function CustomizePage() {
               })}
             </div>
 
-            {/* Apply button */}
-            <button onClick={()=>{
-              const chosen=pendingPrintKey? visiblePatterns.find(p=>p.id===pendingPrintKey):null;
-              if(chosen){
-                if(printModalFor==="base-body"){
-                  applyZonePrint("front",chosen); applyZonePrint("back",chosen);
-                  applyZonePrint("leftSleeve",chosen); applyZonePrint("rightSleeve",chosen);
-                  applyZonePrint("collar",chosen);
-                } else if(printModalFor==="collar"){
-                  applyZonePrint("collar",chosen);
-                } else if(printModalFor==="accent"){
-                  applyPatternDesignPrint(chosen);
-                } else {
-                  applyAllOverPrint(chosen);
-                }
-                saveHistory();
-              }
-              setPendingPrintKey(null); setPrintModalFor(null);
-            }} disabled={!pendingPrintKey} style={{
-              display:"block",width:"100%",padding:"12px 0",borderRadius:10,
-              background:pendingPrintKey?`linear-gradient(135deg,${V.ac},#b8943e)`:"rgba(26,26,24,0.08)",
-              border:"none",cursor:pendingPrintKey?"pointer":"default",
-              fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:700,
-              color:pendingPrintKey?"#fff":V.mu,letterSpacing:".12em",textTransform:"uppercase",
-              boxShadow:pendingPrintKey?"0 4px 16px rgba(201,168,76,0.35)":"none",
-              transition:"all .2s",
-            }}>Apply Print</button>
-
             {allOverPrintId&&(
               <button onClick={()=>{clearAllOverPrint();saveHistory();setPrintModalFor(null);setPendingPrintKey(null);}} style={{
-                display:"block",width:"100%",marginTop:10,padding:"10px 0",
+                display:"block",width:"100%",marginTop:12,padding:"10px 0",
                 borderRadius:99,border:`1px solid rgba(196,92,92,.35)`,
                 background:"transparent",color:"#c45c5c",fontSize:11,
                 cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".05em",

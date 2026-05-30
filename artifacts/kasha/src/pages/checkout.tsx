@@ -611,19 +611,28 @@ export default function CheckoutPage() {
             <div className="space-y-6 mb-8 max-h-[70vh] overflow-y-auto pr-2">
               {cart.items.map(item => (
                 <div key={item.id} className="flex gap-4">
-                  <div className="w-16 aspect-[3/4] bg-secondary flex-shrink-0 relative">
-                    {(item.product.thumbnailUrl || item.product.modelUrl) && (
+                  <div className="w-16 aspect-[3/4] bg-secondary flex-shrink-0 relative overflow-hidden">
+                    {item.customization?.previewImageUrl ? (
+                      <img
+                        src={item.customization.previewImageUrl}
+                        alt={item.product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (item.product.thumbnailUrl || item.product.modelUrl) ? (
                       <img 
                         src={getAssetUrl(item.product.thumbnailUrl || item.product.modelUrl)} 
                         alt={item.product.name}
                         className="w-full h-full object-cover"
                       />
+                    ) : null}
+                    {item.customization && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-white text-[8px] text-center py-0.5 tracking-widest uppercase">Bespoke</div>
                     )}
                   </div>
                   <div className="flex-1 flex flex-col justify-center text-sm">
                     <p className="font-serif font-medium">{item.product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}</p>
                     <p className="text-muted-foreground">Qty: {item.quantity} | Size: {item.size}</p>
-                    {item.customization && <p className="text-xs italic text-primary mt-1">Bespoke: {item.customization.name}</p>}
+                    {item.customization && <p className="text-xs italic text-primary mt-1">{item.customization.name}</p>}
                   </div>
                   <div className="text-sm font-medium">
                     {formatPrice(item.product.priceInPaise * item.quantity)}
