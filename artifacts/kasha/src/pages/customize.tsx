@@ -100,7 +100,7 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "back-top":      { left: 765, top: 390 },  // back yoke / top of back (near collar back)
   "left-sleeve":   { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
   "right-sleeve":  { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve
-  "collar-left":   { left: 390, top: 240 },  // wearer's left tip → UV RIGHT (mirror flips it to left side on garment)
+  "collar-left":   { left: 395, top: 240 },  // wearer's left tip → UV RIGHT (mirror flips it to left side on garment)
   "collar-right":  { left: 140, top: 240 },  // wearer's right tip → UV LEFT (mirror flips it to right side on garment)
 };
 // All UV zones are horizontally mirrored, so flipX:true corrects text/logos
@@ -114,7 +114,7 @@ function placementFlipX(_placement: string): boolean {
 // The right-sleeve UV island is also flipped vertically relative to the left sleeve,
 // so text/logos placed there need flipY:true as well to appear right-side up.
 function placementFlipY(placement: string): boolean {
-  return placement === "right-sleeve";
+  return placement === "";
 }
 // Which 3-D view to jump to when a placement is selected
 type CameraView = "front"|"back"|"right"|"left"|"collar-center"|"collar-left"|"collar-right";
@@ -637,7 +637,9 @@ export default function CustomizePage() {
     setPrimaryColor(hex);
     const fc=fcRef.current;
     baseBgRef.current=hex;
-    if (!allOverPrintId) setFabricBg(fc,hex);
+    // Always apply colour — if a full-body print is active, clear it so the colour shows
+    if (allOverPrintId) setAllOverPrintId(null);
+    setFabricBg(fc,hex);
     syncTexture();
     if (mats[0]) {
       setMats(prev=>{const n=[...prev];if(!n[0])return prev;n[0]={...n[0],color:hex};try{n[0].mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]);}catch{};return n;});
@@ -3440,6 +3442,10 @@ export default function CustomizePage() {
               onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=V.mu;}}>✕</button>
             </div>
 
+            <div style={{fontFamily:"'Jost',sans-serif",fontSize:10,color:V.mu,letterSpacing:".05em",marginBottom:12,textTransform:"uppercase",fontWeight:500}}>
+              Click a colour to apply it instantly
+            </div>
+
             {/* Preset swatches — click to apply immediately */}
             {(()=>{
               const pickedVal = colorModalFor==="pattern" ? patColorB : colorModalFor==="base" ? patColorA : primaryColor;
@@ -3537,6 +3543,10 @@ export default function CustomizePage() {
               }}
               onMouseEnter={e=>{e.currentTarget.style.background=V.sf2;e.currentTarget.style.color=V.tx;}}
               onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.color=V.mu;}}>✕</button>
+            </div>
+
+            <div style={{fontFamily:"'Jost',sans-serif",fontSize:10,color:V.mu,letterSpacing:".05em",marginBottom:12,textTransform:"uppercase",fontWeight:500}}>
+              Click a print to apply it instantly
             </div>
 
             {/* Print grid — click to apply immediately */}
