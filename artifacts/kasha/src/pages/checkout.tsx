@@ -130,6 +130,8 @@ export default function CheckoutPage() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [pincodeResolved, setPincodeResolved] = useState(false);
   const [pincodeResolvedState, setPincodeResolvedState] = useState<string>("");
+  // true only when the postal API explicitly says the pincode doesn't exist
+  const [pincodeExplicitlyInvalid, setPincodeExplicitlyInvalid] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function validateForm(): Record<string, string> {
@@ -146,7 +148,7 @@ export default function CheckoutPage() {
       errs.shippingPostalCode = "Enter a valid 6-digit PIN code";
     } else if (pincodeLoading) {
       errs.shippingPostalCode = "Verifying PIN code, please wait…";
-    } else if (!pincodeResolvedState) {
+    } else if (pincodeExplicitlyInvalid) {
       errs.shippingPostalCode = "PIN code not recognised. Please check and try again.";
     }
     if (!formData.shippingState) {
@@ -161,35 +163,43 @@ export default function CheckoutPage() {
   const pincodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const pincode = formData.shippingPostalCode;
+    // Reset pincode-derived state whenever the input changes
+    setPincodeResolved(false);
+    setPincodeResolvedState("");
+    setPincodeExplicitlyInvalid(false);
     if (!/^\d{6}$/.test(pincode)) return;
     if (pincodeTimerRef.current) clearTimeout(pincodeTimerRef.current);
     pincodeTimerRef.current = setTimeout(async () => {
       setPincodeLoading(true);
       try {
         const res = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
-        if (!res.ok) return;
+        if (!res.ok) return; // network/server error — don't block the user
         const data = await res.json();
+        const status = data?.[0]?.Status;
         const postOffice = data?.[0]?.PostOffice?.[0];
-        if (postOffice) {
-          const district = postOffice.District || postOffice.Block || postOffice.Name || "";
-          const state    = postOffice.State || "";
-          const resolvedState = INDIAN_STATES.find(s => s === state)
-            || INDIAN_STATES.find(s => s.toLowerCase() === state.toLowerCase())
-            || INDIAN_STATES.find(s => state.toLowerCase().startsWith(s.toLowerCase()))
-            || "";
-          // Always force state from pincode; only fill city if not already entered
-          setFormData(prev => ({
-            ...prev,
-            shippingCity:  prev.shippingCity.trim() ? prev.shippingCity : (district || prev.shippingCity),
-            shippingState: resolvedState || prev.shippingState,
-          }));
-          if (resolvedState) {
-            setPincodeResolvedState(resolvedState);
-            setPincodeResolved(true);
-          }
-          if (!resolvedState && district) setPincodeResolved(true);
+        if (!postOffice || status === "Error" || status === "404") {
+          // Only mark invalid when the API explicitly says so
+          setPincodeExplicitlyInvalid(true);
+          return;
         }
-      } catch { /* silently ignore */ } finally {
+        const district = postOffice.District || postOffice.Block || postOffice.Name || "";
+        const state    = postOffice.State || "";
+        const resolvedState = INDIAN_STATES.find(s => s === state)
+          || INDIAN_STATES.find(s => s.toLowerCase() === state.toLowerCase())
+          || INDIAN_STATES.find(s => state.toLowerCase().startsWith(s.toLowerCase()))
+          || "";
+        // Always force state from pincode; only fill city if not already entered
+        setFormData(prev => ({
+          ...prev,
+          shippingCity:  prev.shippingCity.trim() ? prev.shippingCity : (district || prev.shippingCity),
+          shippingState: resolvedState || prev.shippingState,
+        }));
+        if (resolvedState) {
+          setPincodeResolvedState(resolvedState);
+          setPincodeResolved(true);
+        }
+        if (!resolvedState && district) setPincodeResolved(true);
+      } catch { /* network failure — silently ignore, don't block the user */ } finally {
         setPincodeLoading(false);
       }
     }, 400);
