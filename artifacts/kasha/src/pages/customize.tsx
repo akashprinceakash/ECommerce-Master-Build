@@ -877,6 +877,9 @@ export default function CustomizePage() {
       img.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition),flipY:placementFlipY(logoPosition),angle:placementAngle(logoPosition)});
       const fc=fcRef.current; if(!fc) return;
       if (logoObjRef.current) fc.remove(logoObjRef.current);
+      // Sweep any previously tagged logo objects (stale refs)
+      fc.getObjects().filter((o:any)=>o?.data?.kashaLogo).forEach((o:any)=>fc.remove(o));
+      (img as any).data={kashaLogo:true};
       fc.add(img); fc.setActiveObject(img); logoObjRef.current=img;
       setLogoPlaced(true);
       fc.renderAll(); syncTexture();
@@ -897,9 +900,14 @@ export default function CustomizePage() {
 
   const removeLogo=()=>{
     const fc=fcRef.current;
-    // Remove from canvas if the object still exists
-    if(logoObjRef.current&&fc){fc.remove(logoObjRef.current);fc.renderAll();syncTexture();}
-    // Always clear state, even if the canvas ref was somehow stale
+    if(fc){
+      // Remove via tracked ref (fast path)
+      if(logoObjRef.current) fc.remove(logoObjRef.current);
+      // Sweep by kashaLogo tag — catches cases where the ref was stale
+      // (e.g. user deleted via Fabric corner control before clicking Remove)
+      fc.getObjects().filter((o:any)=>o?.data?.kashaLogo).forEach((o:any)=>fc.remove(o));
+      fc.renderAll(); syncTexture();
+    }
     logoObjRef.current=null;
     setLogoPreview(null);
     setLogoPlaced(false);
@@ -1382,9 +1390,11 @@ export default function CustomizePage() {
                       // Explicitly remove tracked objects first (covers all Fabric text types)
                       if(textObjRef.current){fc.remove(textObjRef.current);textObjRef.current=null;}
                       if(logoObjRef.current){fc.remove(logoObjRef.current);logoObjRef.current=null;}
-                      // Sweep any stray image/text objects not caught by the refs
+                      // Sweep any stray image/text objects not caught by the refs.
+                      // Protect zone prints (kashaZonePrint) and KD design layers (data.tag = "__kashaKdBg__").
+                      // Note: zone color Rects have type "rect" so they are naturally excluded.
                       fc.getObjects()
-                        .filter((o:any)=>!o?.data?.kashaZonePrint&&!o?.data?.kdDesignZone&&(o.type==="image"||o.type==="textbox"||o.type==="i-text"||o.type==="text"))
+                        .filter((o:any)=>!o?.data?.kashaZonePrint&&!o?.data?.tag&&(o.type==="image"||o.type==="textbox"||o.type==="i-text"||o.type==="text"))
                         .forEach((o:any)=>fc.remove(o));
                       fc.renderAll(); syncTexture();
                     }
@@ -1911,7 +1921,7 @@ export default function CustomizePage() {
                     <div style={{display:"flex",flexDirection:"column",gap:8}}>
                       <div style={{position:"relative",borderRadius:12,overflow:"hidden",border:`1px solid ${V.bd}`}}>
                         <img src={logoPreview} alt="Logo preview" style={{width:"100%",height:120,objectFit:"contain",background:V.sf2,display:"block"}}/>
-                        <button onClick={()=>{setLogoPreview(null);setLogoPlaced(false);if(logoObjRef.current&&fcRef.current){fcRef.current.remove(logoObjRef.current);logoObjRef.current=null;syncTexture();}}} style={{
+                        <button onClick={()=>{removeLogo();}} style={{
                           position:"absolute",top:6,right:6,width:22,height:22,borderRadius:6,
                           border:`1px solid ${V.bd}`,background:"rgba(250,250,247,0.9)",cursor:"pointer",
                           display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:V.mu,
