@@ -1930,7 +1930,7 @@ export default function CustomizePage() {
                     <div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px",borderRadius:12,background:V.sf2,border:`1px solid ${V.bd}`}}>
                       <div>
                         <div style={{...sb}}>Size — <span style={{color:V.ac}}>{(logoSize*0.376).toFixed(1)}&Prime; × {logoObjRef.current?((logoSize*0.376)*(logoObjRef.current.height/logoObjRef.current.width)).toFixed(1):(logoSize*0.376).toFixed(1)}&Prime;</span> <span style={{color:V.mu,fontWeight:400}}>({logoSize}%)</span></div>
-                        <input type="range" min={5} max={60} value={logoSize} onChange={e=>{const v=+e.target.value;setLogoSize(v);if(logoObjRef.current){logoObjRef.current.scaleToWidth(Math.round(v*(1024/100)));logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
+                        <input type="range" min={5} max={60} value={logoSize} onChange={e=>{const v=+e.target.value;setLogoSize(v);if(logoObjRef.current){const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};logoObjRef.current.scaleToWidth(Math.round(v*(1024/100)));logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(logoPosition)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
                           style={{width:"100%",accentColor:V.tx,cursor:"pointer",height:4,borderRadius:2,
                             background:`linear-gradient(to right,${V.tx} 0%,${V.tx} ${Math.round((logoSize-5)/55*100)}%,#c4bfb8 ${Math.round((logoSize-5)/55*100)}%,#c4bfb8 100%)`}}/>
                       </div>
@@ -1969,7 +1969,7 @@ export default function CustomizePage() {
                     <div>
                       <div style={{...sb}}>Size</div>
                       <input type="range" min={14} max={80} value={textFontSize}
-                        onChange={e=>{const v=+e.target.value;setTextFontSize(v);if(textObjRef.current){textObjRef.current.set({fontSize:v});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
+                        onChange={e=>{const v=+e.target.value;setTextFontSize(v);if(textObjRef.current){const pos=LOGO_POSITIONS[textPosition]||{left:512,top:512};textObjRef.current.set({fontSize:v,left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(textPosition)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
                         style={{width:80,accentColor:V.tx,cursor:"pointer",height:4,borderRadius:2,
                           background:`linear-gradient(to right,${V.tx} 0%,${V.tx} ${Math.round((textFontSize-14)/66*100)}%,#c4bfb8 ${Math.round((textFontSize-14)/66*100)}%,#c4bfb8 100%)`}}/>
                       <div style={{fontSize:9,color:V.mu,textAlign:"center",fontFamily:"'Jost',sans-serif"}}>{textFontSize}px</div>
@@ -2841,7 +2841,7 @@ export default function CustomizePage() {
                     <div>
                       <div style={{fontSize:9,letterSpacing:".12em",textTransform:"uppercase",color:V.mu,fontFamily:"'Jost',sans-serif",marginBottom:6}}>Font Size</div>
                       <div style={{position:"relative"}}>
-                        <select value={textFontSize} onChange={e=>{const v=+e.target.value;setTextFontSize(v);if(textObjRef.current){textObjRef.current.set({fontSize:v});fcRef.current?.renderAll();syncTexture();}}} style={{width:"100%",padding:"9px 28px 9px 12px",border:`1.5px solid ${V.bd}`,borderRadius:8,background:"#fff",color:V.tx,fontSize:13,fontFamily:"'Jost',sans-serif",appearance:"none",WebkitAppearance:"none",cursor:"pointer",outline:"none"}}>
+                        <select value={textFontSize} onChange={e=>{const v=+e.target.value;setTextFontSize(v);if(textObjRef.current){const pos=LOGO_POSITIONS[textPosition]||{left:512,top:512};textObjRef.current.set({fontSize:v,left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(textPosition)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{width:"100%",padding:"9px 28px 9px 12px",border:`1.5px solid ${V.bd}`,borderRadius:8,background:"#fff",color:V.tx,fontSize:13,fontFamily:"'Jost',sans-serif",appearance:"none",WebkitAppearance:"none",cursor:"pointer",outline:"none"}}>
                           {[16,20,24,28,32,36,40,48,56,64,72,80,96].map(s=><option key={s} value={s}>{s}</option>)}
                         </select>
                         <span style={{position:"absolute",right:9,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",fontSize:10,color:V.mu}}>▾</span>
@@ -3044,7 +3044,7 @@ export default function CustomizePage() {
                       <span style={{fontSize:11,color:V.tx,fontWeight:600,fontFamily:"'Jost',sans-serif"}}>{logoSize}%</span>
                     </div>
                     <input type="range" min={10} max={100} step={5} value={logoSize}
-                      onChange={e=>{setLogoSize(+e.target.value);if(logoObjRef.current){logoObjRef.current.scaleToWidth(Math.round(+e.target.value*(1024/100)));fcRef.current?.renderAll();syncTexture();}}}
+                      onChange={e=>{const v=+e.target.value;setLogoSize(v);if(logoObjRef.current){const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};logoObjRef.current.scaleToWidth(Math.round(v*(1024/100)));logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(logoPosition)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
                       style={{width:"100%",height:4,background:V.bd2,borderRadius:2,outline:"none",WebkitAppearance:"none",appearance:"none",accentColor:V.ac}}/>
                   </div>
                 </div>
