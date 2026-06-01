@@ -1,0 +1,3 @@
+- [Collar UV mapping](collar-uv.md) — collar UV is NOT body-mirrored; UV-left = garment-left (opposite of body zones)
+- [CustomizeEntryModal product source](modal-products.md) — modal fetches live products via useListProducts; no solid SKU product in DB (solid card uses pattern product + ?style=solid override)
+- [Customisation pricing rules](pricing-rules.md) — zone/all-over prints: ₹0; logo & text: ₹20 base + ₹1/sq inch each

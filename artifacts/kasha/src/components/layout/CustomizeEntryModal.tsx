@@ -1,13 +1,18 @@
 /**
  * CustomizeEntryModal — Bespoke Studio entry point.
- * Gender selector (Men / Women) then a horizontally-scrollable row of all
- * available styles (Solid Polo, Print Polo, KA.SHA Signature Patterns).
- * Solid and Print thumbnails are fetched live from the product API.
+ *
+ * Products are fetched live from the API and categorised by SKU type using
+ * parseSku().  This means the modal always reflects the same product data as
+ * the individual product pages — no more hardcoded IDs or design overrides.
+ *
+ * Layout: 1 Solid · 1 Print Polo · up to 5 Pattern Polos (men's only).
+ * Women's section shows a "Coming Soon" placeholder for now.
  */
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useUser } from "@clerk/react";
-import { useGetProduct, getGetProductQueryKey } from "@workspace/api-client-react";
+import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
+import { parseSku } from "@/components/3d/sku-config";
 import { getAssetUrl } from "@/lib/api";
 
 interface Props {
@@ -24,62 +29,104 @@ interface CarouselItem {
   tag: string;
   thumbnail: string;
   href: string;
-  modelUrl?: string;
+  /** productId whose page this card represents (for consistency check) */
+  productId?: number;
 }
 
-const PATTERN_ITEMS: CarouselItem[] = [
-  {
-    key: "pattern-1001",
-    label: "Pattern 1001",
-    tag: "Pattern",
-    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1779449525478-157065178.webp",
-    href: "/products/34/customize?style=pattern&design=KS1001B",
-  },
-  {
-    key: "pattern-1002",
-    label: "Pattern 1002",
-    tag: "Pattern",
-    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1779449004280-642782439.webp",
-    href: "/products/31/customize?style=pattern&design=KS1002B",
-  },
-  {
-    key: "pattern-1003",
-    label: "Pattern 1003",
-    tag: "Pattern",
-    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1779449254970-226857725.webp",
-    href: "/products/35/customize?style=pattern&design=KS1003B",
-  },
-  {
-    key: "pattern-1004",
-    label: "Pattern 1004",
-    tag: "Pattern",
-    thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1779449327778-896276668.webp",
-    href: "/products/36/customize?style=pattern&design=KS1004B",
-  },
-  {
-    key: "pattern-1005",
-    label: "Pattern 1005",
-    tag: "Pattern",
-    thumbnail: "/api/public/thumbnails/KS1001BBeige-Brown-1.png",
-    href: "/products/32/customize?style=pattern&design=KS1005B",
-  },
-];
+// ── Fallback solid thumbnail (used when no solid product exists in DB) ─────────
+const SOLID_FALLBACK_THUMB =
+  "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1780122689994-89671772.webp";
 
 export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   const [, navigate] = useLocation();
   const [gender, setGender] = useState<Gender>("Men");
   const { user, isLoaded } = useUser();
 
-  const { data: solidProduct } = useGetProduct(34, {
-    query: { queryKey: getGetProductQueryKey(34), enabled: isOpen },
+  // Fetch the full product list — same data as the /products page
+  const { data: products = [] } = useListProducts(undefined, {
+    query: { queryKey: getListProductsQueryKey(), enabled: isOpen },
   });
-  const { data: print003Product } = useGetProduct(27, {
-    query: { queryKey: getGetProductQueryKey(27), enabled: isOpen },
-  });
+
+  // ── Derive carousel items from live product data ─────────────────────────
+  const { solidItem, printItem, patternItems } = useMemo(() => {
+    // Men's products: exclude women's prefix (KL, KW …)
+    const mens = products.filter(
+      (p) => p.sku && !p.sku.toUpperCase().startsWith("KL")
+    );
+
+    // ── Pattern products (one per product, up to 5) ───────────────────────
+    const patternProds = mens.filter(
+      (p) => parseSku(p.sku ?? "").type === "pattern"
+    );
+    // Sort by id for consistent ordering; take up to 5
+    patternProds.sort((a, b) => a.id - b.id);
+    const top5Patterns = patternProds.slice(0, 5);
+
+    const patternItems: CarouselItem[] = top5Patterns.map((p) => {
+      const parsed = parseSku(p.sku ?? "");
+      const designId =
+        parsed.type === "pattern" ? parsed.designId : p.sku ?? "";
+      return {
+        key: `pattern-${p.id}`,
+        label: p.name,
+        tag: "Pattern",
+        thumbnail: getAssetUrl(p.thumbnailUrl) ?? "",
+        // No style override — navigate to the real product page URL so the studio
+        // loads the same design the customer sees on the product page.
+        href: `/products/${p.id}/customize`,
+        productId: p.id,
+      };
+    });
+
+    // ── Print product: prefer the GP004 floral (id=27), else first print ──
+    const printProds = mens
+      .filter((p) => parseSku(p.sku ?? "").type === "print")
+      .sort((a, b) => a.id - b.id);
+    const printProd = printProds.find((p) => p.id === 27) ?? printProds[0];
+    const printItem: CarouselItem | null = printProd
+      ? {
+          key: `print-${printProd.id}`,
+          label: printProd.name,
+          tag: "Print Polo",
+          thumbnail: getAssetUrl(printProd.thumbnailUrl) ?? "",
+          href: `/products/${printProd.id}/customize`,
+          productId: printProd.id,
+        }
+      : null;
+
+    // ── Solid: no solid-SKU product exists in the DB yet.
+    //    Use the first pattern product as the base garment but open the studio
+    //    in solid mode via ?style=solid.  The base product just provides the
+    //    3-D model — colors are fully customisable once inside the studio.
+    const solidBase = top5Patterns[0] ?? patternProds[0];
+    const solidItem: CarouselItem = {
+      key: "solid",
+      label: "Solid Polo",
+      tag: "Solid",
+      thumbnail: SOLID_FALLBACK_THUMB,
+      href: solidBase
+        ? `/products/${solidBase.id}/customize?style=solid&design=KS1000BPOWDERBLUE`
+        : "/products/34/customize?style=solid&design=KS1000BPOWDERBLUE",
+    };
+
+    return { solidItem, printItem, patternItems };
+  }, [products]);
+
+  const MEN_ITEMS: CarouselItem[] = [
+    solidItem,
+    ...(printItem ? [printItem] : []),
+    ...patternItems,
+  ];
+
+  function handleSelect(href: string) {
+    onClose();
+    const sep = href.includes("?") ? "&" : "?";
+    navigate(href + sep + "from=modal");
+  }
 
   if (!isOpen) return null;
 
-  // ── Auth gate: prompt sign-in/sign-up before entering the studio ─────────
+  // ── Auth gate ─────────────────────────────────────────────────────────────
   if (isLoaded && !user) {
     return (
       <div
@@ -87,8 +134,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           position: "fixed", inset: 0, zIndex: 9999,
           display: "flex", alignItems: "center", justifyContent: "center",
           background: "rgba(26,26,24,0.62)",
-          backdropFilter: "blur(8px)",
-          WebkitBackdropFilter: "blur(8px)",
+          backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
           animation: "cemFadeIn 0.28s cubic-bezier(0.16,1,0.3,1)",
         }}
         onClick={e => { if (e.target === e.currentTarget) onClose(); }}
@@ -102,19 +148,15 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           boxShadow: "0 32px 80px rgba(26,26,24,0.24), 0 8px 24px rgba(26,26,24,0.12)",
           textAlign: "center",
         }}>
-          <button
-            onClick={onClose}
-            style={{
-              position: "absolute", top: 16, right: 18,
-              width: 32, height: 32, borderRadius: "50%",
-              border: "1px solid rgba(26,26,24,0.12)",
-              background: "transparent", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 16, color: "#8a8780",
-            }}
-          >×</button>
+          <button onClick={onClose} style={{
+            position: "absolute", top: 16, right: 18,
+            width: 32, height: 32, borderRadius: "50%",
+            border: "1px solid rgba(26,26,24,0.12)",
+            background: "transparent", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 16, color: "#8a8780",
+          }}>×</button>
 
-          {/* Icon */}
           <div style={{
             width: 56, height: 56, borderRadius: "50%",
             background: "linear-gradient(135deg, #fdf6e3, #f5e9c4)",
@@ -142,36 +184,29 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
             fontSize: 12, color: "#6b6b68", lineHeight: 1.7,
             letterSpacing: ".02em", marginBottom: 28,
           }}>
-            Create an account or sign in so we can save your design choices and customisations for you to revisit anytime.
+            Create an account or sign in so we can save your design choices
+            and customisations for you to revisit anytime.
           </p>
 
           <div style={{ height: 1, background: "linear-gradient(90deg, transparent, #c9a84c, transparent)", opacity: 0.3, marginBottom: 24 }} />
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <a
-              href="/sign-up"
-              onClick={onClose}
-              style={{
-                display: "block", padding: "13px 24px", borderRadius: 99,
-                background: "linear-gradient(135deg, #c9a84c, #b8925a)",
-                color: "#fff", fontFamily: "'Jost', sans-serif",
-                fontSize: 11, fontWeight: 700, letterSpacing: ".1em",
-                textTransform: "uppercase", textDecoration: "none",
-                boxShadow: "0 4px 16px rgba(201,168,76,0.3)",
-              }}
-            >Create Account</a>
-            <a
-              href="/sign-in"
-              onClick={onClose}
-              style={{
-                display: "block", padding: "12px 24px", borderRadius: 99,
-                background: "transparent",
-                border: "1.5px solid rgba(26,26,24,0.18)",
-                color: "#1a1a18", fontFamily: "'Jost', sans-serif",
-                fontSize: 11, fontWeight: 600, letterSpacing: ".1em",
-                textTransform: "uppercase", textDecoration: "none",
-              }}
-            >Sign In</a>
+            <a href="/sign-up" onClick={onClose} style={{
+              display: "block", padding: "13px 24px", borderRadius: 99,
+              background: "linear-gradient(135deg, #c9a84c, #b8925a)",
+              color: "#fff", fontFamily: "'Jost', sans-serif",
+              fontSize: 11, fontWeight: 700, letterSpacing: ".1em",
+              textTransform: "uppercase", textDecoration: "none",
+              boxShadow: "0 4px 16px rgba(201,168,76,0.3)",
+            }}>Create Account</a>
+            <a href="/sign-in" onClick={onClose} style={{
+              display: "block", padding: "12px 24px", borderRadius: 99,
+              background: "transparent",
+              border: "1.5px solid rgba(26,26,24,0.18)",
+              color: "#1a1a18", fontFamily: "'Jost', sans-serif",
+              fontSize: 11, fontWeight: 600, letterSpacing: ".1em",
+              textTransform: "uppercase", textDecoration: "none",
+            }}>Sign In</a>
           </div>
 
           <p style={{
@@ -189,35 +224,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
     );
   }
 
-  const solidThumb    = getAssetUrl(solidProduct?.thumbnailUrl) ?? "";
-  const print003Thumb = getAssetUrl(print003Product?.thumbnailUrl) ?? "";
-
-  const MEN_ITEMS: CarouselItem[] = [
-    {
-      key: "solid",
-      label: "Solid Polo",
-      tag: "Solid",
-      thumbnail: "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1780122689994-89671772.webp",
-      modelUrl: solidProduct?.modelUrl ?? undefined,
-      href: "/products/34/customize?style=solid&design=KS1000BPOWDERBLUE",
-    },
-    {
-      key: "print-003",
-      label: "GP003 — Floral Print",
-      tag: "Print Polo",
-      thumbnail: print003Thumb,
-      href: "/products/27/customize?style=print",
-    },
-    ...PATTERN_ITEMS,
-  ];
-
   const items: CarouselItem[] | null = gender === "Men" ? MEN_ITEMS : null;
-
-  function handleSelect(href: string) {
-    onClose();
-    const sep = href.includes("?") ? "&" : "?";
-    navigate(href + sep + "from=modal");
-  }
 
   return (
     <div
@@ -225,8 +232,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         position: "fixed", inset: 0, zIndex: 9999,
         display: "flex", alignItems: "center", justifyContent: "center",
         background: "rgba(26,26,24,0.62)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
+        backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
         animation: "cemFadeIn 0.28s cubic-bezier(0.16,1,0.3,1)",
       }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
@@ -245,19 +251,18 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
       }}>
 
         {/* Close */}
-        <button
-          onClick={onClose}
-          style={{
-            position: "absolute", top: 16, right: 18,
-            width: 32, height: 32, borderRadius: "50%",
-            border: "1px solid rgba(26,26,24,0.12)",
-            background: "transparent", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 16, color: "#8a8780", transition: "all 0.2s",
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#ede9e1"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-        >×</button>
+        <button onClick={onClose} style={{
+          position: "absolute", top: 16, right: 18,
+          width: 32, height: 32, borderRadius: "50%",
+          border: "1px solid rgba(26,26,24,0.12)",
+          background: "transparent", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 16, color: "#8a8780", transition: "all 0.2s",
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#ede9e1"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
+          ×
+        </button>
 
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 22 }}>
@@ -288,21 +293,16 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         {/* Gender selector */}
         <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 20 }}>
           {GENDERS.map(g => (
-            <button
-              key={g}
-              onClick={() => setGender(g)}
-              style={{
-                padding: "6px 18px",
-                borderRadius: 99,
-                border: `1.5px solid ${gender === g ? "#c9a84c" : "rgba(26,26,24,0.14)"}`,
-                background: gender === g ? "rgba(201,168,76,0.1)" : "transparent",
-                color: gender === g ? "#c9a84c" : "#6b6b68",
-                fontFamily: "'Jost', sans-serif",
-                fontSize: 11, letterSpacing: ".08em", textTransform: "uppercase",
-                fontWeight: gender === g ? 700 : 400,
-                cursor: "pointer", transition: "all .18s",
-              }}
-            >{g}</button>
+            <button key={g} onClick={() => setGender(g)} style={{
+              padding: "6px 18px", borderRadius: 99,
+              border: `1.5px solid ${gender === g ? "#c9a84c" : "rgba(26,26,24,0.14)"}`,
+              background: gender === g ? "rgba(201,168,76,0.1)" : "transparent",
+              color: gender === g ? "#c9a84c" : "#6b6b68",
+              fontFamily: "'Jost', sans-serif",
+              fontSize: 11, letterSpacing: ".08em", textTransform: "uppercase",
+              fontWeight: gender === g ? 700 : 400,
+              cursor: "pointer", transition: "all .18s",
+            }}>{g}</button>
           ))}
         </div>
 
@@ -325,22 +325,19 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
               letterSpacing: ".05em", lineHeight: 1.7, maxWidth: 340, margin: "0 auto",
             }}>
               The KA.SHA Women's Bespoke Studio is being crafted with care.
-              Check back shortly — or explore our <strong style={{ color: "#c9a84c" }}>Men's collection</strong> while you wait.
+              Check back shortly — or explore our{" "}
+              <strong style={{ color: "#c9a84c" }}>Men's collection</strong> while you wait.
             </p>
-            <button
-              onClick={() => setGender("Men")}
-              style={{
-                marginTop: 24, padding: "10px 28px", borderRadius: 99,
-                border: "1.5px solid #c9a84c", background: "transparent",
-                fontFamily: "'Jost', sans-serif", fontSize: 10,
-                letterSpacing: ".12em", textTransform: "uppercase",
-                color: "#c9a84c", fontWeight: 700, cursor: "pointer",
-              }}
-            >View Men's Styles</button>
+            <button onClick={() => setGender("Men")} style={{
+              marginTop: 24, padding: "10px 28px", borderRadius: 99,
+              border: "1.5px solid #c9a84c", background: "transparent",
+              fontFamily: "'Jost', sans-serif", fontSize: 10,
+              letterSpacing: ".12em", textTransform: "uppercase",
+              color: "#c9a84c", fontWeight: 700, cursor: "pointer",
+            }}>View Men's Styles</button>
           </div>
         ) : (
           <>
-            {/* Horizontally scrollable row */}
             <div className="cem-scroll" style={{
               display: "flex", gap: 12, overflowX: "auto", overflowY: "hidden",
               paddingBottom: 16, paddingLeft: 2, paddingRight: 2,
@@ -421,28 +418,14 @@ function CarouselCard({ item, onSelect }: { item: CarouselItem; onSelect: (h: st
         el.style.boxShadow = "0 2px 10px rgba(26,26,24,0.05)";
       }}
     >
-      {/* Image / 3-D preview */}
+      {/* Thumbnail */}
       <div style={{
         width: "100%", aspectRatio: "1/1", overflow: "hidden",
         background: "linear-gradient(160deg, #f7f4ee 0%, #edeae3 100%)",
         flexShrink: 0, position: "relative",
         display: "flex", alignItems: "center", justifyContent: "center",
       }}>
-        {item.modelUrl ? (
-          <model-viewer
-            src={item.modelUrl}
-            alt={item.label}
-            camera-orbit="0deg 80deg 2.2m"
-            field-of-view="22deg"
-            shadow-intensity="0.6"
-            exposure="1.05"
-            interaction-prompt="none"
-            style={{
-              width: "100%", height: "100%",
-              display: "block", pointerEvents: "none",
-            }}
-          />
-        ) : item.thumbnail ? (
+        {item.thumbnail ? (
           <img
             src={item.thumbnail}
             alt={item.label}
@@ -472,7 +455,9 @@ function CarouselCard({ item, onSelect }: { item: CarouselItem; onSelect: (h: st
         <div style={{
           fontFamily: "'Cormorant Garamond', serif", fontSize: 14, fontWeight: 600,
           color: "#1a1a18", lineHeight: 1.2,
-        }}>{item.label}</div>
+          overflow: "hidden", display: "-webkit-box",
+          WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+        } as React.CSSProperties}>{item.label}</div>
         <div style={{
           fontFamily: "'Jost', sans-serif", fontSize: 8, color: "#c9a84c",
           marginTop: 5, letterSpacing: ".08em",
