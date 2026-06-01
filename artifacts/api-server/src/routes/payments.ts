@@ -42,11 +42,139 @@ router.post("/shipping/rates", requireAuth, async (req, res): Promise<void> => {
   const weightKg = Math.max(0.1, Number(itemCount) * 0.4);
   const result = await getShippingRates(String(pincode), weightKg, Number(orderValueRupees));
   if (!result) {
-    // Fallback: flat ₹99 if Shiprocket unreachable
     res.json({ chargeInPaise: 9900, courierName: "Standard Delivery" }); return;
   }
   res.json(result);
 });
+
+/* ──────────────────────────────────────────────────────
+   Shared: validate & load cart for checkout
+────────────────────────────────────────────────────── */
+async function validateCheckoutCart(userId: string) {
+  const [cart] = await db.select().from(cartsTable).where(eq(cartsTable.userId, userId));
+  if (!cart) return { error: "Cart is empty" };
+
+  const cartItems = await db.select().from(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id));
+  if (cartItems.length === 0) return { error: "Cart is empty" };
+
+  const cartItemsWithProducts = await Promise.all(
+    cartItems.map(async (item) => {
+      const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId));
+      return { ...item, product };
+    }),
+  );
+
+  for (const item of cartItemsWithProducts) {
+    if (!item.product) return { error: "A product in your cart is no longer available" };
+    if (item.product.stock < item.quantity)
+      return { error: `Only ${item.product.stock} unit${item.product.stock === 1 ? "" : "s"} left for "${item.product.name}"` };
+  }
+
+  const itemsTotalInPaise = cartItemsWithProducts.reduce(
+    (sum, item) => sum + (item.product?.priceInPaise ?? 0) * item.quantity, 0,
+  );
+  if (itemsTotalInPaise <= 0) return { error: "Invalid cart total" };
+
+  return { cart, cartItemsWithProducts, itemsTotalInPaise };
+}
+
+/* ──────────────────────────────────────────────────────
+   Shared: post-order fulfillment (cart clear + stock + Shiprocket + email)
+────────────────────────────────────────────────────── */
+async function runFulfillment(
+  order: typeof ordersTable.$inferSelect,
+  userId: string,
+) {
+  // Clear cart
+  const [cart] = await db.select().from(cartsTable).where(eq(cartsTable.userId, userId));
+  if (cart) {
+    await db.delete(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id));
+  }
+
+  // Deduct stock
+  const rawItemsForStock = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
+  await Promise.all(
+    rawItemsForStock.map((it) =>
+      db.update(productsTable)
+        .set({ stock: sql`GREATEST(${productsTable.stock} - ${it.quantity}, 0)` })
+        .where(eq(productsTable.id, it.productId)),
+    ),
+  );
+
+  // Load items + products for fulfillment
+  const rawItems = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
+  const itemsWithProducts = await Promise.all(
+    rawItems.map(async (it) => {
+      const [product] = await db.select().from(productsTable).where(eq(productsTable.id, it.productId));
+      return { ...it, product };
+    }),
+  );
+
+  // Resolve customer email
+  let customerEmail = "";
+  try {
+    const clerkUser = await clerkClient.users.getUser(userId);
+    customerEmail =
+      clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ?? "";
+  } catch (e) {
+    logger.warn({ userId, e }, "Could not fetch Clerk user email");
+  }
+
+  // Shiprocket + email in background
+  void (async () => {
+    try {
+      const sr = await createShiprocketOrder({
+        orderId: order.id,
+        orderDate: order.createdAt,
+        customerName: order.shippingName,
+        customerEmail,
+        customerPhone: order.shippingPhone,
+        shippingAddress: order.shippingAddress,
+        shippingCity: order.shippingCity,
+        shippingState: order.shippingState,
+        shippingPostalCode: order.shippingPostalCode,
+        items: itemsWithProducts.map((it) => ({
+          name: it.product?.name ?? "KA.SHA Product",
+          sku: it.product?.sku ?? "KASHA-SKU",
+          units: it.quantity,
+          sellingPrice: Math.round((it.product?.priceInPaise ?? it.priceInPaise) / 100),
+        })),
+        totalInRupees: Math.round(order.totalInPaise / 100),
+      });
+
+      if (sr.shiprocketOrderId) {
+        await db.update(ordersTable)
+          .set({ shiprocketOrderId: sr.shiprocketOrderId, shiprocketAwb: sr.awb, trackingUrl: sr.trackingUrl })
+          .where(eq(ordersTable.id, order.id));
+      }
+
+      if (customerEmail) {
+        await sendOrderConfirmation({
+          orderNumber: order.id,
+          customerName: order.shippingName,
+          customerEmail,
+          items: itemsWithProducts.map((it) => ({
+            name: it.product?.name ?? "KA.SHA Product",
+            size: it.size,
+            quantity: it.quantity,
+            priceInPaise: it.priceInPaise,
+          })),
+          totalInPaise: order.totalInPaise,
+          shippingChargeInPaise: order.shippingChargeInPaise ?? 0,
+          shippingAddress: order.shippingAddress,
+          shippingCity: order.shippingCity,
+          shippingState: order.shippingState,
+          shippingPostalCode: order.shippingPostalCode,
+          shippingPhone: order.shippingPhone,
+          awb: sr.awb,
+          trackingUrl: sr.trackingUrl,
+        });
+      }
+    } catch (e) {
+      logger.error({ orderId: order.id, e }, "Post-payment background tasks failed");
+    }
+  })();
+}
 
 /* ──────────────────────────────────────────────────────
    Step 1: Create Razorpay order + DB pending order
@@ -64,7 +192,6 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
     res.status(400).json({ error: "Missing shipping fields" }); return;
   }
 
-  // Format validation
   if (!/^[a-zA-Z\s]{2,60}$/.test(String(shippingName).trim())) {
     res.status(400).json({ error: "Name must contain only letters and spaces (2–60 characters)" }); return;
   }
@@ -76,37 +203,13 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
     res.status(400).json({ error: "PIN code must be exactly 6 digits" }); return;
   }
 
-  const [cart] = await db.select().from(cartsTable).where(eq(cartsTable.userId, userId));
-  if (!cart) { res.status(400).json({ error: "Cart is empty" }); return; }
+  const cartResult = await validateCheckoutCart(userId);
+  if ("error" in cartResult) { res.status(400).json({ error: cartResult.error }); return; }
+  const { cartItemsWithProducts, itemsTotalInPaise } = cartResult;
 
-  const cartItems = await db.select().from(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id));
-  if (cartItems.length === 0) { res.status(400).json({ error: "Cart is empty" }); return; }
-
-  const cartItemsWithProducts = await Promise.all(
-    cartItems.map(async (item) => {
-      const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId));
-      return { ...item, product };
-    }),
-  );
-
-  const itemsTotalInPaise = cartItemsWithProducts.reduce(
-    (sum, item) => sum + (item.product?.priceInPaise ?? 0) * item.quantity, 0,
-  );
-  if (itemsTotalInPaise <= 0) { res.status(400).json({ error: "Invalid cart total" }); return; }
   const totalInPaise = itemsTotalInPaise + shippingChargeInPaise;
 
-  for (const item of cartItemsWithProducts) {
-    if (!item.product) {
-      res.status(400).json({ error: "A product in your cart is no longer available" }); return;
-    }
-    if (item.product.stock < item.quantity) {
-      res.status(400).json({
-        error: `Only ${item.product.stock} unit${item.product.stock === 1 ? "" : "s"} left for "${item.product.name}"`,
-      }); return;
-    }
-  }
-
-  // Cancel stale pending orders so we don't accumulate them
+  // Cancel stale pending orders
   const stale = await db
     .select({ id: ordersTable.id })
     .from(ordersTable)
@@ -117,7 +220,6 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
       .where(inArray(ordersTable.id, stale.map((s) => s.id)));
   }
 
-  // payment_capture: 1 → tells Razorpay to auto-capture when payment is authorised
   let rzpOrder: any;
   try {
     rzpOrder = await rzp.orders.create({
@@ -135,6 +237,7 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
   const [order] = await db.insert(ordersTable).values({
     userId,
     status: "pending",
+    paymentMethod: "online",
     totalInPaise,
     shippingChargeInPaise,
     shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
@@ -174,7 +277,6 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
   );
   if (!dbOrder) { res.status(404).json({ error: "Order not found for this user" }); return; }
 
-  // Idempotent: already confirmed with same payment
   if (dbOrder.status === "confirmed" && dbOrder.paymentId === razorpay_payment_id) {
     const full = await buildFullOrder(dbOrder.id);
     res.status(200).json(full); return;
@@ -183,7 +285,6 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
     res.status(409).json({ error: `Order is in '${dbOrder.status}' state and cannot be paid` }); return;
   }
 
-  // Verify HMAC signature
   const expected = crypto
     .createHmac("sha256", keySecret)
     .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -192,7 +293,6 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
     res.status(400).json({ error: "Invalid payment signature" }); return;
   }
 
-  // Fetch payment from Razorpay
   let payment: any;
   try { payment = await rzp.payments.fetch(razorpay_payment_id); }
   catch (e: any) {
@@ -206,7 +306,6 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
     res.status(400).json({ error: "Payment amount mismatch" }); return;
   }
 
-  // If payment is authorized but not yet captured, capture it now
   if (payment.status === "authorized") {
     try {
       await rzp.payments.capture(razorpay_payment_id, dbOrder.totalInPaise, "INR");
@@ -228,20 +327,87 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
 });
 
 /* ──────────────────────────────────────────────────────
-   Razorpay Webhook — handles UPI/mobile where the
-   browser callback never fires (app switch, reload etc.)
-   Register this URL in Razorpay Dashboard → Webhooks:
-     https://api.kashaonline.in/api/payment/webhook
-   Events to enable: payment.captured
+   COD Order — creates a confirmed order without payment
+────────────────────────────────────────────────────── */
+router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).userId;
+
+  const {
+    shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
+    shippingChargeInPaise: rawShippingCharge,
+  } = req.body ?? {};
+  const shippingChargeInPaise = Math.max(0, parseInt(String(rawShippingCharge ?? "0"), 10) || 0);
+
+  if (!shippingName || !shippingAddress || !shippingCity || !shippingState || !shippingPostalCode || !shippingPhone) {
+    res.status(400).json({ error: "Missing shipping fields" }); return;
+  }
+  if (!/^[a-zA-Z\s]{2,60}$/.test(String(shippingName).trim())) {
+    res.status(400).json({ error: "Name must contain only letters and spaces (2–60 characters)" }); return;
+  }
+  const phoneDigits = String(shippingPhone).replace(/\D/g, "");
+  if (!/^\d{10}$/.test(phoneDigits)) {
+    res.status(400).json({ error: "Mobile number must be exactly 10 digits" }); return;
+  }
+  if (!/^\d{6}$/.test(String(shippingPostalCode))) {
+    res.status(400).json({ error: "PIN code must be exactly 6 digits" }); return;
+  }
+
+  const cartResult = await validateCheckoutCart(userId);
+  if ("error" in cartResult) { res.status(400).json({ error: cartResult.error }); return; }
+  const { cartItemsWithProducts, itemsTotalInPaise } = cartResult;
+
+  const totalInPaise = itemsTotalInPaise + shippingChargeInPaise;
+
+  // Cancel any stale pending (online) orders for this user
+  const stale = await db
+    .select({ id: ordersTable.id })
+    .from(ordersTable)
+    .where(and(eq(ordersTable.userId, userId), eq(ordersTable.status, "pending")));
+  if (stale.length > 0) {
+    await db.update(ordersTable)
+      .set({ status: "cancelled" })
+      .where(inArray(ordersTable.id, stale.map((s) => s.id)));
+  }
+
+  // Create order directly as confirmed — no Razorpay involved
+  const [order] = await db.insert(ordersTable).values({
+    userId,
+    status: "confirmed",
+    paymentMethod: "cod",
+    totalInPaise,
+    shippingChargeInPaise,
+    shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
+  }).returning();
+
+  await Promise.all(
+    cartItemsWithProducts.map((item) =>
+      db.insert(orderItemsTable).values({
+        orderId: order.id,
+        productId: item.productId,
+        customizationId: item.customizationId ?? null,
+        quantity: item.quantity,
+        size: item.size,
+        priceInPaise: item.product?.priceInPaise ?? 0,
+      }),
+    ),
+  );
+
+  // Run fulfillment in background (cart clear, stock deduction, Shiprocket, email)
+  void runFulfillment(order, userId);
+
+  const full = await buildFullOrder(order.id);
+  res.status(201).json(full);
+});
+
+/* ──────────────────────────────────────────────────────
+   Razorpay Webhook
 ────────────────────────────────────────────────────── */
 router.post("/payment/webhook", async (req, res): Promise<void> => {
-  // Return 200 immediately so Razorpay doesn't retry
   res.status(200).json({ ok: true });
 
   const signature = req.headers["x-razorpay-signature"] as string | undefined;
   const rawBody   = (req as any).rawBody as Buffer | undefined;
 
-  // Verify signature only when a webhook secret is configured
   if (webhookSecret) {
     if (!signature || !rawBody) {
       logger.warn("Webhook received without signature or raw body — skipped");
@@ -297,7 +463,7 @@ router.post("/payment/webhook", async (req, res): Promise<void> => {
 });
 
 /* ──────────────────────────────────────────────────────
-   Shared: confirm order + trigger fulfillment
+   Shared: confirm prepaid order + run fulfillment
 ────────────────────────────────────────────────────── */
 async function confirmOrder(
   orderId: number,
@@ -311,101 +477,11 @@ async function confirmOrder(
     .returning();
 
   if (!updated) {
-    // Another concurrent path already confirmed it — just return the existing row
     const [existing] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId));
     return existing;
   }
 
-  // Clear cart
-  const [cart] = await db.select().from(cartsTable).where(eq(cartsTable.userId, userId));
-  if (cart) {
-    await db.delete(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id));
-  }
-
-  // Deduct stock for each ordered item (floor at 0 to prevent negative stock)
-  const rawItemsForStock = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, updated.id));
-  await Promise.all(
-    rawItemsForStock.map((it) =>
-      db.update(productsTable)
-        .set({ stock: sql`GREATEST(${productsTable.stock} - ${it.quantity}, 0)` })
-        .where(eq(productsTable.id, it.productId)),
-    ),
-  );
-
-  // Load items + products for fulfillment
-  const rawItems = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, updated.id));
-  const itemsWithProducts = await Promise.all(
-    rawItems.map(async (it) => {
-      const [product] = await db.select().from(productsTable).where(eq(productsTable.id, it.productId));
-      return { ...it, product };
-    }),
-  );
-
-  // Resolve customer email
-  let customerEmail = "";
-  try {
-    const clerkUser = await clerkClient.users.getUser(userId);
-    customerEmail =
-      clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ?? "";
-  } catch (e) {
-    logger.warn({ userId, e }, "Could not fetch Clerk user email");
-  }
-
-  // Shiprocket + email in background
-  void (async () => {
-    try {
-      const sr = await createShiprocketOrder({
-        orderId: updated.id,
-        orderDate: updated.createdAt,
-        customerName: updated.shippingName,
-        customerEmail,
-        customerPhone: updated.shippingPhone,
-        shippingAddress: updated.shippingAddress,
-        shippingCity: updated.shippingCity,
-        shippingState: updated.shippingState,
-        shippingPostalCode: updated.shippingPostalCode,
-        items: itemsWithProducts.map((it) => ({
-          name: it.product?.name ?? "KA.SHA Product",
-          sku: it.product?.sku ?? "KASHA-SKU",
-          units: it.quantity,
-          sellingPrice: Math.round((it.product?.priceInPaise ?? it.priceInPaise) / 100),
-        })),
-        totalInRupees: Math.round(updated.totalInPaise / 100),
-      });
-
-      if (sr.shiprocketOrderId) {
-        await db.update(ordersTable)
-          .set({ shiprocketOrderId: sr.shiprocketOrderId, shiprocketAwb: sr.awb, trackingUrl: sr.trackingUrl })
-          .where(eq(ordersTable.id, updated.id));
-      }
-
-      if (customerEmail) {
-        await sendOrderConfirmation({
-          orderNumber: updated.id,
-          customerName: updated.shippingName,
-          customerEmail,
-          items: itemsWithProducts.map((it) => ({
-            name: it.product?.name ?? "KA.SHA Product",
-            size: it.size,
-            quantity: it.quantity,
-            priceInPaise: it.priceInPaise,
-          })),
-          totalInPaise: updated.totalInPaise,
-          shippingChargeInPaise: updated.shippingChargeInPaise ?? 0,
-          shippingAddress: updated.shippingAddress,
-          shippingCity: updated.shippingCity,
-          shippingState: updated.shippingState,
-          shippingPostalCode: updated.shippingPostalCode,
-          shippingPhone: updated.shippingPhone,
-          awb: sr.awb,
-          trackingUrl: sr.trackingUrl,
-        });
-      }
-    } catch (e) {
-      logger.error({ orderId: updated.id, e }, "Post-payment background tasks failed");
-    }
-  })();
-
+  await runFulfillment(updated, userId);
   return updated;
 }
 

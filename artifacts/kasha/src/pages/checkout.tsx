@@ -276,6 +276,7 @@ export default function CheckoutPage() {
     return () => { if (rateTimerRef.current) clearTimeout(rateTimerRef.current); };
   }, [formData.shippingPostalCode, cart]);
 
+  const [paymentMethod, setPaymentMethod] = useState<"online" | "cod">("online");
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentResult, setPaymentResult] = useState<PaymentResult>(null);
 
@@ -310,12 +311,32 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!window.Razorpay) {
-      toast({ title: "Payment unavailable", description: "Razorpay failed to load. Please refresh and try again.", variant: "destructive" });
+    setIsProcessing(true);
+
+    // ── COD path ──────────────────────────────────────────────────────────
+    if (paymentMethod === "cod") {
+      try {
+        const order = await authFetch("/api/payment/cod-order", {
+          method: "POST",
+          body: JSON.stringify({ ...formData, shippingChargeInPaise: shippingRate.chargeInPaise }),
+        });
+        queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+        setPaymentResult({ type: "success", orderId: order.id });
+      } catch (e: any) {
+        toast({ title: "Order Failed", description: e?.message ?? "There was an error placing your order.", variant: "destructive" });
+      } finally {
+        setIsProcessing(false);
+      }
       return;
     }
 
-    setIsProcessing(true);
+    // ── Online (Razorpay) path ────────────────────────────────────────────
+    if (!window.Razorpay) {
+      toast({ title: "Payment unavailable", description: "Razorpay failed to load. Please refresh and try again.", variant: "destructive" });
+      setIsProcessing(false);
+      return;
+    }
+
     let modalShown = false;
     try {
       const { orderId, amount, currency, keyId } = await authFetch("/api/payment/order", {
@@ -582,17 +603,78 @@ export default function CheckoutPage() {
               </div>
 
               <div className="pt-8">
-                <h2 className="font-serif text-xl font-medium mb-6 border-b border-border/50 pb-2">Payment</h2>
-                <div className="p-4 border border-border/50 bg-secondary/5 mb-8">
-                  <p className="text-sm text-muted-foreground">Secured by Razorpay. You will be redirected to complete your payment via UPI, card, or netbanking.</p>
+                <h2 className="font-serif text-xl font-medium mb-6 border-b border-border/50 pb-2">Payment Method</h2>
+
+                {/* Payment method selector */}
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  {(["online", "cod"] as const).map((method) => {
+                    const active = paymentMethod === method;
+                    return (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setPaymentMethod(method)}
+                        className="flex flex-col items-start gap-1.5 p-4 border text-left transition-all"
+                        style={{
+                          borderColor: active ? "hsl(var(--primary))" : "hsl(var(--border) / 0.5)",
+                          background: active ? "hsl(var(--primary) / 0.04)" : "hsl(var(--secondary) / 0.05)",
+                          outline: active ? "1px solid hsl(var(--primary))" : "none",
+                        }}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <span
+                            className="w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                            style={{ borderColor: active ? "hsl(var(--primary))" : "#aaa" }}
+                          >
+                            {active && (
+                              <span
+                                className="w-1.5 h-1.5 rounded-full"
+                                style={{ background: "hsl(var(--primary))" }}
+                              />
+                            )}
+                          </span>
+                          <span
+                            className="text-sm font-medium tracking-wide"
+                            style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.07em", textTransform: "uppercase", fontSize: 11 }}
+                          >
+                            {method === "online" ? "Pay Online" : "Cash on Delivery"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground pl-5">
+                          {method === "online"
+                            ? "UPI, card, netbanking via Razorpay"
+                            : "Pay when your order arrives"}
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
-                <Button 
-                  type="submit" 
-                  size="lg" 
+
+                {/* Context note */}
+                {paymentMethod === "online" ? (
+                  <div className="p-3 border border-border/40 bg-secondary/5 mb-6 flex items-start gap-2">
+                    <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"/></svg>
+                    <p className="text-xs text-muted-foreground">Secured by Razorpay. Complete payment via UPI, card, or netbanking.</p>
+                  </div>
+                ) : (
+                  <div className="p-3 border border-amber-200 bg-amber-50 mb-6 flex items-start gap-2">
+                    <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <p className="text-xs text-amber-700">Please keep the exact amount ready at the time of delivery. COD is available across India.</p>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  size="lg"
                   className="w-full h-14 text-sm tracking-widest rounded-none"
                   disabled={isProcessing || !shippingRate}
                 >
-                  {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : `PAY ${shippingRate ? formatPrice(grandTotal) : ""}`}
+                  {isProcessing
+                    ? <Loader2 className="w-5 h-5 animate-spin" />
+                    : paymentMethod === "cod"
+                      ? `PLACE ORDER — ${shippingRate ? formatPrice(grandTotal) : ""}`
+                      : `PAY ${shippingRate ? formatPrice(grandTotal) : ""}`
+                  }
                 </Button>
                 {!shippingRate && formData.shippingPostalCode.length === 6 && (
                   <p className="text-xs text-muted-foreground text-center mt-2">Calculating shipping...</p>
@@ -727,7 +809,7 @@ export default function CheckoutPage() {
                       <circle cx="26" cy="26" r="26" className="kasha-circle" stroke="#16a34a" strokeWidth="2" fill="none" />
                       <path className="kasha-check" d="M14 27l8 8 16-16" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
                     </svg>
-                    <h2 className="font-serif text-2xl font-medium text-gray-900 mb-2">Payment Successful</h2>
+                    <h2 className="font-serif text-2xl font-medium text-gray-900 mb-2">Order Confirmed!</h2>
                     <p className="text-gray-500 text-sm mb-1">Your order has been placed successfully.</p>
                     <p className="text-xs text-gray-400 mb-8">
                       Order #{String(paymentResult.orderId).padStart(6, "0")} · Redirecting to your order…
