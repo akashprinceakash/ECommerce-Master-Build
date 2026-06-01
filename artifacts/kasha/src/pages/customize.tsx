@@ -100,8 +100,8 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "back-top":      { left: 765, top: 390 },  // back yoke / top of back (near collar back)
   "left-sleeve":   { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
   "right-sleeve":  { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve
-  "collar-left":   { left: 139, top: 266 },  // centre of left collar half (UV x: 12–265, y centre: 183+83=266)
-  "collar-right":  { left: 392, top: 266 },  // centre of right collar half (UV x: 265–519, y centre: 266)
+  "collar-left":   { left:  62, top: 266 },  // left collar tip (UV strip start); text scaled by clampCollarText to fit
+  "collar-right":  { left: 452, top: 266 },  // right collar tip (UV strip end); text scaled by clampCollarText to fit
 };
 // All UV zones are horizontally mirrored — flipX corrects text/logos for all placements.
 // The right-sleeve UV island is additionally vertically flipped (handled by placementFlipY).
@@ -119,23 +119,30 @@ function placementFlipY(_placement: string): boolean {
 function placementAngle(placement: string): number {
   return (placement === "collar-left" || placement === "collar-right") ? -90 : 0;
 }
-// After -90° rotation, a text object's **width** (pre-rotation) becomes its horizontal
-// extent in UV space. Clamp it so the text never bleeds outside the collar zone edges
-// (UV x: 12–519). Non-collar placements reset any previous scale.
+// After -90° rotation, a text object's **width** (pre-rotation) spans horizontally in
+// UV space. Rather than scaling text down, we shift the centre so the text's near edge
+// stays just inside the collar zone boundary (UV x: 12–519).
+// collar-left: text may extend rightward freely; clamp only the left edge.
+// collar-right: text may extend leftward freely; clamp only the right edge.
 const COLLAR_UV_LEFT = 12, COLLAR_UV_RIGHT = 519;
+const COLLAR_MARGIN  = 8; // px clearance from zone boundary
 function clampCollarText(obj: any, position: string): void {
-  const isCollar = position === "collar-left" || position === "collar-right";
-  if (!isCollar) { obj.set({ scaleX: 1, scaleY: 1 }); return; }
-  const cx   = LOGO_POSITIONS[position]?.left ?? 265;
-  // Symmetric safe half-width: distance from centre to the nearer zone edge minus margin
-  const maxHalfW = Math.min(cx - COLLAR_UV_LEFT, COLLAR_UV_RIGHT - cx) - 8;
-  const halfW    = (obj.width ?? 0) * (obj.scaleX ?? 1) / 2;
-  if (halfW > maxHalfW && maxHalfW > 0) {
-    const s = maxHalfW / halfW;
-    obj.set({ scaleX: (obj.scaleX ?? 1) * s, scaleY: (obj.scaleY ?? 1) * s });
-  } else if (!isCollar) {
+  if (position !== "collar-left" && position !== "collar-right") {
     obj.set({ scaleX: 1, scaleY: 1 });
+    return;
   }
+  obj.set({ scaleX: 1, scaleY: 1 }); // always render at natural size
+  const halfW  = (obj.width ?? 0) / 2;
+  const baseCx = LOGO_POSITIONS[position]?.left ?? 265;
+  let   cx     = baseCx;
+  if (position === "collar-left") {
+    // ensure left edge (cx − halfW) ≥ COLLAR_UV_LEFT + MARGIN
+    cx = Math.max(baseCx, COLLAR_UV_LEFT + COLLAR_MARGIN + halfW);
+  } else {
+    // ensure right edge (cx + halfW) ≤ COLLAR_UV_RIGHT − MARGIN
+    cx = Math.min(baseCx, COLLAR_UV_RIGHT - COLLAR_MARGIN - halfW);
+  }
+  if (cx !== baseCx) obj.set({ left: cx });
 }
 // Which 3-D view to jump to when a placement is selected
 type CameraView = "front"|"back"|"right"|"left"|"collar-center"|"collar-left"|"collar-right";
