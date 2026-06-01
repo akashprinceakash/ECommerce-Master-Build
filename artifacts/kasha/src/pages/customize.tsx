@@ -125,7 +125,7 @@ function placementAngle(placement: string): number {
 // collar-left: text may extend rightward freely; clamp only the left edge.
 // collar-right: text may extend leftward freely; clamp only the right edge.
 const COLLAR_UV_LEFT = 12, COLLAR_UV_RIGHT = 519;
-const COLLAR_MARGIN  = 8; // px clearance from zone boundary
+const COLLAR_MARGIN  = 4; // px clearance from zone boundary
 function clampCollarText(obj: any, position: string): void {
   if (position !== "collar-left" && position !== "collar-right") {
     obj.set({ scaleX: 1, scaleY: 1 });
@@ -943,10 +943,12 @@ export default function CustomizePage() {
     const fc=fcRef.current; if(!fc||!textInput.trim()) return;
     const pos=LOGO_POSITIONS[textPosition]||{left:512,top:512};
     if (textObjRef.current) fc.remove(textObjRef.current);
+    const isCollar=textPosition==="collar-left"||textPosition==="collar-right";
+    const effectiveFontSize=isCollar?Math.min(textFontSize,14):textFontSize;
     const txt=new (fabric as any).IText(textInput.trim(),{
       left:pos.left, top:pos.top,
       originX:"center", originY:"center",
-      fontSize:textFontSize,
+      fontSize:effectiveFontSize,
       fill:textColor,
       fontFamily:textFont,
       fontWeight:textBold?"700":"400",
@@ -2984,7 +2986,7 @@ export default function CustomizePage() {
                             const isA=textPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                             return(
-                              <div key={c.key} onClick={()=>{setTextPosition(c.key);setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key),flipY:placementFlipY(c.key),angle:placementAngle(c.key)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
+                              <div key={c.key} onClick={()=>{const isCollar=c.key==="collar-left"||c.key==="collar-right";setTextPosition(c.key);if(isCollar)setTextFontSize(v=>Math.min(v,14));setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};const fs=isCollar?Math.min(textFontSize,14):textFontSize;textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key),flipY:placementFlipY(c.key),angle:placementAngle(c.key),fontSize:fs,scaleX:1,scaleY:1});clampCollarText(textObjRef.current,c.key);textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
                                 display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
                                 padding:"8px 4px",borderRadius:9,transition:"all .18s",
                                 border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
@@ -3477,7 +3479,7 @@ export default function CustomizePage() {
                         <div style={{...sb,marginBottom:8}}>Text</div>
                         {chipGrid(
                           k=>textPosition===k,
-                          k=>{setTextPosition(k as any);setCameraView(PLACEMENT_VIEW[k]??"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(textObjRef.current){const pos=LOGO_POSITIONS[k]||{left:512,top:512};textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(k),flipY:placementFlipY(k),angle:placementAngle(k)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}
+                          k=>{const isCollar=k==="collar-left"||k==="collar-right";setTextPosition(k as any);if(isCollar)setTextFontSize(v=>Math.min(v,14));setCameraView(PLACEMENT_VIEW[k]??"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(textObjRef.current){const pos=LOGO_POSITIONS[k]||{left:512,top:512};const fs=isCollar?Math.min(textFontSize,14):textFontSize;textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(k),flipY:placementFlipY(k),angle:placementAngle(k),fontSize:fs,scaleX:1,scaleY:1});clampCollarText(textObjRef.current,k);textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}
                         )}
                       </div>
                     )}
