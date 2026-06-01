@@ -100,8 +100,8 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "back-top":      { left: 765, top: 390 },  // back yoke / top of back (near collar back)
   "left-sleeve":   { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
   "right-sleeve":  { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve
-  "collar-left":   { left:  62, top: 270 },  // left tip — near left edge of collar UV strip
-  "collar-right":  { left: 452, top: 270 },  // right tip — near right edge of collar UV strip
+  "collar-left":   { left: 110, top: 270 },  // left collar flap — 98px from UV zone left edge (x=12)
+  "collar-right":  { left: 410, top: 270 },  // right collar flap — 109px from UV zone right edge (x=519)
 };
 // All UV zones are horizontally mirrored — flipX corrects text/logos for all placements.
 // The right-sleeve UV island is additionally vertically flipped (handled by placementFlipY).
@@ -118,6 +118,24 @@ function placementFlipY(_placement: string): boolean {
 // sitting neatly at the collar tip as seen from the front.
 function placementAngle(placement: string): number {
   return (placement === "collar-left" || placement === "collar-right") ? -90 : 0;
+}
+// After -90° rotation, a text object's **width** (pre-rotation) becomes its horizontal
+// extent in UV space. Clamp it so the text never bleeds outside the collar zone edges
+// (UV x: 12–519). Non-collar placements reset any previous scale.
+const COLLAR_UV_LEFT = 12, COLLAR_UV_RIGHT = 519;
+function clampCollarText(obj: any, position: string): void {
+  const isCollar = position === "collar-left" || position === "collar-right";
+  if (!isCollar) { obj.set({ scaleX: 1, scaleY: 1 }); return; }
+  const cx   = LOGO_POSITIONS[position]?.left ?? 265;
+  // Symmetric safe half-width: distance from centre to the nearer zone edge minus margin
+  const maxHalfW = Math.min(cx - COLLAR_UV_LEFT, COLLAR_UV_RIGHT - cx) - 8;
+  const halfW    = (obj.width ?? 0) * (obj.scaleX ?? 1) / 2;
+  if (halfW > maxHalfW && maxHalfW > 0) {
+    const s = maxHalfW / halfW;
+    obj.set({ scaleX: (obj.scaleX ?? 1) * s, scaleY: (obj.scaleY ?? 1) * s });
+  } else if (!isCollar) {
+    obj.set({ scaleX: 1, scaleY: 1 });
+  }
 }
 // Which 3-D view to jump to when a placement is selected
 type CameraView = "front"|"back"|"right"|"left"|"collar-center"|"collar-left"|"collar-right";
@@ -932,6 +950,7 @@ export default function CustomizePage() {
       selectable:true, evented:true,
       data:{tag:"user-text"},
     });
+    clampCollarText(txt, textPosition);
     fc.add(txt); fc.setActiveObject(txt);
     textObjRef.current=txt;
     setTextPlaced(true);
@@ -941,7 +960,11 @@ export default function CustomizePage() {
   const repositionText = () => {
     const o=textObjRef.current; if(!o) return;
     const pos=LOGO_POSITIONS[textPosition]||{left:512,top:512};
-    o.set({left:pos.left, top:pos.top, originX:"center", originY:"center", flipX:placementFlipX(textPosition),flipY:placementFlipY(textPosition),angle:placementAngle(textPosition), fontSize:textFontSize, fill:textColor, fontFamily:textFont, fontWeight:textBold?"700":"400", fontStyle:textItalic?"italic":"normal"});
+    o.set({left:pos.left, top:pos.top, originX:"center", originY:"center", flipX:placementFlipX(textPosition),flipY:placementFlipY(textPosition),angle:placementAngle(textPosition), fontSize:textFontSize, fill:textColor, fontFamily:textFont, fontWeight:textBold?"700":"400", fontStyle:textItalic?"italic":"normal",
+      // Reset scale first so clampCollarText works from a clean base
+      scaleX:1, scaleY:1,
+    });
+    clampCollarText(o, textPosition);
     o.setCoords();
     fcRef.current?.renderAll(); syncTexture();
   };
@@ -1979,7 +2002,7 @@ export default function CustomizePage() {
                     <div>
                       <div style={{...sb}}>Size</div>
                       <input type="range" min={14} max={80} value={textFontSize}
-                        onChange={e=>{const v=+e.target.value;setTextFontSize(v);if(textObjRef.current){const pos=LOGO_POSITIONS[textPosition]||{left:512,top:512};textObjRef.current.set({fontSize:v,left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(textPosition)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
+                        onChange={e=>{const v=+e.target.value;setTextFontSize(v);if(textObjRef.current){const pos=LOGO_POSITIONS[textPosition]||{left:512,top:512};textObjRef.current.set({fontSize:v,left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(textPosition),scaleX:1,scaleY:1});clampCollarText(textObjRef.current,textPosition);textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
                         style={{width:80,accentColor:V.tx,cursor:"pointer",height:4,borderRadius:2,
                           background:`linear-gradient(to right,${V.tx} 0%,${V.tx} ${Math.round((textFontSize-14)/66*100)}%,#c4bfb8 ${Math.round((textFontSize-14)/66*100)}%,#c4bfb8 100%)`}}/>
                       <div style={{fontSize:9,color:V.mu,textAlign:"center",fontFamily:"'Jost',sans-serif"}}>{textFontSize}px</div>
@@ -2851,7 +2874,7 @@ export default function CustomizePage() {
                     <div>
                       <div style={{fontSize:9,letterSpacing:".12em",textTransform:"uppercase",color:V.mu,fontFamily:"'Jost',sans-serif",marginBottom:6}}>Font Size</div>
                       <div style={{position:"relative"}}>
-                        <select value={textFontSize} onChange={e=>{const v=+e.target.value;setTextFontSize(v);if(textObjRef.current){const pos=LOGO_POSITIONS[textPosition]||{left:512,top:512};textObjRef.current.set({fontSize:v,left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(textPosition)});textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{width:"100%",padding:"9px 28px 9px 12px",border:`1.5px solid ${V.bd}`,borderRadius:8,background:"#fff",color:V.tx,fontSize:13,fontFamily:"'Jost',sans-serif",appearance:"none",WebkitAppearance:"none",cursor:"pointer",outline:"none"}}>
+                        <select value={textFontSize} onChange={e=>{const v=+e.target.value;setTextFontSize(v);if(textObjRef.current){const pos=LOGO_POSITIONS[textPosition]||{left:512,top:512};textObjRef.current.set({fontSize:v,left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(textPosition),scaleX:1,scaleY:1});clampCollarText(textObjRef.current,textPosition);textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{width:"100%",padding:"9px 28px 9px 12px",border:`1.5px solid ${V.bd}`,borderRadius:8,background:"#fff",color:V.tx,fontSize:13,fontFamily:"'Jost',sans-serif",appearance:"none",WebkitAppearance:"none",cursor:"pointer",outline:"none"}}>
                           {[16,20,24,28,32,36,40,48,56,64,72,80,96].map(s=><option key={s} value={s}>{s}</option>)}
                         </select>
                         <span style={{position:"absolute",right:9,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",fontSize:10,color:V.mu}}>▾</span>
