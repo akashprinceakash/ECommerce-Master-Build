@@ -100,8 +100,8 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "back-top":      { left: 765, top: 390 },  // back yoke / top of back (near collar back)
   "left-sleeve":   { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
   "right-sleeve":  { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve
-  "collar-left":   { left: 395, top: 240 },  // wearer's left tip → UV RIGHT (mirror flips it to left side on garment)
-  "collar-right":  { left: 140, top: 240 },  // wearer's right tip → UV LEFT (mirror flips it to right side on garment)
+  "collar-left":   { left: 140, top: 300 },  // wearer's left tip — collar UV is not body-mirrored; left in UV = left on garment
+  "collar-right":  { left: 390, top: 300 },  // wearer's right tip — right in UV = right on garment
 };
 // All UV zones are horizontally mirrored, so flipX:true corrects text/logos
 // everywhere. The right-sleeve island is also vertically flipped, requiring
@@ -893,8 +893,13 @@ export default function CustomizePage() {
   };
 
   const removeLogo=()=>{
-    const fc=fcRef.current; if(!fc) return;
-    if(logoObjRef.current){fc.remove(logoObjRef.current);logoObjRef.current=null;setLogoPreview(null);setLogoPlaced(false);fc.renderAll();syncTexture();}
+    const fc=fcRef.current;
+    // Remove from canvas if the object still exists
+    if(logoObjRef.current&&fc){fc.remove(logoObjRef.current);fc.renderAll();syncTexture();}
+    // Always clear state, even if the canvas ref was somehow stale
+    logoObjRef.current=null;
+    setLogoPreview(null);
+    setLogoPlaced(false);
   };
 
   // ── Text handlers ─────────────────────────────────────────────────────────
@@ -998,20 +1003,29 @@ export default function CustomizePage() {
     onSuccess:()=>{toast({title:"Design Saved ✓"});queryClient.invalidateQueries({queryKey:["customization",id]});},
     onError:(e:any)=>toast({title:"Error",description:e.message,variant:"destructive"}),
   });
+  const [cartAdded, setCartAdded] = useState(false);
   const cartMut=useMutation({
     mutationFn:async()=>{
       const payload=await buildPayload();
       const effectiveQty=Object.values(sizeQty).reduce((a,b)=>a+b,0)||qty;
       const effectiveSize=Object.entries(sizeQty).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])[0]?.[0]||size;
+      // Compute customisation charge
+      const logoW = logoSize * 0.376;
+      const logoArea = logoW * logoW * 0.75;
+      const logoCharge = logoPreview ? (20 + Math.ceil(logoArea)) : 0;
+      const textH = textFontSize * (22/1024);
+      const textW = Math.max(1, textInput.length) * textFontSize * 0.55 * (22/1024);
+      const textCharge = textPlaced ? (20 + Math.ceil(textH * textW)) : 0;
+      const customizationCharge = logoCharge + textCharge;
       // Try to save the customisation; if it fails, still add to cart without a customisation ID
       let customizationId: number|null = null;
       try {
-        const cust=await apiFetch("/api/customizations",{method:"POST",body:JSON.stringify(payload)});
+        const cust=await apiFetch("/api/customizations",{method:"POST",body:JSON.stringify({...payload,customizationCharge})});
         customizationId=cust.id??null;
       } catch { /* non-blocking — cart add will proceed */ }
       return apiFetch("/api/cart/items",{method:"POST",body:JSON.stringify({productId:id,customizationId,quantity:effectiveQty,size:effectiveSize})});
     },
-    onSuccess:()=>{toast({title:"Added to Cart ✓",description:"Your custom design has been saved to your cart."});},
+    onSuccess:()=>{setCartAdded(true);toast({title:"Added to Cart ✓",description:"Your custom design has been saved to your cart."});},
     onError:(e:any)=>toast({title:"Could not add to cart",description:e.message,variant:"destructive"}),
   });
 
@@ -1912,7 +1926,7 @@ export default function CustomizePage() {
                   {logoPreview&&(
                     <div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px",borderRadius:12,background:V.sf2,border:`1px solid ${V.bd}`}}>
                       <div>
-                        <div style={{...sb}}>Size — <span style={{color:V.ac}}>{(logoSize*0.376).toFixed(1)}&Prime;</span> <span style={{color:V.mu,fontWeight:400}}>({logoSize}%)</span></div>
+                        <div style={{...sb}}>Size — <span style={{color:V.ac}}>{(logoSize*0.376).toFixed(1)}&Prime; × {logoObjRef.current?((logoSize*0.376)*(logoObjRef.current.height/logoObjRef.current.width)).toFixed(1):(logoSize*0.376).toFixed(1)}&Prime;</span> <span style={{color:V.mu,fontWeight:400}}>({logoSize}%)</span></div>
                         <input type="range" min={5} max={60} value={logoSize} onChange={e=>{const v=+e.target.value;setLogoSize(v);if(logoObjRef.current){logoObjRef.current.scaleToWidth(Math.round(v*(1024/100)));logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
                           style={{width:"100%",accentColor:V.tx,cursor:"pointer",height:4,borderRadius:2,
                             background:`linear-gradient(to right,${V.tx} 0%,${V.tx} ${Math.round((logoSize-5)/55*100)}%,#c4bfb8 ${Math.round((logoSize-5)/55*100)}%,#c4bfb8 100%)`}}/>
@@ -3148,6 +3162,20 @@ export default function CustomizePage() {
                         {cartMut.isPending?"Adding…":"✦ Add to Cart"}
                       </button>
                     )}
+                    {cartAdded&&!isTypeMode&&(
+                      <Link href="/cart" style={{
+                        padding:"11px 0",borderRadius:99,
+                        border:`1.5px solid ${V.ac}`,background:V.aclt,color:V.tx,
+                        fontSize:12,fontWeight:600,cursor:"pointer",
+                        fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",
+                        textDecoration:"none",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:6,
+                        transition:"all 0.3s",
+                      }}
+                      onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=V.ac;}}
+                      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=V.aclt;}}>
+                        🛒 View Cart
+                      </Link>
+                    )}
                     {!isTypeMode && (
                       <Show when="signed-in">
                         <button onClick={handleSave} disabled={saveMut.isPending} style={{
@@ -3340,30 +3368,24 @@ export default function CustomizePage() {
           }}>
             <div style={{padding:"20px 14px",display:"flex",flexDirection:"column",gap:18}}>
               <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:15,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>Placement</div>
-              {/* ── Customisation charge: Rs 1 per sq inch ── */}
+              {/* ── Customisation charge: ₹20 base + ₹1/sq inch for logo & text only ── */}
               {(()=>{
-                // Print area estimates (sq in) per zone for a size-M polo shirt
-                const ZONE_SQ_IN: Record<string,number> = {front:120,back:150,collar:20,leftSleeve:55,rightSleeve:55};
-                const printedZoneArea = allOverPrintId
-                  ? (ZONE_SQ_IN.front + ZONE_SQ_IN.back)   // all-over = front + back
-                  : Object.entries(zonePrintIds).filter(([,v])=>!!v).reduce((s,[z])=>s+(ZONE_SQ_IN[z]||0),0);
-                const printCharge = printedZoneArea;
-                const logoW = logoSize * 0.376;
-                const logoArea = logoW * logoW * 0.75;
-                const logoCharge = logoPreview ? Math.ceil(logoArea) : 0;
+                // Zone prints and all-over prints carry no extra charge
+                const logoW = logoSize * 0.376;          // inches
+                const logoArea = logoW * logoW * 0.75;   // sq in estimate
+                const logoCharge = logoPreview ? (20 + Math.ceil(logoArea)) : 0;
                 const textH = textFontSize * (22/1024);
                 const textW = Math.max(1, textInput.length) * textFontSize * 0.55 * (22/1024);
-                const textCharge = textPlaced ? Math.ceil(textH * textW) : 0;
-                const total = printCharge + logoCharge + textCharge;
+                const textCharge = textPlaced ? (20 + Math.ceil(textH * textW)) : 0;
+                const total = logoCharge + textCharge;
                 if (!total) return null;
                 return(
                   <div style={{padding:"10px 12px",borderRadius:10,background:V.sf2,border:`1px solid ${V.bd}`}}>
                     <div style={{fontFamily:"'Jost',sans-serif",fontSize:9,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:V.mu,marginBottom:8}}>Customisation Charge</div>
-                    {printCharge>0&&<div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>{allOverPrintId?"All-over Print":"Zone Print"}</span><span style={{color:V.ac,fontWeight:600}}>₹{printCharge}</span></div>}
                     {logoPreview&&<div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>Logo</span><span style={{color:V.ac,fontWeight:600}}>₹{logoCharge}</span></div>}
-                    {textPlaced&&<div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>Text</span><span style={{color:V.ac,fontWeight:600}}>₹{textCharge}</span></div>}
+                    {textPlaced&&<div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>Text / Name</span><span style={{color:V.ac,fontWeight:600}}>₹{textCharge}</span></div>}
                     <div style={{borderTop:`1px solid ${V.bd}`,marginTop:6,paddingTop:6,display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:12,fontWeight:700,color:V.tx}}><span>Total</span><span style={{color:V.ac}}>₹{total}</span></div>
-                    <div style={{fontFamily:"'Jost',sans-serif",fontSize:8,color:V.mu,marginTop:5,fontStyle:"italic"}}>@ ₹1 per sq inch</div>
+                    <div style={{fontFamily:"'Jost',sans-serif",fontSize:9,color:V.mu,marginTop:5,fontStyle:"italic"}}>₹20 base + ₹1 per sq inch (logo &amp; text only)</div>
                   </div>
                 );
               })()}
