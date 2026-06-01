@@ -645,7 +645,7 @@ export default function CheckoutPage() {
                           </span>
                           <span
                             className="text-sm font-medium tracking-wide"
-                            style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.07em", textTransform: "uppercase", fontSize: 11 }}
+                            style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.07em", textTransform: "uppercase", fontSize: 12 }}
                           >
                             {method === "online" ? "Pay Online" : "Cash on Delivery"}
                           </span>

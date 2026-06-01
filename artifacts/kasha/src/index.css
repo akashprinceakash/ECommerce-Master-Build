@@ -61,6 +61,12 @@
   --font-serif: var(--app-font-serif);
   --font-mono: var(--app-font-mono);
 
+  /* Bump small text sizes for legibility */
+  --text-xs: 0.8125rem;          /* 13px  (was 12px) */
+  --text-xs--line-height: 1.2rem;
+  --text-sm: 0.9375rem;          /* 15px  (was 14px) */
+  --text-sm--line-height: 1.4rem;
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
