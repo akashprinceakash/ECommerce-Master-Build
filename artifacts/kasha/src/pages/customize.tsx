@@ -110,8 +110,8 @@ function placementFlipX(_placement: string): boolean {
 }
 // The right-sleeve UV island is also flipped vertically relative to the left sleeve,
 // so text/logos placed there need flipY:true as well to appear right-side up.
-function placementFlipY(placement: string): boolean {
-  return placement === "right-sleeve";
+function placementFlipY(_placement: string): boolean {
+  return false;
 }
 // Which 3-D view to jump to when a placement is selected
 type CameraView = "front"|"back"|"right"|"left"|"collar-center"|"collar-left"|"collar-right";
