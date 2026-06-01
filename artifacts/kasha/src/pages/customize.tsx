@@ -103,9 +103,10 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "collar-left":   { left: 140, top: 300 },  // wearer's left tip — collar UV is not body-mirrored; left in UV = left on garment
   "collar-right":  { left: 390, top: 300 },  // wearer's right tip — right in UV = right on garment
 };
-// Every UV island is horizontally mirrored → flipX:true corrects text/logos everywhere.
-function placementFlipX(_placement: string): boolean {
-  return true;
+// Every UV island except right-sleeve is horizontally mirrored → flipX:true corrects text/logos.
+// right-sleeve uses the leftSleeve UV island which is NOT h-mirrored, so flipX stays false there.
+function placementFlipX(placement: string): boolean {
+  return placement !== "right-sleeve";
 }
 // The right-sleeve UV island is additionally vertically flipped.
 // flipY:true corrects that so text/logos appear upright on the right sleeve.
