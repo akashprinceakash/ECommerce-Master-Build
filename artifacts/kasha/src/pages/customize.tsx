@@ -116,13 +116,8 @@ function placementFlipY(_placement: string): boolean {
 // The collar UV is laid out with the collar LENGTH along the X axis, so a 0° object
 // appears vertical on the physical collar. Rotate -90° to make text/logos horizontal,
 // sitting neatly at the collar tip as seen from the front.
-// Collar flaps are mirror images of each other in UV space.
-// Left tip (x≈12): -90° makes text read correctly on the left flap.
-// Right tip (x≈519): +90° (opposite) makes text read correctly on the right flap.
 function placementAngle(placement: string): number {
-  if (placement === "collar-left")  return -90;
-  if (placement === "collar-right") return  90;
-  return 0;
+  return (placement === "collar-left" || placement === "collar-right") ? -90 : 0;
 }
 // After -90° rotation, a text object's **width** (pre-rotation) spans horizontally in
 // UV space. Rather than scaling text down, we shift the centre so the text's near edge
