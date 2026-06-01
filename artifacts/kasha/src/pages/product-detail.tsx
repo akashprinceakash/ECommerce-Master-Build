@@ -26,7 +26,6 @@ export default function ProductDetailPage() {
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
-  const [customSizeText, setCustomSizeText] = useState("");
   const [personalizeOpen, setPersonalizeOpen] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const sizingAccordionRef = useRef<HTMLDivElement>(null);
@@ -377,7 +376,15 @@ export default function ProductDetailPage() {
                 {sizes.map(size => (
                   <button
                     key={size}
-                    onClick={() => setSelectedSize(size)}
+                    onClick={() => {
+                      setSelectedSize(size);
+                      if (size === "CUSTOM") {
+                        setOpenAccordion("sizing");
+                        setTimeout(() => {
+                          sizingAccordionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        }, 50);
+                      }
+                    }}
                     className={`h-11 text-[12px] font-bold border transition-all ${size === "CUSTOM" ? "px-4 min-w-[72px]" : "w-11"} ${
                       selectedSize === size
                         ? "bg-black text-white border-black"
@@ -392,25 +399,6 @@ export default function ProductDetailPage() {
                 <p className="text-[11px] text-gray-400 mt-2">Please select a size</p>
               )}
 
-              {/* Custom size input */}
-              {selectedSize === "CUSTOM" && (
-                <div className="mt-4 space-y-2">
-                  <label className="text-[11px] font-bold tracking-[0.15em] text-black block">
-                    YOUR MEASUREMENTS
-                  </label>
-                  <input
-                    type="text"
-                    value={customSizeText}
-                    onChange={e => setCustomSizeText(e.target.value)}
-                    placeholder="e.g. Chest 42, Waist 34, Length 28 (inches)"
-                    className="w-full border border-gray-300 focus:border-black px-4 py-3 text-sm outline-none transition-colors"
-                    style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.03em" }}
-                  />
-                  <p className="text-[11px] text-gray-400">
-                    Our team will contact you within 24 hours to confirm your measurements and discuss the fit.
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Quantity */}
