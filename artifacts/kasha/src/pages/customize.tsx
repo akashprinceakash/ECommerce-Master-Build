@@ -103,20 +103,14 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "collar-left":   { left: 140, top: 300 },  // wearer's left tip — collar UV is not body-mirrored; left in UV = left on garment
   "collar-right":  { left: 390, top: 300 },  // wearer's right tip — right in UV = right on garment
 };
-// Most UV zones are horizontally mirrored — flipX corrects text/logos there.
-// Exception: "right-sleeve" placement uses the leftSleeve UV island which is NOT
-// h-mirrored, so it must skip flipX. It IS vertically flipped (handled by placementFlipY).
-function placementFlipX(placement: string): boolean {
-  // The body UV and right-sleeve-visible zone (leftSleeve island, x:210) are
-  // oriented differently: the body island IS h-mirrored (flipX needed), but
-  // the leftSleeve island used for "right-sleeve" placement is NOT h-mirrored,
-  // so flipX would double-mirror and make text backwards. Skip it for right-sleeve.
-  return placement !== "right-sleeve";
+// Every UV island is horizontally mirrored → flipX:true corrects text/logos everywhere.
+function placementFlipX(_placement: string): boolean {
+  return true;
 }
-// The right-sleeve UV island is also flipped vertically relative to the left sleeve,
-// so text/logos placed there need flipY:true as well to appear right-side up.
+// The right-sleeve UV island is additionally vertically flipped.
+// flipY:true corrects that so text/logos appear upright on the right sleeve.
 function placementFlipY(placement: string): boolean {
-  return placement === "";
+  return placement === "right-sleeve";
 }
 // Which 3-D view to jump to when a placement is selected
 type CameraView = "front"|"back"|"right"|"left"|"collar-center"|"collar-left"|"collar-right";
