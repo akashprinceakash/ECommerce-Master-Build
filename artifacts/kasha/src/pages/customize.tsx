@@ -2296,7 +2296,7 @@ export default function CustomizePage() {
                     }}
                     onMouseEnter={e=>{e.currentTarget.style.background=V.ac;}}
                     onMouseLeave={e=>{e.currentTarget.style.background=V.aclt;}}>
-                    🛒 Sizing
+                    🛒 Add to Cart
                   </button>
                 )}
               </>
