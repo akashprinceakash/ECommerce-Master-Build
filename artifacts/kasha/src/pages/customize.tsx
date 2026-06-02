@@ -111,8 +111,8 @@ function placementFlipX(_placement: string): boolean {
 }
 // The right-sleeve UV island is also flipped vertically relative to the left sleeve,
 // so text/logos placed there need flipY:true as well to appear right-side up.
-function placementFlipY(_placement: string): boolean {
-  return false;
+function placementFlipY(placement: string): boolean {
+  return placement === "right-sleeve";
 }
 // The collar UV is laid out with the collar LENGTH along the X axis, so a 0° object
 // appears vertical on the physical collar. Rotate -90° to make text/logos horizontal,
