@@ -177,6 +177,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         padding: "36px 32px 38px", position: "relative",
         animation: "cemSlideUp 0.32s cubic-bezier(0.16,1,0.3,1)",
         boxShadow: "0 32px 80px rgba(26,26,24,0.24), 0 8px 24px rgba(26,26,24,0.12)",
+        maxHeight: "92vh", overflowY: "auto",
       }}>
 
         {/* Close */}
@@ -256,14 +257,20 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         @keyframes cemFadeIn  { from { opacity:0 } to { opacity:1 } }
         @keyframes cemSlideUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:translateY(0) } }
         @keyframes cemPulse   { 0%,100% { opacity:.5 } 50% { opacity:.85 } }
+        .cem-sheet::-webkit-scrollbar { width: 4px; }
+        .cem-sheet::-webkit-scrollbar-track { background: transparent; }
+        .cem-sheet::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 99px; }
         .cem-tiles {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 16px;
         }
-        @media (max-width: 580px) {
+        @media (max-width: 640px) {
           .cem-sheet { padding: 20px 14px 24px !important; border-radius: 14px !important; width: calc(100vw - 16px) !important; }
-          .cem-tiles { grid-template-columns: 1fr; gap: 12px; }
+          .cem-tiles { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+        }
+        @media (max-width: 420px) {
+          .cem-tiles { grid-template-columns: 1fr !important; gap: 10px !important; }
         }
       `}</style>
     </div>
@@ -322,7 +329,7 @@ function StyleTile({
           <img
             src={thumbnail}
             alt={label}
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }}
+            style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center center", display: "block", padding: "8px" }}
             onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.15"; }}
           />
         ) : (
