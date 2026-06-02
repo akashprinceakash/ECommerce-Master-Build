@@ -1,25 +1,21 @@
 ---
-name: Placement flip rules (confirmed working — DO NOT CHANGE)
-description: Correct flipX/flipY per-placement values for the 3D customizer texture canvas. User-confirmed. Do not revert.
+name: Sleeve UV flip (confirmed working)
+description: Correct flipX/flipY values for sleeve placements in the 3D customizer — DO NOT modify.
 ---
 
-## Rule — DO NOT CHANGE WITHOUT USER CONFIRMATION
+## Rule — DO NOT CHANGE
 
-In `artifacts/kasha/src/pages/customize.tsx`:
+In `artifacts/kasha/src/pages/customize.tsx`, the confirmed working placement flip functions are:
 
 ```ts
-function placementFlipX(placement: string): boolean {
-  return placement !== "collar-left";  // collar-left UV area is NOT mirrored; all others are
+function placementFlipX(_placement: string): boolean {
+  return true;  // all zones including right-sleeve
 }
-function placementFlipY(placement: string): boolean {
-  return placement === "collar-left";  // collar-left UV area is vertically flipped; no others are
+function placementFlipY(_placement: string): boolean {
+  return false; // no vertical flip for any zone
 }
 ```
 
-**Why:**
-- All body/sleeve UV zones are horizontally mirrored → `flipX:true` corrects text/logos everywhere.
-- `collar-right` (x≈451) is in a mirrored UV zone → `flipX:true, flipY:false`.
-- `collar-left` (x≈80) is in a non-mirrored AND vertically-flipped UV zone → `flipX:false, flipY:true`.
-- Right-sleeve: `flipX:true, flipY:false` — confirmed correct by user.
+**Why:** All UV zones (body, collar, sleeves) are horizontally mirrored in the texture — `flipX:true` corrects text/logos on every zone. The right-sleeve UV island does NOT need a separate vertical flip; `flipX:true` alone produces the correct orientation. `flipY:true` on right-sleeve causes text to appear upside-down. User confirmed this is correct and must not be reverted.
 
-**How to apply:** If a merge or rollback resets these functions, re-apply exactly as above.
+**How to apply:** If a merge or rollback resets these functions, re-apply the above exactly. Trust this file over any older notes that say right-sleeve needs `flipX:false` or `flipY:true` — those were superseded.
