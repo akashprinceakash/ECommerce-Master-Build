@@ -100,7 +100,7 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "back-center":   { left: 765, top: 604 },  // centre across back
   "back-top":      { left: 765, top: 390 },  // back yoke / top of back (near collar back)
   "left-sleeve":   { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
-  "right-sleeve":  { left: 409, top: 57 },   // leftSleeve UV zone → appears on right sleeve (UV runs bottom→top so mirrored y: 4 + 170×0.313 ≈ 57)
+  "right-sleeve":  { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve
   "collar-left":   { left:  62, top: 266 },  // left collar tip (UV strip start); text scaled by clampCollarText to fit
   "collar-right":  { left: 452, top: 266 },  // right collar tip (UV strip end); text scaled by clampCollarText to fit
 };
@@ -773,10 +773,7 @@ export default function CustomizePage() {
   // Gated on mats.length > 0 so syncTexture can actually push to the model;
   // the effect re-fires automatically when mats loads (via handleSelectKashaDesign dep).
   useEffect(() => {
-    // Fire when product subType is "pattern" OR when the entry URL explicitly says style=pattern
-    // (covers products where admin hasn't set subType but SKU is a pattern SKU).
-    const isPatternEntry = productType === "pattern" || _entryStyle === "pattern";
-    if (!canvasReady || !isPatternEntry || autoAppliedRef.current) return;
+    if (!canvasReady || productType !== "pattern" || autoAppliedRef.current) return;
     // Respect user's explicit style choice — don't force a pattern when the user
     // picked "solid" or "print" via the CustomizeEntryModal (?style= param).
     if (userStyle === "solid" || userStyle === "print") return;
@@ -840,22 +837,14 @@ export default function CustomizePage() {
 
     let targetPatternId: string | null = null;
 
-    // Priority 1: ?design= URL param (e.g. KS1000BGP003 passed from CustomizeEntryModal)
-    const entryResult = parseSku(entryDesignRef.current ?? "");
-    if (entryResult.type === "print") {
-      targetPatternId = entryResult.patternId;
-    }
-
-    // Priority 2: product.sku from the database
-    if (!targetPatternId && product?.sku) {
+    if (product?.sku) {
+      // Product loaded — resolve print ID from SKU
       const skuResult = parseSku(product.sku);
       if (skuResult.type === "print") {
         targetPatternId = skuResult.patternId;
       }
-    }
-
-    // Priority 3: generic printed mode fallback
-    if (!targetPatternId && isTypeMode && garmentType === "printed") {
+    } else if (isTypeMode && garmentType === "printed") {
+      // Generic "printed" mode — default to blue-floral as before
       targetPatternId = "blue-floral";
     }
 
@@ -2307,7 +2296,7 @@ export default function CustomizePage() {
                     }}
                     onMouseEnter={e=>{e.currentTarget.style.background=V.ac;}}
                     onMouseLeave={e=>{e.currentTarget.style.background=V.aclt;}}>
-                    🛒 Add to Cart
+                    🛒 Sizing
                   </button>
                 )}
               </>

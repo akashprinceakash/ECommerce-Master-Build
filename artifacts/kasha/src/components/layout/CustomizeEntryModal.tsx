@@ -1,9 +1,10 @@
 /**
  * CustomizeEntryModal — Bespoke Studio entry point.
- * Shows Men's T-shirts grouped into three sections: Solid, Printed, Pattern.
- * No Women's tab. Clicking any product navigates directly to the studio
- * with the correct SKU-based default design pre-applied on the 3D model.
+ * Fetches all Men's T-shirt products live from the API.
+ * Derives style/design URL params from each product's SKU via parseSku(),
+ * exactly mirroring the PersonalizeModal "Full Customisation" flow.
  */
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { useUser } from "@clerk/react";
 import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
@@ -15,13 +16,18 @@ interface Props {
   onClose: () => void;
 }
 
+const GENDERS = ["Men", "Women"] as const;
+type Gender = typeof GENDERS[number];
+
+// Bottoms category tokens — anything NOT in this list is a t-shirt
 const BOTTOMS_CATS = ["trousers", "trouser", "pants", "chinos", "shorts", "short", "skort", "skorts", "skirts", "skirt", "bottoms"];
 const MEN_TOKENS   = ["men", "men's", "mens", "male"];
 
 interface StyleItem {
   id: number;
   name: string;
-  type: "solid" | "print" | "pattern";
+  tag: string;
+  sortKey: number;
   thumbnail: string;
   href: string;
 }
@@ -32,32 +38,28 @@ function buildHref(productId: number, sku: string): string {
     return `/products/${productId}/customize?entry=1&style=pattern&design=${encodeURIComponent(sku)}`;
   }
   if (result.type === "print") {
-    const designParam = sku ? `&design=${encodeURIComponent(sku)}` : "";
-    return `/products/${productId}/customize?entry=1&style=print${designParam}`;
+    return `/products/${productId}/customize?entry=1&style=print`;
   }
+  // solid (or unknown → treat as solid)
   const designParam = sku ? `&design=${encodeURIComponent(sku)}` : "";
   return `/products/${productId}/customize?entry=1&style=solid${designParam}`;
 }
 
-function inferType(sku: string, category: string): "solid" | "print" | "pattern" {
+function inferTag(sku: string, category: string): { tag: string; sortKey: number } {
   const result = parseSku(sku);
-  if (result.type === "print")   return "print";
-  if (result.type === "pattern") return "pattern";
-  if (result.type === "solid")   return "solid";
+  if (result.type === "print")    return { tag: "Printed",  sortKey: 1 };
+  if (result.type === "pattern")  return { tag: "Pattern",  sortKey: 2 };
+  if (result.type === "solid")    return { tag: "Solid",    sortKey: 0 };
+  // fallback: infer from category string
   const haystack = category.toLowerCase();
-  if (haystack.includes("print"))   return "print";
-  if (haystack.includes("pattern")) return "pattern";
-  return "solid";
+  if (haystack.includes("print")) return { tag: "Printed",  sortKey: 1 };
+  if (haystack.includes("pattern")) return { tag: "Pattern", sortKey: 2 };
+  return { tag: "Solid", sortKey: 0 };
 }
-
-const SECTION_META: Record<"solid"|"print"|"pattern", { label: string; sub: string; color: string }> = {
-  solid:   { label: "Solid T-Shirts",   sub: "Classic single-colour garments — personalise with your logo or text", color: "#6b8fa3" },
-  print:   { label: "Printed T-Shirts", sub: "All-over print garments — add logos or swap the background pattern",  color: "#a36b6b" },
-  pattern: { label: "Pattern T-Shirts", sub: "Structured zone designs — customise colours and design layers",        color: "#6ba37a" },
-};
 
 export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   const [, navigate] = useLocation();
+  const [gender, setGender] = useState<Gender>("Men");
   const { user, isLoaded } = useUser();
 
   const { data: allProducts, isLoading } = useListProducts(
@@ -96,6 +98,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 16, color: "#8a8780",
           }}>×</button>
+
           <div style={{
             width: 56, height: 56, borderRadius: "50%",
             background: "linear-gradient(135deg, #fdf6e3, #f5e9c4)",
@@ -105,16 +108,19 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           }}>
             <span style={{ fontSize: 24 }}>✦</span>
           </div>
+
           <div style={{
             fontFamily: "'Jost', sans-serif", fontSize: 10,
             letterSpacing: ".2em", textTransform: "uppercase",
             color: "#c9a84c", marginBottom: 10, fontWeight: 500,
           }}>KA.SHA Bespoke Studio</div>
+
           <h2 style={{
             fontFamily: "'Cormorant Garamond', serif",
             fontSize: 24, fontWeight: 600, color: "#1a1a18",
             letterSpacing: ".02em", margin: "0 0 12px", lineHeight: 1.25,
           }}>Sign in to design<br />your garment</h2>
+
           <p style={{
             fontFamily: "'Jost', sans-serif",
             fontSize: 12, color: "#6b6b68", lineHeight: 1.7,
@@ -122,7 +128,9 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           }}>
             Create an account or sign in so we can save your design choices and customisations for you to revisit anytime.
           </p>
+
           <div style={{ height: 1, background: "linear-gradient(90deg, transparent, #c9a84c, transparent)", opacity: 0.3, marginBottom: 24 }} />
+
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <a href="/sign-up" onClick={onClose} style={{
               display: "block", padding: "13px 24px", borderRadius: 99,
@@ -141,6 +149,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
               textTransform: "uppercase", textDecoration: "none",
             }}>Sign In</a>
           </div>
+
           <p style={{
             marginTop: 20, fontFamily: "'Jost', sans-serif",
             fontSize: 10, color: "#b8b5ae", letterSpacing: ".05em", fontStyle: "italic",
@@ -154,8 +163,8 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
     );
   }
 
-  // ── Build grouped Men's T-shirt items ─────────────────────────────────────
-  const allItems: StyleItem[] = (allProducts ?? [])
+  // ── Build men's t-shirt items from live API ────────────────────────────────
+  const menItems: StyleItem[] = (allProducts ?? [])
     .filter(p => {
       if (!p.available) return false;
       const g = (p.gender ?? "").toLowerCase();
@@ -166,22 +175,17 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
     })
     .map(p => {
       const sku = p.sku ?? "";
+      const { tag, sortKey } = inferTag(sku, p.category ?? "");
       return {
         id: p.id,
         name: p.name.replace(/\s*\[gt:GT\d+\]\s*$/i, ""),
-        type: inferType(sku, p.category ?? ""),
+        tag,
+        sortKey,
         thumbnail: getAssetUrl(p.thumbnailUrl) ?? "",
         href: buildHref(p.id, sku),
       };
-    });
-
-  const grouped: Record<"solid"|"print"|"pattern", StyleItem[]> = {
-    solid:   allItems.filter(i => i.type === "solid").sort((a,b) => a.name.localeCompare(b.name)),
-    print:   allItems.filter(i => i.type === "print").sort((a,b) => a.name.localeCompare(b.name)),
-    pattern: allItems.filter(i => i.type === "pattern").sort((a,b) => a.name.localeCompare(b.name)),
-  };
-
-  const sections = (["solid","print","pattern"] as const).filter(k => grouped[k].length > 0);
+    })
+    .sort((a, b) => a.sortKey - b.sortKey || a.name.localeCompare(b.name));
 
   function handleSelect(href: string) {
     onClose();
@@ -202,9 +206,9 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
     >
       <div className="cem-sheet" style={{
         background: "#fafaf7", borderRadius: 20,
-        maxWidth: 860, width: "calc(100vw - 32px)",
+        maxWidth: 820, width: "calc(100vw - 32px)",
         maxHeight: "calc(100vh - 40px)", overflowY: "auto",
-        padding: "34px 28px 40px", position: "relative",
+        padding: "34px 28px 38px", position: "relative",
         animation: "cemSlideUp 0.32s cubic-bezier(0.16,1,0.3,1)",
         boxShadow: "0 32px 80px rgba(26,26,24,0.24), 0 8px 24px rgba(26,26,24,0.12)",
       }}>
@@ -223,7 +227,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         >×</button>
 
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <div style={{ textAlign: "center", marginBottom: 22 }}>
           <div style={{
             fontFamily: "'Jost', sans-serif",
             fontSize: 10, letterSpacing: ".2em", textTransform: "uppercase",
@@ -233,99 +237,111 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
             fontFamily: "'Cormorant Garamond', serif",
             fontSize: 26, fontWeight: 600, color: "#1a1a18",
             letterSpacing: ".02em", margin: 0, lineHeight: 1.2,
-          }}>Choose Your T-Shirt</h2>
+          }}>Choose Your Style</h2>
           <p style={{
             fontFamily: "'Jost', sans-serif",
             fontSize: 11, color: "#8a8780", marginTop: 6,
             letterSpacing: ".04em", fontStyle: "italic",
-          }}>Select a product — it opens in the studio with its design already applied</p>
+          }}>Select a product — it loads instantly in the studio, ready to personalise</p>
         </div>
 
+        {/* Gold divider */}
         <div style={{
           height: 1, background: "linear-gradient(90deg, transparent, #c9a84c, transparent)",
-          opacity: 0.4, marginBottom: 28,
+          opacity: 0.4, marginBottom: 20,
         }} />
 
-        {/* Sections */}
-        {isLoading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-            {[1,2,3].map(s => (
-              <div key={s}>
-                <div style={{ width: 140, height: 14, borderRadius: 6, background: "#e8e4db", marginBottom: 14, opacity: 0.6 }} />
-                <div style={{ display: "flex", gap: 12 }}>
-                  {[1,2,3].map(i => (
-                    <div key={i} style={{
-                      width: 160, flexShrink: 0, borderRadius: 14,
-                      background: "linear-gradient(135deg, #f0ede6, #e8e4db)",
-                      aspectRatio: "1/1.35", animation: "pulse 1.4s ease-in-out infinite",
-                      opacity: 0.5 + i * 0.07,
-                    }} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : allItems.length === 0 ? (
+        {/* Gender selector */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 20 }}>
+          {GENDERS.map(g => (
+            <button key={g} onClick={() => setGender(g)} style={{
+              padding: "6px 18px", borderRadius: 99,
+              border: `1.5px solid ${gender === g ? "#c9a84c" : "rgba(26,26,24,0.14)"}`,
+              background: gender === g ? "rgba(201,168,76,0.1)" : "transparent",
+              color: gender === g ? "#c9a84c" : "#6b6b68",
+              fontFamily: "'Jost', sans-serif",
+              fontSize: 11, letterSpacing: ".08em", textTransform: "uppercase",
+              fontWeight: gender === g ? 700 : 400,
+              cursor: "pointer", transition: "all .18s",
+            }}>{g}</button>
+          ))}
+        </div>
+
+        {/* Content */}
+        {gender === "Women" ? (
           <div style={{
             textAlign: "center", padding: "48px 24px",
-            fontFamily: "'Jost', sans-serif", fontSize: 12, color: "#8a8780",
+            background: "linear-gradient(135deg, #fdfbf6 0%, #f5efe0 100%)",
+            borderRadius: 16, border: "1px solid rgba(201,168,76,0.2)",
           }}>
+            <div style={{ fontSize: 36, marginBottom: 16, opacity: 0.7 }}>✦</div>
+            <div style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: 26, fontWeight: 600, color: "#1a1a18",
+              letterSpacing: ".02em", marginBottom: 10,
+            }}>Coming Soon</div>
+            <p style={{
+              fontFamily: "'Jost', sans-serif",
+              fontSize: 12, color: "#8a8780",
+              letterSpacing: ".05em", lineHeight: 1.7, maxWidth: 340, margin: "0 auto",
+            }}>
+              The KA.SHA Women's Bespoke Studio is being crafted with care.
+              Check back shortly — or explore our <strong style={{ color: "#c9a84c" }}>Men's collection</strong> while you wait.
+            </p>
+            <button onClick={() => setGender("Men")} style={{
+              marginTop: 24, padding: "10px 28px", borderRadius: 99,
+              border: "1.5px solid #c9a84c", background: "transparent",
+              fontFamily: "'Jost', sans-serif", fontSize: 10,
+              letterSpacing: ".12em", textTransform: "uppercase",
+              color: "#c9a84c", fontWeight: 700, cursor: "pointer",
+            }}>View Men's Styles</button>
+          </div>
+        ) : isLoading ? (
+          <div style={{
+            display: "flex", gap: 12, overflowX: "hidden", paddingBottom: 16,
+          }}>
+            {[1,2,3,4].map(i => (
+              <div key={i} style={{
+                width: 170, flexShrink: 0, borderRadius: 14,
+                background: "linear-gradient(135deg, #f0ede6, #e8e4db)",
+                aspectRatio: "1/1.35", animation: "pulse 1.4s ease-in-out infinite",
+                opacity: 0.6 + i * 0.05,
+              }} />
+            ))}
+          </div>
+        ) : menItems.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px 24px", color: "#8a8780", fontFamily: "'Jost', sans-serif", fontSize: 12 }}>
             No products available yet. Check back soon.
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-            {sections.map(key => {
-              const meta = SECTION_META[key];
-              const items = grouped[key];
-              return (
-                <div key={key}>
-                  {/* Section header */}
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3 }}>
-                      <div style={{
-                        width: 6, height: 6, borderRadius: "50%",
-                        background: meta.color, flexShrink: 0,
-                      }} />
-                      <div style={{
-                        fontFamily: "'Cormorant Garamond', serif",
-                        fontSize: 18, fontWeight: 600, color: "#1a1a18",
-                        letterSpacing: ".02em",
-                      }}>{meta.label}</div>
-                      <div style={{
-                        fontFamily: "'Jost', sans-serif", fontSize: 9, fontWeight: 600,
-                        letterSpacing: ".1em", textTransform: "uppercase",
-                        color: meta.color, marginLeft: 2,
-                        background: `${meta.color}18`, borderRadius: 4, padding: "2px 7px",
-                      }}>{items.length}</div>
-                    </div>
-                    <div style={{
-                      fontFamily: "'Jost', sans-serif",
-                      fontSize: 10, color: "#8a8780", letterSpacing: ".03em",
-                      fontStyle: "italic", paddingLeft: 16,
-                    }}>{meta.sub}</div>
-                  </div>
-
-                  {/* Horizontal scroll row */}
-                  <div className="cem-scroll" style={{
-                    display: "flex", gap: 12, overflowX: "auto", overflowY: "hidden",
-                    paddingBottom: 12, paddingLeft: 2, paddingRight: 2,
-                    scrollSnapType: "x mandatory",
-                    WebkitOverflowScrolling: "touch",
-                  }}>
-                    {items.map(item => (
-                      <div key={item.id} style={{ scrollSnapAlign: "start", flexShrink: 0 }} className="cem-card-wrap">
-                        <CarouselCard item={item} accentColor={meta.color} onSelect={handleSelect} />
-                      </div>
-                    ))}
-                  </div>
+          <>
+            <div className="cem-scroll" style={{
+              display: "flex", gap: 12, overflowX: "auto", overflowY: "hidden",
+              paddingBottom: 16, paddingLeft: 2, paddingRight: 2,
+              scrollSnapType: "x mandatory",
+              WebkitOverflowScrolling: "touch",
+              cursor: "grab",
+            }}
+            onMouseDown={e => { e.currentTarget.style.cursor = "grabbing"; }}
+            onMouseUp={e => { e.currentTarget.style.cursor = "grab"; }}
+            onMouseLeave={e => { e.currentTarget.style.cursor = "grab"; }}
+            >
+              {menItems.map(item => (
+                <div key={item.id} style={{ scrollSnapAlign: "start", flexShrink: 0 }} className="cem-card-wrap">
+                  <CarouselCard item={item} onSelect={handleSelect} />
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+            <div style={{
+              fontFamily: "'Jost', sans-serif", fontSize: 9, color: "#c9c7c0",
+              letterSpacing: ".06em", textAlign: "center", marginTop: 4, fontStyle: "italic",
+            }}>Swipe to browse all styles →</div>
+          </>
         )}
 
+        {/* Footer note */}
         <p style={{
-          textAlign: "center", marginTop: 24,
+          textAlign: "center", marginTop: 18,
           fontFamily: "'Jost', sans-serif",
           fontSize: 10, color: "#b8b5ae",
           letterSpacing: ".08em", fontStyle: "italic",
@@ -341,28 +357,27 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         .cem-scroll::-webkit-scrollbar { height: 4px; }
         .cem-scroll::-webkit-scrollbar-track { background: rgba(26,26,24,0.05); border-radius: 99px; }
         .cem-scroll::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.4); border-radius: 99px; }
-        .cem-card-wrap { width: 160px; }
+        .cem-card-wrap { width: 170px; }
         @media (max-width: 620px) {
-          .cem-sheet { padding:18px 12px 28px !important; border-radius:14px !important; width:calc(100vw - 16px) !important; }
-          .cem-card-wrap { width: 140px; }
+          .cem-sheet { padding:18px 12px 24px !important; border-radius:14px !important; width:calc(100vw - 16px) !important; }
+          .cem-card-wrap { width: 150px; }
         }
         @media (max-width: 400px) {
-          .cem-card-wrap { width: 128px; }
+          .cem-card-wrap { width: 135px; }
         }
       `}</style>
     </div>
   );
 }
 
-function CarouselCard({
-  item,
-  accentColor,
-  onSelect,
-}: {
-  item: StyleItem;
-  accentColor: string;
-  onSelect: (h: string) => void;
-}) {
+function CarouselCard({ item, onSelect }: { item: StyleItem; onSelect: (h: string) => void }) {
+  const tagColor: Record<string, string> = {
+    Solid:   "#6b8fa3",
+    Printed: "#a36b6b",
+    Pattern: "#6ba37a",
+  };
+  const col = tagColor[item.tag] ?? "#c9a84c";
+
   return (
     <button
       onClick={() => onSelect(item.href)}
@@ -391,7 +406,7 @@ function CarouselCard({
       <div style={{
         width: "100%", aspectRatio: "1/1", overflow: "hidden",
         background: "linear-gradient(160deg, #f7f4ee 0%, #edeae3 100%)",
-        flexShrink: 0,
+        flexShrink: 0, position: "relative",
         display: "flex", alignItems: "center", justifyContent: "center",
       }}>
         {item.thumbnail ? (
@@ -402,19 +417,34 @@ function CarouselCard({
             onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.2"; }}
           />
         ) : (
-          <div style={{ fontSize: 28, opacity: 0.3 }}>✦</div>
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", gap: 6, width: "100%", height: "100%",
+          }}>
+            <div style={{ fontSize: 28, opacity: 0.35 }}>✦</div>
+          </div>
         )}
+        {/* Type badge overlaid on image */}
+        <div style={{
+          position: "absolute", top: 7, left: 7,
+          background: "rgba(255,255,255,0.92)",
+          borderRadius: 6, padding: "2px 7px",
+          fontFamily: "'Jost', sans-serif",
+          fontSize: 7, fontWeight: 700, letterSpacing: ".12em",
+          textTransform: "uppercase", color: col,
+          backdropFilter: "blur(4px)",
+        }}>{item.tag}</div>
       </div>
 
       {/* Label */}
       <div style={{ padding: "9px 10px 11px" }}>
         <div style={{
           fontFamily: "'Cormorant Garamond', serif", fontSize: 13, fontWeight: 600,
-          color: "#1a1a18", lineHeight: 1.25, marginBottom: 5,
+          color: "#1a1a18", lineHeight: 1.25, marginBottom: 4,
         }}>{item.name}</div>
         <div style={{
-          fontFamily: "'Jost', sans-serif", fontSize: 8,
-          color: accentColor, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600,
+          fontFamily: "'Jost', sans-serif", fontSize: 8, color: "#c9a84c",
+          letterSpacing: ".08em",
         }}>Customise →</div>
       </div>
     </button>
