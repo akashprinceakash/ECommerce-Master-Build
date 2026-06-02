@@ -24,6 +24,9 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
+  const [customMeasurements, setCustomMeasurements] = useState<Record<string,string>>({
+    chest:"", waist:"", hip:"", shoulder:"", length:"", sleeve:""
+  });
   const [imgLoaded, setImgLoaded] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [personalizeOpen, setPersonalizeOpen] = useState(false);
@@ -378,12 +381,7 @@ export default function ProductDetailPage() {
                     key={size}
                     onClick={() => {
                       setSelectedSize(size);
-                      if (size === "CUSTOM") {
-                        setOpenAccordion("sizing");
-                        setTimeout(() => {
-                          sizingAccordionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                        }, 50);
-                      }
+                      if (size !== "CUSTOM") setCustomMeasurements({chest:"",waist:"",hip:"",shoulder:"",length:"",sleeve:""});
                     }}
                     className={`h-11 text-[12px] font-bold border transition-all ${size === "CUSTOM" ? "px-4 min-w-[72px]" : "w-11"} ${
                       selectedSize === size
@@ -398,6 +396,74 @@ export default function ProductDetailPage() {
               {!selectedSize && (
                 <p className="text-[11px] text-gray-400 mt-2">Please select a size</p>
               )}
+
+              {/* Custom Measurements form — mirrors the Bespoke Studio sizing step */}
+              {selectedSize === "CUSTOM" && (() => {
+                const SIZE_CLASH: Record<string,{s:string;lo:number;hi:number}[]> = {
+                  chest:    [{s:"S",lo:36,hi:37},{s:"M",lo:38,hi:39},{s:"L",lo:40,hi:41},{s:"XL",lo:42,hi:43},{s:"XXL",lo:44,hi:46}],
+                  shoulder: [{s:"S",lo:16,hi:17},{s:"M",lo:17,hi:18},{s:"L",lo:18,hi:19},{s:"XL",lo:19,hi:20},{s:"XXL",lo:20,hi:21}],
+                  length:   [{s:"S",lo:27,hi:28},{s:"M",lo:28,hi:29},{s:"L",lo:29,hi:30},{s:"XL",lo:30,hi:31},{s:"XXL",lo:31,hi:32}],
+                  sleeve:   [{s:"S",lo:8, hi:9}, {s:"M",lo:9, hi:10},{s:"L",lo:10,hi:11},{s:"XL",lo:11,hi:12},{s:"XXL",lo:12,hi:13}],
+                  waist:    [{s:"S",lo:30,hi:31},{s:"M",lo:32,hi:33},{s:"L",lo:34,hi:35},{s:"XL",lo:36,hi:37},{s:"XXL",lo:38,hi:40}],
+                  hip:      [{s:"S",lo:34,hi:35},{s:"M",lo:36,hi:37},{s:"L",lo:38,hi:39},{s:"XL",lo:40,hi:41},{s:"XXL",lo:42,hi:44}],
+                };
+                const fields: {key:string; label:string}[] = [
+                  {key:"chest",    label:"Chest"},
+                  {key:"waist",    label:"Waist"},
+                  {key:"hip",      label:"Hip"},
+                  {key:"shoulder", label:"Shoulder Width"},
+                  {key:"length",   label:"Garment Length"},
+                  {key:"sleeve",   label:"Sleeve Length"},
+                ];
+                return (
+                  <div className="mt-4 space-y-3">
+                    <p className="text-[11px] font-bold tracking-[0.12em] text-black">
+                      CUSTOM MEASUREMENTS <span className="font-normal text-gray-400">(optional, in inches)</span>
+                    </p>
+                    <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                      <p className="text-[10px] font-bold text-amber-800 tracking-wide leading-relaxed uppercase">
+                        All measurements below are body measurements, not garment measurements. Please specify if your inputs are garment measurements.
+                      </p>
+                    </div>
+                    <p className="text-[10px] text-gray-400 leading-relaxed">
+                      Leave blank to use standard sizing. Fill in for a tailored fit.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {fields.map(({key, label}) => {
+                        const val = customMeasurements[key] ?? "";
+                        const ranges = SIZE_CLASH[key];
+                        const numVal = parseFloat(val);
+                        const clash = !isNaN(numVal) && ranges
+                          ? ranges.find(sz => numVal >= sz.lo && numVal <= sz.hi)
+                          : null;
+                        return (
+                          <div key={key}>
+                            <p className="text-[10px] tracking-widest uppercase text-gray-400 mb-1">{label}</p>
+                            <input
+                              type="number"
+                              min={0}
+                              step={0.5}
+                              placeholder="—"
+                              value={val}
+                              onChange={e => setCustomMeasurements(p => ({...p, [key]: e.target.value}))}
+                              className="w-full border border-gray-300 focus:border-black px-3 py-2 text-[13px] outline-none transition-colors rounded"
+                              style={{ fontFamily: "'Josefin Sans', sans-serif" }}
+                            />
+                            {clash && (
+                              <p className="mt-1 text-[9px] text-amber-700 bg-amber-50 rounded px-2 py-1 leading-snug">
+                                {val}" matches our standard {clash.s} size ({clash.lo}–{clash.hi}"). Consider selecting {clash.s} above instead.
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-gray-400 italic">
+                      Our team will contact you to confirm measurements before production.
+                    </p>
+                  </div>
+                );
+              })()}
 
             </div>
 
