@@ -493,8 +493,8 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Personalise This T-Shirt */}
-            {SHOW_CUSTOMIZATION && (
+            {/* Personalise This T-Shirt — hidden for women until women's 3D studio is ready */}
+            {SHOW_CUSTOMIZATION && (product?.gender || "").toLowerCase() !== "women" && (
               <button
                 onClick={() => setPersonalizeOpen(true)}
                 style={{
