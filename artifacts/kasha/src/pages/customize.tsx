@@ -645,14 +645,19 @@ export default function CustomizePage() {
       ctx.putImageData(d,0,0);
       const newUrl=c.toDataURL("image/png");
       setLogoPreview(newUrl);
-      if (logoObjRef.current&&fcRef.current) {
-        const fc=fcRef.current; fc.remove(logoObjRef.current);
+      const fc=fcRef.current;
+      if (fc) {
         const ni=await fabric.FabricImage.fromURL(newUrl,{crossOrigin:"anonymous"});
         const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};
         const maxW=Math.round(logoSize*(1024/100));
         if(ni.width&&ni.width>maxW) ni.scaleToWidth(maxW);
         ni.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition),flipY:placementFlipY(logoPosition),angle:placementAngle(logoPosition)});
+        // Remove old logo by ref AND by tag (mirrors handleLogoUpload)
+        if (logoObjRef.current) fc.remove(logoObjRef.current);
+        fc.getObjects().filter((o:any)=>o?.data?.kashaLogo).forEach((o:any)=>fc.remove(o));
+        (ni as any).data={kashaLogo:true};
         fc.add(ni); fc.setActiveObject(ni); logoObjRef.current=ni;
+        setLogoPlaced(true);
         fc.renderAll(); syncTexture();
       }
       toast({title:"Background removed ✓"});
