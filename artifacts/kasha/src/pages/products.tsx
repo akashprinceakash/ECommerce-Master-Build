@@ -11,7 +11,7 @@ import { getAssetUrl } from "@/lib/api";
 import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
 import { useUser, useClerk } from "@clerk/react";
 
-type ItemType = "tshirts" | "bottoms" | "dresses";
+type ItemType = "tshirts" | "bottoms";
 type StyleFilter = "solids" | "patterns" | "prints" | "trousers" | "shorts" | "skorts";
 
 type SidebarChild = { label: string; style: StyleFilter };
@@ -127,11 +127,6 @@ const sidebar: SidebarSection[] = [
           { label: "Shorts", style: "shorts" },
         ],
       },
-      {
-        label: "Golf Dresses",
-        type: "dresses",
-        children: [],
-      },
     ],
   },
   ...(SHOW_KIDS ? [{
@@ -170,7 +165,7 @@ export default function ProductsPage() {
   const gender: Gender | undefined =
     genderParam === "men" || genderParam === "women" || genderParam === "kids" ? genderParam : undefined;
   const type: ItemType | undefined =
-    typeParam === "tshirts" || typeParam === "bottoms" || typeParam === "dresses" ? typeParam : undefined;
+    typeParam === "tshirts" || typeParam === "bottoms" ? typeParam : undefined;
   const styleFilter: StyleFilter | undefined =
     styleParam === "solids" || styleParam === "patterns" || styleParam === "prints" ||
     styleParam === "trousers" || styleParam === "shorts" || styleParam === "skorts"
@@ -260,11 +255,7 @@ export default function ProductsPage() {
           return TROUSER_CATEGORIES.includes(cat) || SHORTS_CATEGORIES.includes(cat) || SKORT_CATEGORIES.includes(cat);
         });
       }
-    } else if (type === "dresses") {
-      list = list.filter((p) => {
-        const cat = (p.category || "").toLowerCase();
-        return cat === "dress" || cat === "dresses";
-      });
+
     }
 
     // Sort: gender (men → women → kids), then type (tshirts → bottoms), then subType
@@ -290,7 +281,7 @@ export default function ProductsPage() {
     return q ? `/products?${q}` : "/products";
   };
 
-  const typeLabel = (t?: ItemType) => t === "tshirts" ? "Golf T-shirts" : t === "bottoms" ? "Bottoms" : t === "dresses" ? "Golf Dresses" : null;
+  const typeLabel = (t?: ItemType) => t === "tshirts" ? "Golf T-shirts" : t === "bottoms" ? "Bottoms" : null;
   const styleLabel = (s?: StyleFilter) =>
     s === "solids" ? "Solid" : s === "patterns" ? "Pattern Design" : s === "prints" ? "Printed" :
     s === "trousers" ? "Trousers" : s === "shorts" ? "Shorts" : s === "skorts" ? "Skorts" : null;
