@@ -154,7 +154,7 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
       tags:   ["Limited Prints"],
     },
     {
-      href:   "/products?gender=women&type=skirts",
+      href:   "/products?gender=women&type=bottoms&style=skorts",
       img:    "/images/shop/women_skorts.png",
       seoAlt: "Women's luxury golf skort with performance stretch fabric",
       cat:    "Bottoms",
@@ -162,15 +162,6 @@ const PANELS: Record<"men" | "women" | "kids", Card[]> = {
       desc:   "· Tailored fit · Active skirt",
       tags:   ["3 Colours", "Skirt", "Skort"],
     },
-    ...(SHOW_CUSTOMIZATION ? [{
-      href:       "/products/1/customize",
-      cat:        "Bespoke",
-      title:      "Custom Studio",
-      desc:       "Your colour, logo & fit — 1 piece or 500",
-      tags:       [],
-      bespoke:    true as const,
-      bespokeSub: "Bespoke",
-    }] : []),
   ],
   kids: [
     {

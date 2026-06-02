@@ -470,12 +470,9 @@ export default function ProductsPage() {
                   Skorts
                 </h2>
                 <p className="max-w-md mx-auto mb-8" style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, color: "rgba(0,0,0,0.5)", lineHeight: 1.8, letterSpacing: "0.06em" }}>
-                  Tailored skorts in our signature stretch fabric — landing in the next drop. Want yours sooner? Build it in the Custom Studio today.
+                  Tailored skorts in our signature stretch fabric — landing in the next drop.
                 </p>
                 <div className="flex flex-wrap justify-center gap-3">
-                  <Link href="/products/1/customize" className="text-[10px] uppercase text-white px-7 py-3.5 transition-all" style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.28em", background: "#B8925A" }}>
-                    Open Custom Studio
-                  </Link>
                   <Link href={buildHref(gender, "tshirts")} className="text-[10px] uppercase px-7 py-3.5 transition-all hover:!text-neutral-900" style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.28em", color: "rgba(0,0,0,0.6)", border: "1px solid rgba(0,0,0,0.2)" }}>
                     Browse T-shirts
                   </Link>

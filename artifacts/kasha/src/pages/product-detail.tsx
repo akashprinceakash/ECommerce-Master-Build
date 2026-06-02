@@ -380,8 +380,13 @@ export default function ProductDetailPage() {
                   <button
                     key={size}
                     onClick={() => {
-                      setSelectedSize(size);
-                      if (size !== "CUSTOM") setCustomMeasurements({chest:"",waist:"",hip:"",shoulder:"",length:"",sleeve:""});
+                      if (size === "CUSTOM" && selectedSize === "CUSTOM") {
+                        setSelectedSize(null);
+                        setCustomMeasurements({chest:"",waist:"",hip:"",shoulder:"",length:"",sleeve:""});
+                      } else {
+                        setSelectedSize(size);
+                        if (size !== "CUSTOM") setCustomMeasurements({chest:"",waist:"",hip:"",shoulder:"",length:"",sleeve:""});
+                      }
                     }}
                     className={`h-11 text-[12px] font-bold border transition-all ${size === "CUSTOM" ? "px-4 min-w-[72px]" : "w-11"} ${
                       selectedSize === size
