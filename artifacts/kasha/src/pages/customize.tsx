@@ -1057,14 +1057,15 @@ export default function CustomizePage() {
       const payload=await buildPayload();
       const effectiveQty=Object.values(sizeQty).reduce((a,b)=>a+b,0)||qty;
       const effectiveSize=Object.entries(sizeQty).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])[0]?.[0]||size;
-      // Compute customisation charge
+      // Compute customisation charge: ₹20 base (once) + ₹1 per sq inch for logo & text
+      // Body/collar prints and all-over garment prints carry no extra charge
       const logoW = logoSize * 0.376;
-      const logoArea = logoW * logoW * 0.75;
-      const logoCharge = logoPreview ? (20 + Math.ceil(logoArea)) : 0;
+      const logoAreaSqIn = logoPreview ? Math.ceil(logoW * logoW * 0.75) : 0;
       const textH = textFontSize * (22/1024);
       const textW = Math.max(1, textInput.length) * textFontSize * 0.55 * (22/1024);
-      const textCharge = textPlaced ? (20 + Math.ceil(textH * textW)) : 0;
-      const customizationCharge = logoCharge + textCharge;
+      const textAreaSqIn = textPlaced ? Math.ceil(textH * textW) : 0;
+      const hasLogoOrText = !!(logoPreview || textPlaced);
+      const customizationCharge = hasLogoOrText ? (20 + logoAreaSqIn + textAreaSqIn) : 0;
       // Try to save the customisation; if it fails, still add to cart without a customisation ID
       let customizationId: number|null = null;
       try {
@@ -3430,24 +3431,25 @@ export default function CustomizePage() {
           }}>
             <div style={{padding:"20px 14px",display:"flex",flexDirection:"column",gap:18}}>
               <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:15,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>Placement</div>
-              {/* ── Customisation charge: ₹20 base + ₹1/sq inch for logo & text only ── */}
+              {/* ── Customisation charge: ₹20 base (once) + ₹1/sq inch for logo & text ── */}
               {(()=>{
-                // Zone prints and all-over prints carry no extra charge
-                const logoW = logoSize * 0.376;          // inches
-                const logoArea = logoW * logoW * 0.75;   // sq in estimate
-                const logoCharge = logoPreview ? (20 + Math.ceil(logoArea)) : 0;
+                // Body / collar prints and all-over garment prints carry no extra charge
+                const logoW = logoSize * 0.376;
+                const logoAreaSqIn = logoPreview ? Math.ceil(logoW * logoW * 0.75) : 0;
                 const textH = textFontSize * (22/1024);
                 const textW = Math.max(1, textInput.length) * textFontSize * 0.55 * (22/1024);
-                const textCharge = textPlaced ? (20 + Math.ceil(textH * textW)) : 0;
-                const total = logoCharge + textCharge;
+                const textAreaSqIn = textPlaced ? Math.ceil(textH * textW) : 0;
+                const hasLogoOrText = !!(logoPreview || textPlaced);
+                const total = hasLogoOrText ? (20 + logoAreaSqIn + textAreaSqIn) : 0;
                 if (!total) return null;
                 return(
                   <div style={{padding:"10px 12px",borderRadius:10,background:V.sf2,border:`1px solid ${V.bd}`}}>
                     <div style={{fontFamily:"'Jost',sans-serif",fontSize:9,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:V.mu,marginBottom:8}}>Customisation Charge</div>
-                    {logoPreview&&<div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>Logo</span><span style={{color:V.ac,fontWeight:600}}>₹{logoCharge}</span></div>}
-                    {textPlaced&&<div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>Text / Name</span><span style={{color:V.ac,fontWeight:600}}>₹{textCharge}</span></div>}
+                    <div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>Base fee</span><span style={{color:V.ac,fontWeight:600}}>₹20</span></div>
+                    {logoPreview&&<div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>Logo ({logoAreaSqIn} sq in)</span><span style={{color:V.ac,fontWeight:600}}>₹{logoAreaSqIn}</span></div>}
+                    {textPlaced&&<div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>Name / Text ({textAreaSqIn} sq in)</span><span style={{color:V.ac,fontWeight:600}}>₹{textAreaSqIn}</span></div>}
                     <div style={{borderTop:`1px solid ${V.bd}`,marginTop:6,paddingTop:6,display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:12,fontWeight:700,color:V.tx}}><span>Total</span><span style={{color:V.ac}}>₹{total}</span></div>
-                    <div style={{fontFamily:"'Jost',sans-serif",fontSize:9,color:V.mu,marginTop:5,fontStyle:"italic"}}>₹20 base + ₹1 per sq inch (logo &amp; text only)</div>
+                    <div style={{fontFamily:"'Jost',sans-serif",fontSize:9,color:V.mu,marginTop:5,fontStyle:"italic"}}>₹20 base + ₹1 per sq inch · name &amp; logo only · prints &amp; colours free</div>
                   </div>
                 );
               })()}
