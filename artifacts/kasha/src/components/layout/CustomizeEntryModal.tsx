@@ -1,8 +1,8 @@
 /**
  * CustomizeEntryModal — Bespoke Studio entry point.
- * Men / Women gender tabs, each showing Solid · Printed · Pattern sections.
+ * Three fixed style tiles (Solid · Printed · Pattern), each linked to a
+ * canonical example product SKU. Clicking a tile opens that product's studio.
  */
-import { useState } from "react";
 import { useLocation } from "wouter";
 import { useUser } from "@clerk/react";
 import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
@@ -14,20 +14,36 @@ interface Props {
   onClose: () => void;
 }
 
-const BOTTOMS_CATS = ["trousers","trouser","pants","chinos","shorts","short","skort","skorts","skirts","skirt","bottoms"];
-const MEN_TOKENS   = ["men","men's","mens","male"];
-const WOMEN_TOKENS = ["women","women's","womens","female","ladies","lady","girl","girls","her"];
+// ── Canonical entry-point SKUs ──────────────────────────────────────────────
+const ENTRY_SKUS = {
+  solid:   "KS1000BPINK",
+  printed: "KS1000BGP003",
+  pattern: "KS1001B-RB",
+} as const;
 
-type Gender    = "Men" | "Women";
-type StyleType = "Solid" | "Printed" | "Pattern";
-
-interface StyleItem {
-  id:        number;
-  name:      string;
-  type:      StyleType;
-  thumbnail: string;
-  href:      string;
-}
+const TILE_CONFIG = [
+  {
+    key:      "solid" as const,
+    label:    "Solid",
+    desc:     "Clean base colours, ready to personalise",
+    accent:   "#6b8fa3",
+    icon:     "◼",
+  },
+  {
+    key:      "printed" as const,
+    label:    "Printed",
+    desc:     "All-over prints from the KA.SHA library",
+    accent:   "#a36b6b",
+    icon:     "✦",
+  },
+  {
+    key:      "pattern" as const,
+    label:    "Pattern",
+    desc:     "Bespoke geometric & signature patterns",
+    accent:   "#6ba37a",
+    icon:     "◈",
+  },
+];
 
 function buildHref(productId: number, sku: string): string {
   const result = parseSku(sku);
@@ -39,36 +55,9 @@ function buildHref(productId: number, sku: string): string {
   return `/products/${productId}/customize?entry=1&style=solid${designParam}`;
 }
 
-function inferType(sku: string, category: string, subType?: string | null): StyleType {
-  // Prefer the explicit subType set in the admin panel
-  if (subType) {
-    const st = subType.toLowerCase();
-    if (st === "printed" || st.includes("print")) return "Printed";
-    if (st === "pattern" || st.includes("pattern")) return "Pattern";
-    if (st === "solid") return "Solid";
-  }
-  // Fall back to SKU parsing
-  const result = parseSku(sku);
-  if (result.type === "print")   return "Printed";
-  if (result.type === "pattern") return "Pattern";
-  if (result.type === "solid")   return "Solid";
-  // Last resort: category name
-  const h = category.toLowerCase();
-  if (h.includes("print"))   return "Printed";
-  if (h.includes("pattern")) return "Pattern";
-  return "Solid";
-}
-
-const SECTION_CONFIG: { type: StyleType; label: string; sublabel: string; accent: string }[] = [
-  { type: "Solid",   label: "Solid T-Shirts",   sublabel: "Clean base colours, ready to personalise", accent: "#6b8fa3" },
-  { type: "Printed", label: "Printed T-Shirts",  sublabel: "All-over prints from the KA.SHA library",  accent: "#a36b6b" },
-  { type: "Pattern", label: "Pattern T-Shirts",  sublabel: "Bespoke geometric & signature patterns",    accent: "#6ba37a" },
-];
-
 export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   const [, navigate] = useLocation();
   const { user, isLoaded } = useUser();
-  const [gender, setGender] = useState<Gender>("Men");
 
   const { data: allProducts, isLoading } = useListProducts(
     {},
@@ -77,7 +66,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
 
   if (!isOpen) return null;
 
-  // ── Auth gate ──────────────────────────────────────────────────────────────
+  // ── Auth gate ─────────────────────────────────────────────────────────────
   if (isLoaded && !user) {
     return (
       <div
@@ -159,51 +148,17 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
     );
   }
 
-  // ── Filter products by gender ──────────────────────────────────────────────
-  // NOTE: "women".includes("men") === true, so we must explicitly exclude
-  // the opposite gender tokens to avoid cross-contamination.
-  function buildItems(tokens: string[], excludeTokens: string[]): StyleItem[] {
-    return (allProducts ?? [])
-      .filter(p => {
-        if (!p.available) return false;
-        const g = (p.gender ?? "").toLowerCase();
-        // Must match at least one token for this gender
-        if (!tokens.some(t => g.includes(t))) return false;
-        // Must NOT match any token from the opposite gender
-        if (excludeTokens.some(t => g.includes(t))) return false;
-        const cat = (p.category ?? "").toLowerCase();
-        return !BOTTOMS_CATS.includes(cat);
-      })
-      .map(p => {
-        const sku = p.sku ?? "";
-        return {
-          id:        p.id,
-          name:      p.name.replace(/\s*\[gt:GT\d+\]\s*$/i, ""),
-          type:      inferType(sku, p.category ?? "", p.subType),
-          thumbnail: getAssetUrl(p.thumbnailUrl) ?? "",
-          href:      buildHref(p.id, sku),
-        };
-      })
-      .sort((a, b) => a.name.localeCompare(b.name));
+  // ── Resolve each tile's product from the fetched list ─────────────────────
+  function resolveProduct(sku: string) {
+    return (allProducts ?? []).find(
+      p => (p.sku ?? "").toUpperCase() === sku.toUpperCase() && p.available
+    ) ?? null;
   }
 
-  const menItems    = buildItems(MEN_TOKENS,   WOMEN_TOKENS);
-  const womenItems  = buildItems(WOMEN_TOKENS, MEN_TOKENS);
-  const activeItems = gender === "Men" ? menItems : womenItems;
-
-  const grouped = {
-    Solid:   activeItems.filter(i => i.type === "Solid"),
-    Printed: activeItems.filter(i => i.type === "Printed"),
-    Pattern: activeItems.filter(i => i.type === "Pattern"),
-  };
-
-  function handleSelect(href: string) {
+  function handleSelect(productId: number, sku: string) {
     onClose();
-    const sep = href.includes("?") ? "&" : "?";
-    navigate(href + sep + "from=modal");
+    navigate(buildHref(productId, sku) + "&from=modal");
   }
-
-  const hasAnyProducts = activeItems.length > 0;
 
   return (
     <div
@@ -218,9 +173,8 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
     >
       <div className="cem-sheet" style={{
         background: "#fafaf7", borderRadius: 20,
-        maxWidth: 860, width: "calc(100vw - 32px)",
-        maxHeight: "calc(100vh - 40px)", overflowY: "auto",
-        padding: "32px 28px 36px", position: "relative",
+        maxWidth: 720, width: "calc(100vw - 32px)",
+        padding: "36px 32px 38px", position: "relative",
         animation: "cemSlideUp 0.32s cubic-bezier(0.16,1,0.3,1)",
         boxShadow: "0 32px 80px rgba(26,26,24,0.24), 0 8px 24px rgba(26,26,24,0.12)",
       }}>
@@ -238,7 +192,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         >×</button>
 
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 20 }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div style={{
             fontFamily: "'Jost', sans-serif", fontSize: 10,
             letterSpacing: ".2em", textTransform: "uppercase",
@@ -246,105 +200,43 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           }}>KA.SHA Bespoke Studio</div>
           <h2 style={{
             fontFamily: "'Cormorant Garamond', serif",
-            fontSize: 26, fontWeight: 600, color: "#1a1a18",
-            letterSpacing: ".02em", margin: 0, lineHeight: 1.2,
-          }}>Choose Your T-Shirt</h2>
+            fontSize: 28, fontWeight: 600, color: "#1a1a18",
+            letterSpacing: ".02em", margin: "0 0 8px", lineHeight: 1.2,
+          }}>Choose Your Style</h2>
           <p style={{
             fontFamily: "'Jost', sans-serif", fontSize: 11,
-            color: "#8a8780", marginTop: 6, letterSpacing: ".04em", fontStyle: "italic",
+            color: "#8a8780", letterSpacing: ".04em", fontStyle: "italic", margin: 0,
           }}>
-            Select any style — the 3D model loads with your chosen product's design pre-applied
+            Select a style — the 3D studio opens ready for your customisation
           </p>
         </div>
 
         {/* Gold divider */}
         <div style={{
           height: 1, background: "linear-gradient(90deg, transparent, #c9a84c, transparent)",
-          opacity: 0.4, marginBottom: 22,
+          opacity: 0.4, marginBottom: 28,
         }} />
 
-        {/* Gender tabs */}
-        <div style={{
-          display: "flex", justifyContent: "center", gap: 0,
-          marginBottom: 26,
-          border: "1.5px solid rgba(26,26,24,0.12)", borderRadius: 99,
-          padding: 4, width: "fit-content", margin: "0 auto 26px",
-          background: "rgba(26,26,24,0.03)",
-        }}>
-          {(["Men", "Women"] as Gender[]).map(g => (
-            <button
-              key={g}
-              onClick={() => setGender(g)}
-              style={{
-                padding: "8px 28px", borderRadius: 99, border: "none",
-                fontFamily: "'Jost', sans-serif", fontSize: 11, fontWeight: 600,
-                letterSpacing: ".12em", textTransform: "uppercase",
-                cursor: "pointer", transition: "all 0.22s cubic-bezier(0.16,1,0.3,1)",
-                background: gender === g
-                  ? "linear-gradient(135deg, #c9a84c, #b8925a)"
-                  : "transparent",
-                color: gender === g ? "#fff" : "#6b6b68",
-                boxShadow: gender === g ? "0 2px 12px rgba(201,168,76,0.28)" : "none",
-              }}
-            >{g}</button>
-          ))}
-        </div>
-
-        {/* Content */}
+        {/* Three style tiles */}
         {isLoading ? (
           <LoadingSkeleton />
-        ) : !hasAnyProducts ? (
-          <ComingSoon gender={gender} />
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-            {SECTION_CONFIG.map(sec => {
-              const items = grouped[sec.type];
+          <div className="cem-tiles">
+            {TILE_CONFIG.map(tile => {
+              const sku     = ENTRY_SKUS[tile.key];
+              const product = resolveProduct(sku);
               return (
-                <section key={sec.type}>
-                  {/* Section header */}
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{
-                        width: 8, height: 8, borderRadius: "50%",
-                        background: sec.accent, display: "inline-block", flexShrink: 0,
-                      }} />
-                      <span style={{
-                        fontFamily: "'Cormorant Garamond', serif",
-                        fontSize: 18, fontWeight: 600, color: "#1a1a18",
-                        letterSpacing: ".01em",
-                      }}>{sec.label}</span>
-                    </div>
-                    <span style={{
-                      fontFamily: "'Jost', sans-serif", fontSize: 10,
-                      color: "#b8b5ae", letterSpacing: ".04em", fontStyle: "italic",
-                    }}>{sec.sublabel}</span>
-                  </div>
-
-                  {items.length === 0 ? (
-                    <SectionComingSoon accent={sec.accent} />
-                  ) : (
-                    <div
-                      className="cem-scroll"
-                      style={{
-                        display: "flex", gap: 12,
-                        overflowX: "auto", overflowY: "hidden",
-                        paddingBottom: 10, paddingLeft: 2, paddingRight: 2,
-                        scrollSnapType: "x mandatory",
-                        WebkitOverflowScrolling: "touch",
-                        cursor: "grab",
-                      }}
-                      onMouseDown={e => { e.currentTarget.style.cursor = "grabbing"; }}
-                      onMouseUp={e => { e.currentTarget.style.cursor = "grab"; }}
-                      onMouseLeave={e => { e.currentTarget.style.cursor = "grab"; }}
-                    >
-                      {items.map(item => (
-                        <div key={item.id} style={{ scrollSnapAlign: "start", flexShrink: 0 }} className="cem-card-wrap">
-                          <ProductCard item={item} accent={sec.accent} onSelect={handleSelect} />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
+                <StyleTile
+                  key={tile.key}
+                  label={tile.label}
+                  desc={tile.desc}
+                  accent={tile.accent}
+                  icon={tile.icon}
+                  thumbnail={product ? (getAssetUrl(product.thumbnailUrl) ?? "") : ""}
+                  productName={product?.name.replace(/\s*\[gt:GT\d+\]\s*$/i, "") ?? ""}
+                  disabled={!product}
+                  onSelect={() => product && handleSelect(product.id, sku)}
+                />
               );
             })}
           </div>
@@ -352,7 +244,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
 
         {/* Footer note */}
         <p style={{
-          textAlign: "center", marginTop: 20,
+          textAlign: "center", marginTop: 24,
           fontFamily: "'Jost', sans-serif", fontSize: 10,
           color: "#b8b5ae", letterSpacing: ".08em", fontStyle: "italic",
         }}>
@@ -364,156 +256,128 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         @keyframes cemFadeIn  { from { opacity:0 } to { opacity:1 } }
         @keyframes cemSlideUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:translateY(0) } }
         @keyframes cemPulse   { 0%,100% { opacity:.5 } 50% { opacity:.85 } }
-        .cem-scroll::-webkit-scrollbar { height: 4px; }
-        .cem-scroll::-webkit-scrollbar-track { background: rgba(26,26,24,0.05); border-radius: 99px; }
-        .cem-scroll::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.35); border-radius: 99px; }
-        .cem-card-wrap { width: 160px; }
-        @media (max-width: 620px) {
-          .cem-sheet { padding:16px 12px 22px !important; border-radius:14px !important; width:calc(100vw - 16px) !important; }
-          .cem-card-wrap { width: 140px; }
+        .cem-tiles {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 16px;
         }
-        @media (max-width: 400px) {
-          .cem-card-wrap { width: 128px; }
+        @media (max-width: 580px) {
+          .cem-sheet { padding: 20px 14px 24px !important; border-radius: 14px !important; width: calc(100vw - 16px) !important; }
+          .cem-tiles { grid-template-columns: 1fr; gap: 12px; }
         }
       `}</style>
     </div>
   );
 }
 
-// ── Full-gender coming soon (no products at all for that gender) ───────────────
-function ComingSoon({ gender }: { gender: Gender }) {
-  return (
-    <div style={{
-      textAlign: "center", padding: "40px 24px",
-      border: "1.5px dashed rgba(201,168,76,0.3)", borderRadius: 14,
-      background: "linear-gradient(160deg, #fdf9f2, #faf6ee)",
-    }}>
-      <div style={{ fontSize: 32, marginBottom: 14, opacity: 0.5 }}>✦</div>
-      <div style={{
-        fontFamily: "'Cormorant Garamond', serif", fontSize: 20,
-        fontWeight: 600, color: "#1a1a18", marginBottom: 8,
-      }}>{gender}'s Collection — Coming Soon</div>
-      <p style={{
-        fontFamily: "'Jost', sans-serif", fontSize: 11,
-        color: "#8a8780", letterSpacing: ".05em", lineHeight: 1.7,
-        maxWidth: 320, margin: "0 auto",
-      }}>
-        We're crafting a bespoke range for {gender === "Women" ? "her" : "him"}.<br />
-        Check back soon or explore the Men's collection in the meantime.
-      </p>
-    </div>
-  );
-}
-
-// ── Per-section coming soon (no products for this style × gender combo) ────────
-function SectionComingSoon({ accent }: { accent: string }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 12,
-      padding: "14px 18px",
-      border: `1px dashed ${accent}55`, borderRadius: 10,
-      background: `${accent}08`,
-    }}>
-      <span style={{ fontSize: 18, opacity: 0.35 }}>✦</span>
-      <span style={{
-        fontFamily: "'Jost', sans-serif", fontSize: 10,
-        letterSpacing: ".1em", textTransform: "uppercase",
-        color: accent, opacity: 0.7,
-      }}>Coming Soon</span>
-    </div>
-  );
-}
-
-// ── Product card ───────────────────────────────────────────────────────────────
-function ProductCard({ item, accent, onSelect }: {
-  item: StyleItem;
+// ── Style tile ────────────────────────────────────────────────────────────────
+function StyleTile({
+  label, desc, accent, icon, thumbnail, productName, disabled, onSelect,
+}: {
+  label: string;
+  desc: string;
   accent: string;
-  onSelect: (h: string) => void;
+  icon: string;
+  thumbnail: string;
+  productName: string;
+  disabled: boolean;
+  onSelect: () => void;
 }) {
   return (
     <button
-      onClick={() => onSelect(item.href)}
+      onClick={onSelect}
+      disabled={disabled}
+      className="cem-tile"
       style={{
-        padding: 0, border: "1.5px solid rgba(26,26,24,0.09)",
-        borderRadius: 12, cursor: "pointer", background: "#ffffff",
-        overflow: "hidden", textAlign: "left", width: "100%",
+        display: "flex", flexDirection: "column", alignItems: "stretch",
+        padding: 0, border: `1.5px solid ${accent}33`,
+        borderRadius: 14, cursor: disabled ? "not-allowed" : "pointer",
+        background: "#fff", overflow: "hidden", textAlign: "left",
         transition: "all 0.24s cubic-bezier(0.16,1,0.3,1)",
-        boxShadow: "0 2px 8px rgba(26,26,24,0.06)",
-        display: "flex", flexDirection: "column",
+        boxShadow: "0 2px 10px rgba(26,26,24,0.06)",
+        opacity: disabled ? 0.45 : 1,
       }}
       onMouseEnter={e => {
+        if (disabled) return;
         const el = e.currentTarget as HTMLElement;
-        el.style.borderColor = "#c9a84c";
-        el.style.transform = "translateY(-3px)";
-        el.style.boxShadow = "0 10px 28px rgba(201,168,76,0.18), 0 4px 12px rgba(26,26,24,0.07)";
+        el.style.borderColor = accent;
+        el.style.transform = "translateY(-4px)";
+        el.style.boxShadow = `0 14px 36px ${accent}28, 0 4px 14px rgba(26,26,24,0.08)`;
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLElement;
-        el.style.borderColor = "rgba(26,26,24,0.09)";
+        el.style.borderColor = `${accent}33`;
         el.style.transform = "translateY(0)";
-        el.style.boxShadow = "0 2px 8px rgba(26,26,24,0.06)";
+        el.style.boxShadow = "0 2px 10px rgba(26,26,24,0.06)";
       }}
     >
       {/* Thumbnail */}
       <div style={{
-        width: "100%", aspectRatio: "1/1", overflow: "hidden",
-        background: "linear-gradient(160deg, #f7f4ee, #edeae3)",
+        width: "100%", aspectRatio: "4/3", overflow: "hidden",
+        background: `linear-gradient(160deg, ${accent}12, ${accent}06)`,
         flexShrink: 0, position: "relative",
         display: "flex", alignItems: "center", justifyContent: "center",
       }}>
-        {item.thumbnail ? (
+        {thumbnail ? (
           <img
-            src={item.thumbnail}
-            alt={item.name}
+            src={thumbnail}
+            alt={label}
             style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }}
-            onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.18"; }}
+            onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0.15"; }}
           />
         ) : (
-          <span style={{ fontSize: 26, opacity: 0.3 }}>✦</span>
+          <span style={{ fontSize: 36, opacity: 0.18, color: accent }}>{icon}</span>
         )}
+        {/* Style badge */}
+        <div style={{
+          position: "absolute", top: 10, left: 10,
+          background: accent, color: "#fff",
+          fontFamily: "'Jost', sans-serif", fontSize: 8, fontWeight: 700,
+          letterSpacing: ".14em", textTransform: "uppercase",
+          padding: "4px 9px", borderRadius: 99,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+        }}>{label}</div>
       </div>
 
       {/* Info */}
-      <div style={{ padding: "8px 10px 10px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
-          <span style={{ width: 5, height: 5, borderRadius: "50%", background: accent, flexShrink: 0 }} />
-          <span style={{
-            fontFamily: "'Jost', sans-serif", fontSize: 7.5, fontWeight: 700,
-            letterSpacing: ".12em", textTransform: "uppercase", color: accent,
-          }}>{item.type}</span>
-        </div>
+      <div style={{ padding: "14px 14px 16px" }}>
         <div style={{
-          fontFamily: "'Cormorant Garamond', serif", fontSize: 13, fontWeight: 600,
+          fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontWeight: 600,
           color: "#1a1a18", lineHeight: 1.25, marginBottom: 4,
-        }}>{item.name}</div>
+        }}>
+          {productName || `${label} T-Shirt`}
+        </div>
+        <p style={{
+          fontFamily: "'Jost', sans-serif", fontSize: 9.5, color: "#8a8780",
+          letterSpacing: ".04em", lineHeight: 1.6, margin: "0 0 10px",
+        }}>{desc}</p>
         <div style={{
-          fontFamily: "'Jost', sans-serif", fontSize: 8, color: "#c9a84c", letterSpacing: ".08em",
-        }}>Open in Studio →</div>
+          fontFamily: "'Jost', sans-serif", fontSize: 8.5, fontWeight: 600,
+          color: accent, letterSpacing: ".1em", textTransform: "uppercase",
+        }}>
+          {disabled ? "Coming Soon" : "Open in Studio →"}
+        </div>
       </div>
     </button>
   );
 }
 
-// ── Loading skeleton ───────────────────────────────────────────────────────────
+// ── Loading skeleton ──────────────────────────────────────────────────────────
 function LoadingSkeleton() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-      {["Solid T-Shirts", "Printed T-Shirts", "Pattern T-Shirts"].map(label => (
-        <div key={label}>
-          <div style={{
-            width: 140, height: 16, borderRadius: 6,
-            background: "linear-gradient(90deg, #ede9e1, #e0dbd2, #ede9e1)",
-            marginBottom: 12, animation: "cemPulse 1.4s ease-in-out infinite",
-          }} />
-          <div style={{ display: "flex", gap: 12 }}>
-            {[1, 2, 3].map(i => (
-              <div key={i} style={{
-                width: 160, height: 200, borderRadius: 12, flexShrink: 0,
-                background: "linear-gradient(160deg, #f0ede6, #e8e4db)",
-                animation: "cemPulse 1.4s ease-in-out infinite",
-                animationDelay: `${i * 0.15}s`,
-              }} />
-            ))}
+    <div className="cem-tiles">
+      {[0, 1, 2].map(i => (
+        <div key={i} style={{
+          borderRadius: 14, overflow: "hidden",
+          border: "1.5px solid rgba(26,26,24,0.07)",
+          animation: "cemPulse 1.4s ease-in-out infinite",
+          animationDelay: `${i * 0.15}s`,
+        }}>
+          <div style={{ aspectRatio: "4/3", background: "linear-gradient(160deg, #f0ede6, #e8e4db)" }} />
+          <div style={{ padding: "14px 14px 16px" }}>
+            <div style={{ width: "70%", height: 14, borderRadius: 4, background: "#ede9e1", marginBottom: 8 }} />
+            <div style={{ width: "90%", height: 10, borderRadius: 4, background: "#ede9e1", marginBottom: 4 }} />
+            <div style={{ width: "50%", height: 10, borderRadius: 4, background: "#ede9e1" }} />
           </div>
         </div>
       ))}
