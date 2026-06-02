@@ -1,20 +1,21 @@
 ---
-name: Right sleeve UV flip
-description: Correct flipX/flipY values for the right-sleeve UV island in the 3D customizer texture canvas.
+name: Sleeve UV flip (confirmed working)
+description: Correct flipX/flipY values for sleeve placements in the 3D customizer — DO NOT modify.
 ---
 
-## Rule
-In `artifacts/kasha/src/pages/customize.tsx`, the two placement flip functions must be:
+## Rule — DO NOT CHANGE
+
+In `artifacts/kasha/src/pages/customize.tsx`, the confirmed working placement flip functions are:
 
 ```ts
-function placementFlipX(placement: string): boolean {
-  return placement !== "right-sleeve";   // all zones except right-sleeve
+function placementFlipX(_placement: string): boolean {
+  return true;  // all zones including right-sleeve
 }
-function placementFlipY(placement: string): boolean {
-  return placement === "right-sleeve";   // only right-sleeve
+function placementFlipY(_placement: string): boolean {
+  return false; // no vertical flip for any zone
 }
 ```
 
-**Why:** The UV texture map is horizontally mirrored for every zone, so `flipX:true` corrects text/logos everywhere. The right-sleeve UV island is additionally vertically flipped relative to the left sleeve — `flipY:true` corrects that. The combination means right-sleeve gets `flipX:false` + `flipY:true`; all other zones get `flipX:true` + `flipY:false`. Setting both to `true` (or both to `false`) produces reversed/upside-down text on the right sleeve.
+**Why:** All UV zones (body, collar, sleeves) are horizontally mirrored in the texture — `flipX:true` corrects text/logos on every zone. The right-sleeve UV island does NOT need a separate vertical flip; `flipX:true` alone produces the correct orientation. `flipY:true` on right-sleeve causes text to appear upside-down. User confirmed this is correct and must not be reverted.
 
-**How to apply:** Any time a rollback or merge resets these functions, re-apply the above. The code comment in the file also documents this — trust the comment, not the function body if they conflict.
+**How to apply:** If a merge or rollback resets these functions, re-apply the above exactly. Trust this file over any older notes that say right-sleeve needs `flipX:false` or `flipY:true` — those were superseded.
