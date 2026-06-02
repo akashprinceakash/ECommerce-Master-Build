@@ -1663,7 +1663,7 @@ export default function CustomizePage() {
                     {isPrintMode&&(
                       <>
                         <TargetRow title="Full Body" desc="Apply a premium print to the entire garment" showPrint printFor="all"/>
-                        <TargetRow title="Base Body" desc="Print on body, excluding the collar" showPrint printFor="base-body"/>
+                        <TargetRow title="Base Body" desc="Colour or print the body, excluding the collar" showColour colourFor="base-body" showPrint printFor="base-body"/>
                         <TargetRow title="Collar" desc="Collar accent colour or print" showColour colourFor="collar" showPrint printFor="collar"/>
                       </>
                     )}
@@ -3710,7 +3710,6 @@ export default function CustomizePage() {
                   if(printModalFor==="base-body"){
                     applyZonePrint("front",chosen); applyZonePrint("back",chosen);
                     applyZonePrint("leftSleeve",chosen); applyZonePrint("rightSleeve",chosen);
-                    applyZonePrint("collar",chosen);
                   } else if(printModalFor==="collar"){
                     applyZonePrint("collar",chosen);
                   } else if(printModalFor==="accent"){
