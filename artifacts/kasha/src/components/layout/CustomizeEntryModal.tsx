@@ -17,9 +17,6 @@ interface Props {
   onClose: () => void;
 }
 
-const GENDERS = ["Men", "Women"] as const;
-type Gender = typeof GENDERS[number];
-
 const BOTTOMS_CATS = ["trousers","trouser","pants","chinos","shorts","short","skort","skorts","skirts","skirt","bottoms"];
 const MEN_TOKENS   = ["men","men's","mens","male"];
 
@@ -68,7 +65,6 @@ const SECTION_CONFIG: { type: StyleType; label: string; sublabel: string; accent
 
 export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   const [, navigate] = useLocation();
-  const [gender, setGender] = useState<Gender>("Men");
   const { user, isLoaded } = useUser();
 
   const { data: allProducts, isLoading } = useListProducts(
@@ -248,54 +244,11 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         {/* Gold divider */}
         <div style={{
           height: 1, background: "linear-gradient(90deg, transparent, #c9a84c, transparent)",
-          opacity: 0.4, marginBottom: 20,
+          opacity: 0.4, marginBottom: 24,
         }} />
 
-        {/* Gender selector */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 24 }}>
-          {GENDERS.map(g => (
-            <button key={g} onClick={() => setGender(g)} style={{
-              padding: "6px 20px", borderRadius: 99,
-              border: `1.5px solid ${gender === g ? "#c9a84c" : "rgba(26,26,24,0.14)"}`,
-              background: gender === g ? "rgba(201,168,76,0.1)" : "transparent",
-              color: gender === g ? "#c9a84c" : "#6b6b68",
-              fontFamily: "'Jost', sans-serif", fontSize: 11,
-              letterSpacing: ".08em", textTransform: "uppercase",
-              fontWeight: gender === g ? 700 : 400,
-              cursor: "pointer", transition: "all .18s",
-            }}>{g}</button>
-          ))}
-        </div>
-
         {/* Content */}
-        {gender === "Women" ? (
-          <div style={{
-            textAlign: "center", padding: "48px 24px",
-            background: "linear-gradient(135deg, #fdfbf6, #f5efe0)",
-            borderRadius: 16, border: "1px solid rgba(201,168,76,0.2)",
-          }}>
-            <div style={{ fontSize: 36, marginBottom: 16, opacity: 0.7 }}>✦</div>
-            <div style={{
-              fontFamily: "'Cormorant Garamond', serif",
-              fontSize: 26, fontWeight: 600, color: "#1a1a18",
-              letterSpacing: ".02em", marginBottom: 10,
-            }}>Coming Soon</div>
-            <p style={{
-              fontFamily: "'Jost', sans-serif", fontSize: 12, color: "#8a8780",
-              letterSpacing: ".05em", lineHeight: 1.7, maxWidth: 340, margin: "0 auto",
-            }}>
-              The KA.SHA Women's Bespoke Studio is being crafted with care.
-              Check back shortly — or explore our <strong style={{ color: "#c9a84c" }}>Men's collection</strong> while you wait.
-            </p>
-            <button onClick={() => setGender("Men")} style={{
-              marginTop: 24, padding: "10px 28px", borderRadius: 99,
-              border: "1.5px solid #c9a84c", background: "transparent",
-              fontFamily: "'Jost', sans-serif", fontSize: 10,
-              letterSpacing: ".12em", textTransform: "uppercase",
-              color: "#c9a84c", fontWeight: 700, cursor: "pointer",
-            }}>View Men's Styles</button>
-          </div>
-        ) : isLoading ? (
+        {isLoading ? (
           <LoadingSkeleton />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
