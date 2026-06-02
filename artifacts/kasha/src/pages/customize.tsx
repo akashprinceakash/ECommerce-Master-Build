@@ -104,10 +104,10 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "collar-left":   { left:  62, top: 266 },  // left collar tip (UV strip start); text scaled by clampCollarText to fit
   "collar-right":  { left: 452, top: 266 },  // right collar tip (UV strip end); text scaled by clampCollarText to fit
 };
-// All UV zones are horizontally mirrored — flipX corrects text/logos for all placements.
-// The right-sleeve UV island is additionally vertically flipped (handled by placementFlipY).
-function placementFlipX(_placement: string): boolean {
-  return true;
+// All UV zones are horizontally mirrored — flipX corrects text/logos for all placements
+// EXCEPT right-sleeve, whose UV island is vertically flipped but not horizontally mirrored.
+function placementFlipX(placement: string): boolean {
+  return placement !== "right-sleeve";
 }
 // The right-sleeve UV island is also flipped vertically relative to the left sleeve,
 // so text/logos placed there need flipY:true as well to appear right-side up.
