@@ -2293,6 +2293,18 @@ export default function CustomizePage() {
               }}>
                 Browse →
               </a>
+            ) : cartAdded ? (
+              <Link href="/cart" style={{
+                flex:2,padding:"11px 0",borderRadius:99,textDecoration:"none",
+                background:V.ac,color:V.tx,textAlign:"center",
+                fontSize:11,fontWeight:600,cursor:"pointer",
+                fontFamily:"'Jost',sans-serif",letterSpacing:".07em",textTransform:"uppercase",
+                transition:"all 0.25s",display:"flex",alignItems:"center",justifyContent:"center",gap:6,
+              }}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=V.tx;(e.currentTarget as HTMLElement).style.color="#fff";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=V.ac;(e.currentTarget as HTMLElement).style.color=V.tx;}}>
+                🛒 View Cart
+              </Link>
             ) : (
               <button
                 onClick={handleAddToCart}
