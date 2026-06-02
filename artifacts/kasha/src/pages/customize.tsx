@@ -1240,7 +1240,7 @@ export default function CustomizePage() {
           <div style={{width:1,height:18,background:`rgba(26,26,24,0.1)`}}/>
           <Link href="/" style={{display:"inline-flex",alignItems:"center"}}>
             <img
-              src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Horizontal%20logo%20coloured%20(350%20by%2075)%20(1).svg"
+              src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/Kasha-logo-01.jpeg"
               alt="KA.SHA — Home"
               style={{height:28,width:"auto",objectFit:"contain"}}
             />

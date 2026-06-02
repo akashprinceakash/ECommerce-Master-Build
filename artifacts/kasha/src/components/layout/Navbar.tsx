@@ -144,7 +144,7 @@ export function Navbar() {
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         >
           <img
-            src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Horizontal%20logo%20coloured%20(350%20by%2075)%20(1).svg"
+            src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/Kasha-logo-01.jpeg"
             alt="Ka.Sha"
             style={{ width: 140, height: "auto", objectFit: "contain", filter: scrolled ? "brightness(1)" : "brightness(1.1)" }}
           />
