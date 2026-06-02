@@ -1,9 +1,6 @@
 /**
  * CustomizeEntryModal — Bespoke Studio entry point.
- * Fetches all Men's T-shirt products live from the API and groups them into
- * three labelled sections: Solid T-Shirts · Printed T-Shirts · Pattern T-Shirts.
- * Clicking any card navigates to the studio with style + design params so the
- * 3D model renders with that product's colours/print/pattern pre-applied.
+ * Men / Women gender tabs, each showing Solid · Printed · Pattern sections.
  */
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -19,29 +16,25 @@ interface Props {
 
 const BOTTOMS_CATS = ["trousers","trouser","pants","chinos","shorts","short","skort","skorts","skirts","skirt","bottoms"];
 const MEN_TOKENS   = ["men","men's","mens","male"];
+const WOMEN_TOKENS = ["women","women's","womens","female","ladies","lady","girl","girls","her"];
 
+type Gender    = "Men" | "Women";
 type StyleType = "Solid" | "Printed" | "Pattern";
 
 interface StyleItem {
-  id: number;
-  name: string;
-  type: StyleType;
+  id:        number;
+  name:      string;
+  type:      StyleType;
   thumbnail: string;
-  href: string;
+  href:      string;
 }
 
-/** Build the customize URL so the studio pre-applies the product's design on load. */
 function buildHref(productId: number, sku: string): string {
   const result = parseSku(sku);
-  if (result.type === "pattern") {
-    // Pass full SKU (inc. colorway e.g. KS1001B-RB) so the studio applies the right colors
+  if (result.type === "pattern")
     return `/products/${productId}/customize?entry=1&style=pattern&design=${encodeURIComponent(sku)}`;
-  }
-  if (result.type === "print") {
-    // Pass SKU as design so the studio knows which exact print to pre-apply
+  if (result.type === "print")
     return `/products/${productId}/customize?entry=1&style=print&design=${encodeURIComponent(sku)}`;
-  }
-  // Solid — pass full SKU (e.g. KS1000BROYALBLUE) so the correct color is applied
   const designParam = sku ? `&design=${encodeURIComponent(sku)}` : "";
   return `/products/${productId}/customize?entry=1&style=solid${designParam}`;
 }
@@ -66,6 +59,7 @@ const SECTION_CONFIG: { type: StyleType; label: string; sublabel: string; accent
 export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   const [, navigate] = useLocation();
   const { user, isLoaded } = useUser();
+  const [gender, setGender] = useState<Gender>("Men");
 
   const { data: allProducts, isLoading } = useListProducts(
     {},
@@ -156,26 +150,38 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
     );
   }
 
-  // ── Build items from live API ──────────────────────────────────────────────
-  const menItems: StyleItem[] = (allProducts ?? [])
-    .filter(p => {
-      if (!p.available) return false;
-      const g = (p.gender ?? "").toLowerCase();
-      if (!MEN_TOKENS.some(t => g.includes(t))) return false;
-      const cat = (p.category ?? "").toLowerCase();
-      return !BOTTOMS_CATS.includes(cat);
-    })
-    .map(p => {
-      const sku = p.sku ?? "";
-      return {
-        id:        p.id,
-        name:      p.name.replace(/\s*\[gt:GT\d+\]\s*$/i, ""),
-        type:      inferType(sku, p.category ?? ""),
-        thumbnail: getAssetUrl(p.thumbnailUrl) ?? "",
-        href:      buildHref(p.id, sku),
-      };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
+  // ── Filter products by gender ──────────────────────────────────────────────
+  function buildItems(tokens: string[]): StyleItem[] {
+    return (allProducts ?? [])
+      .filter(p => {
+        if (!p.available) return false;
+        const g = (p.gender ?? "").toLowerCase();
+        if (!tokens.some(t => g.includes(t))) return false;
+        const cat = (p.category ?? "").toLowerCase();
+        return !BOTTOMS_CATS.includes(cat);
+      })
+      .map(p => {
+        const sku = p.sku ?? "";
+        return {
+          id:        p.id,
+          name:      p.name.replace(/\s*\[gt:GT\d+\]\s*$/i, ""),
+          type:      inferType(sku, p.category ?? ""),
+          thumbnail: getAssetUrl(p.thumbnailUrl) ?? "",
+          href:      buildHref(p.id, sku),
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  const menItems    = buildItems(MEN_TOKENS);
+  const womenItems  = buildItems(WOMEN_TOKENS);
+  const activeItems = gender === "Men" ? menItems : womenItems;
+
+  const grouped = {
+    Solid:   activeItems.filter(i => i.type === "Solid"),
+    Printed: activeItems.filter(i => i.type === "Printed"),
+    Pattern: activeItems.filter(i => i.type === "Pattern"),
+  };
 
   function handleSelect(href: string) {
     onClose();
@@ -183,11 +189,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
     navigate(href + sep + "from=modal");
   }
 
-  const grouped = {
-    Solid:   menItems.filter(i => i.type === "Solid"),
-    Printed: menItems.filter(i => i.type === "Printed"),
-    Pattern: menItems.filter(i => i.type === "Pattern"),
-  };
+  const hasAnyProducts = activeItems.length > 0;
 
   return (
     <div
@@ -244,17 +246,45 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         {/* Gold divider */}
         <div style={{
           height: 1, background: "linear-gradient(90deg, transparent, #c9a84c, transparent)",
-          opacity: 0.4, marginBottom: 24,
+          opacity: 0.4, marginBottom: 22,
         }} />
+
+        {/* Gender tabs */}
+        <div style={{
+          display: "flex", justifyContent: "center", gap: 0,
+          marginBottom: 26,
+          border: "1.5px solid rgba(26,26,24,0.12)", borderRadius: 99,
+          padding: 4, width: "fit-content", margin: "0 auto 26px",
+          background: "rgba(26,26,24,0.03)",
+        }}>
+          {(["Men", "Women"] as Gender[]).map(g => (
+            <button
+              key={g}
+              onClick={() => setGender(g)}
+              style={{
+                padding: "8px 28px", borderRadius: 99, border: "none",
+                fontFamily: "'Jost', sans-serif", fontSize: 11, fontWeight: 600,
+                letterSpacing: ".12em", textTransform: "uppercase",
+                cursor: "pointer", transition: "all 0.22s cubic-bezier(0.16,1,0.3,1)",
+                background: gender === g
+                  ? "linear-gradient(135deg, #c9a84c, #b8925a)"
+                  : "transparent",
+                color: gender === g ? "#fff" : "#6b6b68",
+                boxShadow: gender === g ? "0 2px 12px rgba(201,168,76,0.28)" : "none",
+              }}
+            >{g}</button>
+          ))}
+        </div>
 
         {/* Content */}
         {isLoading ? (
           <LoadingSkeleton />
+        ) : !hasAnyProducts ? (
+          <ComingSoon gender={gender} />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
             {SECTION_CONFIG.map(sec => {
               const items = grouped[sec.type];
-              if (items.length === 0) return null;
               return (
                 <section key={sec.type}>
                   {/* Section header */}
@@ -276,34 +306,37 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
                     }}>{sec.sublabel}</span>
                   </div>
 
-                  {/* Horizontal scroll row */}
-                  <div
-                    className="cem-scroll"
-                    style={{
-                      display: "flex", gap: 12,
-                      overflowX: "auto", overflowY: "hidden",
-                      paddingBottom: 10, paddingLeft: 2, paddingRight: 2,
-                      scrollSnapType: "x mandatory",
-                      WebkitOverflowScrolling: "touch",
-                      cursor: "grab",
-                    }}
-                    onMouseDown={e => { e.currentTarget.style.cursor = "grabbing"; }}
-                    onMouseUp={e => { e.currentTarget.style.cursor = "grab"; }}
-                    onMouseLeave={e => { e.currentTarget.style.cursor = "grab"; }}
-                  >
-                    {items.map(item => (
-                      <div key={item.id} style={{ scrollSnapAlign: "start", flexShrink: 0 }} className="cem-card-wrap">
-                        <ProductCard item={item} accent={sec.accent} onSelect={handleSelect} />
-                      </div>
-                    ))}
-                  </div>
+                  {items.length === 0 ? (
+                    <SectionComingSoon accent={sec.accent} />
+                  ) : (
+                    <div
+                      className="cem-scroll"
+                      style={{
+                        display: "flex", gap: 12,
+                        overflowX: "auto", overflowY: "hidden",
+                        paddingBottom: 10, paddingLeft: 2, paddingRight: 2,
+                        scrollSnapType: "x mandatory",
+                        WebkitOverflowScrolling: "touch",
+                        cursor: "grab",
+                      }}
+                      onMouseDown={e => { e.currentTarget.style.cursor = "grabbing"; }}
+                      onMouseUp={e => { e.currentTarget.style.cursor = "grab"; }}
+                      onMouseLeave={e => { e.currentTarget.style.cursor = "grab"; }}
+                    >
+                      {items.map(item => (
+                        <div key={item.id} style={{ scrollSnapAlign: "start", flexShrink: 0 }} className="cem-card-wrap">
+                          <ProductCard item={item} accent={sec.accent} onSelect={handleSelect} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </section>
               );
             })}
           </div>
         )}
 
-        {/* Footer */}
+        {/* Footer note */}
         <p style={{
           textAlign: "center", marginTop: 20,
           fontFamily: "'Jost', sans-serif", fontSize: 10,
@@ -333,7 +366,51 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   );
 }
 
-// ── Product card ──────────────────────────────────────────────────────────────
+// ── Full-gender coming soon (no products at all for that gender) ───────────────
+function ComingSoon({ gender }: { gender: Gender }) {
+  return (
+    <div style={{
+      textAlign: "center", padding: "40px 24px",
+      border: "1.5px dashed rgba(201,168,76,0.3)", borderRadius: 14,
+      background: "linear-gradient(160deg, #fdf9f2, #faf6ee)",
+    }}>
+      <div style={{ fontSize: 32, marginBottom: 14, opacity: 0.5 }}>✦</div>
+      <div style={{
+        fontFamily: "'Cormorant Garamond', serif", fontSize: 20,
+        fontWeight: 600, color: "#1a1a18", marginBottom: 8,
+      }}>{gender}'s Collection — Coming Soon</div>
+      <p style={{
+        fontFamily: "'Jost', sans-serif", fontSize: 11,
+        color: "#8a8780", letterSpacing: ".05em", lineHeight: 1.7,
+        maxWidth: 320, margin: "0 auto",
+      }}>
+        We're crafting a bespoke range for {gender === "Women" ? "her" : "him"}.<br />
+        Check back soon or explore the Men's collection in the meantime.
+      </p>
+    </div>
+  );
+}
+
+// ── Per-section coming soon (no products for this style × gender combo) ────────
+function SectionComingSoon({ accent }: { accent: string }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 12,
+      padding: "14px 18px",
+      border: `1px dashed ${accent}55`, borderRadius: 10,
+      background: `${accent}08`,
+    }}>
+      <span style={{ fontSize: 18, opacity: 0.35 }}>✦</span>
+      <span style={{
+        fontFamily: "'Jost', sans-serif", fontSize: 10,
+        letterSpacing: ".1em", textTransform: "uppercase",
+        color: accent, opacity: 0.7,
+      }}>Coming Soon</span>
+    </div>
+  );
+}
+
+// ── Product card ───────────────────────────────────────────────────────────────
 function ProductCard({ item, accent, onSelect }: {
   item: StyleItem;
   accent: string;
@@ -380,18 +457,12 @@ function ProductCard({ item, accent, onSelect }: {
         ) : (
           <span style={{ fontSize: 26, opacity: 0.3 }}>✦</span>
         )}
-        {/* "Opens in Studio" label on hover via CSS isn't easy — use a subtle overlay dot */}
       </div>
 
       {/* Info */}
       <div style={{ padding: "8px 10px 10px" }}>
-        <div style={{
-          display: "flex", alignItems: "center", gap: 5, marginBottom: 3,
-        }}>
-          <span style={{
-            width: 5, height: 5, borderRadius: "50%",
-            background: accent, flexShrink: 0,
-          }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
+          <span style={{ width: 5, height: 5, borderRadius: "50%", background: accent, flexShrink: 0 }} />
           <span style={{
             fontFamily: "'Jost', sans-serif", fontSize: 7.5, fontWeight: 700,
             letterSpacing: ".12em", textTransform: "uppercase", color: accent,
@@ -409,7 +480,7 @@ function ProductCard({ item, accent, onSelect }: {
   );
 }
 
-// ── Loading skeleton ──────────────────────────────────────────────────────────
+// ── Loading skeleton ───────────────────────────────────────────────────────────
 function LoadingSkeleton() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
