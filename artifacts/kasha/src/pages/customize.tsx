@@ -858,27 +858,38 @@ export default function CustomizePage() {
   }, [product, isTypeMode, garmentType, canvasReady, applyAllOverPrint]);
 
   // SOLID auto-apply: apply the correct base color from SKU when arriving on a solid product.
-  // Priority: 1) ?design= URL param (e.g. KS1000BPOWDERBLUE from modal)  2) product.sku
+  // Priority: 1) ?design= URL param hex  2) product.sku hex  3) product.defaultColor
+  // The fallback hex "#f5f5f5" means the color code wasn't in the map, so we don't use it.
   const autoAppliedSolidRef = useRef(false);
   useEffect(() => {
     if (autoAppliedSolidRef.current) return;
     if (!canvasReady) return;
 
-    // Try the entry design param first (e.g. KS1000BPOWDERBLUE passed from the modal)
+    const FALLBACK_WHITE = "#f5f5f5";
+
+    // 1) Try the entry design param (e.g. KS1000BROYELBLUE passed from the modal)
     const entryResult = parseSku(entryDesignRef.current ?? "");
-    if (entryResult.type === "solid") {
+    if (entryResult.type === "solid" && entryResult.hex !== FALLBACK_WHITE) {
       autoAppliedSolidRef.current = true;
       applyPrimary(entryResult.hex);
       return;
     }
 
-    // Fall back to the product's own SKU
-    if (!product?.sku) return;
-    const skuResult = parseSku(product.sku);
-    if (skuResult.type !== "solid") return;
+    // 2) Try the product's own SKU
+    if (product?.sku) {
+      const skuResult = parseSku(product.sku);
+      if (skuResult.type === "solid" && skuResult.hex !== FALLBACK_WHITE) {
+        autoAppliedSolidRef.current = true;
+        applyPrimary(skuResult.hex);
+        return;
+      }
+    }
 
-    autoAppliedSolidRef.current = true;
-    applyPrimary(skuResult.hex);
+    // 3) Fall back to the product's defaultColor field (set in admin panel)
+    if (product?.defaultColor) {
+      autoAppliedSolidRef.current = true;
+      applyPrimary(product.defaultColor);
+    }
   // applyPrimary is stable (defined with plain function, not useCallback), so we omit it
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product, canvasReady]);

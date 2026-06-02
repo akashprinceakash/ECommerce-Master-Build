@@ -42,6 +42,21 @@ export const SOLID_COLOR_MAP: Record<string, string> = {
   GOLD:       "#c9a84c",
   ORANGE:     "#d4600a",
   SKYBLUE:    "#4a8fd4",
+  ROYALBLUE:  "#310599",
+  ROYELBLUE:  "#310599",
+  DARKMAROON: "#7b241c",
+  DARKNAVY:   "#0d1b3e",
+  DARKGREEN:  "#145a30",
+  LIGHTBLUE:  "#87CEEB",
+  PINK:       "#FF69B4",
+  CORAL:      "#FF6B6B",
+  TEAL:       "#008080",
+  BURGUNDY:   "#800020",
+  KHAKI:      "#8B7355",
+  OLIVE:      "#556B2F",
+  CHARCOAL:   "#36454F",
+  MINT:       "#98FF98",
+  LAVENDER:   "#E6E6FA",
 };
 
 // ── Pattern colorway suffix → channel colors ─────────────────────────────────
