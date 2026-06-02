@@ -101,8 +101,8 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "back-top":      { left: 765, top: 390 },  // back yoke / top of back (near collar back)
   "left-sleeve":   { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
   "right-sleeve":  { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve
-  "collar-left":   { left:  35, top: 250 },  // left collar tip; nudged toward tip & outer edge of collar strip
-  "collar-right":  { left: 496, top: 250 },  // right collar tip; symmetric with left (519 − 23 = 496)
+  "collar-left":   { left:  35, top: 234 },  // left collar tip; high on outer collar edge
+  "collar-right":  { left: 496, top: 234 },  // right collar tip; symmetric with left (519 − 23 = 496)
 };
 // All UV zones are horizontally mirrored — flipX:true corrects text/logos everywhere.
 // The right-sleeve UV island is ALSO vertically flipped, so it needs flipY:true on top.
