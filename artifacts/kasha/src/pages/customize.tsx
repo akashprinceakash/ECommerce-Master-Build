@@ -773,7 +773,10 @@ export default function CustomizePage() {
   // Gated on mats.length > 0 so syncTexture can actually push to the model;
   // the effect re-fires automatically when mats loads (via handleSelectKashaDesign dep).
   useEffect(() => {
-    if (!canvasReady || productType !== "pattern" || autoAppliedRef.current) return;
+    // Fire when product subType is "pattern" OR when the entry URL explicitly says style=pattern
+    // (covers products where admin hasn't set subType but SKU is a pattern SKU).
+    const isPatternEntry = productType === "pattern" || _entryStyle === "pattern";
+    if (!canvasReady || !isPatternEntry || autoAppliedRef.current) return;
     // Respect user's explicit style choice — don't force a pattern when the user
     // picked "solid" or "print" via the CustomizeEntryModal (?style= param).
     if (userStyle === "solid" || userStyle === "print") return;
@@ -837,14 +840,22 @@ export default function CustomizePage() {
 
     let targetPatternId: string | null = null;
 
-    if (product?.sku) {
-      // Product loaded — resolve print ID from SKU
+    // Priority 1: ?design= URL param (e.g. KS1000BGP003 passed from CustomizeEntryModal)
+    const entryResult = parseSku(entryDesignRef.current ?? "");
+    if (entryResult.type === "print") {
+      targetPatternId = entryResult.patternId;
+    }
+
+    // Priority 2: product.sku from the database
+    if (!targetPatternId && product?.sku) {
       const skuResult = parseSku(product.sku);
       if (skuResult.type === "print") {
         targetPatternId = skuResult.patternId;
       }
-    } else if (isTypeMode && garmentType === "printed") {
-      // Generic "printed" mode — default to blue-floral as before
+    }
+
+    // Priority 3: generic printed mode fallback
+    if (!targetPatternId && isTypeMode && garmentType === "printed") {
       targetPatternId = "blue-floral";
     }
 

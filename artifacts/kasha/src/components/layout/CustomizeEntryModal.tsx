@@ -38,7 +38,10 @@ function buildHref(productId: number, sku: string): string {
     return `/products/${productId}/customize?entry=1&style=pattern&design=${encodeURIComponent(sku)}`;
   }
   if (result.type === "print") {
-    return `/products/${productId}/customize?entry=1&style=print`;
+    // Pass full SKU as ?design= so the customizer can resolve the exact print
+    // via entryDesignRef even if the product.sku lookup fails for any reason.
+    const designParam = sku ? `&design=${encodeURIComponent(sku)}` : "";
+    return `/products/${productId}/customize?entry=1&style=print${designParam}`;
   }
   // solid (or unknown → treat as solid)
   const designParam = sku ? `&design=${encodeURIComponent(sku)}` : "";
