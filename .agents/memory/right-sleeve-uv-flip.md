@@ -9,23 +9,25 @@ In `artifacts/kasha/src/pages/customize.tsx`:
 
 ```ts
 function placementFlipX(placement: string): boolean {
-  return placement !== "collar-left";  // all except collar-left get flipX:true
+  return placement !== "collar-left" && placement !== "right-sleeve";
 }
 function placementFlipY(placement: string): boolean {
-  return placement === "collar-left";  // only collar-left gets flipY:true
+  return placement === "collar-left" || placement === "right-sleeve";
 }
 ```
 
-**Per-placement flip table (confirmed):**
+**Per-placement flip table:**
 
-| Placement    | flipX | flipY | Reason                                                  |
-|--------------|-------|-------|---------------------------------------------------------|
-| front-center | true  | false | UV horizontally mirrored                                |
-| back-center  | true  | false | UV horizontally mirrored                                |
-| back-top     | true  | false | UV horizontally mirrored                                |
-| left-sleeve  | true  | false | rightSleeve UV zone — horizontally mirrored             |
-| right-sleeve | true  | false | leftSleeve UV zone — horizontally mirrored, needs flipX |
-| collar-left  | false | true  | UV not mirrored horizontally, but vertically flipped    |
-| collar-right | true  | false | UV horizontally mirrored, not vertically flipped        |
+| Placement    | flipX | flipY | Reason                                                     |
+|--------------|-------|-------|------------------------------------------------------------|
+| front-center | true  | false | UV horizontally mirrored                                   |
+| back-center  | true  | false | UV horizontally mirrored                                   |
+| back-top     | true  | false | UV horizontally mirrored                                   |
+| left-sleeve  | true  | false | rightSleeve UV zone — horizontally mirrored                |
+| right-sleeve | false | true  | leftSleeve UV zone — vertically flipped, not h-mirrored    |
+| collar-left  | false | true  | UV not h-mirrored, but vertically flipped                  |
+| collar-right | true  | false | UV horizontally mirrored, not vertically flipped           |
+
+**Why right-sleeve is false/true:** The UV zone at (409,120) is vertically flipped by the UV map but NOT horizontally mirrored. flipX=true adds an unwanted h-mirror on top; flipY=true cancels the UV's vertical flip. Any other combination produces reversed/upside-down text.
 
 **How to apply:** If a merge or rollback resets these functions, re-apply exactly as above.
