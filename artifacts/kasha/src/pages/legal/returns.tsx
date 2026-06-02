@@ -31,7 +31,7 @@ export default function ReturnsPage() {
         <Section title="3. Return Process">
           <p>To initiate a return:</p>
           <ol style={{ paddingLeft: 20, marginTop: 4, listStyle: "decimal" }}>
-            <li>Contact our support team at <strong>support@kashaonline.in</strong> or call <strong>+91 95608 89594</strong> with your order details.</li>
+            <li>Contact our support team at <a href="https://mail.google.com/mail/?view=cm&to=support@kashaonline.in" target="_blank" rel="noopener noreferrer" style={{ color: "#B8925A" }}>support@kashaonline.in</a> or call <strong>+91 95608 89594</strong> with your order details.</li>
             <li>Share photos/videos if the item is damaged or incorrect.</li>
             <li>Our team will verify the request and arrange pickup where applicable.</li>
             <li>Once the product is received and inspected, the return will be approved.</li>
@@ -84,7 +84,7 @@ export default function ReturnsPage() {
         <Section title="9. Contact Us">
           <p>For return, refund, or exchange-related support, contact us:</p>
           <ul style={{ paddingLeft: 20, marginTop: 4, listStyle: "disc" }}>
-            <li>Email: <strong>support@kashaonline.in</strong></li>
+            <li>Email: <a href="https://mail.google.com/mail/?view=cm&to=support@kashaonline.in" target="_blank" rel="noopener noreferrer" style={{ color: "#B8925A" }}>support@kashaonline.in</a></li>
             <li>Phone: <strong>9560889594</strong></li>
             <li>Business Hours: Monday to Saturday, 10:00 AM – 6:00 PM</li>
           </ul>

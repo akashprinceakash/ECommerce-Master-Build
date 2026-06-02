@@ -1,0 +1,87 @@
+Mobile Optimisation
+Customisation Page
+
+
+
+1.  increase size of the font for customize -> word (not completed) and products are not aligned properly getting 3products in each session need to fix this with one by one product with sliding option and increase every product sizes along with names and sentences - completed
+2.  Bespoke design studio and name your design button getting overlapping. - completed - but design spelling not finished properly
+
+3.  everywhere parts images are same we need to show every parts with separate 2D images.
+
+4.  increase size of the RESET button 
+
+5.  increase font size in every session  
+
+6.    prints are loading very slowly
+
+7.  in coller see there are 2colurs are getting one is printed and another is green I added green to the color first after I chnaged to print but still green showing 
+
+
+
+8.  Pattern 5 still not getting
+
+9.  When I add the cart it's redirected to the cart page I think it's not necessary to redirect just add to the card and give a successful message that's it because if I want to change again means I need to from the beginning of the customization - completed
+
+10.   After adding logos there is no option for placing the logo where the options for that and same for logo as well
+
+11.  increase size of the customisation color option circle 
+
+12.  in sizing page everywhere increase font sizes
+
+13.  while customization website getting very lag and too slow 
+
+14.  I selected a pattern with pink and Black I am getting a different color one
+
+15.   I selected a pattern with red and black but getting a different one and different parts with green and black - completed
+
+16.   print 3D model loading time too long 
+
+17. Custom studio pop-up Slider is not working properly
+18.  In All Products page the arrows are not showing for the product - completed
+
+
+19.  While filling the address i am getting this error
+
+20.  I have added different products here and in cart i am getting bulk enquiry option whether it is correct ?
+
+
+
+
+
+
+Website - functional bugs pending 
+1. There is some broken link at bottom of the page.
+2. Remove button pouse and start button in the logo\text 
+3. In the Print shirt option - the colalr does not change its not working - in this if we apply colour it will work and if we apply print then we try to apply colour it is not working.
+4. In lookbook product order is missing and products not placed correctly.
+ 
+5.  I have added different products here and in cart i am getting bulk enquiry option whether it is correct ?
+6.  In address field state column not taking based on the pin-code 
+7. Can the logo size be defined in inches rather than % so that the  customer can get an idea of size of the logo or the text/Name 
+8.  Also center back position i think the customer should be able to move the print higher or lower
+ The customer 
+should be able to enter his number in inches/cms in the yellow column but if the figure he inputs clashes with the next size he should be given an alter.
+i.e. if he in L puts in chest as 43 then he need to be told that the chest for XL is already 43 therefore he should pick that size
+9.Is it not possible to highlight on 3d image the areas that will change colour. 
+10. clicking different placement opitons on the left should show that side in the 3 d model.
+11.we should go back to earlier ui - placement options on right, and upload and alignment on left - this way they can upload backa nd front. now only view changes
+12. Everywhere mention proper India number prefix to the mobile number
+ 
+13.	When I click on the mail link still its opening mails options instead direct email sending in chrome 
+ 14.Active designs are not loading
+15.3D printed t-shirts not getting correctly -- printing showing parts by parts 
+  
+
+16. Logo and text placing incorrectly
+17. Logo and Text  placing incorrectly while clicking left and right sleeves and placing different place- logo and text should place in correct placement and remain fixed regardless of the view angle.
+18. Switching color working but we should remove print first but my suggestion is to remove automatically when select color option.
+19. Mention color chart to the color picker option then they can easily find out that one
+20. Text and logo placing dots in the right side options are wrong
+and need to be re-aligned with the corresponding design elements to ensure intuitive interaction. Additionally,
+ 
+21. I am not ordered anything with my profile but there is an active order showing up in my history, which is highly concerning. And the cancellation order also displaying and total spent money displaying and also saved designs also incorrect.
+ 
+22. Saved designs are failing to sync across devices, leading too lag and frustrating inconsistencies that undermine user trust. Data integrity is the cornerstone of a seamless experience.
+ 
+23. Left Collar and right collar placement is still wrong. Also when you switch left sleeve to right sleeve the print size changes.and need the print to be in inches (2" X 4")
+24. 

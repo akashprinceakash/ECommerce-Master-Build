@@ -26,7 +26,7 @@ export default function TermsPage() {
         </Section>
         <Section title="4. Order Confirmation & Cancellation">
           <p>An order confirmation email is sent upon successful payment. Ka.Sha reserves the right to cancel any order due to stock unavailability or suspected fraud, with a full refund to the original payment method within 5–7 business days.</p>
-          <p>You may cancel a standard (non-bespoke) order within 24 hours of placement by contacting us at <strong>support@kashaonline.in</strong>.</p>
+          <p>You may cancel a standard (non-bespoke) order within 24 hours of placement by contacting us at <a href="https://mail.google.com/mail/?view=cm&to=support@kashaonline.in" target="_blank" rel="noopener noreferrer" style={{ color: "#B8925A" }}>support@kashaonline.in</a>.</p>
         </Section>
         <Section title="5. Intellectual Property">
           <p>All content on this Site — including text, images, logos, product designs, and the Ka.Sha brand — is the exclusive property of Ka.Sha and protected under Indian copyright law. Unauthorised reproduction or commercial use is strictly prohibited.</p>
@@ -41,7 +41,7 @@ export default function TermsPage() {
           <p>These Terms are governed by the laws of India. Any disputes shall be subject to the exclusive jurisdiction of the courts of Mumbai, Maharashtra.</p>
         </Section>
         <Section title="9. Contact">
-          <p>For any queries regarding these Terms, write to us at <strong>support@kashaonline.in</strong> or call <strong>+91 95608 89594</strong>.</p>
+          <p>For any queries regarding these Terms, write to us at <a href="https://mail.google.com/mail/?view=cm&to=support@kashaonline.in" target="_blank" rel="noopener noreferrer" style={{ color: "#B8925A" }}>support@kashaonline.in</a> or call <strong>+91 95608 89594</strong>.</p>
         </Section>
       </LegalPage>
     </Layout>
