@@ -9,17 +9,25 @@ In `artifacts/kasha/src/pages/customize.tsx`:
 
 ```ts
 function placementFlipX(placement: string): boolean {
-  return placement !== "collar-left";  // collar-left UV area is NOT mirrored; all others are
+  return placement !== "collar-left" && placement !== "right-sleeve";
 }
 function placementFlipY(placement: string): boolean {
-  return placement === "collar-left";  // collar-left UV area is vertically flipped; no others are
+  return placement === "collar-left";
 }
 ```
 
-**Why:**
-- All body/sleeve UV zones are horizontally mirrored → `flipX:true` corrects text/logos everywhere.
-- `collar-right` (x≈451) is in a mirrored UV zone → `flipX:true, flipY:false`.
-- `collar-left` (x≈80) is in a non-mirrored AND vertically-flipped UV zone → `flipX:false, flipY:true`.
-- Right-sleeve: `flipX:true, flipY:false` — confirmed correct by user.
+**Per-placement flip table (confirmed):**
 
-**How to apply:** If a merge or rollback resets these functions, re-apply exactly as above.
+| Placement        | flipX | flipY | Reason                                                      |
+|------------------|-------|-------|-------------------------------------------------------------|
+| front-center     | true  | false | UV is horizontally mirrored                                 |
+| back-center      | true  | false | UV is horizontally mirrored                                 |
+| back-top         | true  | false | UV is horizontally mirrored                                 |
+| left-sleeve      | true  | false | rightSleeve UV zone — horizontally mirrored                 |
+| right-sleeve     | false | false | leftSleeve UV zone — NOT mirrored; no flips needed          |
+| collar-left      | false | true  | UV not mirrored horizontally, but vertically flipped        |
+| collar-right     | true  | false | UV is horizontally mirrored, not vertically flipped         |
+
+**Why right-sleeve is false/false:** The leftSleeve UV zone at (409, 120) is not mirrored by the UV map. Applying any flip in Fabric.js adds an extra mirror on top — flipX=true reverses the text, flipX+flipY=true gives double-flip (180° = text upside-down AND mirrored). No flip in canvas lets the UV render it correctly.
+
+**How to apply:** If a merge or rollback resets these functions, re-apply exactly as above. Trust this table over any older notes.
