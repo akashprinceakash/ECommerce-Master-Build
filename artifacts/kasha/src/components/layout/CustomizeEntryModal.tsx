@@ -39,11 +39,20 @@ function buildHref(productId: number, sku: string): string {
   return `/products/${productId}/customize?entry=1&style=solid${designParam}`;
 }
 
-function inferType(sku: string, category: string): StyleType {
+function inferType(sku: string, category: string, subType?: string | null): StyleType {
+  // Prefer the explicit subType set in the admin panel
+  if (subType) {
+    const st = subType.toLowerCase();
+    if (st === "printed" || st.includes("print")) return "Printed";
+    if (st === "pattern" || st.includes("pattern")) return "Pattern";
+    if (st === "solid") return "Solid";
+  }
+  // Fall back to SKU parsing
   const result = parseSku(sku);
   if (result.type === "print")   return "Printed";
   if (result.type === "pattern") return "Pattern";
   if (result.type === "solid")   return "Solid";
+  // Last resort: category name
   const h = category.toLowerCase();
   if (h.includes("print"))   return "Printed";
   if (h.includes("pattern")) return "Pattern";
@@ -170,7 +179,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         return {
           id:        p.id,
           name:      p.name.replace(/\s*\[gt:GT\d+\]\s*$/i, ""),
-          type:      inferType(sku, p.category ?? ""),
+          type:      inferType(sku, p.category ?? "", p.subType),
           thumbnail: getAssetUrl(p.thumbnailUrl) ?? "",
           href:      buildHref(p.id, sku),
         };
