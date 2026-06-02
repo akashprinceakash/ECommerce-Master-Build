@@ -1,0 +1,1 @@
+- [Right sleeve UV flip](right-sleeve-uv-flip.md) — right-sleeve needs flipX:false + flipY:true; all other zones need flipX:true + flipY:false. Do NOT revert to all-true.
