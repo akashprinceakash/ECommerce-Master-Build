@@ -11,15 +11,15 @@ In `artifacts/kasha/src/pages/customize.tsx`:
 function placementFlipX(placement: string): boolean {
   return placement !== "collar-left";  // collar-left UV area is NOT mirrored; all others are
 }
-function placementFlipY(_placement: string): boolean {
-  return false;  // no vertical flip needed for any placement
+function placementFlipY(placement: string): boolean {
+  return placement === "collar-left";  // collar-left UV area is vertically flipped; no others are
 }
 ```
 
 **Why:**
-- All body/sleeve UV zones are horizontally mirrored in the texture → `flipX:true` corrects text/logos.
-- `collar-right` (x≈451) is in a mirrored UV zone → needs `flipX:true`.
-- `collar-left` (x≈80) is in a non-mirrored UV zone → `flipX:true` reverses text; must use `flipX:false`.
-- Right-sleeve was previously thought to need `flipY:true`, but user confirmed `flipX:true, flipY:false` produces correct orientation there too.
+- All body/sleeve UV zones are horizontally mirrored → `flipX:true` corrects text/logos everywhere.
+- `collar-right` (x≈451) is in a mirrored UV zone → `flipX:true, flipY:false`.
+- `collar-left` (x≈80) is in a non-mirrored AND vertically-flipped UV zone → `flipX:false, flipY:true`.
+- Right-sleeve: `flipX:true, flipY:false` — confirmed correct by user.
 
-**How to apply:** If a merge or rollback resets these functions, re-apply exactly as above. Ignore any older notes suggesting right-sleeve needs `flipX:false` or `flipY:true` — superseded and confirmed incorrect.
+**How to apply:** If a merge or rollback resets these functions, re-apply exactly as above.
