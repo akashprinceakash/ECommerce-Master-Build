@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { productsTable } from "./products";
@@ -25,7 +25,11 @@ export const ordersTable = pgTable("orders", {
   trackingUrl: text("tracking_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => [
+  index("orders_user_id_idx").on(t.userId),
+  index("orders_status_idx").on(t.status),
+  index("orders_created_at_idx").on(t.createdAt),
+]);
 
 export const orderItemsTable = pgTable("order_items", {
   id: serial("id").primaryKey(),
@@ -36,7 +40,10 @@ export const orderItemsTable = pgTable("order_items", {
   size: text("size").notNull(),
   priceInPaise: integer("price_in_paise").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [
+  index("order_items_order_id_idx").on(t.orderId),
+  index("order_items_product_id_idx").on(t.productId),
+]);
 
 export const insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertOrderItemSchema = createInsertSchema(orderItemsTable).omit({ id: true, createdAt: true });

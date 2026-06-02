@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { productsTable } from "./products";
@@ -18,7 +18,10 @@ export const customizationsTable = pgTable("customizations", {
   sideImageUrl: text("side_image_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => [
+  index("customizations_user_id_idx").on(t.userId),
+  index("customizations_product_id_idx").on(t.productId),
+]);
 
 export const insertCustomizationSchema = createInsertSchema(customizationsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCustomization = z.infer<typeof insertCustomizationSchema>;
