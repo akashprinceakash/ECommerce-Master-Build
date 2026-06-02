@@ -109,9 +109,9 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
 function placementFlipX(placement: string): boolean {
   return placement !== "collar-left";
 }
-// collar-left UV area is vertically flipped relative to other zones.
+// collar-left and right-sleeve UV areas are vertically flipped relative to other zones.
 function placementFlipY(placement: string): boolean {
-  return placement === "collar-left";
+  return placement === "collar-left" || placement === "right-sleeve";
 }
 // The collar UV is laid out with the collar LENGTH along the X axis, so a 0° object
 // appears vertical on the physical collar. Rotate -90° to make text/logos horizontal,
