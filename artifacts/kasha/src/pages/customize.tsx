@@ -18,6 +18,7 @@ import { useParams, Link, useLocation, useSearch } from "wouter";
 import { useUser, Show } from "@clerk/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useCart } from "@/contexts/CartContext";
 import { getApiUrl } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import * as fabric from "fabric";
@@ -230,6 +231,7 @@ export default function CustomizePage() {
   const [, setLocation] = useLocation();
   const { user } = useUser();
   const { toast } = useToast();
+  const { openCart } = useCart();
   const queryClient = useQueryClient();
 
 
@@ -1080,6 +1082,12 @@ export default function CustomizePage() {
 
   const handleAddToCart=()=>{
     if(!user){setLocation("/sign-in?redirect_url="+encodeURIComponent(window.location.pathname+window.location.search));return;}
+    const totalQty=Object.values(sizeQty).reduce((a,b)=>a+b,0);
+    if(totalQty===0){
+      toast({title:"Select a size",description:"Please choose at least one size and quantity before adding to cart.",variant:"destructive"});
+      setStep(4);
+      return;
+    }
     cartMut.mutate();
   };
 
@@ -2302,33 +2310,38 @@ export default function CustomizePage() {
               }}>
                 Browse →
               </a>
-            ) : cartAdded ? (
-              <Link href="/cart" style={{
-                flex:2,padding:"11px 0",borderRadius:99,textDecoration:"none",
-                background:V.ac,color:V.tx,textAlign:"center",
-                fontSize:11,fontWeight:600,cursor:"pointer",
-                fontFamily:"'Jost',sans-serif",letterSpacing:".07em",textTransform:"uppercase",
-                transition:"all 0.25s",display:"flex",alignItems:"center",justifyContent:"center",gap:6,
-              }}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=V.tx;(e.currentTarget as HTMLElement).style.color="#fff";}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=V.ac;(e.currentTarget as HTMLElement).style.color=V.tx;}}>
-                🛒 View Cart
-              </Link>
             ) : (
-              <button
-                onClick={handleAddToCart}
-                disabled={cartMut.isPending}
-                style={{
-                  flex:2,padding:"11px 0",borderRadius:99,
-                  border:"none",background:V.ac,color:V.tx,
-                  fontSize:11,fontWeight:600,cursor:"pointer",
-                  fontFamily:"'Jost',sans-serif",letterSpacing:".07em",textTransform:"uppercase",
-                  opacity:cartMut.isPending?.6:1,transition:"all 0.25s",
-                }}
-                onMouseEnter={e=>{if(!cartMut.isPending){e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}}
-                onMouseLeave={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}>
-                {cartMut.isPending?"Adding…":"🛒 Add to Cart"}
-              </button>
+              <>
+                <button
+                  onClick={handleAddToCart}
+                  disabled={cartMut.isPending}
+                  style={{
+                    flex:2,padding:"11px 0",borderRadius:99,
+                    border:"none",background:V.ac,color:V.tx,
+                    fontSize:11,fontWeight:600,cursor:"pointer",
+                    fontFamily:"'Jost',sans-serif",letterSpacing:".07em",textTransform:"uppercase",
+                    opacity:cartMut.isPending?.6:1,transition:"all 0.25s",
+                  }}
+                  onMouseEnter={e=>{if(!cartMut.isPending){e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}>
+                  {cartMut.isPending?"Adding…":"🛒 Add to Cart"}
+                </button>
+                {cartAdded&&!isTypeMode&&(
+                  <button
+                    onClick={openCart}
+                    style={{
+                      flex:1,padding:"11px 0",borderRadius:99,
+                      border:`1.5px solid ${V.ac}`,background:V.aclt,color:V.tx,
+                      fontSize:10,fontWeight:600,cursor:"pointer",
+                      fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",
+                      transition:"all 0.25s",
+                    }}
+                    onMouseEnter={e=>{e.currentTarget.style.background=V.ac;}}
+                    onMouseLeave={e=>{e.currentTarget.style.background=V.aclt;}}>
+                    🛒 View Cart
+                  </button>
+                )}
+              </>
             )}
           </div>
 
@@ -3229,18 +3242,17 @@ export default function CustomizePage() {
                       </button>
                     )}
                     {cartAdded&&!isTypeMode&&(
-                      <Link href="/cart" style={{
+                      <button onClick={openCart} style={{
                         padding:"11px 0",borderRadius:99,
                         border:`1.5px solid ${V.ac}`,background:V.aclt,color:V.tx,
                         fontSize:12,fontWeight:600,cursor:"pointer",
                         fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",
-                        textDecoration:"none",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:6,
                         transition:"all 0.3s",
                       }}
-                      onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=V.ac;}}
-                      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=V.aclt;}}>
+                      onMouseEnter={e=>{e.currentTarget.style.background=V.ac;}}
+                      onMouseLeave={e=>{e.currentTarget.style.background=V.aclt;}}>
                         🛒 View Cart
-                      </Link>
+                      </button>
                     )}
                     {!isTypeMode && (
                       <Show when="signed-in">
