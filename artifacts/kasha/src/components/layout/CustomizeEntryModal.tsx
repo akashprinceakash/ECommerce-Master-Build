@@ -151,12 +151,17 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   }
 
   // ── Filter products by gender ──────────────────────────────────────────────
-  function buildItems(tokens: string[]): StyleItem[] {
+  // NOTE: "women".includes("men") === true, so we must explicitly exclude
+  // the opposite gender tokens to avoid cross-contamination.
+  function buildItems(tokens: string[], excludeTokens: string[]): StyleItem[] {
     return (allProducts ?? [])
       .filter(p => {
         if (!p.available) return false;
         const g = (p.gender ?? "").toLowerCase();
+        // Must match at least one token for this gender
         if (!tokens.some(t => g.includes(t))) return false;
+        // Must NOT match any token from the opposite gender
+        if (excludeTokens.some(t => g.includes(t))) return false;
         const cat = (p.category ?? "").toLowerCase();
         return !BOTTOMS_CATS.includes(cat);
       })
@@ -173,8 +178,8 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  const menItems    = buildItems(MEN_TOKENS);
-  const womenItems  = buildItems(WOMEN_TOKENS);
+  const menItems    = buildItems(MEN_TOKENS,   WOMEN_TOKENS);
+  const womenItems  = buildItems(WOMEN_TOKENS, MEN_TOKENS);
   const activeItems = gender === "Men" ? menItems : womenItems;
 
   const grouped = {
