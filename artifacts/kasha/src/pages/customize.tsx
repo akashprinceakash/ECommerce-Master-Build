@@ -101,8 +101,8 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "back-top":      { left: 765, top: 390 },  // back yoke / top of back (near collar back)
   "left-sleeve":   { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
   "right-sleeve":  { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve
-  "collar-left":   { left:  62, top: 266 },  // left collar tip; 50px from UV left edge (12) → symmetric with right
-  "collar-right":  { left: 469, top: 266 },  // right collar tip; 50px from UV right edge (519) → mirrors left
+  "collar-left":   { left:  35, top: 250 },  // left collar tip; nudged toward tip & outer edge of collar strip
+  "collar-right":  { left: 496, top: 250 },  // right collar tip; symmetric with left (519 − 23 = 496)
 };
 // All UV zones are horizontally mirrored — flipX corrects text/logos for all placements
 // EXCEPT right-sleeve, whose UV island is vertically flipped but not horizontally mirrored.
@@ -128,8 +128,8 @@ function placementAngle(placement: string): number {
 const COLLAR_UV_LEFT = 12, COLLAR_UV_RIGHT = 519;
 const COLLAR_MARGIN  = 4; // px clearance from zone boundary
 // After -90° rotation a logo's WIDTH spans the collar HEIGHT direction in UV space.
-// The collar strip is ~60px tall — cap logos so they sit neatly inside it.
-const COLLAR_LOGO_MAX_PX = 44;
+// Keep collar logos at 14px — matches the 14px font cap for collar text.
+const COLLAR_LOGO_MAX_PX = 14;
 function logoMaxW(position: string, logoSizePct: number): number {
   const base = Math.round(logoSizePct * (1024 / 100));
   return (position === "collar-left" || position === "collar-right")
