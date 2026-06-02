@@ -1,20 +1,25 @@
 ---
-name: Right sleeve UV flip
-description: Correct flipX/flipY values for the right-sleeve UV island in the 3D customizer texture canvas.
+name: Placement flip rules (confirmed working — DO NOT CHANGE)
+description: Correct flipX/flipY per-placement values for the 3D customizer texture canvas. User-confirmed. Do not revert.
 ---
 
-## Rule
-In `artifacts/kasha/src/pages/customize.tsx`, the two placement flip functions must be:
+## Rule — DO NOT CHANGE WITHOUT USER CONFIRMATION
+
+In `artifacts/kasha/src/pages/customize.tsx`:
 
 ```ts
 function placementFlipX(placement: string): boolean {
-  return placement !== "right-sleeve";   // all zones except right-sleeve
+  return placement !== "collar-left";  // collar-left UV area is NOT mirrored; all others are
 }
 function placementFlipY(placement: string): boolean {
-  return placement === "right-sleeve";   // only right-sleeve
+  return placement === "collar-left";  // collar-left UV area is vertically flipped; no others are
 }
 ```
 
-**Why:** The UV texture map is horizontally mirrored for every zone, so `flipX:true` corrects text/logos everywhere. The right-sleeve UV island is additionally vertically flipped relative to the left sleeve — `flipY:true` corrects that. The combination means right-sleeve gets `flipX:false` + `flipY:true`; all other zones get `flipX:true` + `flipY:false`. Setting both to `true` (or both to `false`) produces reversed/upside-down text on the right sleeve.
+**Why:**
+- All body/sleeve UV zones are horizontally mirrored → `flipX:true` corrects text/logos everywhere.
+- `collar-right` (x≈451) is in a mirrored UV zone → `flipX:true, flipY:false`.
+- `collar-left` (x≈80) is in a non-mirrored AND vertically-flipped UV zone → `flipX:false, flipY:true`.
+- Right-sleeve: `flipX:true, flipY:false` — confirmed correct by user.
 
-**How to apply:** Any time a rollback or merge resets these functions, re-apply the above. The code comment in the file also documents this — trust the comment, not the function body if they conflict.
+**How to apply:** If a merge or rollback resets these functions, re-apply exactly as above.
