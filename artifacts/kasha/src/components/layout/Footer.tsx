@@ -224,9 +224,10 @@ export function Footer() {
               <div style={COL_TITLE}>Support</div>
               <div className="flex flex-col gap-1.5">
                 <a
-                  href="mailto:support@kashaonline.in"
+                  href="https://mail.google.com/mail/?view=cm&to=support@kashaonline.in"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{ ...LINK_STYLE, display: "block" }}
-                  onClick={scrollToTop}
                   className="hover:!text-[#B8925A] transition-colors"
                 >
                   support@kashaonline.in

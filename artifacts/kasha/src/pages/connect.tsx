@@ -245,10 +245,13 @@ export default function ConnectPage() {
           Reach Us Directly
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
-          <a href="mailto:support@kashaonline.in" style={{
-            fontFamily: "'Josefin Sans', sans-serif", fontSize: 18, letterSpacing: "0.08em",
-            color: "#1a1a1a", textDecoration: "none",
-          }}
+          <a href="https://mail.google.com/mail/?view=cm&to=support@kashaonline.in"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontFamily: "'Josefin Sans', sans-serif", fontSize: 18, letterSpacing: "0.08em",
+              color: "#1a1a1a", textDecoration: "none",
+            }}
             className="hover:text-[#B8925A] transition-colors">
             support@kashaonline.in
           </a>
