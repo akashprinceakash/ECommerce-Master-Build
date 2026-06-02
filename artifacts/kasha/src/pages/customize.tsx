@@ -100,7 +100,7 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "back-center":   { left: 765, top: 604 },  // centre across back
   "back-top":      { left: 765, top: 390 },  // back yoke / top of back (near collar back)
   "left-sleeve":   { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
-  "right-sleeve":  { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve
+  "right-sleeve":  { left: 409, top: 57 },   // leftSleeve UV zone → appears on right sleeve (UV runs bottom→top so mirrored y: 4 + 170×0.313 ≈ 57)
   "collar-left":   { left:  62, top: 266 },  // left collar tip (UV strip start); text scaled by clampCollarText to fit
   "collar-right":  { left: 452, top: 266 },  // right collar tip (UV strip end); text scaled by clampCollarText to fit
 };
