@@ -435,6 +435,8 @@ export default function CustomizePage() {
   const [modelPaused, setModelPaused] = useState(false);
   const historyStack = useRef<string[]>([]);
   const historyIdx = useRef(-1);
+  // Track the customization ID used in this browser session to avoid creating duplicates
+  const sessionCustomizationIdRef = useRef<number | null>(null);
 
   // ── Design name ──────────────────────────────────────────────────────────
   const { data: existing } = useQuery<any>({
@@ -1049,7 +1051,16 @@ export default function CustomizePage() {
     };
   };
   const saveMut=useMutation({
-    mutationFn:async()=>apiFetch("/api/customizations",{method:"POST",body:JSON.stringify(await buildPayload())}),
+    mutationFn:async()=>{
+      const payload=await buildPayload();
+      const existingId=sessionCustomizationIdRef.current??existing?.id??null;
+      if(existingId){
+        return apiFetch(`/api/customizations/${existingId}`,{method:"PUT",body:JSON.stringify(payload)});
+      }
+      const created=await apiFetch("/api/customizations",{method:"POST",body:JSON.stringify(payload)});
+      if(created?.id) sessionCustomizationIdRef.current=created.id;
+      return created;
+    },
     onSuccess:()=>{toast({title:"Design Saved ✓"});queryClient.invalidateQueries({queryKey:["customization",id]});},
     onError:(e:any)=>toast({title:"Error",description:e.message,variant:"destructive"}),
   });
@@ -1068,11 +1079,18 @@ export default function CustomizePage() {
       const textAreaSqIn = textPlaced ? Math.ceil(textH * textW) : 0;
       const hasLogoOrText = !!(logoPreview || textPlaced);
       const customizationCharge = hasLogoOrText ? (20 + logoAreaSqIn + textAreaSqIn) : 0;
-      // Try to save the customisation; if it fails, still add to cart without a customisation ID
+      // Save or update the customisation; reuse the session ID to avoid creating duplicates
       let customizationId: number|null = null;
       try {
-        const cust=await apiFetch("/api/customizations",{method:"POST",body:JSON.stringify({...payload,customizationCharge})});
-        customizationId=cust.id??null;
+        const existingId=sessionCustomizationIdRef.current??existing?.id??null;
+        if(existingId){
+          await apiFetch(`/api/customizations/${existingId}`,{method:"PUT",body:JSON.stringify({...payload})});
+          customizationId=existingId;
+        } else {
+          const cust=await apiFetch("/api/customizations",{method:"POST",body:JSON.stringify({...payload,customizationCharge})});
+          customizationId=cust.id??null;
+          if(customizationId) sessionCustomizationIdRef.current=customizationId;
+        }
       } catch { /* non-blocking — cart add will proceed */ }
       return apiFetch("/api/cart/items",{method:"POST",body:JSON.stringify({productId:id,customizationId,quantity:effectiveQty,size:effectiveSize})});
     },

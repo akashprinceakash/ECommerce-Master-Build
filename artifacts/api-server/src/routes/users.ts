@@ -1,8 +1,11 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db, userProfilesTable, ordersTable, customizationsTable } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import { sql } from "drizzle-orm";
+
+// Only count orders that represent real spend — exclude pending/cancelled
+const PAID_STATUSES = ["confirmed", "shipped", "delivered"] as const;
 
 const router: IRouter = Router();
 
@@ -20,7 +23,7 @@ router.get("/users/profile", requireAuth, async (req, res): Promise<void> => {
       totalSpentInPaise: sql<number>`coalesce(sum(total_in_paise), 0)::int`,
     })
     .from(ordersTable)
-    .where(eq(ordersTable.userId, userId));
+    .where(and(eq(ordersTable.userId, userId), inArray(ordersTable.status, [...PAID_STATUSES])));
 
   const [designStats] = await db
     .select({ savedDesignsCount: sql<number>`count(*)::int` })
@@ -69,7 +72,7 @@ router.post("/users/profile/upsert", requireAuth, async (req, res): Promise<void
       totalSpentInPaise: sql<number>`coalesce(sum(total_in_paise), 0)::int`,
     })
     .from(ordersTable)
-    .where(eq(ordersTable.userId, userId));
+    .where(and(eq(ordersTable.userId, userId), inArray(ordersTable.status, [...PAID_STATUSES])));
 
   const [designStats] = await db
     .select({ savedDesignsCount: sql<number>`count(*)::int` })
