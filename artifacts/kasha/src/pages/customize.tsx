@@ -100,8 +100,8 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "back-top":      { left: 765, top: 390 },  // back yoke / top of back (near collar back)
   "left-sleeve":   { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
   "right-sleeve":  { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve
-  "collar-left":   { left:  62, top: 266 },  // left collar tip (UV strip start); text scaled by clampCollarText to fit
-  "collar-right":  { left: 452, top: 266 },  // right collar tip (UV strip end); text scaled by clampCollarText to fit
+  "collar-left":   { left: 452, top: 266 },  // viewer's left collar tip (UV x≈452, right end of strip)
+  "collar-right":  { left:  62, top: 266 },  // viewer's right collar tip (UV x≈62, left end of strip)
 };
 // All UV zones are horizontally mirrored — flipX corrects text/logos for all placements.
 // The right-sleeve UV island is additionally vertically flipped (handled by placementFlipY).
@@ -122,8 +122,8 @@ function placementAngle(placement: string): number {
 // After -90° rotation, a text object's **width** (pre-rotation) spans horizontally in
 // UV space. Rather than scaling text down, we shift the centre so the text's near edge
 // stays just inside the collar zone boundary (UV x: 12–519).
-// collar-left: text may extend rightward freely; clamp only the left edge.
-// collar-right: text may extend leftward freely; clamp only the right edge.
+// collar-left is at UV x≈452 (right end of strip) — clamp the right edge.
+// collar-right is at UV x≈62 (left end of strip) — clamp the left edge.
 const COLLAR_UV_LEFT = 12, COLLAR_UV_RIGHT = 519;
 const COLLAR_MARGIN  = 4; // px clearance from zone boundary
 function clampCollarText(obj: any, position: string): void {
@@ -136,11 +136,11 @@ function clampCollarText(obj: any, position: string): void {
   const baseCx = LOGO_POSITIONS[position]?.left ?? 265;
   let   cx     = baseCx;
   if (position === "collar-left") {
-    // ensure left edge (cx − halfW) ≥ COLLAR_UV_LEFT + MARGIN
-    cx = Math.max(baseCx, COLLAR_UV_LEFT + COLLAR_MARGIN + halfW);
-  } else {
-    // ensure right edge (cx + halfW) ≤ COLLAR_UV_RIGHT − MARGIN
+    // collar-left is near UV right edge — clamp so right edge (cx + halfW) ≤ UV_RIGHT − MARGIN
     cx = Math.min(baseCx, COLLAR_UV_RIGHT - COLLAR_MARGIN - halfW);
+  } else {
+    // collar-right is near UV left edge — clamp so left edge (cx − halfW) ≥ UV_LEFT + MARGIN
+    cx = Math.max(baseCx, COLLAR_UV_LEFT + COLLAR_MARGIN + halfW);
   }
   if (cx !== baseCx) obj.set({ left: cx });
 }
@@ -390,6 +390,7 @@ export default function CustomizePage() {
   // ── Logo step state ──────────────────────────────────────────────────────
   const [logoPosition, setLogoPosition] = useState("front-left");
   const [logoSize, setLogoSize] = useState(50);
+  const [logoAspectRatio, setLogoAspectRatio] = useState(1);
   const [logoPreview, setLogoPreview] = useState<string|null>(null);
   const [logoPlaced, setLogoPlaced] = useState(false);
 
@@ -904,6 +905,7 @@ export default function CustomizePage() {
       const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};
       const maxW=Math.round(logoSize*(1024/100));
       if (img.width&&img.width>maxW) img.scaleToWidth(maxW);
+      if (img.width&&img.height) setLogoAspectRatio(img.width/img.height);
       img.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition),flipY:placementFlipY(logoPosition),angle:placementAngle(logoPosition)});
       const fc=fcRef.current; if(!fc) return;
       if (logoObjRef.current) fc.remove(logoObjRef.current);
@@ -1080,6 +1082,12 @@ export default function CustomizePage() {
 
   const handleAddToCart=()=>{
     if(!user){setLocation("/sign-in?redirect_url="+encodeURIComponent(window.location.pathname+window.location.search));return;}
+    const totalQtySelected=Object.values(sizeQty).reduce((a,b)=>a+b,0);
+    if(totalQtySelected===0&&!size){
+      toast({title:"Please select a size",description:"Choose at least one size and quantity before adding to cart.",variant:"destructive"});
+      setStep(4);
+      return;
+    }
     cartMut.mutate();
   };
 
@@ -3086,7 +3094,7 @@ export default function CustomizePage() {
                             const isA=logoPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                             return(
-                              <div key={c.key} onClick={()=>{setLogoPosition(c.key);setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key),flipY:placementFlipY(c.key),angle:placementAngle(c.key)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
+                              <div key={c.key} onClick={()=>{setLogoPosition(c.key);setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.scaleToWidth(Math.round(logoSize*(1024/100)));logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key),flipY:placementFlipY(c.key),angle:placementAngle(c.key)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
                                 display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
                                 padding:"8px 4px",borderRadius:9,transition:"all .18s",
                                 border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
@@ -3102,10 +3110,17 @@ export default function CustomizePage() {
                   </div>
                   {/* Size */}
                   <div>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                      <div style={sb}>Logo size</div>
-                      <span style={{fontSize:11,color:V.tx,fontWeight:600,fontFamily:"'Jost',sans-serif"}}>{logoSize}%</span>
-                    </div>
+                    {(()=>{
+                      const UV_PX_PER_INCH=49; // 490 UV px ≈ 10" front print zone
+                      const wIn=(logoSize*1024/100/UV_PX_PER_INCH).toFixed(1);
+                      const hIn=(logoSize*1024/100/logoAspectRatio/UV_PX_PER_INCH).toFixed(1);
+                      return(
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                          <div style={sb}>Logo size</div>
+                          <span style={{fontSize:11,color:V.tx,fontWeight:600,fontFamily:"'Jost',sans-serif"}}>{wIn}" × {hIn}"</span>
+                        </div>
+                      );
+                    })()}
                     <input type="range" min={10} max={100} step={5} value={logoSize}
                       onChange={e=>{const v=+e.target.value;setLogoSize(v);if(logoObjRef.current){const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};logoObjRef.current.scaleToWidth(Math.round(v*(1024/100)));logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(logoPosition)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
                       style={{width:"100%",height:4,background:V.bd2,borderRadius:2,outline:"none",WebkitAppearance:"none",appearance:"none",accentColor:V.ac}}/>
