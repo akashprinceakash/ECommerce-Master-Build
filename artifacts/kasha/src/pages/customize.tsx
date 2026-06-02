@@ -101,8 +101,8 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "back-top":      { left: 765, top: 390 },  // back yoke / top of back (near collar back)
   "left-sleeve":   { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
   "right-sleeve":  { left: 409, top: 120 },  // leftSleeve UV zone → appears on right sleeve
-  "collar-left":   { left:  62, top: 266 },  // left collar tip (UV strip start); text scaled by clampCollarText to fit
-  "collar-right":  { left: 452, top: 266 },  // right collar tip (UV strip end); text scaled by clampCollarText to fit
+  "collar-left":   { left:  62, top: 266 },  // left collar tip; 50px from UV left edge (12) → symmetric with right
+  "collar-right":  { left: 469, top: 266 },  // right collar tip; 50px from UV right edge (519) → mirrors left
 };
 // All UV zones are horizontally mirrored — flipX corrects text/logos for all placements
 // EXCEPT right-sleeve, whose UV island is vertically flipped but not horizontally mirrored.
@@ -391,7 +391,7 @@ export default function CustomizePage() {
 
   // ── Logo step state ──────────────────────────────────────────────────────
   const [logoPosition, setLogoPosition] = useState("front-left");
-  const [logoSize, setLogoSize] = useState(50);
+  const [logoSize, setLogoSize] = useState(15);
   const [logoPreview, setLogoPreview] = useState<string|null>(null);
   const [logoPlaced, setLogoPlaced] = useState(false);
 

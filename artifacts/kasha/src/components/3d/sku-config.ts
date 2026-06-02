@@ -36,7 +36,7 @@ export const SOLID_COLOR_MAP: Record<string, string> = {
   BLACK:      "#1a1a1a",
   RED:        "#c0392b",
   GREEN:      "#1f7a45",
-  GREY:       "#5a5a5a",
+  GREY:       "#B0B0B0",  // Arctic Grey
   MAROON:     "#7b241c",
   PURPLE:     "#6b2fa0",
   GOLD:       "#c9a84c",
@@ -48,7 +48,7 @@ export const SOLID_COLOR_MAP: Record<string, string> = {
   DARKNAVY:   "#0d1b3e",
   DARKGREEN:  "#145a30",
   LIGHTBLUE:  "#87CEEB",
-  PINK:       "#FF69B4",
+  PINK:       "#FC8EAC",  // Flamingo Pink
   CORAL:      "#FF6B6B",
   TEAL:       "#008080",
   BURGUNDY:   "#800020",
