@@ -127,6 +127,15 @@ function placementAngle(placement: string): number {
 // collar-right: text may extend leftward freely; clamp only the right edge.
 const COLLAR_UV_LEFT = 12, COLLAR_UV_RIGHT = 519;
 const COLLAR_MARGIN  = 4; // px clearance from zone boundary
+// After -90° rotation a logo's WIDTH spans the collar HEIGHT direction in UV space.
+// The collar strip is ~60px tall — cap logos so they sit neatly inside it.
+const COLLAR_LOGO_MAX_PX = 44;
+function logoMaxW(position: string, logoSizePct: number): number {
+  const base = Math.round(logoSizePct * (1024 / 100));
+  return (position === "collar-left" || position === "collar-right")
+    ? Math.min(base, COLLAR_LOGO_MAX_PX)
+    : base;
+}
 function clampCollarText(obj: any, position: string): void {
   if (position !== "collar-left" && position !== "collar-right") {
     obj.set({ scaleX: 1, scaleY: 1 });
@@ -653,7 +662,7 @@ export default function CustomizePage() {
       if (fc) {
         const ni=await fabric.FabricImage.fromURL(newUrl,{crossOrigin:"anonymous"});
         const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};
-        const maxW=Math.round(logoSize*(1024/100));
+        const maxW=logoMaxW(logoPosition,logoSize);
         if(ni.width&&ni.width>maxW) ni.scaleToWidth(maxW);
         ni.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition),flipY:placementFlipY(logoPosition),angle:placementAngle(logoPosition)});
         // Remove old logo by ref AND by tag (mirrors handleLogoUpload)
@@ -917,7 +926,7 @@ export default function CustomizePage() {
       setLogoPreview(src);
       const img=await fabric.FabricImage.fromURL(src);
       const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};
-      const maxW=Math.round(logoSize*(1024/100));
+      const maxW=logoMaxW(logoPosition,logoSize);
       if (img.width&&img.width>maxW) img.scaleToWidth(maxW);
       img.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition),flipY:placementFlipY(logoPosition),angle:placementAngle(logoPosition)});
       const fc=fcRef.current; if(!fc) return;
@@ -936,7 +945,7 @@ export default function CustomizePage() {
   const repositionLogo = () => {
     const o=logoObjRef.current; if(!o) return;
     const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};
-    const maxW=Math.round(logoSize*(1024/100));
+    const maxW=logoMaxW(logoPosition,logoSize);
     o.scaleToWidth(maxW);
     o.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition),flipY:placementFlipY(logoPosition),angle:placementAngle(logoPosition)});
     o.setCoords();
@@ -2018,7 +2027,7 @@ export default function CustomizePage() {
                     <div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px",borderRadius:12,background:V.sf2,border:`1px solid ${V.bd}`}}>
                       <div>
                         <div style={{...sb}}>Size — <span style={{color:V.ac}}>{(logoSize*0.376).toFixed(1)}&Prime; × {logoObjRef.current?((logoSize*0.376)*(logoObjRef.current.height/logoObjRef.current.width)).toFixed(1):(logoSize*0.376).toFixed(1)}&Prime;</span> <span style={{color:V.mu,fontWeight:400}}>({logoSize}%)</span></div>
-                        <input type="range" min={5} max={60} value={logoSize} onChange={e=>{const v=+e.target.value;setLogoSize(v);if(logoObjRef.current){const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};logoObjRef.current.scaleToWidth(Math.round(v*(1024/100)));logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(logoPosition)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
+                        <input type="range" min={5} max={60} value={logoSize} onChange={e=>{const v=+e.target.value;setLogoSize(v);if(logoObjRef.current){const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};logoObjRef.current.scaleToWidth(logoMaxW(logoPosition,v));logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(logoPosition)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
                           style={{width:"100%",accentColor:V.tx,cursor:"pointer",height:4,borderRadius:2,
                             background:`linear-gradient(to right,${V.tx} 0%,${V.tx} ${Math.round((logoSize-5)/55*100)}%,#c4bfb8 ${Math.round((logoSize-5)/55*100)}%,#c4bfb8 100%)`}}/>
                       </div>
@@ -3149,7 +3158,7 @@ export default function CustomizePage() {
                       <span style={{fontSize:11,color:V.tx,fontWeight:600,fontFamily:"'Jost',sans-serif"}}>{logoSize}%</span>
                     </div>
                     <input type="range" min={10} max={100} step={5} value={logoSize}
-                      onChange={e=>{const v=+e.target.value;setLogoSize(v);if(logoObjRef.current){const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};logoObjRef.current.scaleToWidth(Math.round(v*(1024/100)));logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(logoPosition)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
+                      onChange={e=>{const v=+e.target.value;setLogoSize(v);if(logoObjRef.current){const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};logoObjRef.current.scaleToWidth(logoMaxW(logoPosition,v));logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(logoPosition)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
                       style={{width:"100%",height:4,background:V.bd2,borderRadius:2,outline:"none",WebkitAppearance:"none",appearance:"none",accentColor:V.ac}}/>
                   </div>
                 </div>
