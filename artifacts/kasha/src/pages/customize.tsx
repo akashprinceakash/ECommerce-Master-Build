@@ -2949,6 +2949,41 @@ export default function CustomizePage() {
                     />
                   </div>
 
+                  {/* Placement thumbnails — shown FIRST so mobile users see it without scrolling */}
+                  <div style={{marginBottom:14}}>
+                    <div style={{fontSize:9,letterSpacing:".12em",textTransform:"uppercase",color:V.mu,fontFamily:"'Jost',sans-serif",marginBottom:8}}>Placement</div>
+                    {(()=>{
+                      const cards=[
+                        {key:"front-left",   label:"Chest Left",   cx:39,cy:40},
+                        {key:"front-right",  label:"Chest Right",  cx:21,cy:40},
+                        {key:"left-sleeve",  label:"Left Sleeve",  cx:53,cy:23},
+                        {key:"right-sleeve", label:"Right Sleeve", cx:7, cy:23},
+                        {key:"back-top",     label:"Back Top",     cx:30,cy:24,back:true},
+                        {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
+                        {key:"collar-left",  label:"Collar Left",  cx:36,cy:14},
+                        {key:"collar-right", label:"Collar Right", cx:24,cy:14},
+                      ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
+                      return(
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+                          {cards.map(c=>{
+                            const isA=textPosition===c.key;
+                            const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
+                            return(
+                              <div key={c.key} onClick={()=>{const isCollar=c.key==="collar-left"||c.key==="collar-right";setTextPosition(c.key);if(isCollar)setTextFontSize(v=>Math.min(v,14));setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};const fs=isCollar?Math.min(textFontSize,14):textFontSize;textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key),flipY:placementFlipY(c.key),angle:placementAngle(c.key),fontSize:fs,scaleX:1,scaleY:1});clampCollarText(textObjRef.current,c.key);textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
+                                display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",
+                                padding:"6px 2px",borderRadius:9,transition:"all .18s",
+                                border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
+                              }}>
+                                <div style={{width:32,height:36}} dangerouslySetInnerHTML={{__html:svg}}/>
+                                <span style={{fontSize:8,textTransform:"uppercase",letterSpacing:".03em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:"#4a4a48",fontWeight:isA?700:500,textAlign:"center",lineHeight:1.2}}>{c.label}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
                   {/* FONT SIZE + COLOR row */}
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
                     <div>
@@ -3035,41 +3070,6 @@ export default function CustomizePage() {
                         }}>{fx}</button>
                       ))}
                     </div>
-                  </div>
-
-                  {/* Placement thumbnails */}
-                  <div style={{marginBottom:14}}>
-                    <div style={{fontSize:9,letterSpacing:".12em",textTransform:"uppercase",color:V.mu,fontFamily:"'Jost',sans-serif",marginBottom:8}}>Placement</div>
-                    {(()=>{
-                      const cards=[
-                        {key:"front-left",   label:"Chest Left",   cx:39,cy:40},
-                        {key:"front-right",  label:"Chest Right",  cx:21,cy:40},
-                        {key:"left-sleeve",  label:"Left Sleeve",  cx:53,cy:23},
-                        {key:"right-sleeve", label:"Right Sleeve", cx:7, cy:23},
-                        {key:"back-top",     label:"Back Top",     cx:30,cy:24,back:true},
-                        {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
-                        {key:"collar-left",  label:"Collar Left",  cx:36,cy:14},
-                        {key:"collar-right", label:"Collar Right", cx:24,cy:14},
-                      ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
-                      return(
-                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5}}>
-                          {cards.map(c=>{
-                            const isA=textPosition===c.key;
-                            const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
-                            return(
-                              <div key={c.key} onClick={()=>{const isCollar=c.key==="collar-left"||c.key==="collar-right";setTextPosition(c.key);if(isCollar)setTextFontSize(v=>Math.min(v,14));setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};const fs=isCollar?Math.min(textFontSize,14):textFontSize;textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key),flipY:placementFlipY(c.key),angle:placementAngle(c.key),fontSize:fs,scaleX:1,scaleY:1});clampCollarText(textObjRef.current,c.key);textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
-                                display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
-                                padding:"8px 4px",borderRadius:9,transition:"all .18s",
-                                border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
-                              }}>
-                                <div style={{width:40,height:45}} dangerouslySetInnerHTML={{__html:svg}}/>
-                                <span style={{fontSize:11,textTransform:"uppercase",letterSpacing:".04em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:"#4a4a48",fontWeight:isA?700:500,textAlign:"center",lineHeight:1.25}}>{c.label}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
                   </div>
 
                   {/* Actions */}
@@ -3316,7 +3316,7 @@ export default function CustomizePage() {
 
         {/* ── CENTER: 3D CANVAS ─────────────────────────────────────────────── */}
         <div style={{
-          flex:screenW<768?"0 0 44vh":1,
+          flex:screenW<768?"0 0 38vh":1,
           order:screenW<768?1:2,
           position:"relative",
           background:"radial-gradient(ellipse at 55% 40%, #c8c2b6 0%, #b8b1a4 60%, #a8a196 100%)",

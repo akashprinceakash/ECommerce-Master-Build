@@ -3,6 +3,7 @@
  * Three fixed style tiles (Solid · Printed · Pattern), each linked to a
  * canonical example product SKU. Clicking a tile opens that product's studio.
  */
+import { useRef } from "react";
 import { useLocation } from "wouter";
 import { useUser } from "@clerk/react";
 import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
@@ -160,6 +161,11 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
     navigate(buildHref(productId, sku) + "&from=modal");
   }
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scroll = (dir: "left" | "right") => {
+    scrollRef.current?.scrollBy({ left: dir === "left" ? -220 : 220, behavior: "smooth" });
+  };
+
   return (
     <div
       style={{
@@ -218,28 +224,35 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           opacity: 0.4, marginBottom: 28,
         }} />
 
-        {/* Three style tiles */}
+        {/* Three style tiles — horizontal scroll with nav arrows */}
         {isLoading ? (
           <LoadingSkeleton />
         ) : (
-          <div className="cem-tiles">
-            {TILE_CONFIG.map(tile => {
-              const sku     = ENTRY_SKUS[tile.key];
-              const product = resolveProduct(sku);
-              return (
-                <StyleTile
-                  key={tile.key}
-                  label={tile.label}
-                  desc={tile.desc}
-                  accent={tile.accent}
-                  icon={tile.icon}
-                  thumbnail={product ? (getAssetUrl(product.thumbnailUrl) ?? "") : ""}
-                  productName={product?.name.replace(/\s*\[gt:GT\d+\]\s*$/i, "") ?? ""}
-                  disabled={!product}
-                  onSelect={() => product && handleSelect(product.id, sku)}
-                />
-              );
-            })}
+          <div style={{ position: "relative" }}>
+            {/* Left arrow */}
+            <button onClick={() => scroll("left")} className="cem-nav-btn cem-nav-left" aria-label="Scroll left">‹</button>
+            {/* Right arrow */}
+            <button onClick={() => scroll("right")} className="cem-nav-btn cem-nav-right" aria-label="Scroll right">›</button>
+
+            <div ref={scrollRef} className="cem-tiles">
+              {TILE_CONFIG.map(tile => {
+                const sku     = ENTRY_SKUS[tile.key];
+                const product = resolveProduct(sku);
+                return (
+                  <StyleTile
+                    key={tile.key}
+                    label={tile.label}
+                    desc={tile.desc}
+                    accent={tile.accent}
+                    icon={tile.icon}
+                    thumbnail={product ? (getAssetUrl(product.thumbnailUrl) ?? "") : ""}
+                    productName={product?.name.replace(/\s*\[gt:GT\d+\]\s*$/i, "") ?? ""}
+                    disabled={!product}
+                    onSelect={() => product && handleSelect(product.id, sku)}
+                  />
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -261,16 +274,45 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         .cem-sheet::-webkit-scrollbar-track { background: transparent; }
         .cem-sheet::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 99px; }
         .cem-tiles {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          display: flex;
+          flex-direction: row;
           gap: 16px;
+          overflow-x: auto;
+          scroll-snap-type: x mandatory;
+          -webkit-overflow-scrolling: touch;
+          padding: 4px 2px 12px;
+          scrollbar-width: none;
         }
+        .cem-tiles::-webkit-scrollbar { display: none; }
+        .cem-tile {
+          flex: 0 0 200px;
+          scroll-snap-align: start;
+        }
+        .cem-nav-btn {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-60%);
+          width: 34px; height: 34px;
+          border-radius: 50%;
+          border: 1.5px solid rgba(201,168,76,0.35);
+          background: rgba(250,250,247,0.95);
+          color: #1a1a18;
+          font-size: 22px;
+          line-height: 1;
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          z-index: 2;
+          box-shadow: 0 2px 10px rgba(26,26,24,0.1);
+          transition: all 0.2s;
+        }
+        .cem-nav-btn:hover { background: #c9a84c; color: #fff; border-color: #c9a84c; }
+        .cem-nav-left  { left: -14px; }
+        .cem-nav-right { right: -14px; }
         @media (max-width: 640px) {
           .cem-sheet { padding: 20px 14px 24px !important; border-radius: 14px !important; width: calc(100vw - 16px) !important; }
-          .cem-tiles { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
-        }
-        @media (max-width: 420px) {
-          .cem-tiles { grid-template-columns: 1fr !important; gap: 10px !important; }
+          .cem-tile { flex: 0 0 72vw; }
+          .cem-nav-left  { left: -10px; }
+          .cem-nav-right { right: -10px; }
         }
       `}</style>
     </div>
@@ -303,6 +345,7 @@ function StyleTile({
         transition: "all 0.24s cubic-bezier(0.16,1,0.3,1)",
         boxShadow: "0 2px 10px rgba(26,26,24,0.06)",
         opacity: disabled ? 0.45 : 1,
+        minWidth: 0,
       }}
       onMouseEnter={e => {
         if (disabled) return;
