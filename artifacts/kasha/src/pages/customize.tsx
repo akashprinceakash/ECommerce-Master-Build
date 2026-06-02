@@ -1971,6 +1971,9 @@ export default function CustomizePage() {
                         fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",
                         opacity:bgRemoving?.6:1,transition:"all .2s",
                       }}>{bgRemoving?"Removing…":"✦ Remove Background"}</button>
+                      <div style={{fontFamily:"'Jost',sans-serif",fontSize:10,color:V.mu,lineHeight:1.5,paddingLeft:2}}>
+                        Removes the white or light background from your logo so only the artwork shows on the garment. Works best on logos with a plain white background.
+                      </div>
                     </div>
                   )}
 
