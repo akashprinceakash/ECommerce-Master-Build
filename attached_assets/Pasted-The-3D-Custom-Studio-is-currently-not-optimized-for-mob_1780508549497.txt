@@ -1,0 +1,39 @@
+The 3D Custom Studio is currently not optimized for mobile devices and requires significant improvements in both performance and user experience.
+
+**Issues Identified:**
+
+1. **Performance Issues**
+
+   * The 3D model takes a long time to load on mobile devices.
+   * Prints, colors, and other customizations are loading slowly and do not update smoothly.
+
+2. **UI/UX Issues**
+
+   * The overall mobile experience is not user-friendly compared to desktop and tablet devices.
+   * Several UI elements are misaligned and not responsive.
+   * Button text is overflowing outside button boundaries in some areas.
+   * The layout needs to be redesigned to provide a smoother and more intuitive mobile experience.
+
+3. **Placement Options Missing**
+
+   * When a user clicks **"Place Text on Garment"** or uploads a logo, the placement options are not displayed on mobile devices.
+   * These placement options are visible and working correctly on laptops/desktops, so the same functionality should be available on mobile.
+
+4. **Save Design Issue**
+
+   * On desktop and tablet devices, clicking **Save Design** allows users to enter a design name before saving.
+   * On mobile devices, this design name input modal/popup is not appearing, preventing users from saving designs properly.
+
+**Expected Outcome**
+
+* The entire Custom Studio should be fully responsive and optimized for mobile devices.
+* All customization features should work consistently across desktop, tablet, and mobile devices.
+* Loading performance should be improved for the 3D model, prints, and textures.
+* Placement options, save design functionality, and all customization workflows should be fully functional on mobile.
+* UI elements, buttons, and text should be properly aligned and responsive without overflow issues.
+
+For reference, please review the mobile experience of the following custom studio, which provides a much smoother and more user-friendly mobile UI/UX:
+
+https://www.yourdesignstore.in/products/customize/womens-polo?color=midnight-navy
+
+Use this as a benchmark for responsiveness, usability, customization workflow, and overall mobile experience.

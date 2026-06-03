@@ -431,6 +431,7 @@ export default function CustomizePage() {
   const [customMeasurements, setCustomMeasurements] = useState({ chest:"", shoulder:"", length:"", sleeve:"" });
   const [designName, setDesignName] = useState("");
   const [qty, setQty] = useState(1);
+  const [showMobileSaveSheet, setShowMobileSaveSheet] = useState(false);
 
   // ── Studio UI state ───────────────────────────────────────────────────────
   const [activeTool, setActiveTool] = useState<"products"|"colors"|"prints"|"patterns"|"text"|"image"|"order"|null>("products");
@@ -1444,7 +1445,9 @@ export default function CustomizePage() {
           />
           {!isTypeMode && (
             <Show when="signed-in">
-              <button onClick={handleSave} disabled={saveMut.isPending}
+              <button
+                onClick={screenW < 768 ? ()=>setShowMobileSaveSheet(true) : handleSave}
+                disabled={saveMut.isPending}
                 style={{
                   padding:"7px 16px",borderRadius:40,
                   border:`1px solid rgba(201,168,76,0.35)`,
@@ -1453,6 +1456,7 @@ export default function CustomizePage() {
                   letterSpacing:".06em",textTransform:"uppercase",
                   color:V.tx,transition:"all 0.25s",
                   opacity:saveMut.isPending?.6:1,
+                  whiteSpace:"nowrap",
                 }}
                 onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.background=V.aclt;}}
                 onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(201,168,76,0.35)";e.currentTarget.style.background="transparent";}}>
@@ -2150,6 +2154,41 @@ export default function CustomizePage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Logo placement — mobile only (desktop uses right panel) */}
+                  {logoPreview&&screenW<768&&(()=>{
+                    const CHIPS=[
+                      {key:"front-left",   label:"Chest Left",   cx:39,cy:40},
+                      {key:"front-right",  label:"Chest Right",  cx:21,cy:40},
+                      {key:"left-sleeve",  label:"Right Sleeve", cx:7, cy:23},
+                      {key:"right-sleeve", label:"Left Sleeve",  cx:53,cy:23},
+                      {key:"back-top",     label:"Back Top",     cx:30,cy:24,back:true},
+                      {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
+                      {key:"collar-left",  label:"Collar Right", cx:24,cy:14},
+                      {key:"collar-right", label:"Collar Left",  cx:36,cy:14},
+                    ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
+                    return(
+                      <div style={{display:"flex",flexDirection:"column",gap:8,padding:"12px 0 0"}}>
+                        <div style={{...sb}}>Logo Placement</div>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+                          {CHIPS.map(c=>{
+                            const isA=logoPosition===c.key;
+                            const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
+                            return(
+                              <div key={c.key} onClick={()=>{setLogoPosition(c.key as any);setCameraView(PLACEMENT_VIEW[c.key]??"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key),flipY:placementFlipY(c.key),angle:placementAngle(c.key)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
+                                display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",
+                                padding:"6px 2px",borderRadius:9,transition:"all .18s",
+                                border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
+                              }}>
+                                <div style={{width:32,height:36}} dangerouslySetInnerHTML={{__html:svg}}/>
+                                <span style={{fontSize:8,textTransform:"uppercase",letterSpacing:".03em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:"#4a4a48",fontWeight:isA?700:500,textAlign:"center",lineHeight:1.2}}>{c.label}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Text section */}
@@ -2208,14 +2247,47 @@ export default function CustomizePage() {
                       }}>{label}</button>
                     ))}
                   </div>
-                  {/* Text placement chips moved to right panel */}
+                  {/* Text placement — mobile only (desktop uses right panel) */}
+                  {screenW<768&&(()=>{
+                    const CHIPS=[
+                      {key:"front-left",   label:"Chest Left",   cx:39,cy:40},
+                      {key:"front-right",  label:"Chest Right",  cx:21,cy:40},
+                      {key:"left-sleeve",  label:"Right Sleeve", cx:7, cy:23},
+                      {key:"right-sleeve", label:"Left Sleeve",  cx:53,cy:23},
+                      {key:"back-top",     label:"Back Top",     cx:30,cy:24,back:true},
+                      {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
+                      {key:"collar-left",  label:"Collar Right", cx:24,cy:14},
+                      {key:"collar-right", label:"Collar Left",  cx:36,cy:14},
+                    ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
+                    return(
+                      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                        <div style={{...sb}}>Text Placement</div>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
+                          {CHIPS.map(c=>{
+                            const isA=textPosition===c.key;
+                            const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
+                            return(
+                              <div key={c.key} onClick={()=>{const isCollar=c.key==="collar-left"||c.key==="collar-right";setTextPosition(c.key as any);if(isCollar)setTextFontSize(v=>Math.min(v,14));setCameraView(PLACEMENT_VIEW[c.key]??"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(textObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};const fs=isCollar?Math.min(textFontSize,14):textFontSize;textObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key),flipY:placementFlipY(c.key),angle:placementAngle(c.key),fontSize:fs,scaleX:1,scaleY:1});clampCollarText(textObjRef.current,c.key);textObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
+                                display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",
+                                padding:"6px 2px",borderRadius:9,transition:"all .18s",
+                                border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
+                              }}>
+                                <div style={{width:32,height:36}} dangerouslySetInnerHTML={{__html:svg}}/>
+                                <span style={{fontSize:8,textTransform:"uppercase",letterSpacing:".03em",fontFamily:"'Jost',sans-serif",color:isA?V.tx:"#4a4a48",fontWeight:isA?700:500,textAlign:"center",lineHeight:1.2}}>{c.label}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <button onClick={()=>{
                     if(!textInput.trim())return;
                     applyText();
                   }} style={{
                     padding:"10px 16px",borderRadius:8,border:"none",background:V.ac,cursor:"pointer",
                     fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:700,letterSpacing:".08em",
-                    textTransform:"uppercase",color:V.tx,transition:"all .2s",
+                    textTransform:"uppercase",color:V.tx,transition:"all .2s",whiteSpace:"nowrap",
                   }}
                   onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=V.ac;(e.currentTarget as HTMLElement).style.opacity="0.85";}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=V.ac;(e.currentTarget as HTMLElement).style.opacity="1";}}>
@@ -3450,7 +3522,7 @@ export default function CustomizePage() {
 
         {/* ── CENTER: 3D CANVAS ─────────────────────────────────────────────── */}
         <div style={{
-          flex:screenW<768?"0 0 38vh":1,
+          flex:screenW<768?"0 0 44vh":1,
           order:screenW<768?1:2,
           position:"relative",
           background:"radial-gradient(ellipse at 55% 40%, #c8c2b6 0%, #b8b1a4 60%, #a8a196 100%)",
@@ -3889,6 +3961,75 @@ export default function CustomizePage() {
         </div>
       )}
 
+      {/* Mobile Save Bottom Sheet */}
+      {showMobileSaveSheet&&(
+        <div
+          style={{position:"fixed",inset:0,zIndex:400,background:"rgba(26,26,24,0.55)",backdropFilter:"blur(4px)"}}
+          onClick={()=>setShowMobileSaveSheet(false)}
+        >
+          <div
+            onClick={e=>e.stopPropagation()}
+            style={{
+              position:"fixed",bottom:0,left:0,right:0,
+              background:V.bg,borderRadius:"20px 20px 0 0",
+              padding:"24px 20px 36px",
+              boxShadow:"0 -8px 40px rgba(26,26,24,0.22)",
+              border:`1px solid rgba(201,168,76,0.18)`,
+              borderBottom:"none",
+            }}
+          >
+            {/* Handle bar */}
+            <div style={{width:40,height:4,borderRadius:2,background:V.bd,margin:"0 auto 20px"}}/>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,fontWeight:600,color:V.tx,letterSpacing:".02em",marginBottom:6}}>
+              Save Your Design
+            </div>
+            <div style={{fontFamily:"'Jost',sans-serif",fontSize:11,color:V.mu,letterSpacing:".04em",marginBottom:18}}>
+              Give your design a name so you can find it later
+            </div>
+            <input
+              value={designName}
+              onChange={e=>setDesignName(e.target.value)}
+              placeholder={`${product?.name||"Custom"} Design`}
+              autoFocus
+              style={{
+                width:"100%",padding:"12px 16px",boxSizing:"border-box",
+                borderRadius:12,border:`1.5px solid ${V.bd}`,
+                background:V.sf2,color:V.tx,
+                fontFamily:"'Jost',sans-serif",fontSize:14,
+                outline:"none",marginBottom:16,
+              }}
+              onFocus={e=>e.target.style.borderColor=V.ac}
+              onBlur={e=>e.target.style.borderColor=V.bd}
+            />
+            <div style={{display:"flex",gap:10}}>
+              <button
+                onClick={()=>setShowMobileSaveSheet(false)}
+                style={{
+                  flex:1,padding:"13px 0",borderRadius:40,
+                  border:`1.5px solid ${V.bd}`,background:"transparent",
+                  color:V.mu,fontFamily:"'Jost',sans-serif",fontSize:12,fontWeight:500,
+                  letterSpacing:".06em",textTransform:"uppercase",cursor:"pointer",
+                  transition:"all .2s",
+                }}
+              >Cancel</button>
+              <button
+                onClick={()=>{handleSave();setShowMobileSaveSheet(false);}}
+                disabled={saveMut.isPending}
+                style={{
+                  flex:2,padding:"13px 0",borderRadius:40,
+                  border:"none",background:V.tx,color:"#fff",
+                  fontFamily:"'Jost',sans-serif",fontSize:12,fontWeight:600,
+                  letterSpacing:".06em",textTransform:"uppercase",cursor:"pointer",
+                  opacity:saveMut.isPending?.6:1,transition:"all .2s",
+                }}
+                onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}
+                onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}
+              >{saveMut.isPending?"Saving…":"✦ Save Design"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hidden Fabric canvas (texture pipeline) */}
       <div id="fc-wrapper" style={{position:"fixed",left:"-9999px",top:0,width:"1024px",height:"1024px",pointerEvents:"none",opacity:0.01,zIndex:-1}}>
         <div id="fc-scale-host" style={{position:"absolute",left:0,top:0,width:"1024px",height:"1024px",transformOrigin:"top left"}}>
@@ -3912,11 +4053,13 @@ export default function CustomizePage() {
         details summary::-webkit-details-marker{display:none}
         @media (max-width: 600px) {
           .studio-title-center { display: none !important; }
-          .design-name-input { width: 100px !important; font-size: 10px !important; }
+          .design-name-input { width: 90px !important; font-size: 10px !important; }
+        }
+        @media (max-width: 480px) {
+          .design-name-input { display: none !important; }
         }
         @media (max-width: 420px) {
           .design-name-input { display: none !important; }
-          .mobile-design-name-row { display: block !important; }
         }
       `}</style>
 
