@@ -398,6 +398,8 @@ export default function CustomizePage() {
   const [activeKashaDesign, setActiveKashaDesign] = useState<KashaDesignDef|null>(null);
   const kdRequestIdRef = useRef(0);
   const autoAppliedRef = useRef(false);
+  // Prevents the full canvas+model restore from running more than once per session
+  const restoredRef = useRef(false);
 
   // ── Parts step state ─────────────────────────────────────────────────────
   const [activePartZone, setActivePartZone] = useState<Exclude<PatternZone,"all">>("collar");
@@ -596,23 +598,84 @@ export default function CustomizePage() {
   // Sync userStyle when the URL param changes (e.g. navigating from pattern → solid via modal)
   useEffect(() => { setUserStyle(_entryStyle); }, [_entryStyle]);
 
-  // When viewing a saved design (?from=saved), restore userStyle + customizationType from
-  // the stored canvasData so Step 2 (Design) renders the right controls without going
-  // through Step 1 (Style).
+  // When viewing a saved design (?from=saved), fully restore the canvas and 3D model
+  // to the state that was saved. This effect runs once canvasReady and existing data
+  // are both available. Auto-apply effects are suppressed in saved mode (see guards
+  // below) so they don't overwrite the restored design.
   useEffect(() => {
-    if (_fromSource !== "saved" || !existing?.canvasData) return;
-    try {
-      const cd = JSON.parse(existing.canvasData);
-      if (cd.customizationType) {
-        const t: string = cd.customizationType;
-        setCustomizationType(t as "color"|"print"|"pattern");
-        if (t === "color")   setUserStyle("solid");
-        else if (t === "print")   setUserStyle("print");
-        else if (t === "pattern") setUserStyle("pattern");
-      }
-    } catch { /* ignore malformed data */ }
+    if (_fromSource !== "saved" || !existing?.canvasData || !canvasReady) return;
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+
+    const fc = fcRef.current;
+    if (!fc) return;
+
+    (async () => {
+      try {
+        const cd = JSON.parse(existing.canvasData as string);
+
+        // ── 1. React UI state ───────────────────────────────────────────
+        if (cd.customizationType) {
+          const t: string = cd.customizationType;
+          setCustomizationType(t as "color"|"print"|"pattern");
+          if (t === "color")        setUserStyle("solid");
+          else if (t === "print")   setUserStyle("print");
+          else if (t === "pattern") setUserStyle("pattern");
+        }
+        if (cd.primaryColor)    setPrimaryColor(cd.primaryColor);
+        if (cd.activePrintId)   setActivePrintId(cd.activePrintId);
+        if (cd.allOverPrintId)  setAllOverPrintId(cd.allOverPrintId);
+        if (cd.zoneColors)      setZoneColors(cd.zoneColors);
+        if (cd.patColorA)       setPatColorA(cd.patColorA);
+        if (cd.patColorB)       setPatColorB(cd.patColorB);
+        if (cd.sleeveLength)    setSleeveLength(cd.sleeveLength as "half"|"full");
+
+        // ── 2. Fabric canvas background color (solid layer) ─────────────
+        const bg: string = cd.primaryColor ?? "#ffffff";
+        baseBgRef.current = bg;
+        setFabricBg(fc, bg);
+
+        // ── 3. Restore canvas objects (logos, text, zone prints, design shapes)
+        if (cd.canvasJSON) {
+          try {
+            const cj = typeof cd.canvasJSON === "string"
+              ? JSON.parse(cd.canvasJSON)
+              : cd.canvasJSON;
+            await (fc as any).loadFromJSON(cj);
+            fc.renderAll();
+          } catch { /* malformed canvasJSON — canvas keeps objects from step 2 */ }
+        }
+
+        // ── 4. Re-apply all-over print background ───────────────────────
+        // fabric.Pattern doesn't survive JSON serialisation (the offscreen
+        // canvas source becomes stale), so we rebuild it from the stored ID.
+        if (cd.allOverPrintId) {
+          const p = PATTERNS.find((pat: any) => pat.id === cd.allOverPrintId);
+          if (p) {
+            // applyAllOverPrint sets the pattern as canvas.backgroundColor and
+            // calls syncTexture() — model update is handled there.
+            await applyAllOverPrint(p);
+            return; // model already updated by applyAllOverPrint → done
+          }
+        }
+
+        // ── 5. KA.SHA bespoke design ────────────────────────────────────
+        // Objects are already in canvasJSON (step 3). Just sync React state
+        // so the correct design is highlighted in the UI.
+        if (cd.kdDesignId) {
+          const design = KASHA_DESIGNS.find((d: any) => d.id === cd.kdDesignId);
+          if (design) setActiveKashaDesign(design);
+        }
+
+        // ── 6. Push restored canvas state to the 3D model ───────────────
+        // syncTexture() is a no-op when mats are not loaded yet — but the
+        // [mats, syncTexture] effect fires automatically once the model-viewer
+        // materials arrive, so the restored canvas state will be applied then.
+        syncTexture();
+      } catch { /* ignore malformed canvasData */ }
+    })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [_fromSource, existing]);
+  }, [_fromSource, existing, canvasReady]);
 
   // Update styleTab when productType resolves (after data fetch)
   useEffect(() => {
@@ -828,6 +891,7 @@ export default function CustomizePage() {
   // Gated on mats.length > 0 so syncTexture can actually push to the model;
   // the effect re-fires automatically when mats loads (via handleSelectKashaDesign dep).
   useEffect(() => {
+    if (_fromSource === "saved") return; // restore effect handles saved designs
     if (!canvasReady || productType !== "pattern" || autoAppliedRef.current) return;
     // Respect user's explicit style choice — don't force a pattern when the user
     // picked "solid" or "print" via the CustomizeEntryModal (?style= param).
@@ -887,6 +951,7 @@ export default function CustomizePage() {
   // call syncTexture() once model materials arrive, pushing the texture to the model.
   const autoAppliedPrintRef = useRef(false);
   useEffect(() => {
+    if (_fromSource === "saved") return; // restore effect handles saved designs
     if (autoAppliedPrintRef.current) return;
     if (!canvasReady) return;
 
@@ -915,6 +980,7 @@ export default function CustomizePage() {
   // The fallback hex "#f5f5f5" means the color code wasn't in the map, so we don't use it.
   const autoAppliedSolidRef = useRef(false);
   useEffect(() => {
+    if (_fromSource === "saved") return; // restore effect handles saved designs
     if (autoAppliedSolidRef.current) return;
     if (!canvasReady) return;
 
