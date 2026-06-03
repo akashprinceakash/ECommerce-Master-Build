@@ -99,7 +99,7 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "front-right":   { left: 363, top: 490 },  // right chest zone
   "back-center":   { left: 765, top: 604 },  // centre across back
   "back-top":      { left: 765, top: 390 },  // back yoke / top of back (near collar back)
-  "left-sleeve":   { left: 816, top: 120 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
+  "left-sleeve":   { left: 816, top: 60 },  // rightSleeve UV zone → appears on left sleeve (UV is horizontally mirrored)
   "right-sleeve":  { left: 409, top: 120 },  // leftSleeve UV zone → mirror of left-sleeve (1024−816=208)
   "collar-left":   { left:  80, top: 240 },  // inner collar-tip flap (left lapel), visible from front
   "collar-right":  { left: 451, top: 240 },  // inner collar-tip flap (right lapel), symmetric (519−68=451)
