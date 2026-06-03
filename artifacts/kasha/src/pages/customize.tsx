@@ -265,7 +265,7 @@ export default function CustomizePage() {
 
   // ── Wizard step (1–4) ────────────────────────────────────────────────────
   // Auto-advance to Step 2 when arriving via the entry modal (?style= present)
-  const initialStep = isQuickMode ? 3 : (_entryStyle ? 2 : 1);
+  const initialStep = isQuickMode ? 3 : (_entryStyle || _fromSource === "saved" ? 2 : 1);
   const [step, setStep] = useState(() => initialStep);
 
   // ── 3D model-viewer ──────────────────────────────────────────────────────
@@ -585,6 +585,24 @@ export default function CustomizePage() {
 
   // Sync userStyle when the URL param changes (e.g. navigating from pattern → solid via modal)
   useEffect(() => { setUserStyle(_entryStyle); }, [_entryStyle]);
+
+  // When viewing a saved design (?from=saved), restore userStyle + customizationType from
+  // the stored canvasData so Step 2 (Design) renders the right controls without going
+  // through Step 1 (Style).
+  useEffect(() => {
+    if (_fromSource !== "saved" || !existing?.canvasData) return;
+    try {
+      const cd = JSON.parse(existing.canvasData);
+      if (cd.customizationType) {
+        const t: string = cd.customizationType;
+        setCustomizationType(t as "color"|"print"|"pattern");
+        if (t === "color")   setUserStyle("solid");
+        else if (t === "print")   setUserStyle("print");
+        else if (t === "pattern") setUserStyle("pattern");
+      }
+    } catch { /* ignore malformed data */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_fromSource, existing]);
 
   // Update styleTab when productType resolves (after data fetch)
   useEffect(() => {
@@ -1396,7 +1414,7 @@ export default function CustomizePage() {
           {n:2,label:"Design"},
           {n:3,label:"Logo & Text"},
           {n:4,label:"Sizing"},
-        ] as const).map((s,i)=>{
+        ] as const).filter(s => !(_fromSource==="saved" && s.n===1)).map((s,i)=>{
           const active=step===s.n; const done=step>s.n;
           // Style step is locked when the user arrived with a pre-selected style
           // (e.g. from a product page). Clicking it does nothing to prevent

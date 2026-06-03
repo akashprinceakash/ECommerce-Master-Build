@@ -218,7 +218,7 @@ export default function ProfilePage() {
                           ) : null}
                           <div className="w-24 h-24 border border-border/20 shadow-lg" style={{ backgroundColor: design.color, display: ((design as any).previewImageUrl || (design as any).frontImageUrl) ? "none" : "block" }} />
                           <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
-                            <Link href={`/products/${design.productId}/customize`}>
+                            <Link href={`/products/${design.productId}/customize?from=saved`}>
                               <Button variant="outline" className="rounded-none border-foreground hover:bg-foreground hover:text-background">
                                 Edit Design
                               </Button>
