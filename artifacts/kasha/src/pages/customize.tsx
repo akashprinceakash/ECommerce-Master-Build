@@ -1174,16 +1174,40 @@ export default function CustomizePage() {
     setCanRedo(false);
   }, []);
 
+  // After loadFromJSON, re-apply the correct flip/angle to user-placed objects so
+  // stale values baked into the history JSON (e.g. from before a flip-logic fix) are
+  // always overwritten with the current, authoritative placement rules.
+  const reapplyFlips = useCallback((fc: fabric.Canvas) => {
+    fc.getObjects().forEach((o: any) => {
+      if (o?.data?.tag === "user-text") {
+        o.set({
+          flipX: placementFlipX(textPosition),
+          flipY: placementFlipY(textPosition),
+          angle: placementAngle(textPosition),
+        });
+        o.setCoords();
+      } else if (o?.data?.kashaLogo) {
+        o.set({
+          flipX: placementFlipX(logoPosition),
+          flipY: placementFlipY(logoPosition),
+          angle: placementAngle(logoPosition),
+        });
+        o.setCoords();
+      }
+    });
+  }, [textPosition, logoPosition]);
+
   const undoCanvas = useCallback(async () => {
     const fc = fcRef.current; if (!fc || historyIdx.current <= 0) return;
     historyIdx.current--;
     const json = historyStack.current[historyIdx.current];
     if (!json) return;
     await (fc as any).loadFromJSON(JSON.parse(json));
+    reapplyFlips(fc);
     fc.renderAll(); syncTexture();
     setCanUndo(historyIdx.current > 0);
     setCanRedo(true);
-  }, [syncTexture]);
+  }, [syncTexture, reapplyFlips]);
 
   const redoCanvas = useCallback(async () => {
     const fc = fcRef.current;
@@ -1192,10 +1216,11 @@ export default function CustomizePage() {
     const json = historyStack.current[historyIdx.current];
     if (!json) return;
     await (fc as any).loadFromJSON(JSON.parse(json));
+    reapplyFlips(fc);
     fc.renderAll(); syncTexture();
     setCanUndo(true);
     setCanRedo(historyIdx.current < historyStack.current.length - 1);
-  }, [syncTexture]);
+  }, [syncTexture, reapplyFlips]);
 
   // Camera view effect
   useEffect(() => {
