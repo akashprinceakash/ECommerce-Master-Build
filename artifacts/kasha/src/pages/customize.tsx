@@ -112,7 +112,7 @@ function placementFlipX(placement: string): boolean {
 }
 // Only collar-left UV area is vertically flipped.
 function placementFlipY(placement: string): boolean {
-  return placement === "collar-left" || placement === "right-sleeve";;
+  return placement === "collar-left" || placement === "right-sleeve";
 }
 // The collar UV is laid out with the collar LENGTH along the X axis, so a 0° object
 // appears vertical on the physical collar. Rotate -90° to make text/logos horizontal,
