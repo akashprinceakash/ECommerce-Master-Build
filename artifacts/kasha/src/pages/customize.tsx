@@ -105,13 +105,14 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
   "collar-right":  { left: 451, top: 240 },  // inner collar-tip flap (right lapel), symmetric (519−68=451)
 };
 // Most UV zones are horizontally mirrored — flipX:true corrects text/logos.
-// collar-left and right-sleeve UV areas are NOT horizontally mirrored — flipX must be false there.
+// Only collar-left is NOT horizontally mirrored (after label swap, right-sleeve key now
+// serves the left sleeve position and requires the same flipX=true as left-sleeve).
 function placementFlipX(placement: string): boolean {
-  return placement !== "collar-left" && placement !== "right-sleeve";
+  return placement !== "collar-left";
 }
-// collar-left and right-sleeve UV areas are vertically flipped — flipY:true cancels that.
+// Only collar-left UV area is vertically flipped.
 function placementFlipY(placement: string): boolean {
-  return placement === "collar-left" || placement === "right-sleeve";
+  return placement === "collar-left";
 }
 // The collar UV is laid out with the collar LENGTH along the X axis, so a 0° object
 // appears vertical on the physical collar. Rotate -90° to make text/logos horizontal,

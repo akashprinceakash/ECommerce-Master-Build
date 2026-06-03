@@ -1,1 +1,1 @@
-- [Right sleeve UV flip](right-sleeve-uv-flip.md) — right-sleeve needs flipX:false + flipY:true; all other zones need flipX:true + flipY:false. Do NOT revert to all-true.
+- [Placement flip rules](right-sleeve-uv-flip.md) — only collar-left key gets flipX=false/flipY=true; all others flipX=true/flipY=false. UI labels were swapped so key names no longer match display names.
