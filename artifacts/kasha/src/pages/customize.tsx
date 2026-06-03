@@ -1107,7 +1107,6 @@ export default function CustomizePage() {
       const effectiveQty=Object.values(sizeQty).reduce((a,b)=>a+b,0)||qty;
       const effectiveSize=Object.entries(sizeQty).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])[0]?.[0]||size;
       // Compute customisation charge: ₹20 base (once) + ₹1 per sq inch for logo & text
-      // Body/collar prints and all-over garment prints carry no extra charge
       const logoW = logoSize * 0.376;
       const logoAreaSqIn = logoPreview ? Math.ceil(logoW * logoW * 0.75) : 0;
       const textH = textFontSize * (22/1024);
@@ -1115,22 +1114,29 @@ export default function CustomizePage() {
       const textAreaSqIn = textPlaced ? Math.ceil(textH * textW) : 0;
       const hasLogoOrText = !!(logoPreview || textPlaced);
       const customizationCharge = hasLogoOrText ? (20 + logoAreaSqIn + textAreaSqIn) : 0;
-      // Save or update the customisation; reuse the session ID to avoid creating duplicates
+      // Save customisation — when we already have an ID, fire the PUT non-blocking so the
+      // cart add is not held hostage by the image-upload time (can take several seconds).
       let customizationId: number|null = null;
-      try {
-        const existingId=sessionCustomizationIdRef.current??existing?.id??null;
-        if(existingId){
-          await apiFetch(`/api/customizations/${existingId}`,{method:"PUT",body:JSON.stringify({...payload})});
-          customizationId=existingId;
-        } else {
+      const existingId=sessionCustomizationIdRef.current??existing?.id??null;
+      if(existingId){
+        // Use the existing ID immediately; persist the updated design in the background.
+        customizationId=existingId;
+        apiFetch(`/api/customizations/${existingId}`,{method:"PUT",body:JSON.stringify({...payload})}).catch(()=>{});
+      } else {
+        try {
           const cust=await apiFetch("/api/customizations",{method:"POST",body:JSON.stringify({...payload,customizationCharge})});
           customizationId=cust.id??null;
           if(customizationId) sessionCustomizationIdRef.current=customizationId;
-        }
-      } catch { /* non-blocking — cart add will proceed */ }
+        } catch { /* non-blocking — cart add will still proceed */ }
+      }
       return apiFetch("/api/cart/items",{method:"POST",body:JSON.stringify({productId:id,customizationId,quantity:effectiveQty,size:effectiveSize})});
     },
-    onSuccess:()=>{setCartAdded(true);toast({title:"Added to Cart ✓",description:"Your custom design has been saved to your cart."});queryClient.invalidateQueries({queryKey:getGetCartQueryKey()});},
+    onSuccess:()=>{
+      setCartAdded(true);
+      queryClient.invalidateQueries({queryKey:getGetCartQueryKey()});
+      toast({title:"Added to Cart ✓",description:"Your custom design has been added to your cart."});
+      openCart();
+    },
     onError:(e:any)=>toast({title:"Could not add to cart",description:e.message,variant:"destructive"}),
   });
 
