@@ -283,6 +283,11 @@ export default function CustomizePage() {
   const [mats, setMats] = useState<MatEntry[]>([]);
   const syncTextureRef = useRef<(()=>void)|null>(null);
   const lastTextureUrlRef = useRef("");
+  // Sequence counter — incremented on every syncTexture call so older in-flight
+  // calls can detect they've been superseded and bail out before writing to the
+  // model-viewer. This prevents the print-then-colour race where the slower
+  // print sync finishes after the colour sync and stamps the old texture back.
+  const syncSeqRef = useRef(0);
 
   // ── Fabric canvas ────────────────────────────────────────────────────────
   const fcRef = useRef<fabric.Canvas|null>(null);
@@ -520,14 +525,19 @@ export default function CustomizePage() {
   const syncTexture = useCallback(async () => {
     const mv: any=mvRef.current; const fc: any=fcRef.current;
     if (!mv||!fc||!mats.length) return;
+    // Claim a sequence slot — any older in-flight call will see it's stale and abort.
+    const mySeq = ++syncSeqRef.current;
     try {
       if (typeof fc.discardActiveObject === "function") fc.discardActiveObject();
-      fc.renderAll(); await raf(); fc.renderAll(); await raf();
+      fc.renderAll(); await raf(); if (mySeq!==syncSeqRef.current) return;
+      fc.renderAll(); await raf(); if (mySeq!==syncSeqRef.current) return;
       const rawEl: HTMLCanvasElement|undefined = typeof fc.getElement==="function" ? fc.getElement() : undefined;
       const dataUrl = rawEl ? rawEl.toDataURL("image/png",1.0) : fc.toDataURL({format:"png",quality:1.0,multiplier:1});
       if (!dataUrl||dataUrl.length<100) return;
+      if (mySeq!==syncSeqRef.current) return;
       lastTextureUrlRef.current = dataUrl;
       const tex = await mv.createTexture(dataUrl);
+      if (mySeq!==syncSeqRef.current) return; // abort if superseded during texture upload
       for (const entry of mats) {
         const pbr=entry?.mat?.pbrMetallicRoughness; if(!pbr) continue;
         const slot=pbr.baseColorTexture;
