@@ -65,6 +65,9 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
     { query: { queryKey: getListProductsQueryKey({}), enabled: isOpen } }
   );
 
+  // scrollRef must be declared before any early returns (Rules of Hooks)
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   if (!isOpen) return null;
 
   // ── Auth gate ─────────────────────────────────────────────────────────────
@@ -161,7 +164,6 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
     navigate(buildHref(productId, sku) + "&from=modal");
   }
 
-  const scrollRef = useRef<HTMLDivElement>(null);
   const scroll = (dir: "left" | "right") => {
     scrollRef.current?.scrollBy({ left: dir === "left" ? -220 : 220, behavior: "smooth" });
   };

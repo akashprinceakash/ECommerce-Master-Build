@@ -496,9 +496,17 @@ export default function CustomizePage() {
     resizeListenerRef.current = scaleCanvas;
     window.addEventListener("resize", scaleCanvas);
     setTimeout(scaleCanvas, 100);
-    fc.on("object:modified", () => syncTextureRef.current?.());
-    fc.on("object:added",    () => syncTextureRef.current?.());
-    fc.on("object:removed",  () => syncTextureRef.current?.());
+    // Debounce texture sync on canvas events — object:modified fires on every
+    // drag pixel, which would kick off a full GPU texture upload per frame.
+    // 120 ms gives smooth visual feedback without hammering the GPU.
+    let syncTimer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedSync = () => {
+      if (syncTimer) clearTimeout(syncTimer);
+      syncTimer = setTimeout(() => { syncTextureRef.current?.(); }, 120);
+    };
+    fc.on("object:modified", debouncedSync);
+    fc.on("object:added",    debouncedSync);
+    fc.on("object:removed",  debouncedSync);
   }, []);
 
   // ── Texture sync ─────────────────────────────────────────────────────────
