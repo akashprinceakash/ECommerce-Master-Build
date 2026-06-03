@@ -2389,7 +2389,7 @@ export default function CustomizePage() {
                 </button>
                 {cartAdded&&!isTypeMode&&(
                   <button
-                    onClick={openCart}
+                    onClick={()=>setLocation("/cart")}
                     style={{
                       flex:1,padding:"11px 0",borderRadius:99,
                       border:`1.5px solid ${V.ac}`,background:V.aclt,color:V.tx,
@@ -3319,7 +3319,7 @@ export default function CustomizePage() {
                       </button>
                     )}
                     {cartAdded&&!isTypeMode&&(
-                      <button onClick={openCart} style={{
+                      <button onClick={()=>setLocation("/cart")} style={{
                         padding:"11px 0",borderRadius:99,
                         border:`1.5px solid ${V.ac}`,background:V.aclt,color:V.tx,
                         fontSize:12,fontWeight:600,cursor:"pointer",
