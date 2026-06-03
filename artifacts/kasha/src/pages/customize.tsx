@@ -108,11 +108,11 @@ const LOGO_POSITIONS: Record<string, { left:number; top:number }> = {
 // Only collar-left is NOT horizontally mirrored (after label swap, right-sleeve key now
 // serves the left sleeve position and requires the same flipX=true as left-sleeve).
 function placementFlipX(placement: string): boolean {
-  return placement !== "collar-left";
+  return placement !== "collar-left" && placement !== "right-sleeve";
 }
 // Only collar-left UV area is vertically flipped.
 function placementFlipY(placement: string): boolean {
-  return placement === "collar-left";
+  return placement === "collar-left" || placement === "right-sleeve";;
 }
 // The collar UV is laid out with the collar LENGTH along the X axis, so a 0° object
 // appears vertical on the physical collar. Rotate -90° to make text/logos horizontal,
