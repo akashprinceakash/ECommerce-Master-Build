@@ -1273,6 +1273,7 @@ export default function CustomizePage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
+    <>
     <div style={{display:"flex",flexDirection:"column",height:"100vh",background:V.bg,color:V.tx,fontFamily:"'Jost', sans-serif",overflow:"hidden"}}>
 
       {/* ── TOP ACTION BAR ─────────────────────────────────────────────── */}
@@ -3819,8 +3820,10 @@ export default function CustomizePage() {
         }
       `}</style>
 
-      {/* Cart drawer — needed here because customize page has no Navbar */}
-      <CartDrawer open={isCartOpen} onClose={closeCart} cart={cart} />
     </div>
+
+    {/* Cart drawer — rendered outside the studio div so fixed positioning works identically to the Navbar's CartDrawer */}
+    <CartDrawer open={isCartOpen} onClose={closeCart} cart={cart} />
+    </>
   );
 }
