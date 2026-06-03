@@ -19,6 +19,8 @@ import { useUser, Show } from "@clerk/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/contexts/CartContext";
+import { CartDrawer } from "@/components/layout/CartDrawer";
+import { useGetCart, getGetCartQueryKey } from "@workspace/api-client-react";
 import { getApiUrl } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import * as fabric from "fabric";
@@ -240,7 +242,7 @@ export default function CustomizePage() {
   const [, setLocation] = useLocation();
   const { user } = useUser();
   const { toast } = useToast();
-  const { openCart } = useCart();
+  const { openCart, isCartOpen, closeCart } = useCart();
   const queryClient = useQueryClient();
 
 
@@ -446,6 +448,11 @@ export default function CustomizePage() {
   const historyIdx = useRef(-1);
   // Track the customization ID used in this browser session to avoid creating duplicates
   const sessionCustomizationIdRef = useRef<number | null>(null);
+
+  // ── Cart data (needed to open CartDrawer from within the studio) ─────────
+  const { data: cart } = useGetCart({
+    query: { enabled: !!user, queryKey: getGetCartQueryKey() }
+  });
 
   // ── Design name ──────────────────────────────────────────────────────────
   const { data: existing } = useQuery<any>({
@@ -1090,7 +1097,7 @@ export default function CustomizePage() {
       if(created?.id) sessionCustomizationIdRef.current=created.id;
       return created;
     },
-    onSuccess:()=>{toast({title:"Design Saved ✓"});queryClient.invalidateQueries({queryKey:["customization",id]});},
+    onSuccess:()=>{toast({title:"Design Saved ✓",description:"Visit Your Profile → Bespoke Designs to view your saved design."});queryClient.invalidateQueries({queryKey:["customization",id]});},
     onError:(e:any)=>toast({title:"Error",description:e.message,variant:"destructive"}),
   });
   const [cartAdded, setCartAdded] = useState(false);
@@ -3260,6 +3267,22 @@ export default function CustomizePage() {
                       </div>
                     ))}
                   </div>
+                  {/* Design name — mobile only (header input is hidden <420px) */}
+                  <div className="mobile-design-name-row" style={{display:"none"}}>
+                    <input
+                      value={designName}
+                      onChange={e=>setDesignName(e.target.value)}
+                      placeholder="Name your design…"
+                      style={{
+                        width:"100%",padding:"10px 14px",boxSizing:"border-box",
+                        background:"#fff",border:`1.5px solid ${V.bd}`,borderRadius:99,
+                        color:V.tx,fontSize:12,fontFamily:"'Jost',sans-serif",
+                        letterSpacing:".02em",outline:"none",
+                      }}
+                      onFocus={e=>e.target.style.borderColor=V.ac}
+                      onBlur={e=>e.target.style.borderColor=V.bd}
+                    />
+                  </div>
                   {/* CTA */}
                   <div style={{display:"flex",flexDirection:"column",gap:8}}>
                     {isTypeMode ? (
@@ -3354,7 +3377,7 @@ export default function CustomizePage() {
               camera-controls {...(step===3||modelPaused?{}:{"auto-rotate":true,"rotation-per-second":"8deg"})}
               shadow-intensity="1" environment-image="neutral" exposure="1.0"
               camera-orbit="0deg 75deg 2.5m" min-camera-orbit="auto auto 1.5m" max-camera-orbit="auto auto 5m"
-              interaction-prompt="none"
+              interaction-prompt="none" {...{"loading":"eager"}}
               style={{width:"100%",height:"100%","--poster-color":"transparent",opacity:modelDisplayed?1:0,transition:"opacity .4s"} as any}/>
           )}
 
@@ -3792,8 +3815,12 @@ export default function CustomizePage() {
         }
         @media (max-width: 420px) {
           .design-name-input { display: none !important; }
+          .mobile-design-name-row { display: block !important; }
         }
       `}</style>
+
+      {/* Cart drawer — needed here because customize page has no Navbar */}
+      <CartDrawer open={isCartOpen} onClose={closeCart} cart={cart} />
     </div>
   );
 }

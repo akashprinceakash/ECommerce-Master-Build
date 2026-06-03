@@ -204,8 +204,19 @@ export default function ProfilePage() {
                     {customizations.map(design => (
                       <div key={design.id} className="border border-border/50 bg-background group">
                         <div className="aspect-video bg-secondary/30 relative flex items-center justify-center overflow-hidden">
-                          {/* Simplified representation of the design */}
-                          <div className="w-24 h-24 border border-border/20 shadow-lg" style={{ backgroundColor: design.color }} />
+                          {(design as any).previewImageUrl || (design as any).frontImageUrl ? (
+                            <img
+                              src={(design as any).previewImageUrl || (design as any).frontImageUrl}
+                              alt={design.name}
+                              className="w-full h-full object-contain p-2"
+                              onError={e => {
+                                const el = e.currentTarget as HTMLImageElement;
+                                el.style.display = "none";
+                                (el.nextElementSibling as HTMLElement | null)?.removeAttribute("style");
+                              }}
+                            />
+                          ) : null}
+                          <div className="w-24 h-24 border border-border/20 shadow-lg" style={{ backgroundColor: design.color, display: ((design as any).previewImageUrl || (design as any).frontImageUrl) ? "none" : "block" }} />
                           <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
                             <Link href={`/products/${design.productId}/customize`}>
                               <Button variant="outline" className="rounded-none border-foreground hover:bg-foreground hover:text-background">

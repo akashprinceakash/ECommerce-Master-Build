@@ -15,14 +15,13 @@ interface Props {
   onClose: () => void;
 }
 
-// ── Canonical entry-point SKUs ──────────────────────────────────────────────
+// ── Canonical entry-point SKUs for fixed tiles ──────────────────────────────
 const ENTRY_SKUS = {
   solid:   "KS1000BPINK",
   printed: "KS1000BGP003",
-  pattern: "KS1001B-RB",
 } as const;
 
-const TILE_CONFIG = [
+const FIXED_TILE_CONFIG = [
   {
     key:      "solid" as const,
     label:    "Solid",
@@ -36,13 +35,6 @@ const TILE_CONFIG = [
     desc:     "All-over prints from the KA.SHA library",
     accent:   "#a36b6b",
     icon:     "✦",
-  },
-  {
-    key:      "pattern" as const,
-    label:    "Pattern",
-    desc:     "Bespoke geometric & signature patterns",
-    accent:   "#6ba37a",
-    icon:     "◈",
   },
 ];
 
@@ -226,7 +218,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           opacity: 0.4, marginBottom: 28,
         }} />
 
-        {/* Three style tiles — horizontal scroll with nav arrows */}
+        {/* Style tiles — horizontal scroll with nav arrows */}
         {isLoading ? (
           <LoadingSkeleton />
         ) : (
@@ -237,7 +229,8 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
             <button onClick={() => scroll("right")} className="cem-nav-btn cem-nav-right" aria-label="Scroll right">›</button>
 
             <div ref={scrollRef} className="cem-tiles">
-              {TILE_CONFIG.map(tile => {
+              {/* Fixed: Solid + Printed tiles */}
+              {FIXED_TILE_CONFIG.map(tile => {
                 const sku     = ENTRY_SKUS[tile.key];
                 const product = resolveProduct(sku);
                 return (
@@ -254,6 +247,24 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
                   />
                 );
               })}
+
+              {/* Dynamic: one tile per available pattern product */}
+              {(allProducts ?? [])
+                .filter(p => p.available && parseSku(p.sku ?? "").type === "pattern")
+                .map(p => (
+                  <StyleTile
+                    key={p.id}
+                    label="Pattern"
+                    desc={p.description ?? "Bespoke geometric & signature pattern"}
+                    accent="#6ba37a"
+                    icon="◈"
+                    thumbnail={getAssetUrl(p.thumbnailUrl) ?? ""}
+                    productName={p.name.replace(/\s*\[gt:GT\d+\]\s*$/i, "")}
+                    disabled={false}
+                    onSelect={() => handleSelect(p.id, p.sku ?? "")}
+                  />
+                ))
+              }
             </div>
           </div>
         )}
