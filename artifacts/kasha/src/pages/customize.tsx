@@ -505,6 +505,7 @@ export default function CustomizePage() {
     const mv: any=mvRef.current; const fc: any=fcRef.current;
     if (!mv||!fc||!mats.length) return;
     try {
+      if (typeof fc.discardActiveObject === "function") fc.discardActiveObject();
       fc.renderAll(); await raf(); fc.renderAll(); await raf();
       const rawEl: HTMLCanvasElement|undefined = typeof fc.getElement==="function" ? fc.getElement() : undefined;
       const dataUrl = rawEl ? rawEl.toDataURL("image/png",1.0) : fc.toDataURL({format:"png",quality:1.0,multiplier:1});
@@ -663,12 +664,12 @@ export default function CustomizePage() {
         const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};
         const maxW=logoMaxW(logoPosition,logoSize);
         if(ni.width&&ni.width>maxW) ni.scaleToWidth(maxW);
-        ni.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition),flipY:placementFlipY(logoPosition),angle:placementAngle(logoPosition)});
+        ni.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition),flipY:placementFlipY(logoPosition),angle:placementAngle(logoPosition),hasControls:false,hasBorders:false,selectable:false,evented:false});
         // Remove old logo by ref AND by tag (mirrors handleLogoUpload)
         if (logoObjRef.current) fc.remove(logoObjRef.current);
         fc.getObjects().filter((o:any)=>o?.data?.kashaLogo).forEach((o:any)=>fc.remove(o));
         (ni as any).data={kashaLogo:true};
-        fc.add(ni); fc.setActiveObject(ni); logoObjRef.current=ni;
+        fc.add(ni); logoObjRef.current=ni;
         setLogoPlaced(true);
         fc.renderAll(); syncTexture();
       }
@@ -927,13 +928,13 @@ export default function CustomizePage() {
       const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};
       const maxW=logoMaxW(logoPosition,logoSize);
       if (img.width&&img.width>maxW) img.scaleToWidth(maxW);
-      img.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition),flipY:placementFlipY(logoPosition),angle:placementAngle(logoPosition)});
+      img.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(logoPosition),flipY:placementFlipY(logoPosition),angle:placementAngle(logoPosition),hasControls:false,hasBorders:false,selectable:false,evented:false});
       const fc=fcRef.current; if(!fc) return;
       if (logoObjRef.current) fc.remove(logoObjRef.current);
       // Sweep any previously tagged logo objects (stale refs)
       fc.getObjects().filter((o:any)=>o?.data?.kashaLogo).forEach((o:any)=>fc.remove(o));
       (img as any).data={kashaLogo:true};
-      fc.add(img); fc.setActiveObject(img); logoObjRef.current=img;
+      fc.add(img); logoObjRef.current=img;
       setLogoPlaced(true);
       fc.renderAll(); syncTexture();
     };
@@ -2956,12 +2957,12 @@ export default function CustomizePage() {
                       const cards=[
                         {key:"front-left",   label:"Chest Left",   cx:39,cy:40},
                         {key:"front-right",  label:"Chest Right",  cx:21,cy:40},
-                        {key:"left-sleeve",  label:"Left Sleeve",  cx:53,cy:23},
-                        {key:"right-sleeve", label:"Right Sleeve", cx:7, cy:23},
+                        {key:"left-sleeve",  label:"Right Sleeve", cx:7, cy:23},
+                        {key:"right-sleeve", label:"Left Sleeve",  cx:53,cy:23},
                         {key:"back-top",     label:"Back Top",     cx:30,cy:24,back:true},
                         {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
-                        {key:"collar-left",  label:"Collar Left",  cx:36,cy:14},
-                        {key:"collar-right", label:"Collar Right", cx:24,cy:14},
+                        {key:"collar-left",  label:"Collar Right", cx:24,cy:14},
+                        {key:"collar-right", label:"Collar Left",  cx:36,cy:14},
                       ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
                       return(
                         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
@@ -3123,12 +3124,12 @@ export default function CustomizePage() {
                       const cards=[
                         {key:"front-left",   label:"Chest Left",   cx:39,cy:40},
                         {key:"front-right",  label:"Chest Right",  cx:21,cy:40},
-                        {key:"left-sleeve",  label:"Left Sleeve",  cx:53,cy:23},
-                        {key:"right-sleeve", label:"Right Sleeve", cx:7, cy:23},
+                        {key:"left-sleeve",  label:"Right Sleeve", cx:7, cy:23},
+                        {key:"right-sleeve", label:"Left Sleeve",  cx:53,cy:23},
                         {key:"back-top",     label:"Back Top",     cx:30,cy:24,back:true},
                         {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
-                        {key:"collar-left",  label:"Collar Left",  cx:36,cy:14},
-                        {key:"collar-right", label:"Collar Right", cx:24,cy:14},
+                        {key:"collar-left",  label:"Collar Right", cx:24,cy:14},
+                        {key:"collar-right", label:"Collar Left",  cx:36,cy:14},
                       ] as {key:string;label:string;cx:number;cy:number;back?:boolean}[];
                       return(
                         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5}}>
@@ -3509,12 +3510,12 @@ export default function CustomizePage() {
                 const CHIPS=[
                   {key:"front-left",   label:"Chest Left",   cx:39,cy:40,back:false},
                   {key:"front-right",  label:"Chest Right",  cx:21,cy:40,back:false},
-                  {key:"left-sleeve",  label:"Left Sleeve",  cx:53,cy:23,back:false},
-                  {key:"right-sleeve", label:"Right Sleeve", cx:7, cy:23,back:false},
+                  {key:"left-sleeve",  label:"Right Sleeve", cx:7, cy:23,back:false},
+                  {key:"right-sleeve", label:"Left Sleeve",  cx:53,cy:23,back:false},
                   {key:"back-top",     label:"Back Top",     cx:30,cy:24,back:true},
                   {key:"back-center",  label:"Centre Back",  cx:30,cy:52,back:true},
-                  {key:"collar-left",  label:"Collar Left",  cx:36,cy:14,back:false},
-                  {key:"collar-right", label:"Collar Right", cx:24,cy:14,back:false},
+                  {key:"collar-left",  label:"Collar Right", cx:24,cy:14,back:false},
+                  {key:"collar-right", label:"Collar Left",  cx:36,cy:14,back:false},
                 ];
                 const chipGrid=(isActive:(k:string)=>boolean, onSelect:(k:string)=>void)=>(
                   <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:6}}>
