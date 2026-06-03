@@ -1130,7 +1130,7 @@ export default function CustomizePage() {
       } catch { /* non-blocking — cart add will proceed */ }
       return apiFetch("/api/cart/items",{method:"POST",body:JSON.stringify({productId:id,customizationId,quantity:effectiveQty,size:effectiveSize})});
     },
-    onSuccess:()=>{setCartAdded(true);toast({title:"Added to Cart ✓",description:"Your custom design has been saved to your cart."});},
+    onSuccess:()=>{setCartAdded(true);toast({title:"Added to Cart ✓",description:"Your custom design has been saved to your cart."});queryClient.invalidateQueries({queryKey:getGetCartQueryKey()});},
     onError:(e:any)=>toast({title:"Could not add to cart",description:e.message,variant:"destructive"}),
   });
 
