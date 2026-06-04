@@ -76,7 +76,7 @@ export const ZONE_PRESETS: Record<Exclude<PatternZone, "all">, ZonePreset> = {
   rightSleeve: { left: 617, top:   2, w: 398, h: 171 },
 };
 
-export const ALL_OVER_TILE_PX = 512;
+export const ALL_OVER_TILE_PX = 256;
 
 const R2_PATTERNS_BASE = "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/patterns/";
 
