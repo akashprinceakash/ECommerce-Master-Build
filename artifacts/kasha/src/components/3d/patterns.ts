@@ -16,42 +16,42 @@ export interface PatternDef {
 
 export const PATTERNS: PatternDef[] = [
   // ── KA.SHA Golf Print Collection (KS1000BGP001–034) ───────────────────────
-  // Files are named exactly as their SKU with .jpeg extension.
+  // Files are served from R2 CDN as .jpg (KS1000BGP001.jpg … KS1000BGP034.jpg).
   // swatchColors are extracted dominant hues for the picker UI.
-  { id: "KS1000BGP001", label: "GP 001", file: "KS1000BGP001.jpeg", swatchColors: ["#1a3a6b", "#f0e8d2"] },
-  { id: "KS1000BGP002", label: "GP 002", file: "KS1000BGP002.jpeg", swatchColors: ["#2d6e3e", "#f5dc56"] },
-  { id: "KS1000BGP003", label: "GP 003", file: "KS1000BGP003.jpeg", swatchColors: ["#8b1a1a", "#f0e8d2"] },
-  { id: "KS1000BGP004", label: "GP 004", file: "KS1000BGP004.jpeg", swatchColors: ["#1a1a4a", "#c9a84c"] },
-  { id: "KS1000BGP005", label: "GP 005", file: "KS1000BGP005.jpeg", swatchColors: ["#3a1a6b", "#f5f5f5"] },
-  { id: "KS1000BGP006", label: "GP 006", file: "KS1000BGP006.jpeg", swatchColors: ["#1a4a2d", "#e87a48"] },
-  { id: "KS1000BGP007", label: "GP 007", file: "KS1000BGP007.jpeg", swatchColors: ["#6b1a3a", "#f5dc56"] },
-  { id: "KS1000BGP008", label: "GP 008", file: "KS1000BGP008.jpeg", swatchColors: ["#1a3a6b", "#e8633c"] },
-  { id: "KS1000BGP009", label: "GP 009", file: "KS1000BGP009.jpeg", swatchColors: ["#2d1a6b", "#c9a84c"] },
-  { id: "KS1000BGP010", label: "GP 010", file: "KS1000BGP010.jpeg", swatchColors: ["#1a1a1a", "#f0e8d2"] },
-  { id: "KS1000BGP011", label: "GP 011", file: "KS1000BGP011.jpeg", swatchColors: ["#6b3a1a", "#39b6c7"] },
-  { id: "KS1000BGP012", label: "GP 012", file: "KS1000BGP012.jpeg", swatchColors: ["#1a4a3a", "#f5c84a"] },
-  { id: "KS1000BGP013", label: "GP 013", file: "KS1000BGP013.jpeg", swatchColors: ["#4a1a6b", "#f0e8d2"] },
-  { id: "KS1000BGP014", label: "GP 014", file: "KS1000BGP014.jpeg", swatchColors: ["#1a6b3a", "#e88a9a"] },
-  { id: "KS1000BGP015", label: "GP 015", file: "KS1000BGP015.jpeg", swatchColors: ["#6b1a1a", "#39b6c7"] },
-  { id: "KS1000BGP016", label: "GP 016", file: "KS1000BGP016.jpeg", swatchColors: ["#1a2c5e", "#f5dc56"] },
-  { id: "KS1000BGP017", label: "GP 017", file: "KS1000BGP017.jpeg", swatchColors: ["#3a6b1a", "#f0e8d2"] },
-  { id: "KS1000BGP018", label: "GP 018", file: "KS1000BGP018.jpeg", swatchColors: ["#6b4a1a", "#c9a84c"] },
-  { id: "KS1000BGP019", label: "GP 019", file: "KS1000BGP019.jpeg", swatchColors: ["#1a3a4a", "#e87a48"] },
-  { id: "KS1000BGP020", label: "GP 020", file: "KS1000BGP020.jpeg", swatchColors: ["#4a3a1a", "#f5f5f5"] },
-  { id: "KS1000BGP021", label: "GP 021", file: "KS1000BGP021.jpeg", swatchColors: ["#1a6b6b", "#f5c84a"] },
-  { id: "KS1000BGP022", label: "GP 022", file: "KS1000BGP022.jpeg", swatchColors: ["#6b1a6b", "#f0e8d2"] },
-  { id: "KS1000BGP023", label: "GP 023", file: "KS1000BGP023.jpeg", swatchColors: ["#1a4a6b", "#e8633c"] },
-  { id: "KS1000BGP024", label: "GP 024", file: "KS1000BGP024.jpeg", swatchColors: ["#3a1a1a", "#39b6c7"] },
-  { id: "KS1000BGP025", label: "GP 025", file: "KS1000BGP025.jpeg", swatchColors: ["#1a1a6b", "#f5dc56"] },
-  { id: "KS1000BGP026", label: "GP 026", file: "KS1000BGP026.jpeg", swatchColors: ["#6b6b1a", "#f0e8d2"] },
-  { id: "KS1000BGP027", label: "GP 027", file: "KS1000BGP027.jpeg", swatchColors: ["#1a6b1a", "#c9a84c"] },
-  { id: "KS1000BGP028", label: "GP 028", file: "KS1000BGP028.jpeg", swatchColors: ["#4a1a1a", "#e87a48"] },
-  { id: "KS1000BGP029", label: "GP 029", file: "KS1000BGP029.jpeg", swatchColors: ["#1a4a4a", "#f5c84a"] },
-  { id: "KS1000BGP030", label: "GP 030", file: "KS1000BGP030.jpeg", swatchColors: ["#6b1a4a", "#f0e8d2"] },
-  { id: "KS1000BGP031", label: "GP 031", file: "KS1000BGP031.jpeg", swatchColors: ["#1a6b4a", "#f5dc56"] },
-  { id: "KS1000BGP032", label: "GP 032", file: "KS1000BGP032.jpeg", swatchColors: ["#4a6b1a", "#c9a84c"] },
-  { id: "KS1000BGP033", label: "GP 033", file: "KS1000BGP033.jpeg", swatchColors: ["#1a1a6b", "#e8633c"] },
-  { id: "KS1000BGP034", label: "GP 034", file: "KS1000BGP034.jpeg", swatchColors: ["#6b4a4a", "#39b6c7"] },
+  { id: "KS1000BGP001", label: "GP 001", file: "KS1000BGP001.jpg", swatchColors: ["#1a3a6b", "#f0e8d2"] },
+  { id: "KS1000BGP002", label: "GP 002", file: "KS1000BGP002.jpg", swatchColors: ["#2d6e3e", "#f5dc56"] },
+  { id: "KS1000BGP003", label: "GP 003", file: "KS1000BGP003.jpg", swatchColors: ["#8b1a1a", "#f0e8d2"] },
+  { id: "KS1000BGP004", label: "GP 004", file: "KS1000BGP004.jpg", swatchColors: ["#1a1a4a", "#c9a84c"] },
+  { id: "KS1000BGP005", label: "GP 005", file: "KS1000BGP005.jpg", swatchColors: ["#3a1a6b", "#f5f5f5"] },
+  { id: "KS1000BGP006", label: "GP 006", file: "KS1000BGP006.jpg", swatchColors: ["#1a4a2d", "#e87a48"] },
+  { id: "KS1000BGP007", label: "GP 007", file: "KS1000BGP007.jpg", swatchColors: ["#6b1a3a", "#f5dc56"] },
+  { id: "KS1000BGP008", label: "GP 008", file: "KS1000BGP008.jpg", swatchColors: ["#1a3a6b", "#e8633c"] },
+  { id: "KS1000BGP009", label: "GP 009", file: "KS1000BGP009.jpg", swatchColors: ["#2d1a6b", "#c9a84c"] },
+  { id: "KS1000BGP010", label: "GP 010", file: "KS1000BGP010.jpg", swatchColors: ["#1a1a1a", "#f0e8d2"] },
+  { id: "KS1000BGP011", label: "GP 011", file: "KS1000BGP011.jpg", swatchColors: ["#6b3a1a", "#39b6c7"] },
+  { id: "KS1000BGP012", label: "GP 012", file: "KS1000BGP012.jpg", swatchColors: ["#1a4a3a", "#f5c84a"] },
+  { id: "KS1000BGP013", label: "GP 013", file: "KS1000BGP013.jpg", swatchColors: ["#4a1a6b", "#f0e8d2"] },
+  { id: "KS1000BGP014", label: "GP 014", file: "KS1000BGP014.jpg", swatchColors: ["#1a6b3a", "#e88a9a"] },
+  { id: "KS1000BGP015", label: "GP 015", file: "KS1000BGP015.jpg", swatchColors: ["#6b1a1a", "#39b6c7"] },
+  { id: "KS1000BGP016", label: "GP 016", file: "KS1000BGP016.jpg", swatchColors: ["#1a2c5e", "#f5dc56"] },
+  { id: "KS1000BGP017", label: "GP 017", file: "KS1000BGP017.jpg", swatchColors: ["#3a6b1a", "#f0e8d2"] },
+  { id: "KS1000BGP018", label: "GP 018", file: "KS1000BGP018.jpg", swatchColors: ["#6b4a1a", "#c9a84c"] },
+  { id: "KS1000BGP019", label: "GP 019", file: "KS1000BGP019.jpg", swatchColors: ["#1a3a4a", "#e87a48"] },
+  { id: "KS1000BGP020", label: "GP 020", file: "KS1000BGP020.jpg", swatchColors: ["#4a3a1a", "#f5f5f5"] },
+  { id: "KS1000BGP021", label: "GP 021", file: "KS1000BGP021.jpg", swatchColors: ["#1a6b6b", "#f5c84a"] },
+  { id: "KS1000BGP022", label: "GP 022", file: "KS1000BGP022.jpg", swatchColors: ["#6b1a6b", "#f0e8d2"] },
+  { id: "KS1000BGP023", label: "GP 023", file: "KS1000BGP023.jpg", swatchColors: ["#1a4a6b", "#e8633c"] },
+  { id: "KS1000BGP024", label: "GP 024", file: "KS1000BGP024.jpg", swatchColors: ["#3a1a1a", "#39b6c7"] },
+  { id: "KS1000BGP025", label: "GP 025", file: "KS1000BGP025.jpg", swatchColors: ["#1a1a6b", "#f5dc56"] },
+  { id: "KS1000BGP026", label: "GP 026", file: "KS1000BGP026.jpg", swatchColors: ["#6b6b1a", "#f0e8d2"] },
+  { id: "KS1000BGP027", label: "GP 027", file: "KS1000BGP027.jpg", swatchColors: ["#1a6b1a", "#c9a84c"] },
+  { id: "KS1000BGP028", label: "GP 028", file: "KS1000BGP028.jpg", swatchColors: ["#4a1a1a", "#e87a48"] },
+  { id: "KS1000BGP029", label: "GP 029", file: "KS1000BGP029.jpg", swatchColors: ["#1a4a4a", "#f5c84a"] },
+  { id: "KS1000BGP030", label: "GP 030", file: "KS1000BGP030.jpg", swatchColors: ["#6b1a4a", "#f0e8d2"] },
+  { id: "KS1000BGP031", label: "GP 031", file: "KS1000BGP031.jpg", swatchColors: ["#1a6b4a", "#f5dc56"] },
+  { id: "KS1000BGP032", label: "GP 032", file: "KS1000BGP032.jpg", swatchColors: ["#4a6b1a", "#c9a84c"] },
+  { id: "KS1000BGP033", label: "GP 033", file: "KS1000BGP033.jpg", swatchColors: ["#1a1a6b", "#e8633c"] },
+  { id: "KS1000BGP034", label: "GP 034", file: "KS1000BGP034.jpg", swatchColors: ["#6b4a4a", "#39b6c7"] },
 ];
 
 export type PatternZone = "all" | "front" | "back" | "leftSleeve" | "rightSleeve" | "collar";
@@ -77,10 +77,10 @@ export const ZONE_PRESETS: Record<Exclude<PatternZone, "all">, ZonePreset> = {
 
 export const ALL_OVER_TILE_PX = 256;
 
+const R2_PATTERNS_BASE = "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/patterns/";
+
 export function patternUrl(file: string): string {
-  const base = (import.meta as any).env?.BASE_URL ?? "/";
-  const clean = base.endsWith("/") ? base : `${base}/`;
-  return `${clean}patterns/${file}`;
+  return `${R2_PATTERNS_BASE}${file}`;
 }
 
 // GT015 source pixel colors (used by gt-styles.ts pixel-swap engine)
