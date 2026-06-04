@@ -932,8 +932,15 @@ export default function CustomizePage() {
       const off=document.createElement("canvas");off.width=ALL_OVER_TILE_PX;off.height=ALL_OVER_TILE_PX;
       const ctx=off.getContext("2d"); if(ctx){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";ctx.drawImage(img,0,0,ALL_OVER_TILE_PX,ALL_OVER_TILE_PX);}
       // When a KA.SHA design is active, the print becomes the BASE texture — the design stays on top.
-      // Only clear the design when there is no active pattern (standalone all-over print).
-      if (!hasDesign) { /* no design active — print takes full canvas */ }
+      // When there is no active bespoke design, the all-over print owns the whole canvas — remove
+      // any zone-print FabricImage objects that may be sitting on top (e.g. restored from saved JSON)
+      // so the background pattern is not obscured part-by-part.
+      if (!hasDesign) {
+        fc.getObjects()
+          .filter((o: any) => o?.data?.kashaZonePrint)
+          .forEach((o: any) => fc.remove(o));
+        setZonePrintIds({ front: null, back: null, collar: null, leftSleeve: null, rightSleeve: null });
+      }
       const pattern=new fabric.Pattern({source:off,repeat:"repeat"});
       (fc as any).backgroundColor=pattern;
       fc.renderAll();
