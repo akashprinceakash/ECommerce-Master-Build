@@ -54,6 +54,42 @@
       .font-body { font-family: var(--font-body); }
     </style>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <!-- Organization structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Ka.Sha",
+      "url": "https://www.kashaonline.in/",
+      "logo": "https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/Kasha-favicon-01.jpeg",
+      "description": "Premium golf wear and luxury performance apparel for men, women, and kids. Bespoke golf polos, trousers, skorts and custom sportswear made in India.",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer service",
+        "url": "https://www.kashaonline.in/connect"
+      },
+      "sameAs": [
+        "https://www.instagram.com/kashaonline"
+      ]
+    }
+    </script>
+    <!-- WebSite structured data with SearchAction -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Ka.Sha",
+      "url": "https://www.kashaonline.in/",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://www.kashaonline.in/products?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

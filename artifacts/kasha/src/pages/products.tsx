@@ -10,6 +10,7 @@ import { type Gender, getLastGender as _getLastGender, setLastGender } from "@/l
 import { getAssetUrl } from "@/lib/api";
 import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
 import { useUser, useClerk } from "@clerk/react";
+import { getProductColorLabel } from "@/lib/product-color";
 
 type ItemType = "tshirts" | "bottoms";
 type StyleFilter = "solids" | "patterns" | "prints" | "trousers" | "shorts" | "skorts";
@@ -517,29 +518,34 @@ function getProductAltText(product: {
   category?: string | null;
   gender?: string | null;
   subType?: string | null;
+  defaultColor?: string | null;
 }): string {
   const cat = (product.category || "").toLowerCase();
   const gender = (product.gender || "").toLowerCase();
   const sub = (product.subType || "").toLowerCase();
+  const colorLabel = getProductColorLabel(product);
+  const colorSuffix = colorLabel ? ` in ${colorLabel}` : "";
+  const cleanName = product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+.*$/, "").trim();
+
   if (TROUSER_CATEGORIES.includes(cat)) {
     return gender === "women"
-      ? "Premium stretch golf trousers for women with performance fit by Ka.Sha"
-      : "Premium stretch golf trousers for men with performance fit by Ka.Sha";
+      ? `Ka.Sha ${cleanName}${colorSuffix} — premium stretch golf trousers for women`
+      : `Ka.Sha ${cleanName}${colorSuffix} — premium stretch golf trousers for men`;
   }
   if (SKORT_CATEGORIES.some(s => cat.includes(s)) || cat.includes("skirt")) {
-    return "Women's luxury golf skort with performance stretch fabric";
+    return `Ka.Sha ${cleanName}${colorSuffix} — women's luxury golf skort with performance stretch fabric`;
   }
   if (SHORTS_CATEGORIES.includes(cat)) {
-    return "Premium golf shorts with performance stretch fabric by Ka.Sha";
+    return `Ka.Sha ${cleanName}${colorSuffix} — premium golf shorts with performance stretch fabric`;
   }
   if (sub === "printed" || sub === "print") {
     return gender === "women"
-      ? "Designer printed golf polo for women with premium athletic fit"
-      : "Designer printed golf polo for men with premium athletic fit";
+      ? `Ka.Sha ${cleanName}${colorSuffix} — designer printed golf polo for women`
+      : `Ka.Sha ${cleanName}${colorSuffix} — designer printed golf polo for men`;
   }
   return gender === "women"
-    ? "Women's luxury golf polo shirt in breathable dri fit fabric by Ka.Sha"
-    : "Men's luxury golf polo shirt in breathable dri fit fabric by Ka.Sha";
+    ? `Ka.Sha ${cleanName}${colorSuffix} — women's luxury golf polo shirt in breathable fabric`
+    : `Ka.Sha ${cleanName}${colorSuffix} — men's luxury golf polo shirt in breathable fabric`;
 }
 
 interface ProductCardProps {
@@ -553,6 +559,7 @@ interface ProductCardProps {
     category?: string | null;
     gender?: string | null;
     subType?: string | null;
+    defaultColor?: string | null;
   };
   imgSrc?: string;
   /** Position in the grid — used to decide eager vs lazy loading */
@@ -679,9 +686,20 @@ function ProductCard({ product, imgSrc, cardIndex = 0 }: ProductCardProps) {
           </div>
         )}
       </div>
-      <h3 className="text-neutral-900 mb-1 group-hover:!text-[#B8925A] transition-colors" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontWeight: 500, lineHeight: 1.3 }}>
-        {product.name}
+      <h3 className="text-neutral-900 mb-0.5 group-hover:!text-[#B8925A] transition-colors" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontWeight: 500, lineHeight: 1.3 }}>
+        {product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+.*$/, "")}
       </h3>
+      {(() => {
+        const colorLabel = getProductColorLabel(product);
+        return colorLabel ? (
+          <p className="flex items-center gap-1.5 mb-1" style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 9, letterSpacing: "0.18em", color: "rgba(0,0,0,0.42)", textTransform: "uppercase" }}>
+            {product.defaultColor && product.defaultColor.toLowerCase() !== "#ffffff" && product.defaultColor.toLowerCase() !== "#fff" && (
+              <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: product.defaultColor, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />
+            )}
+            {colorLabel}
+          </p>
+        ) : null;
+      })()}
       <p style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", color: "#B8925A" }}>
         {formatPrice(product.priceInPaise)}
       </p>

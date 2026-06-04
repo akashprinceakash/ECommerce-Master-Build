@@ -12,6 +12,7 @@ import { useCart } from "@/contexts/CartContext";
 import { getAssetUrl } from "@/lib/api";
 import { SHOW_CUSTOMIZATION } from "@/lib/features";
 import { PersonalizeModal } from "@/components/layout/PersonalizeModal";
+import { getProductColorLabel } from "@/lib/product-color";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -91,6 +92,63 @@ export default function ProductDetailPage() {
 
   const sizes = ["XS", "S", "M", "L", "XL", "XXL", "CUSTOM"];
 
+  // Dynamic SEO — update title, meta, OG and inject Product JSON-LD when product loads
+  useEffect(() => {
+    if (!product) return;
+    const cleanName = product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+.*$/, "").trim();
+    const colorLabel = getProductColorLabel(product);
+    const colorSuffix = colorLabel ? ` in ${colorLabel}` : "";
+    const desc = product.description
+      ? `${cleanName}${colorSuffix} — ${product.description.slice(0, 130)}${product.description.length > 130 ? "…" : ""} Shop Ka.Sha luxury golf wear.`
+      : `${cleanName}${colorSuffix} — premium golf wear by Ka.Sha. Free shipping on orders above ₹5,000.`;
+    const title = `${cleanName}${colorSuffix} | Ka.Sha Golf`;
+
+    document.title = title;
+    document.querySelector('meta[name="description"]')?.setAttribute("content", desc);
+    document.querySelector('meta[property="og:title"]')?.setAttribute("content", title);
+    document.querySelector('meta[property="og:description"]')?.setAttribute("content", desc);
+    const imgUrl = product.thumbnailUrl ? getAssetUrl(product.thumbnailUrl) : null;
+    if (imgUrl) document.querySelector('meta[property="og:image"]')?.setAttribute("content", imgUrl);
+
+    const ldJson = {
+      "@context": "https://schema.org/",
+      "@type": "Product",
+      "name": cleanName,
+      "description": product.description || "",
+      "brand": { "@type": "Brand", "name": "Ka.Sha" },
+      "offers": {
+        "@type": "Offer",
+        "priceCurrency": "INR",
+        "price": (product.priceInPaise / 100).toFixed(2),
+        "availability": product.available
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock",
+        "seller": { "@type": "Organization", "name": "Ka.Sha" },
+        "url": `https://www.kashaonline.in/products/${product.id}`,
+      },
+      ...(imgUrl ? { "image": imgUrl } : {}),
+      ...(colorLabel ? { "color": colorLabel } : {}),
+    };
+
+    let ldEl = document.getElementById("product-ld-json") as HTMLScriptElement | null;
+    if (!ldEl) {
+      ldEl = document.createElement("script");
+      ldEl.id = "product-ld-json";
+      ldEl.type = "application/ld+json";
+      document.head.appendChild(ldEl);
+    }
+    ldEl.textContent = JSON.stringify(ldJson);
+
+    return () => {
+      document.title = "Ka.Sha | Premium Golf Wear & Luxury Sports Apparel";
+      document.querySelector('meta[name="description"]')?.setAttribute("content", "Premium golf wear and luxury performance apparel for men, women, and kids. Explore stylish golf polos, trousers, custom apparel, and bespoke sportswear by Ka.Sha.");
+      document.querySelector('meta[property="og:title"]')?.setAttribute("content", "Ka.Sha | Premium Golf Wear & Luxury Sports Apparel");
+      document.querySelector('meta[property="og:description"]')?.setAttribute("content", "Premium golf wear and luxury performance apparel for men, women, and kids.");
+      document.querySelector('meta[property="og:image"]')?.setAttribute("content", "https://www.kashaonline.in/opengraph.jpg");
+      document.getElementById("product-ld-json")?.remove();
+    };
+  }, [product]);
+
   if (isLoading) {
     return (
       <Layout>
@@ -126,25 +184,29 @@ export default function ProductDetailPage() {
     const cat = (product?.category || "").toLowerCase();
     const gender = (product?.gender || "").toLowerCase();
     const sub = (product?.subType || "").toLowerCase();
+    const cleanName = product?.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+.*$/, "").trim() ?? "";
+    const colorLabel = product ? getProductColorLabel(product) : "";
+    const colorSuffix = colorLabel ? ` in ${colorLabel}` : "";
+
     if (cat.includes("trouser") || cat.includes("pant")) {
       return gender === "women"
-        ? "Premium stretch golf trousers for women with performance fit by Ka.sha"
-        : "Premium stretch golf trousers for men with performance fit by Ka.sha";
+        ? `Ka.Sha ${cleanName}${colorSuffix} — premium stretch golf trousers for women`
+        : `Ka.Sha ${cleanName}${colorSuffix} — premium stretch golf trousers for men`;
     }
     if (cat.includes("skort") || cat.includes("skirt")) {
-      return "Women's luxury golf skort with performance stretch fabric";
+      return `Ka.Sha ${cleanName}${colorSuffix} — women's luxury golf skort with performance stretch fabric`;
     }
     if (cat.includes("short")) {
-      return "Premium golf shorts with performance stretch fabric by Ka.sha";
+      return `Ka.Sha ${cleanName}${colorSuffix} — premium golf shorts with performance stretch fabric`;
     }
     if (sub === "printed" || sub === "print") {
       return gender === "women"
-        ? "Designer printed golf polo for women with premium athletic fit"
-        : "Designer printed golf polo for men with premium athletic fit";
+        ? `Ka.Sha ${cleanName}${colorSuffix} — designer printed golf polo for women`
+        : `Ka.Sha ${cleanName}${colorSuffix} — designer printed golf polo for men`;
     }
     return gender === "women"
-      ? "Women's luxury golf polo shirt in breathable dri fit fabric by Ka.sha"
-      : "Men's luxury golf polo shirt in breathable dri fit fabric by Ka.sha";
+      ? `Ka.Sha ${cleanName}${colorSuffix} — women's luxury golf polo shirt in breathable dri fit fabric`
+      : `Ka.Sha ${cleanName}${colorSuffix} — men's luxury golf polo shirt in breathable dri fit fabric`;
   }
 
   const mainThumbnail = getAssetUrl(product.thumbnailUrl) || "/images/product-tshirt.png";
@@ -306,7 +368,20 @@ export default function ProductDetailPage() {
               <p className="text-[10px] font-bold tracking-[0.3em] text-gray-400 mb-2 uppercase">
                 {product.category || "Golf Collection"}
               </p>
-              <h1 className="text-3xl md:text-4xl font-black text-black mb-3 leading-tight">{product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}</h1>
+              <h1 className="text-3xl md:text-4xl font-black text-black mb-2 leading-tight">{product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+.*$/, "")}</h1>
+              {(() => {
+                const colorLabel = getProductColorLabel(product);
+                return colorLabel ? (
+                  <div className="flex items-center gap-2 mb-3">
+                    {product.defaultColor && product.defaultColor.toLowerCase() !== "#ffffff" && product.defaultColor.toLowerCase() !== "#fff" && (
+                      <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: "50%", background: product.defaultColor, border: "1px solid rgba(0,0,0,0.18)", flexShrink: 0 }} />
+                    )}
+                    <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.22em", color: "rgba(0,0,0,0.45)", textTransform: "uppercase" }}>
+                      {colorLabel}
+                    </span>
+                  </div>
+                ) : null;
+              })()}
               <div className="flex items-center gap-4 flex-wrap">
                 <p className="text-2xl font-bold text-black">{formatPrice(product.priceInPaise)}</p>
                 {product.available ? (

@@ -2951,7 +2951,7 @@ export default function CustomizePage() {
                       <div style={{background:V.sf2,border:`1px solid ${V.bd}`,borderRadius:10,padding:12,display:"flex",flexDirection:"column",gap:10}}>
                         <div style={{display:"flex",alignItems:"center",gap:10}}>
                           <div style={{width:36,height:36,borderRadius:7,background:`url(${patternUrl(p!.file)}) center/cover`,border:`1px solid ${V.bd}`,flexShrink:0}}/>
-                          <div style={{fontSize:13,fontWeight:600,color:V.tx,fontFamily:"'Cormorant Garamond',serif",letterSpacing:".02em"}}>{p!.label}</div>
+                          <div style={{fontSize:13,fontWeight:600,color:V.tx,fontFamily:"'Cormorant Garamond',serif",letterSpacing:".02em"}}>{p!.customerLabel||p!.label}</div>
                         </div>
                         {/* When a KA.SHA pattern design is active, print acts as base texture.
                             Hide By Part toggle — full body only applies beneath the design. */}
@@ -3531,7 +3531,7 @@ export default function CustomizePage() {
                     <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:15,fontWeight:500,color:V.tx,letterSpacing:".02em",marginBottom:10}}>Your Design</div>
                     {[
                       ["Garment", isTypeMode ? `${garmentType.charAt(0).toUpperCase()+garmentType.slice(1)} T-Shirt` : product!.name.replace(/\s*\[gt:GT\d+\]\s*$/,"")],
-                      ["Style",   activeKashaDesign?`${activeKashaDesign!.id} — ${activeKashaDesign!.label}`:activePrintId?PATTERNS.find(p=>p.id===activePrintId)?.label||"—":primaryColor],
+                      ["Style",   activeKashaDesign?`${activeKashaDesign!.id} — ${activeKashaDesign!.label}`:activePrintId?PATTERNS.find(p=>p.id===activePrintId)?.customerLabel||PATTERNS.find(p=>p.id===activePrintId)?.label||"—":primaryColor],
                       ["Size",    size],
                       ["Qty",     String(qty)],
                       ...(!isTypeMode ? [["Price", formatPrice(product!.priceInPaise)]] : []),
@@ -3724,7 +3724,7 @@ export default function CustomizePage() {
             }}>
               <div style={{fontSize:8,color:V.mu,letterSpacing:".12em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif",marginBottom:1}}>Active Design</div>
               <div style={{fontSize:11,fontWeight:600,color:V.ac,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>
-                {activeKashaDesign?`${activeKashaDesign.id} · ${activeKashaDesign.label}`:PATTERNS.find(p=>p.id===activePrintId)?.label}
+                {activeKashaDesign?`${activeKashaDesign.id} · ${activeKashaDesign.label}`:(PATTERNS.find(p=>p.id===activePrintId)?.customerLabel||PATTERNS.find(p=>p.id===activePrintId)?.label)}
               </div>
             </div>
           )}
