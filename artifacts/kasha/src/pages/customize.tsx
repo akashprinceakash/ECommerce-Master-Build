@@ -820,16 +820,10 @@ export default function CustomizePage() {
     setPrimaryColor(hex);
     const fc=fcRef.current;
     baseBgRef.current=hex;
-    // Always apply colour — if a full-body print is active, clear it so the colour shows
+    // If a full-body print is active, clear it so the colour shows
     if (allOverPrintId) setAllOverPrintId(null);
     setFabricBg(fc,hex);
-    // Apply the colour immediately to ALL model materials as a base-colour-factor so
-    // the 3D model changes colour instantly, even before the async texture upload
-    // completes.  We set the factor to the actual selected colour (linear-space) rather
-    // than white so the tint is correct from the very first frame.
-    // NOTE: we do NOT call setMats() here because that would change the mats reference,
-    // re-fire the [mats,syncTexture] effect, and increment the sequence counter — which
-    // would abort the in-flight syncTexture and leave the model stuck on the old texture.
+
     if (mats.length) {
       const r=parseInt(hex.slice(1,3)||"ff",16)/255;
       const g=parseInt(hex.slice(3,5)||"ff",16)/255;
@@ -837,29 +831,48 @@ export default function CustomizePage() {
       // sRGB → approximate linear (gamma 2.2)
       const lin=(c:number)=>Math.pow(Math.max(0,Math.min(1,c)),2.2);
       const lR=lin(r),lG=lin(g),lB=lin(b);
+      const mv=mvRef.current as any;
+
       for (const entry of mats) {
-        try { entry.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([lR,lG,lB,1]); } catch {}
+        try {
+          const pbr=entry.mat?.pbrMetallicRoughness; if(!pbr) continue;
+          // Step 1: remove the existing print/pattern texture from the material slot.
+          // This is the critical step — calling setTexture(solidColorPNG) on a material
+          // that already has a print texture often fails to visually update model-viewer
+          // because of how model-viewer's Three.js texture caching works (same-size textures
+          // may reuse a cached GPU allocation and skip re-upload).
+          // By nulling the slot first we guarantee a clean state before any new texture is set.
+          pbr.baseColorTexture?.setTexture?.(null);
+          // Step 2: set the solid colour via baseColorFactor — this is synchronous and
+          // always reliable.  With map=null, model-viewer renders: null × [lR,lG,lB,1] =
+          // the solid hex colour.  No async texture upload needed.
+          pbr.setBaseColorFactor?.([lR,lG,lB,1]);
+        } catch {}
       }
-      try { (mvRef.current as any)?.requestUpdate?.(); } catch {}
+      // Force model-viewer to flush the material changes into the Three.js render pipeline.
+      try { mv?.requestUpdate?.(); } catch {}
+      try { mv?.updateFraming?.(); } catch {}
     }
-    // Immediate sync — may not visually update when model-viewer is still
-    // processing a prior texture upload (e.g. Print → Colour transition).
-    syncTexture();
-    // Deferred safety sync: mirrors the 120 ms debouncedSync delay that the
-    // canvas object:removed path uses (which is known to reliably update the
-    // model).  For Printed products the print is stored as canvas.backgroundColor
-    // (not a canvas object), so no object:removed event fires and no debounced
-    // sync is triggered — we schedule one explicitly instead.
-    // The check ensures we only re-sync if the canvas background is still this
-    // exact colour (user hasn't switched to a print or different colour since).
-    if (applyPrimaryTimeoutRef.current) clearTimeout(applyPrimaryTimeoutRef.current);
-    applyPrimaryTimeoutRef.current = setTimeout(() => {
-      applyPrimaryTimeoutRef.current = null;
-      const currentFc = fcRef.current;
-      if (currentFc && currentFc.backgroundColor === hex) {
-        syncTextureRef.current?.();
-      }
-    }, 150);
+
+    // For pure solid-colour backgrounds with NO canvas overlay objects (logos, text,
+    // zone-colour rects) the setTexture(null) + setBaseColorFactor above is sufficient
+    // and more reliable than the async texture pipeline.  syncTexture IS still needed
+    // when overlays are present because they must be baked into the texture together
+    // with the solid background.
+    const hasOverlays = !!(fc && fc.getObjects().length > 0);
+    if (hasOverlays) {
+      // Canvas has overlays — bake them into a texture.  Since we already set
+      // baseColorTexture to null above, syncTexture now transitions null → composite
+      // which is a guaranteed state change and reliably triggers material.needsUpdate.
+      syncTexture();
+      // Deferred safety re-sync for overlays (matches the 120 ms debouncedSync window).
+      if (applyPrimaryTimeoutRef.current) clearTimeout(applyPrimaryTimeoutRef.current);
+      applyPrimaryTimeoutRef.current = setTimeout(() => {
+        applyPrimaryTimeoutRef.current = null;
+        const currentFc = fcRef.current;
+        if (currentFc && currentFc.backgroundColor === hex) syncTextureRef.current?.();
+      }, 150);
+    }
   };
 
   // ── Per-zone colour ──────────────────────────────────────────────────────
