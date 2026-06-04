@@ -196,6 +196,9 @@ export function Footer() {
                 <FooterLink href="/lookbook">Lookbook</FooterLink>
               </li>
               <li>
+                <FooterLink href="/size-guide">Size Guide</FooterLink>
+              </li>
+              <li>
               <FooterLink href="/connect">Connect with Us</FooterLink>
               </li>
               <li>

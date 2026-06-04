@@ -363,17 +363,12 @@ export default function ProductDetailPage() {
             <div>
               <div className="flex justify-between items-center mb-3">
                 <span className="text-[11px] font-bold tracking-[0.15em] text-black">SELECT SIZE</span>
-                <button
+                <Link
+                  href="/size-guide"
                   className="text-[11px] text-gray-400 hover:text-black underline transition-colors tracking-wider"
-                  onClick={() => {
-                    setOpenAccordion("sizing");
-                    setTimeout(() => {
-                      sizingAccordionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                    }, 50);
-                  }}
                 >
                   SIZE GUIDE
-                </button>
+                </Link>
               </div>
               <div className="flex flex-wrap gap-2">
                 {sizes.map(size => (

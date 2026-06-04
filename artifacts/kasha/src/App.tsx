@@ -23,6 +23,7 @@ import PrivacyPage from "@/pages/legal/privacy";
 import ShippingPage from "@/pages/legal/shipping";
 import ReturnsPage from "@/pages/legal/returns";
 import IpPolicyPage from "@/pages/legal/ip-policy";
+import SizeGuidePage from "@/pages/legal/size-guide";
 import ConnectPage from "@/pages/connect";
 import LookbookPage from "@/pages/lookbook";
 
@@ -109,6 +110,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/shipping-policy" component={ShippingPage} />
           <Route path="/returns-policy" component={ReturnsPage} />
           <Route path="/ip-policy" component={IpPolicyPage} />
+          <Route path="/size-guide" component={SizeGuidePage} />
           <Route path="/connect" component={ConnectPage} />
           <Route path="/lookbook" component={LookbookPage} />
 
