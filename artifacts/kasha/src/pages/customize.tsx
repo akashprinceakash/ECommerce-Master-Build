@@ -794,10 +794,16 @@ export default function CustomizePage() {
     // Always apply colour — if a full-body print is active, clear it so the colour shows
     if (allOverPrintId) setAllOverPrintId(null);
     setFabricBg(fc,hex);
-    syncTexture();
+    // Set the material base-colour factor to neutral white directly (no setMats call).
+    // setMats would change the mats reference, re-firing the [mats,syncTexture] effect
+    // which calls syncTexture() a second time.  That second call increments the sequence
+    // counter and aborts THIS syncTexture before the updated canvas (solid colour, no
+    // print pattern) is captured and pushed to the 3D model — exactly the bug where
+    // "print first → colour" leaves the 3D model showing the old print.
     if (mats[0]) {
-      setMats(prev=>{const n=[...prev];if(!n[0])return prev;n[0]={...n[0],color:hex};try{n[0].mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]);}catch{};return n;});
+      try { mats[0].mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]); } catch {}
     }
+    syncTexture();
   };
 
   // ── Per-zone colour ──────────────────────────────────────────────────────
