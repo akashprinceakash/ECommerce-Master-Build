@@ -288,6 +288,7 @@ export default function CustomizePage() {
   // model-viewer. This prevents the print-then-colour race where the slower
   // print sync finishes after the colour sync and stamps the old texture back.
   const syncSeqRef = useRef(0);
+  const applyPrimaryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Fabric canvas ────────────────────────────────────────────────────────
   const fcRef = useRef<fabric.Canvas|null>(null);
@@ -549,6 +550,12 @@ export default function CustomizePage() {
         console.log("[ST] slot=",slot,"setTexture=",typeof slot?.setTexture);
         try {
           if (slot && typeof slot.setTexture === "function") {
+            // Clear the slot first (null → tex) so model-viewer always sets
+            // material.needsUpdate = true even when transitioning between two
+            // non-null textures (e.g. print → solid colour).  Without the null
+            // step, model-viewer's internal previousThreeTexture check may skip
+            // the needsUpdate flag and the GPU texture is never re-uploaded.
+            try { slot.setTexture(null); } catch {}
             slot.setTexture(tex);
             console.log("[ST] setTexture OK for mat",entry.idx);
           } else {
@@ -565,6 +572,10 @@ export default function CustomizePage() {
       // glTF material) are updated in one pass.
       // Nudge model-viewer to re-render after material mutations (LitElement lifecycle).
       try { (mv as any).requestUpdate?.(); } catch {}
+      // updateFraming() forces a full Three.js scene re-render via the Lit
+      // update cycle — acts as a belt-and-suspenders render trigger when
+      // requestUpdate() alone isn't enough to flush the new texture.
+      try { (mv as any).updateFraming?.(); } catch {}
     } catch (e) { console.error("[customize] syncTexture failed:",e); }
   }, [mats]);
 
@@ -831,7 +842,24 @@ export default function CustomizePage() {
       }
       try { (mvRef.current as any)?.requestUpdate?.(); } catch {}
     }
+    // Immediate sync — may not visually update when model-viewer is still
+    // processing a prior texture upload (e.g. Print → Colour transition).
     syncTexture();
+    // Deferred safety sync: mirrors the 120 ms debouncedSync delay that the
+    // canvas object:removed path uses (which is known to reliably update the
+    // model).  For Printed products the print is stored as canvas.backgroundColor
+    // (not a canvas object), so no object:removed event fires and no debounced
+    // sync is triggered — we schedule one explicitly instead.
+    // The check ensures we only re-sync if the canvas background is still this
+    // exact colour (user hasn't switched to a print or different colour since).
+    if (applyPrimaryTimeoutRef.current) clearTimeout(applyPrimaryTimeoutRef.current);
+    applyPrimaryTimeoutRef.current = setTimeout(() => {
+      applyPrimaryTimeoutRef.current = null;
+      const currentFc = fcRef.current;
+      if (currentFc && currentFc.backgroundColor === hex) {
+        syncTextureRef.current?.();
+      }
+    }, 150);
   };
 
   // ── Per-zone colour ──────────────────────────────────────────────────────
