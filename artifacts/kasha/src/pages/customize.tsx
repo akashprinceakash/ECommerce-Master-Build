@@ -563,6 +563,8 @@ export default function CustomizePage() {
       // NOTE: No break — every material gets the canvas texture so that all
       // visible parts of the garment (body, collar, sleeves — each a separate
       // glTF material) are updated in one pass.
+      // Nudge model-viewer to re-render after material mutations (LitElement lifecycle).
+      try { (mv as any).requestUpdate?.(); } catch {}
     } catch (e) { console.error("[customize] syncTexture failed:",e); }
   }, [mats]);
 
@@ -810,14 +812,24 @@ export default function CustomizePage() {
     // Always apply colour — if a full-body print is active, clear it so the colour shows
     if (allOverPrintId) setAllOverPrintId(null);
     setFabricBg(fc,hex);
-    // Set the material base-colour factor to neutral white directly (no setMats call).
-    // setMats would change the mats reference, re-firing the [mats,syncTexture] effect
-    // which calls syncTexture() a second time.  That second call increments the sequence
-    // counter and aborts THIS syncTexture before the updated canvas (solid colour, no
-    // print pattern) is captured and pushed to the 3D model — exactly the bug where
-    // "print first → colour" leaves the 3D model showing the old print.
-    if (mats[0]) {
-      try { mats[0].mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]); } catch {}
+    // Apply the colour immediately to ALL model materials as a base-colour-factor so
+    // the 3D model changes colour instantly, even before the async texture upload
+    // completes.  We set the factor to the actual selected colour (linear-space) rather
+    // than white so the tint is correct from the very first frame.
+    // NOTE: we do NOT call setMats() here because that would change the mats reference,
+    // re-fire the [mats,syncTexture] effect, and increment the sequence counter — which
+    // would abort the in-flight syncTexture and leave the model stuck on the old texture.
+    if (mats.length) {
+      const r=parseInt(hex.slice(1,3)||"ff",16)/255;
+      const g=parseInt(hex.slice(3,5)||"ff",16)/255;
+      const b=parseInt(hex.slice(5,7)||"ff",16)/255;
+      // sRGB → approximate linear (gamma 2.2)
+      const lin=(c:number)=>Math.pow(Math.max(0,Math.min(1,c)),2.2);
+      const lR=lin(r),lG=lin(g),lB=lin(b);
+      for (const entry of mats) {
+        try { entry.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([lR,lG,lB,1]); } catch {}
+      }
+      try { (mvRef.current as any)?.requestUpdate?.(); } catch {}
     }
     syncTexture();
   };
@@ -859,7 +871,8 @@ export default function CustomizePage() {
       (fc as any).backgroundColor=pattern;
       fc.renderAll();
       setAllOverPrintId(p.id); setActivePrintId(p.id);
-      try{mats[0]?.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]);}catch{}
+      for (const entry of mats) { try{entry.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]);}catch{} }
+      try { (mvRef.current as any)?.requestUpdate?.(); } catch {}
       syncTexture();
       toast({
         title: hasDesign ? "Print applied as base texture" : "Print applied",

@@ -1,0 +1,494 @@
+ [ST] start seq= 1 bg= zn
+ [ST] dataUrl len= 925910 seq= 1
+ [ST] applying texture seq= 1 mats= 2
+ [ST] slot= xf setTexture= function
+ [ST] setTexture OK for mat 0
+ [ST] slot= xf setTexture= function
+ [ST] setTexture OK for mat 1
+customize?entry=1&style=print&from=product:1 The resource https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Slide_images/KaSha%20Hero%20banner%201%20Mens.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Understand this warning
+ [ST] start seq= 2 bg= zn
+ [ST] start seq= 3 bg= zn
+ [ST] start seq= 4 bg= zn
+ [ST] start seq= 5 bg= zn
+ [ST] abort2 seq= 2
+ [ST] abort1 seq= 3
+ [ST] abort1 seq= 4
+ [ST] dataUrl len= 1432286 seq= 5
+ [ST] applying texture seq= 5 mats= 2
+ [ST] slot= xf setTexture= function
+ [ST] setTexture OK for mat 0
+ [ST] slot= xf setTexture= function
+ [ST] setTexture OK for mat 1
+ [ST] start seq= 6 bg= zn
+ [ST] dataUrl len= 1432286 seq= 6
+ [ST] applying texture seq= 6 mats= 2
+ [ST] slot= xf setTexture= function
+ [ST] setTexture OK for mat 0
+ [ST] slot= xf setTexture= function
+ [ST] setTexture OK for mat 1
+ [ST] start seq= 7 bg= zn
+ [ST] start seq= 8 bg= zn
+ [ST] start seq= 9 bg= zn
+ [ST] start seq= 10 bg= zn
+ [ST] abort1 seq= 7
+ [ST] abort1 seq= 8
+ [ST] abort1 seq= 9
+ [ST] dataUrl len= 1437586 seq= 10
+ [ST] applying texture seq= 10 mats= 2
+ [ST] slot= xf setTexture= function
+ [ST] setTexture OK for mat 0
+ [ST] slot= xf setTexture= function
+ [ST] setTexture OK for mat 1
+ [ST] start seq= 11 bg= zn
+ [ST] dataUrl len= 1437586 seq= 11
+ [ST] applying texture seq= 11 mats= 2
+ [ST] slot= xf setTexture= function
+ [ST] setTexture OK for mat 0
+ [ST] slot= xf setTexture= function
+ [ST] setTexture OK for mat 1
+Navigated to https://9979baab-9a62-44ae-81d2-3a84fc33d65f-00-3pv6dlsgvrn8h.riker.replit.dev/products/27/customize?entry=1&style=print&from=product
+chunk-AE322PLF.js?v=3bfa3947:17987 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+clerk.browser.js:12 Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+q @ clerk.browser.js:12
+load @ clerk.browser.js:18
+getEntryChunks @ @clerk_react.js?v=3bfa3947:7036
+await in getEntryChunks
+_IsomorphicClerk2 @ @clerk_react.js?v=3bfa3947:6906
+getOrCreateInstance @ @clerk_react.js?v=3bfa3947:6932
+useLoadedIsomorphicClerk @ @clerk_react.js?v=3bfa3947:7207
+ClerkProviderBase @ @clerk_react.js?v=3bfa3947:7185
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17424
+renderWithHooks @ chunk-AE322PLF.js?v=3bfa3947:4206
+updateFunctionComponent @ chunk-AE322PLF.js?v=3bfa3947:6619
+beginWork @ chunk-AE322PLF.js?v=3bfa3947:7654
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+performUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10868
+workLoopSync @ chunk-AE322PLF.js?v=3bfa3947:10728
+renderRootSync @ chunk-AE322PLF.js?v=3bfa3947:10711
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10330
+performWorkOnRootViaSchedulerTask @ chunk-AE322PLF.js?v=3bfa3947:11623
+performWorkUntilDeadline @ chunk-AE322PLF.js?v=3bfa3947:36
+<ClerkProviderBase>
+exports.createElement @ chunk-KC53NVYV.js?v=3bfa3947:773
+Hoc @ @clerk_react.js?v=3bfa3947:3651
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17424
+renderWithHooks @ chunk-AE322PLF.js?v=3bfa3947:4206
+updateFunctionComponent @ chunk-AE322PLF.js?v=3bfa3947:6619
+beginWork @ chunk-AE322PLF.js?v=3bfa3947:7654
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+performUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10868
+workLoopSync @ chunk-AE322PLF.js?v=3bfa3947:10728
+renderRootSync @ chunk-AE322PLF.js?v=3bfa3947:10711
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10330
+performWorkOnRootViaSchedulerTask @ chunk-AE322PLF.js?v=3bfa3947:11623
+performWorkUntilDeadline @ chunk-AE322PLF.js?v=3bfa3947:36
+<ClerkProvider>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=3bfa3947:250
+ClerkProviderWithRoutes @ App.tsx:87
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17424
+renderWithHooks @ chunk-AE322PLF.js?v=3bfa3947:4206
+updateFunctionComponent @ chunk-AE322PLF.js?v=3bfa3947:6619
+beginWork @ chunk-AE322PLF.js?v=3bfa3947:7654
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+performUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10868
+workLoopSync @ chunk-AE322PLF.js?v=3bfa3947:10728
+renderRootSync @ chunk-AE322PLF.js?v=3bfa3947:10711
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10330
+performWorkOnRootViaSchedulerTask @ chunk-AE322PLF.js?v=3bfa3947:11623
+performWorkUntilDeadline @ chunk-AE322PLF.js?v=3bfa3947:36
+<ClerkProviderWithRoutes>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=3bfa3947:250
+App @ App.tsx:139
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17424
+renderWithHooks @ chunk-AE322PLF.js?v=3bfa3947:4206
+updateFunctionComponent @ chunk-AE322PLF.js?v=3bfa3947:6619
+beginWork @ chunk-AE322PLF.js?v=3bfa3947:7654
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+performUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10868
+workLoopSync @ chunk-AE322PLF.js?v=3bfa3947:10728
+renderRootSync @ chunk-AE322PLF.js?v=3bfa3947:10711
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10330
+performWorkOnRootViaSchedulerTask @ chunk-AE322PLF.js?v=3bfa3947:11623
+performWorkUntilDeadline @ chunk-AE322PLF.js?v=3bfa3947:36
+<App>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=3bfa3947:250
+(anonymous) @ main.tsx:22Understand this warning
+customize.tsx:530 [ST] early-exit mv= true fc= true mats= 0
+(anonymous) @ customize.tsx:530
+(anonymous) @ customize.tsx:822
+(anonymous) @ customize.tsx:1033
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17478
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+commitHookEffectListMount @ chunk-AE322PLF.js?v=3bfa3947:8460
+commitHookPassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:8518
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9887
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9984
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9984
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9984
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9984
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9984
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9984
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9899
+flushPassiveEffects @ chunk-AE322PLF.js?v=3bfa3947:11302
+flushPendingEffects @ chunk-AE322PLF.js?v=3bfa3947:11276
+flushSpawnedWork @ chunk-AE322PLF.js?v=3bfa3947:11250
+commitRoot @ chunk-AE322PLF.js?v=3bfa3947:11081
+commitRootWhenReady @ chunk-AE322PLF.js?v=3bfa3947:10512
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10457
+performSyncWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:11635
+flushSyncWorkAcrossRoots_impl @ chunk-AE322PLF.js?v=3bfa3947:11536
+processRootScheduleInMicrotask @ chunk-AE322PLF.js?v=3bfa3947:11558
+(anonymous) @ chunk-AE322PLF.js?v=3bfa3947:11649
+<CustomizePage>
+exports.createElement @ chunk-KC53NVYV.js?v=3bfa3947:773
+h_route @ wouter.js?v=3bfa3947:277
+Route @ wouter.js?v=3bfa3947:309
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17424
+renderWithHooks @ chunk-AE322PLF.js?v=3bfa3947:4206
+updateFunctionComponent @ chunk-AE322PLF.js?v=3bfa3947:6619
+beginWork @ chunk-AE322PLF.js?v=3bfa3947:7654
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+performUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10868
+workLoopSync @ chunk-AE322PLF.js?v=3bfa3947:10728
+renderRootSync @ chunk-AE322PLF.js?v=3bfa3947:10711
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10330
+performWorkOnRootViaSchedulerTask @ chunk-AE322PLF.js?v=3bfa3947:11623
+performWorkUntilDeadline @ chunk-AE322PLF.js?v=3bfa3947:36
+<Route>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=3bfa3947:250
+ClerkProviderWithRoutes @ App.tsx:102
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17424
+renderWithHooks @ chunk-AE322PLF.js?v=3bfa3947:4206
+updateFunctionComponent @ chunk-AE322PLF.js?v=3bfa3947:6619
+beginWork @ chunk-AE322PLF.js?v=3bfa3947:7654
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+performUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10868
+workLoopSync @ chunk-AE322PLF.js?v=3bfa3947:10728
+renderRootSync @ chunk-AE322PLF.js?v=3bfa3947:10711
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10330
+performWorkOnRootViaSchedulerTask @ chunk-AE322PLF.js?v=3bfa3947:11623
+performWorkUntilDeadline @ chunk-AE322PLF.js?v=3bfa3947:36
+<ClerkProviderWithRoutes>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=3bfa3947:250
+App @ App.tsx:139
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17424
+renderWithHooks @ chunk-AE322PLF.js?v=3bfa3947:4206
+updateFunctionComponent @ chunk-AE322PLF.js?v=3bfa3947:6619
+beginWork @ chunk-AE322PLF.js?v=3bfa3947:7654
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+performUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10868
+workLoopSync @ chunk-AE322PLF.js?v=3bfa3947:10728
+renderRootSync @ chunk-AE322PLF.js?v=3bfa3947:10711
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10330
+performWorkOnRootViaSchedulerTask @ chunk-AE322PLF.js?v=3bfa3947:11623
+performWorkUntilDeadline @ chunk-AE322PLF.js?v=3bfa3947:36
+<App>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=3bfa3947:250
+(anonymous) @ main.tsx:22Understand this warning
+customize.tsx:530 [ST] early-exit mv= true fc= true mats= 0
+(anonymous) @ customize.tsx:530
+(anonymous) @ customize.tsx:863
+await in (anonymous)
+(anonymous) @ customize.tsx:998
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17478
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+commitHookEffectListMount @ chunk-AE322PLF.js?v=3bfa3947:8460
+commitHookPassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:8518
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9887
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9984
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9984
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9984
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9984
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9984
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9984
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9881
+recursivelyTraversePassiveMountEffects @ chunk-AE322PLF.js?v=3bfa3947:9868
+commitPassiveMountOnFiber @ chunk-AE322PLF.js?v=3bfa3947:9899
+flushPassiveEffects @ chunk-AE322PLF.js?v=3bfa3947:11302
+flushPendingEffects @ chunk-AE322PLF.js?v=3bfa3947:11276
+flushSpawnedWork @ chunk-AE322PLF.js?v=3bfa3947:11250
+commitRoot @ chunk-AE322PLF.js?v=3bfa3947:11081
+commitRootWhenReady @ chunk-AE322PLF.js?v=3bfa3947:10512
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10457
+performSyncWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:11635
+flushSyncWorkAcrossRoots_impl @ chunk-AE322PLF.js?v=3bfa3947:11536
+processRootScheduleInMicrotask @ chunk-AE322PLF.js?v=3bfa3947:11558
+(anonymous) @ chunk-AE322PLF.js?v=3bfa3947:11649
+<CustomizePage>
+exports.createElement @ chunk-KC53NVYV.js?v=3bfa3947:773
+h_route @ wouter.js?v=3bfa3947:277
+Route @ wouter.js?v=3bfa3947:309
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17424
+renderWithHooks @ chunk-AE322PLF.js?v=3bfa3947:4206
+updateFunctionComponent @ chunk-AE322PLF.js?v=3bfa3947:6619
+beginWork @ chunk-AE322PLF.js?v=3bfa3947:7654
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+performUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10868
+workLoopSync @ chunk-AE322PLF.js?v=3bfa3947:10728
+renderRootSync @ chunk-AE322PLF.js?v=3bfa3947:10711
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10330
+performWorkOnRootViaSchedulerTask @ chunk-AE322PLF.js?v=3bfa3947:11623
+performWorkUntilDeadline @ chunk-AE322PLF.js?v=3bfa3947:36
+<Route>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=3bfa3947:250
+ClerkProviderWithRoutes @ App.tsx:102
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17424
+renderWithHooks @ chunk-AE322PLF.js?v=3bfa3947:4206
+updateFunctionComponent @ chunk-AE322PLF.js?v=3bfa3947:6619
+beginWork @ chunk-AE322PLF.js?v=3bfa3947:7654
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+performUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10868
+workLoopSync @ chunk-AE322PLF.js?v=3bfa3947:10728
+renderRootSync @ chunk-AE322PLF.js?v=3bfa3947:10711
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10330
+performWorkOnRootViaSchedulerTask @ chunk-AE322PLF.js?v=3bfa3947:11623
+performWorkUntilDeadline @ chunk-AE322PLF.js?v=3bfa3947:36
+<ClerkProviderWithRoutes>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=3bfa3947:250
+App @ App.tsx:139
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17424
+renderWithHooks @ chunk-AE322PLF.js?v=3bfa3947:4206
+updateFunctionComponent @ chunk-AE322PLF.js?v=3bfa3947:6619
+beginWork @ chunk-AE322PLF.js?v=3bfa3947:7654
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+performUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10868
+workLoopSync @ chunk-AE322PLF.js?v=3bfa3947:10728
+renderRootSync @ chunk-AE322PLF.js?v=3bfa3947:10711
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10330
+performWorkOnRootViaSchedulerTask @ chunk-AE322PLF.js?v=3bfa3947:11623
+performWorkUntilDeadline @ chunk-AE322PLF.js?v=3bfa3947:36
+<App>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=3bfa3947:250
+(anonymous) @ main.tsx:22Understand this warning
+customize.tsx:530 [ST] early-exit mv= true fc= true mats= 0
+(anonymous) @ customize.tsx:530
+(anonymous) @ customize.tsx:592
+requestAnimationFrame
+(anonymous) @ customize.tsx:592
+(anonymous) @ model-viewer.js:60874
+requestAnimationFrame
+(anonymous) @ model-viewer.js:60873
+requestAnimationFrame
+(anonymous) @ model-viewer.js:60872
+(anonymous) @ model-viewer.js:60871
+await in (anonymous)
+updated @ model-viewer.js:60690
+updated @ model-viewer.js:61008
+updated @ model-viewer.js:63339
+updated @ model-viewer.js:52227
+value @ model-viewer.js:51861
+value @ model-viewer.js:51861
+value @ model-viewer.js:51861
+value @ model-viewer.js:51861
+value @ model-viewer.js:51861
+value @ model-viewer.js:51861
+value @ model-viewer.js:51861
+updated @ model-viewer.js:39463
+updated @ model-viewer.js:63459
+value @ model-viewer.js:51861
+updated @ model-viewer.js:58686
+_$AE @ model-viewer.js:39169
+performUpdate @ model-viewer.js:39169
+scheduleUpdate @ model-viewer.js:39169
+_$Ej @ model-viewer.js:39169
+await in _$Ej
+requestUpdate @ model-viewer.js:39169
+_$Eu @ model-viewer.js:39169
+constructor @ model-viewer.js:39169
+constructor @ model-viewer.js:60475
+constructor @ model-viewer.js:60932
+constructor @ model-viewer.js:63175
+constructor @ model-viewer.js:62760
+constructor @ model-viewer.js:52109
+constructor @ model-viewer.js:39450
+constructor @ model-viewer.js:63433
+constructor @ model-viewer.js:58623
+constructor @ model-viewer.js:61074
+completeWork @ chunk-AE322PLF.js?v=3bfa3947:8149
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+completeUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10976
+performUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10882
+workLoopSync @ chunk-AE322PLF.js?v=3bfa3947:10728
+renderRootSync @ chunk-AE322PLF.js?v=3bfa3947:10711
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10330
+performSyncWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:11635
+flushSyncWorkAcrossRoots_impl @ chunk-AE322PLF.js?v=3bfa3947:11536
+processRootScheduleInMicrotask @ chunk-AE322PLF.js?v=3bfa3947:11558
+(anonymous) @ chunk-AE322PLF.js?v=3bfa3947:11649
+<model-viewer>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=3bfa3947:250
+(anonymous) @ customize.tsx:3571
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17424
+renderWithHooks @ chunk-AE322PLF.js?v=3bfa3947:4206
+updateFunctionComponent @ chunk-AE322PLF.js?v=3bfa3947:6619
+beginWork @ chunk-AE322PLF.js?v=3bfa3947:7654
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+performUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10868
+workLoopSync @ chunk-AE322PLF.js?v=3bfa3947:10728
+renderRootSync @ chunk-AE322PLF.js?v=3bfa3947:10711
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10330
+performSyncWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:11635
+flushSyncWorkAcrossRoots_impl @ chunk-AE322PLF.js?v=3bfa3947:11536
+processRootScheduleInMicrotask @ chunk-AE322PLF.js?v=3bfa3947:11558
+(anonymous) @ chunk-AE322PLF.js?v=3bfa3947:11649
+<CustomizePage>
+exports.createElement @ chunk-KC53NVYV.js?v=3bfa3947:773
+h_route @ wouter.js?v=3bfa3947:277
+Route @ wouter.js?v=3bfa3947:309
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17424
+renderWithHooks @ chunk-AE322PLF.js?v=3bfa3947:4206
+updateFunctionComponent @ chunk-AE322PLF.js?v=3bfa3947:6619
+beginWork @ chunk-AE322PLF.js?v=3bfa3947:7654
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+performUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10868
+workLoopSync @ chunk-AE322PLF.js?v=3bfa3947:10728
+renderRootSync @ chunk-AE322PLF.js?v=3bfa3947:10711
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10330
+performWorkOnRootViaSchedulerTask @ chunk-AE322PLF.js?v=3bfa3947:11623
+performWorkUntilDeadline @ chunk-AE322PLF.js?v=3bfa3947:36
+<Route>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=3bfa3947:250
+ClerkProviderWithRoutes @ App.tsx:102
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17424
+renderWithHooks @ chunk-AE322PLF.js?v=3bfa3947:4206
+updateFunctionComponent @ chunk-AE322PLF.js?v=3bfa3947:6619
+beginWork @ chunk-AE322PLF.js?v=3bfa3947:7654
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+performUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10868
+workLoopSync @ chunk-AE322PLF.js?v=3bfa3947:10728
+renderRootSync @ chunk-AE322PLF.js?v=3bfa3947:10711
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10330
+performWorkOnRootViaSchedulerTask @ chunk-AE322PLF.js?v=3bfa3947:11623
+performWorkUntilDeadline @ chunk-AE322PLF.js?v=3bfa3947:36
+<ClerkProviderWithRoutes>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=3bfa3947:250
+App @ App.tsx:139
+react-stack-bottom-frame @ chunk-AE322PLF.js?v=3bfa3947:17424
+renderWithHooks @ chunk-AE322PLF.js?v=3bfa3947:4206
+updateFunctionComponent @ chunk-AE322PLF.js?v=3bfa3947:6619
+beginWork @ chunk-AE322PLF.js?v=3bfa3947:7654
+runWithFiberInDEV @ chunk-AE322PLF.js?v=3bfa3947:1485
+performUnitOfWork @ chunk-AE322PLF.js?v=3bfa3947:10868
+workLoopSync @ chunk-AE322PLF.js?v=3bfa3947:10728
+renderRootSync @ chunk-AE322PLF.js?v=3bfa3947:10711
+performWorkOnRoot @ chunk-AE322PLF.js?v=3bfa3947:10330
+performWorkOnRootViaSchedulerTask @ chunk-AE322PLF.js?v=3bfa3947:11623
+performWorkUntilDeadline @ chunk-AE322PLF.js?v=3bfa3947:36
+<App>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=3bfa3947:250
+(anonymous) @ main.tsx:22Understand this warning
+customize.tsx:532 [ST] start seq= 1 bg= zn {repeat: 'repeat', offsetX: 0, offsetY: 0, crossOrigin: '', id: 0, …}
+customize.tsx:539 [ST] dataUrl len= 2136906 seq= 1
+customize.tsx:545 [ST] applying texture seq= 1 mats= 2
+customize.tsx:549 [ST] slot= xf {Symbol(texture): uf, Symbol(transform): {…}, Symbol(activeVideo): false, Symbol(materials): Set(1), Symbol(onUpdate): ƒ, …} setTexture= function
+customize.tsx:553 [ST] setTexture OK for mat 0
+customize.tsx:549 [ST] slot= xf {Symbol(texture): uf, Symbol(transform): {…}, Symbol(activeVideo): false, Symbol(materials): Set(1), Symbol(onUpdate): ƒ, …} setTexture= function
+customize.tsx:553 [ST] setTexture OK for mat 1
+customize?entry=1&style=print&from=product:1 The resource https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/images/Slide_images/KaSha%20Hero%20banner%201%20Mens.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Understand this warning
+customize.tsx:532 [ST] start seq= 2 bg= zn {repeat: 'repeat', offsetX: 0, offsetY: 0, crossOrigin: '', id: 0, …}
+customize.tsx:532 [ST] start seq= 3 bg= zn {repeat: 'repeat', offsetX: 0, offsetY: 0, crossOrigin: '', id: 0, …}
+customize.tsx:532 [ST] start seq= 4 bg= zn {repeat: 'repeat', offsetX: 0, offsetY: 0, crossOrigin: '', id: 0, …}
+customize.tsx:532 [ST] start seq= 5 bg= zn {repeat: 'repeat', offsetX: 0, offsetY: 0, crossOrigin: '', id: 0, …}
+customize.tsx:536 [ST] abort2 seq= 2
+customize.tsx:535 [ST] abort1 seq= 3
+customize.tsx:535 [ST] abort1 seq= 4
+customize.tsx:532 [ST] start seq= 6 bg= zn {repeat: 'repeat', offsetX: 0, offsetY: 0, crossOrigin: '', id: 0, …}
+customize.tsx:536 [ST] abort2 seq= 5
+customize.tsx:539 [ST] dataUrl len= 3301674 seq= 6
+customize.tsx:545 [ST] applying texture seq= 6 mats= 2
+customize.tsx:549 [ST] slot= xf {Symbol(texture): uf, Symbol(transform): {…}, Symbol(activeVideo): false, Symbol(materials): Set(1), Symbol(onUpdate): ƒ, …} setTexture= function
+customize.tsx:553 [ST] setTexture OK for mat 0
+customize.tsx:549 [ST] slot= xf {Symbol(texture): uf, Symbol(transform): {…}, Symbol(activeVideo): false, Symbol(materials): Set(1), Symbol(onUpdate): ƒ, …} setTexture= function
+customize.tsx:553 [ST] setTexture OK for mat 1
+customize.tsx:532 [ST] start seq= 7 bg= zn {repeat: 'repeat', offsetX: 0, offsetY: 0, crossOrigin: '', id: 0, …}
+customize.tsx:532 [ST] start seq= 8 bg= zn {repeat: 'repeat', offsetX: 0, offsetY: 0, crossOrigin: '', id: 0, …}
+customize.tsx:532 [ST] start seq= 9 bg= zn {repeat: 'repeat', offsetX: 0, offsetY: 0, crossOrigin: '', id: 0, …}
+customize.tsx:532 [ST] start seq= 10 bg= zn {repeat: 'repeat', offsetX: 0, offsetY: 0, crossOrigin: '', id: 0, …}
+customize.tsx:535 [ST] abort1 seq= 7
+customize.tsx:535 [ST] abort1 seq= 8
+customize.tsx:535 [ST] abort1 seq= 9
+customize.tsx:539 [ST] dataUrl len= 3291258 seq= 10
+customize.tsx:545 [ST] applying texture seq= 10 mats= 2
+customize.tsx:549 [ST] slot= xf {Symbol(texture): uf, Symbol(transform): {…}, Symbol(activeVideo): false, Symbol(materials): Set(1), Symbol(onUpdate): ƒ, …} setTexture= function
+customize.tsx:553 [ST] setTexture OK for mat 0
+customize.tsx:549 [ST] slot= xf {Symbol(texture): uf, Symbol(transform): {…}, Symbol(activeVideo): false, Symbol(materials): Set(1), Symbol(onUpdate): ƒ, …} setTexture= function
+customize.tsx:553 [ST] setTexture OK for mat 1
+customize.tsx:532 [ST] start seq= 11 bg= zn {repeat: 'repeat', offsetX: 0, offsetY: 0, crossOrigin: '', id: 0, …}
+customize.tsx:539 [ST] dataUrl len= 3291258 seq= 11
+customize.tsx:545 [ST] applying texture seq= 11 mats= 2
+customize.tsx:549 [ST] slot= xf {Symbol(texture): uf, Symbol(transform): {…}, Symbol(activeVideo): false, Symbol(materials): Set(1), Symbol(onUpdate): ƒ, …} setTexture= function
+customize.tsx:553 [ST] setTexture OK for mat 0
+customize.tsx:549 [ST] slot= xf {Symbol(texture): uf, Symbol(transform): {…}, Symbol(activeVideo): false, Symbol(materials): Set(1), Symbol(onUpdate): ƒ, …} setTexture= function
+customize.tsx:553 [ST] setTexture OK for mat 1
+customize.tsx:532 [ST] start seq= 12 bg= #FFFFFF
+customize.tsx:532 [ST] start seq= 13 bg= #FFFFFF
+customize.tsx:535 [ST] abort1 seq= 12
+customize.tsx:539 [ST] dataUrl len= 118554 seq= 13
+customize.tsx:545 [ST] applying texture seq= 13 mats= 2
+customize.tsx:549 [ST] slot= xf {Symbol(texture): uf, Symbol(transform): {…}, Symbol(activeVideo): false, Symbol(materials): Set(1), Symbol(onUpdate): ƒ, …} setTexture= function
+customize.tsx:553 [ST] setTexture OK for mat 0
+customize.tsx:549 [ST] slot= xf {Symbol(texture): uf, Symbol(transform): {…}, Symbol(activeVideo): false, Symbol(materials): Set(1), Symbol(onUpdate): ƒ, …} setTexture= function
+customize.tsx:553 [ST] setTexture OK for mat 1
+customize.tsx:532 [ST] start seq= 14 bg= #FFFFFF
+customize.tsx:539 [ST] dataUrl len= 118554 seq= 14
+customize.tsx:545 [ST] applying texture seq= 14 mats= 2
+customize.tsx:549 [ST] slot= xf {Symbol(texture): uf, Symbol(transform): {…}, Symbol(activeVideo): false, Symbol(materials): Set(1), Symbol(onUpdate): ƒ, …} setTexture= function
+customize.tsx:553 [ST] setTexture OK for mat 0
+customize.tsx:549 [ST] slot= xf {Symbol(texture): uf, Symbol(transform): {…}, Symbol(activeVideo): false, Symbol(materials): Set(1), Symbol(onUpdate): ƒ, …} setTexture= function
+customize.tsx:553 [ST] setTexture OK for mat 1
