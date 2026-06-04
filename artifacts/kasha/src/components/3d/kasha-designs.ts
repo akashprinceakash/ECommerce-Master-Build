@@ -56,7 +56,7 @@ const KD_ZONES: Record<string, string> = {
 export const KASHA_DESIGNS: KashaDesignDef[] = [
   {
     id: "KS1001B", label: "Pattern 1001",
-    thumbnail: "/images/designs/KS1001B.png",
+    thumbnail: "/images/designs/KD001.png",
     zones: {
       front: KD_ZONES["F1"],
       back: KD_ZONES["B1"],
@@ -67,7 +67,7 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
   },
   {
     id: "KS1002B", label: "Pattern 1002",
-    thumbnail: "/images/designs/KS1002B.png",
+    thumbnail: "/images/designs/KD002.png",
     zones: {
       front: KD_ZONES["F2"],
       back: KD_ZONES["B2"],
@@ -78,7 +78,7 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
   },
   {
     id: "KS1003B", label: "Pattern 1003",
-    thumbnail: "/images/designs/KS1003B.png",
+    thumbnail: "/images/designs/KD003.png",
     zones: {
       front: KD_ZONES["F3"],
       back: KD_ZONES["B3"],
@@ -89,7 +89,7 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
   },
   {
     id: "KS1004B", label: "Pattern 1004",
-    thumbnail: "/images/designs/KS1004B.png",
+    thumbnail: "/images/designs/KD004.png",
     zones: {
       front: KD_ZONES["F4"],
       collar: KD_ZONES["COL4"],

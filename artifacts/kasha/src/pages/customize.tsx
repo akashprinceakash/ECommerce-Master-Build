@@ -3749,49 +3749,6 @@ export default function CustomizePage() {
             </div>
           )}
 
-          {/* Mobile horizontal view selector */}
-          {screenW<768&&(
-            <div style={{
-              position:"absolute",bottom:10,left:"50%",transform:"translateX(-50%)",
-              display:"flex",gap:6,
-              background:"rgba(250,250,247,0.93)",
-              borderRadius:20,padding:"6px 10px",
-              backdropFilter:"blur(12px)",
-              border:`1px solid rgba(201,168,76,0.2)`,
-              boxShadow:"0 2px 12px rgba(26,26,24,0.10)",
-              zIndex:8,
-            }}>
-              {CAMERA_VIEWS.map(v=>{
-                const isA=cameraView===v.id;
-                const hi=isA?"#c9a84c":"#b0a898";
-                const fill=isA?"rgba(201,168,76,0.18)":"rgba(232,228,220,0.6)";
-                // Distinct inline SVG shirt illustration per view:
-                // front — body highlighted, back — flipped with "B" label,
-                // right — right sleeve highlighted, left — left sleeve highlighted
-                const svgMap: Record<string,string>={
-                  front:`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="${hi}" stroke-width="2"/><rect x="19" y="28" width="22" height="34" rx="1" fill="${fill}"/></svg>`,
-                  back:`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M38 4L50 12L56 32L46 34L46 64H14L14 34L4 32L10 12L22 4L26 6C28 8 32 8 34 6Z" fill="#e8e4dc" stroke="${hi}" stroke-width="2"/><rect x="19" y="28" width="22" height="34" rx="1" fill="${fill}"/><text x="30" y="50" text-anchor="middle" font-size="8" fill="${hi}" font-family="sans-serif" font-weight="700">B</text></svg>`,
-                  right:`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="${hi}" stroke-width="2"/><path d="M50 12L56 32L46 34L42 14Z" fill="${fill}" stroke="${hi}" stroke-width="1.2"/></svg>`,
-                  left:`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="${hi}" stroke-width="2"/><path d="M10 12L4 32L14 34L18 14Z" fill="${fill}" stroke="${hi}" stroke-width="1.2"/></svg>`,
-                };
-                return(
-                  <button key={v.id} onClick={()=>setCameraView(v.id as any)} style={{
-                    display:"flex",flexDirection:"column",alignItems:"center",gap:1,
-                    cursor:"pointer",padding:"5px 6px",borderRadius:10,border:"none",
-                    background:isA?V.aclt:"transparent",
-                    boxShadow:isA?`inset 0 0 0 1.5px ${V.ac}`:"none",
-                    flexShrink:0,transition:"all .2s",
-                  }}>
-                    <div style={{width:28,height:32}} dangerouslySetInnerHTML={{__html:svgMap[v.id]||svgMap.front}}/>
-                    <span style={{fontSize:7,letterSpacing:".05em",fontFamily:"'Jost',sans-serif",
-                      color:isA?V.ac:V.mu,fontWeight:isA?700:400,textTransform:"uppercase"}}>
-                      {v.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         {/* ── RIGHT PANEL: Placement chips (step 3 desktop only) ─────────── */}
