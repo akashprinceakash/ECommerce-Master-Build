@@ -338,28 +338,6 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Thumbnail strip */}
-            {galleryImages.length > 1 && (
-              <div className="mt-3 flex gap-2 flex-wrap">
-                {galleryImages.map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => goTo(i)}
-                    className="overflow-hidden transition-all"
-                    style={{
-                      width: 60,
-                      height: 60,
-                      background: "#F9F8F6",
-                      border: `2px solid ${activeIdx === i ? "#1a1a1a" : "transparent"}`,
-                      outline: activeIdx === i ? "none" : "1px solid rgba(0,0,0,0.10)",
-                      transition: "border-color 0.2s",
-                    }}
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Product Details */}
