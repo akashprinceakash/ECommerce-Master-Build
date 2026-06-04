@@ -216,6 +216,33 @@ export interface UpsertUserProfileBody {
   defaultShippingAddress?: string | null;
 }
 
+export interface LookbookOutfitItem {
+  productId: number;
+  name: string;
+  thumbnailUrl: string;
+  x: number;
+  y: number;
+  width: number;
+}
+
+export interface LookbookOutfit {
+  id: number;
+  userId: string;
+  name: string;
+  items: LookbookOutfitItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateLookbookOutfitBody {
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  name: string;
+  items: LookbookOutfitItem[];
+}
+
 export type ListProductsParams = {
   category?: string;
 };

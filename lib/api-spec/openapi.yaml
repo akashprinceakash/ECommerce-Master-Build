@@ -20,6 +20,8 @@ tags:
     description: Order operations
   - name: users
     description: User profile operations
+  - name: lookbook
+    description: Lookbook outfit planner operations
 
 paths:
   /healthz:
@@ -477,6 +479,89 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /lookbook-outfits:
+    get:
+      operationId: listLookbookOutfits
+      tags: [lookbook]
+      summary: List the user's saved outfit combinations
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of saved outfits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LookbookOutfit"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createLookbookOutfit
+      tags: [lookbook]
+      summary: Save a new outfit combination
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLookbookOutfitBody"
+      responses:
+        "201":
+          description: Outfit saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LookbookOutfit"
+        "400":
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /lookbook-outfits/{id}:
+    delete:
+      operationId: deleteLookbookOutfit
+      tags: [lookbook]
+      summary: Delete a saved outfit
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Outfit deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -887,3 +972,54 @@ components:
           type: ["string", "null"]
         defaultShippingAddress:
           type: ["string", "null"]
+
+    LookbookOutfitItem:
+      type: object
+      required: [productId, name, thumbnailUrl, x, y, width]
+      properties:
+        productId:
+          type: integer
+        name:
+          type: string
+        thumbnailUrl:
+          type: string
+        x:
+          type: number
+        y:
+          type: number
+        width:
+          type: number
+
+    LookbookOutfit:
+      type: object
+      required: [id, userId, name, items, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        name:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LookbookOutfitItem"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateLookbookOutfitBody:
+      type: object
+      required: [name, items]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LookbookOutfitItem"

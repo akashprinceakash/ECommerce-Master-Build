@@ -546,3 +546,53 @@ export const UpsertUserProfileResponse = zod.object({
   savedDesignsCount: zod.number(),
   createdAt: zod.coerce.date(),
 });
+
+/**
+ * @summary List the user's saved outfit combinations
+ */
+export const ListLookbookOutfitsResponseItem = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  name: zod.string(),
+  items: zod.array(
+    zod.object({
+      productId: zod.number(),
+      name: zod.string(),
+      thumbnailUrl: zod.string(),
+      x: zod.number(),
+      y: zod.number(),
+      width: zod.number(),
+    }),
+  ),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+export const ListLookbookOutfitsResponse = zod.array(
+  ListLookbookOutfitsResponseItem,
+);
+
+/**
+ * @summary Save a new outfit combination
+ */
+export const createLookbookOutfitBodyNameMax = 100;
+
+export const CreateLookbookOutfitBody = zod.object({
+  name: zod.string().min(1).max(createLookbookOutfitBodyNameMax),
+  items: zod.array(
+    zod.object({
+      productId: zod.number(),
+      name: zod.string(),
+      thumbnailUrl: zod.string(),
+      x: zod.number(),
+      y: zod.number(),
+      width: zod.number(),
+    }),
+  ),
+});
+
+/**
+ * @summary Delete a saved outfit
+ */
+export const DeleteLookbookOutfitParams = zod.object({
+  id: zod.coerce.number(),
+});

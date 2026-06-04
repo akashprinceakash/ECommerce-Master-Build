@@ -21,12 +21,14 @@ import type {
   Cart,
   CartItem,
   CreateCustomizationBody,
+  CreateLookbookOutfitBody,
   CreateOrderBody,
   Customization,
   CustomizationOrNull,
   ErrorResponse,
   HealthStatus,
   ListProductsParams,
+  LookbookOutfit,
   Order,
   Product,
   UpdateCartItemBody,
@@ -1623,4 +1625,250 @@ export const useUpsertUserProfile = <
   TContext
 > => {
   return useMutation(getUpsertUserProfileMutationOptions(options));
+};
+
+/**
+ * @summary List the user's saved outfit combinations
+ */
+export const getListLookbookOutfitsUrl = () => {
+  return `/api/lookbook-outfits`;
+};
+
+export const listLookbookOutfits = async (
+  options?: RequestInit,
+): Promise<LookbookOutfit[]> => {
+  return customFetch<LookbookOutfit[]>(getListLookbookOutfitsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListLookbookOutfitsQueryKey = () => {
+  return [`/api/lookbook-outfits`] as const;
+};
+
+export const getListLookbookOutfitsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLookbookOutfits>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listLookbookOutfits>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListLookbookOutfitsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listLookbookOutfits>>
+  > = ({ signal }) => listLookbookOutfits({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLookbookOutfits>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListLookbookOutfitsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listLookbookOutfits>>
+>;
+export type ListLookbookOutfitsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List the user's saved outfit combinations
+ */
+
+export function useListLookbookOutfits<
+  TData = Awaited<ReturnType<typeof listLookbookOutfits>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listLookbookOutfits>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListLookbookOutfitsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Save a new outfit combination
+ */
+export const getCreateLookbookOutfitUrl = () => {
+  return `/api/lookbook-outfits`;
+};
+
+export const createLookbookOutfit = async (
+  createLookbookOutfitBody: CreateLookbookOutfitBody,
+  options?: RequestInit,
+): Promise<LookbookOutfit> => {
+  return customFetch<LookbookOutfit>(getCreateLookbookOutfitUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createLookbookOutfitBody),
+  });
+};
+
+export const getCreateLookbookOutfitMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLookbookOutfit>>,
+    TError,
+    { data: BodyType<CreateLookbookOutfitBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createLookbookOutfit>>,
+  TError,
+  { data: BodyType<CreateLookbookOutfitBody> },
+  TContext
+> => {
+  const mutationKey = ["createLookbookOutfit"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createLookbookOutfit>>,
+    { data: BodyType<CreateLookbookOutfitBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createLookbookOutfit(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateLookbookOutfitMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createLookbookOutfit>>
+>;
+export type CreateLookbookOutfitMutationBody =
+  BodyType<CreateLookbookOutfitBody>;
+export type CreateLookbookOutfitMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Save a new outfit combination
+ */
+export const useCreateLookbookOutfit = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLookbookOutfit>>,
+    TError,
+    { data: BodyType<CreateLookbookOutfitBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createLookbookOutfit>>,
+  TError,
+  { data: BodyType<CreateLookbookOutfitBody> },
+  TContext
+> => {
+  return useMutation(getCreateLookbookOutfitMutationOptions(options));
+};
+
+/**
+ * @summary Delete a saved outfit
+ */
+export const getDeleteLookbookOutfitUrl = (id: number) => {
+  return `/api/lookbook-outfits/${id}`;
+};
+
+export const deleteLookbookOutfit = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteLookbookOutfitUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteLookbookOutfitMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteLookbookOutfit>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteLookbookOutfit>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteLookbookOutfit"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteLookbookOutfit>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteLookbookOutfit(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteLookbookOutfitMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteLookbookOutfit>>
+>;
+
+export type DeleteLookbookOutfitMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete a saved outfit
+ */
+export const useDeleteLookbookOutfit = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteLookbookOutfit>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteLookbookOutfit>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteLookbookOutfitMutationOptions(options));
 };

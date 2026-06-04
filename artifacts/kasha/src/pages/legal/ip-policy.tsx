@@ -63,7 +63,7 @@ export default function IpPolicyPage() {
           <p>For any intellectual property queries, please contact:</p>
           <ul style={{ paddingLeft: 20, marginTop: 4, listStyle: "disc" }}>
             <li>Email: <a href="https://mail.google.com/mail/?view=cm&to=support@kashaonline.in" target="_blank" rel="noopener noreferrer" style={{ color: "#B8925A" }}>support@kashaonline.in</a></li>
-            <li>Phone: <strong>9560889594</strong></li>
+            <li>Phone: <strong>+91 9560889594</strong></li>
             <li>Business Hours: Monday to Saturday, 10:00 AM – 6:00 PM</li>
           </ul>
         </Section>

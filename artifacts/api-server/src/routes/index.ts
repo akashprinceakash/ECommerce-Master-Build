@@ -12,6 +12,7 @@ import siteSettingsRouter from "./siteSettings";
 import r2proxyRouter from "./r2proxy";
 import skuAssetsRouter from "./skuAssets";
 import contactRouter from "./contact";
+import lookbookRouter from "./lookbook";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(siteSettingsRouter);
 router.use(r2proxyRouter);
 router.use(skuAssetsRouter);
 router.use(contactRouter);
+router.use(lookbookRouter);
 
 export default router;
