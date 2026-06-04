@@ -824,54 +824,80 @@ export default function CustomizePage() {
     if (allOverPrintId) setAllOverPrintId(null);
     setFabricBg(fc,hex);
 
-    if (mats.length) {
+    const mv=mvRef.current as any;
+    const capturedMats=mats; // stable snapshot for the async closure below
+
+    if (capturedMats.length && mv) {
       const r=parseInt(hex.slice(1,3)||"ff",16)/255;
       const g=parseInt(hex.slice(3,5)||"ff",16)/255;
       const b=parseInt(hex.slice(5,7)||"ff",16)/255;
-      // sRGB → approximate linear (gamma 2.2)
+      // sRGB → approximate linear (gamma 2.2) — used as an immediate visual hint
       const lin=(c:number)=>Math.pow(Math.max(0,Math.min(1,c)),2.2);
       const lR=lin(r),lG=lin(g),lB=lin(b);
-      const mv=mvRef.current as any;
 
-      for (const entry of mats) {
-        try {
-          const pbr=entry.mat?.pbrMetallicRoughness; if(!pbr) continue;
-          // Step 1: remove the existing print/pattern texture from the material slot.
-          // This is the critical step — calling setTexture(solidColorPNG) on a material
-          // that already has a print texture often fails to visually update model-viewer
-          // because of how model-viewer's Three.js texture caching works (same-size textures
-          // may reuse a cached GPU allocation and skip re-upload).
-          // By nulling the slot first we guarantee a clean state before any new texture is set.
-          pbr.baseColorTexture?.setTexture?.(null);
-          // Step 2: set the solid colour via baseColorFactor — this is synchronous and
-          // always reliable.  With map=null, model-viewer renders: null × [lR,lG,lB,1] =
-          // the solid hex colour.  No async texture upload needed.
-          pbr.setBaseColorFactor?.([lR,lG,lB,1]);
-        } catch {}
+      // ── Step A: instant visual hint via baseColorFactor ────────────────────
+      // Tints the 3D model to the chosen colour on the very next frame, before
+      // the async texture upload completes.  Keeps the UX responsive.
+      for (const entry of capturedMats) {
+        try { entry.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([lR,lG,lB,1]); } catch {}
       }
-      // Force model-viewer to flush the material changes into the Three.js render pipeline.
-      try { mv?.requestUpdate?.(); } catch {}
-      try { mv?.updateFraming?.(); } catch {}
+      try { mv.requestUpdate?.(); } catch {}
+
+      // ── Step B: real solid-colour texture via createTexture ─────────────────
+      // The ONLY path that reliably replaces a print texture in model-viewer 3.4 is
+      // createTexture(url) + setTexture(tex).  This is exactly the path that
+      // clearAllOverPrint / Reset uses and it always works.
+      //
+      // We create a tiny 4×4 canvas with the solid colour (synchronous, ~1 ms),
+      // export it as a PNG data URL, then call mv.createTexture(url) which handles
+      // the GPU texture upload.  This avoids the full 1024×1024 Fabric canvas
+      // rendering pipeline and all its associated timing / sequence issues.
+      //
+      // A baseColorFactor of [1,1,1,1] is set after the texture so the texture
+      // colour shows through unmodified (same as every other syncTexture call).
+      (async () => {
+        try {
+          const sc=document.createElement("canvas");
+          sc.width=4; sc.height=4;
+          const ctx=sc.getContext("2d"); if(!ctx) return;
+          ctx.fillStyle=hex; ctx.fillRect(0,0,4,4);
+          const url=sc.toDataURL("image/png");
+          const tex=await mv.createTexture(url);
+          // Guard: user switched colour or applied a print while we awaited
+          if (baseBgRef.current!==hex) return;
+          for (const entry of capturedMats) {
+            try {
+              const pbr=entry.mat?.pbrMetallicRoughness; if(!pbr) continue;
+              const slot=pbr.baseColorTexture;
+              if (slot && typeof slot.setTexture==="function") {
+                slot.setTexture(tex);
+              }
+              pbr.setBaseColorFactor?.([1,1,1,1]);
+            } catch {}
+          }
+          try { mv.requestUpdate?.(); } catch {}
+          try { mv.updateFraming?.(); } catch {}
+        } catch(e) {
+          console.warn("[applyPrimary] solid texture failed, factor-only fallback:",e);
+        }
+      })();
     }
 
-    // For pure solid-colour backgrounds with NO canvas overlay objects (logos, text,
-    // zone-colour rects) the setTexture(null) + setBaseColorFactor above is sufficient
-    // and more reliable than the async texture pipeline.  syncTexture IS still needed
-    // when overlays are present because they must be baked into the texture together
-    // with the solid background.
-    const hasOverlays = !!(fc && fc.getObjects().length > 0);
+    // ── Step C: bake overlays into texture when they exist ────────────────────
+    // If the canvas has overlay objects (logos, text, zone-colour rects) they must
+    // be baked together with the solid background into one texture.
+    // syncTexture handles this; since Step B already applied the correct solid texture
+    // to the slot, the null → composite transition inside syncTexture is guaranteed
+    // to trigger material.needsUpdate.
+    const hasOverlays=!!(fc && fc.getObjects().length>0);
     if (hasOverlays) {
-      // Canvas has overlays — bake them into a texture.  Since we already set
-      // baseColorTexture to null above, syncTexture now transitions null → composite
-      // which is a guaranteed state change and reliably triggers material.needsUpdate.
       syncTexture();
-      // Deferred safety re-sync for overlays (matches the 120 ms debouncedSync window).
       if (applyPrimaryTimeoutRef.current) clearTimeout(applyPrimaryTimeoutRef.current);
-      applyPrimaryTimeoutRef.current = setTimeout(() => {
-        applyPrimaryTimeoutRef.current = null;
-        const currentFc = fcRef.current;
-        if (currentFc && currentFc.backgroundColor === hex) syncTextureRef.current?.();
-      }, 150);
+      applyPrimaryTimeoutRef.current=setTimeout(()=>{
+        applyPrimaryTimeoutRef.current=null;
+        const currentFc=fcRef.current;
+        if (currentFc && currentFc.backgroundColor===hex) syncTextureRef.current?.();
+      },150);
     }
   };
 
