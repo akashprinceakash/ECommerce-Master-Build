@@ -70,7 +70,7 @@ function LegalPage({ title, updated, children }: { title: string; updated: strin
         </p>
       </div>
       <div className="max-w-[760px] mx-auto px-6 py-14">
-        <div className="flex flex-col gap-8" style={{ fontFamily: "'system-ui', -apple-system, sans-serif", fontSize: 14, lineHeight: 1.9, color: MUTED }}>
+        <div className="flex flex-col gap-10" style={{ fontFamily: "'system-ui', -apple-system, sans-serif", fontSize: 16, lineHeight: 1.9, color: MUTED }}>
           {children}
         </div>
       </div>
@@ -81,7 +81,7 @@ function LegalPage({ title, updated, children }: { title: string; updated: strin
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 20, fontWeight: 500, color: TX, letterSpacing: "0.02em", marginBottom: 10 }}>
+      <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 24, fontWeight: 500, color: TX, letterSpacing: "0.02em", marginBottom: 12 }}>
         {title}
       </h2>
       <div className="flex flex-col gap-3">{children}</div>

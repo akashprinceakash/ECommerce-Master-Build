@@ -192,19 +192,16 @@ export default function CartPage() {
                   <span className="font-black text-xl text-black">{formatPrice(cart?.totalInPaise || 0)}</span>
                 </div>
 
-                {(cart?.itemCount ?? 0) > 4 ? (
-                  <Link href="/contact?inquiry=bulk">
-                    <button className="w-full bg-[#c9a84c] hover:bg-[#b8943e] text-[#1a1a18] text-[12px] font-bold tracking-[0.15em] py-4 transition-colors flex items-center justify-center gap-2 mb-3">
-                      BULK ENQUIRY <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </Link>
-                ) : (
-                  <Link href="/checkout">
-                    <button className="w-full bg-black hover:bg-neutral-800 text-white text-[12px] font-bold tracking-[0.15em] py-4 transition-colors flex items-center justify-center gap-2 mb-3">
-                      CHECKOUT <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </Link>
-                )}
+                <Link href="/checkout">
+                  <button className="w-full bg-black hover:bg-neutral-800 text-white text-[12px] font-bold tracking-[0.15em] py-4 transition-colors flex items-center justify-center gap-2 mb-3">
+                    CHECKOUT <ArrowRight className="w-4 h-4" />
+                  </button>
+                </Link>
+                <Link href="/contact?inquiry=bulk">
+                  <button className="w-full border border-[#c9a84c] text-[#c9a84c] hover:bg-[#c9a84c] hover:text-[#1a1a18] text-[11px] font-semibold tracking-[0.12em] py-3 transition-colors flex items-center justify-center gap-2 mb-3">
+                    BULK ENQUIRY <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </Link>
 
                 <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-400 font-medium mt-3">
                   <Lock className="w-3 h-3" /> All transactions are secure and encrypted
