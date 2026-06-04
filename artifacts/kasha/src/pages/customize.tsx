@@ -827,6 +827,15 @@ export default function CustomizePage() {
     const mv=mvRef.current as any;
     const capturedMats=mats; // stable snapshot for the async closure below
 
+    // Determine up-front whether a full canvas bake is required.
+    // • allOverPrintId set  → a print texture is on the GPU; we must replace it.
+    // • canvas objects exist → logos / zone-colour rects must be baked together.
+    // When either is true we skip the 4×4 Step B entirely to avoid a race where
+    // Step B (plain solid, no overlays) would overwrite Step C's correctly-baked
+    // composite texture.
+    const hasOverlays=!!(fc && fc.getObjects().length>0);
+    const needsFullBake = hasOverlays || !!allOverPrintId;
+
     if (capturedMats.length && mv) {
       const r=parseInt(hex.slice(1,3)||"ff",16)/255;
       const g=parseInt(hex.slice(3,5)||"ff",16)/255;
@@ -843,68 +852,57 @@ export default function CustomizePage() {
       }
       try { mv.requestUpdate?.(); } catch {}
 
-      // ── Step B: real solid-colour texture via createTexture ─────────────────
-      // The ONLY path that reliably replaces a print texture in model-viewer 3.4 is
-      // createTexture(url) + setTexture(tex).  This is exactly the path that
-      // clearAllOverPrint / Reset uses and it always works.
-      //
-      // We create a tiny 4×4 canvas with the solid colour (synchronous, ~1 ms),
-      // export it as a PNG data URL, then call mv.createTexture(url) which handles
-      // the GPU texture upload.  This avoids the full 1024×1024 Fabric canvas
-      // rendering pipeline and all its associated timing / sequence issues.
-      //
-      // A baseColorFactor of [1,1,1,1] is set after the texture so the texture
-      // colour shows through unmodified (same as every other syncTexture call).
-      (async () => {
-        try {
-          const sc=document.createElement("canvas");
-          sc.width=4; sc.height=4;
-          const ctx=sc.getContext("2d"); if(!ctx) return;
-          ctx.fillStyle=hex; ctx.fillRect(0,0,4,4);
-          const url=sc.toDataURL("image/png");
-          const tex=await mv.createTexture(url);
-          // Guard: user switched colour or applied a print while we awaited
-          if (baseBgRef.current!==hex) return;
-          for (const entry of capturedMats) {
-            try {
-              const pbr=entry.mat?.pbrMetallicRoughness; if(!pbr) continue;
-              const slot=pbr.baseColorTexture;
-              if (slot && typeof slot.setTexture==="function") {
-                // Clear first (null → tex) so model-viewer marks needsUpdate even
-                // when transitioning from a print texture to a solid colour —
-                // without this step the GPU texture is never re-uploaded.
-                try { slot.setTexture(null); } catch {}
-                slot.setTexture(tex);
-              }
-              pbr.setBaseColorFactor?.([1,1,1,1]);
-            } catch {}
+      // ── Step B: fast 4×4 solid-colour texture (clean case only) ────────────
+      // Only used when there is no active print and no canvas overlay objects, so
+      // there is nothing to bake — the tiny canvas is guaranteed to match the full
+      // canvas output.  When needsFullBake is true we rely exclusively on Step C
+      // (syncTexture) so that print textures and overlays are handled correctly.
+      if (!needsFullBake) {
+        (async () => {
+          try {
+            const sc=document.createElement("canvas");
+            sc.width=4; sc.height=4;
+            const ctx=sc.getContext("2d"); if(!ctx) return;
+            ctx.fillStyle=hex; ctx.fillRect(0,0,4,4);
+            const url=sc.toDataURL("image/png");
+            const tex=await mv.createTexture(url);
+            // Guard: user switched colour while we awaited
+            if (baseBgRef.current!==hex) return;
+            for (const entry of capturedMats) {
+              try {
+                const pbr=entry.mat?.pbrMetallicRoughness; if(!pbr) continue;
+                const slot=pbr.baseColorTexture;
+                if (slot && typeof slot.setTexture==="function") {
+                  try { slot.setTexture(null); } catch {}
+                  slot.setTexture(tex);
+                }
+                pbr.setBaseColorFactor?.([1,1,1,1]);
+              } catch {}
+            }
+            try { mv.requestUpdate?.(); } catch {}
+            try { mv.updateFraming?.(); } catch {}
+          } catch(e) {
+            console.warn("[applyPrimary] solid texture failed, factor-only fallback:",e);
           }
-          try { mv.requestUpdate?.(); } catch {}
-          try { mv.updateFraming?.(); } catch {}
-        } catch(e) {
-          console.warn("[applyPrimary] solid texture failed, factor-only fallback:",e);
-        }
-      })();
+        })();
+      }
     }
 
-    // ── Step C: bake overlays into texture when they exist ────────────────────
-    // If the canvas has overlay objects (logos, text, zone-colour rects) they must
-    // be baked together with the solid background into one texture.
-    // Also force-sync when clearing an active all-over print — the print is stored
-    // as canvas.backgroundColor (a Fabric Pattern), not as a canvas object, so
-    // hasOverlays would be false even though the GPU still holds the print texture.
-    // Running syncTexture (which uses the null trick) ensures model-viewer always
-    // replaces the old texture rather than silently skipping the GPU update.
-    const hasOverlays=!!(fc && fc.getObjects().length>0);
-    const needsForceSync = hasOverlays || !!allOverPrintId;
-    if (needsForceSync) {
+    // ── Step C: full canvas bake via syncTexture ──────────────────────────────
+    // Runs when a print or overlay exists.  syncTexture renders the Fabric canvas
+    // (now with solid-colour background after setFabricBg above) and uploads the
+    // result via createTexture + null-trick setTexture — the exact same path that
+    // Reset / clearAllOverPrint uses, which is confirmed to always work.
+    // A 200 ms belt-and-suspenders retry fires in case the first call is aborted
+    // by a concurrent debounced sync.
+    if (needsFullBake) {
       syncTexture();
       if (applyPrimaryTimeoutRef.current) clearTimeout(applyPrimaryTimeoutRef.current);
       applyPrimaryTimeoutRef.current=setTimeout(()=>{
         applyPrimaryTimeoutRef.current=null;
         const currentFc=fcRef.current;
         if (currentFc && currentFc.backgroundColor===hex) syncTextureRef.current?.();
-      },150);
+      },200);
     }
   };
 
@@ -3885,13 +3883,15 @@ export default function CustomizePage() {
               const pickedVal = colorModalFor==="pattern" ? patColorB : colorModalFor==="base" ? patColorA : primaryColor;
               const displayCol = pendingColorPick ?? pickedVal;
               const applyCol = (col: string) => {
-                if(colorModalFor==="all"){
+                if(colorModalFor==="all"||colorModalFor==="base-body"){
+                  // "Full Body" or "Base Body" colour: clear any active print and set
+                  // the solid colour as the canvas background so the 3D model updates
+                  // immediately.  applyPrimary handles the print→colour transition
+                  // (null-trick + syncTexture) identically to how Reset does it.
                   applyPrimary(col);
                 } else if(colorModalFor==="base"){
                   setPatColorA(col);
                   applyPatternColors(col, patColorB);
-                } else if(colorModalFor==="base-body"){
-                  (["front","back","leftSleeve","rightSleeve"] as const).forEach(z=>applyZoneColor(z,col));
                 } else if(colorModalFor==="collar"){
                   applyZoneColor("collar",col);
                 } else {
@@ -3929,7 +3929,7 @@ export default function CustomizePage() {
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   <div style={{width:36,height:36,borderRadius:8,background:displayCol,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
                   <input type="color" value={displayCol}
-                    onChange={e=>{if(colorModalFor==='all'){applyPrimary(e.target.value);}else if(colorModalFor==='base'){setPatColorA(e.target.value);applyPatternColors(e.target.value,patColorB);}else if(colorModalFor==='base-body'){(['front','back','leftSleeve','rightSleeve'] as const).forEach(z=>applyZoneColor(z,e.target.value));}else if(colorModalFor==='collar'){applyZoneColor('collar',e.target.value);}else{setPatColorB(e.target.value);applyPatternColors(patColorA,e.target.value);}setPendingColorPick(null);}}
+                    onChange={e=>{if(colorModalFor==='all'||colorModalFor==='base-body'){applyPrimary(e.target.value);}else if(colorModalFor==='base'){setPatColorA(e.target.value);applyPatternColors(e.target.value,patColorB);}else if(colorModalFor==='collar'){applyZoneColor('collar',e.target.value);}else{setPatColorB(e.target.value);applyPatternColors(patColorA,e.target.value);}setPendingColorPick(null);}}
                     style={{width:44,height:36,padding:2,border:`1.5px solid ${V.bd}`,borderRadius:8,cursor:"pointer",background:V.sf2}}/>
                   <input type="text" defaultValue={displayCol}
                     onBlur={e=>{
