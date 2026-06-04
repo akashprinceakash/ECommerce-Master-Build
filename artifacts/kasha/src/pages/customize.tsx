@@ -870,6 +870,10 @@ export default function CustomizePage() {
               const pbr=entry.mat?.pbrMetallicRoughness; if(!pbr) continue;
               const slot=pbr.baseColorTexture;
               if (slot && typeof slot.setTexture==="function") {
+                // Clear first (null → tex) so model-viewer marks needsUpdate even
+                // when transitioning from a print texture to a solid colour —
+                // without this step the GPU texture is never re-uploaded.
+                try { slot.setTexture(null); } catch {}
                 slot.setTexture(tex);
               }
               pbr.setBaseColorFactor?.([1,1,1,1]);
@@ -886,11 +890,14 @@ export default function CustomizePage() {
     // ── Step C: bake overlays into texture when they exist ────────────────────
     // If the canvas has overlay objects (logos, text, zone-colour rects) they must
     // be baked together with the solid background into one texture.
-    // syncTexture handles this; since Step B already applied the correct solid texture
-    // to the slot, the null → composite transition inside syncTexture is guaranteed
-    // to trigger material.needsUpdate.
+    // Also force-sync when clearing an active all-over print — the print is stored
+    // as canvas.backgroundColor (a Fabric Pattern), not as a canvas object, so
+    // hasOverlays would be false even though the GPU still holds the print texture.
+    // Running syncTexture (which uses the null trick) ensures model-viewer always
+    // replaces the old texture rather than silently skipping the GPU update.
     const hasOverlays=!!(fc && fc.getObjects().length>0);
-    if (hasOverlays) {
+    const needsForceSync = hasOverlays || !!allOverPrintId;
+    if (needsForceSync) {
       syncTexture();
       if (applyPrimaryTimeoutRef.current) clearTimeout(applyPrimaryTimeoutRef.current);
       applyPrimaryTimeoutRef.current=setTimeout(()=>{
@@ -1369,9 +1376,11 @@ export default function CustomizePage() {
     fontFamily:"'Jost', sans-serif",
   };
 
-  const swatch=(hex:string, selected:boolean, onClick:()=>void, title?:string)=>(
+  const swatch=(hex:string, selected:boolean, onClick:()=>void, title?:string, size?:number)=>{
+    const sz=size??30;
+    return (
     <button key={hex} onClick={onClick} title={title||hex} style={{
-      width:30,height:30,borderRadius:"50%",cursor:"pointer",padding:0,flexShrink:0,
+      width:sz,height:sz,borderRadius:"50%",cursor:"pointer",padding:0,flexShrink:0,
       background:hex==="transparent"?"none":hex,
       border:selected?`2.5px solid ${V.ac}`:`1.5px solid rgba(26,26,24,0.12)`,
       outline:selected?`3px solid rgba(201,168,76,0.25)`:undefined,
@@ -1379,7 +1388,7 @@ export default function CustomizePage() {
       transition:"all 0.25s cubic-bezier(0.16,1,0.3,1)",
       boxShadow:selected?`0 0 0 1px ${V.ac}`:`inset 0 0 0 1px rgba(0,0,0,.08)`,
     }}/>
-  );
+  );};
 
   // ── History helpers ───────────────────────────────────────────────────────
   const saveHistory = useCallback(() => {
@@ -2307,9 +2316,9 @@ export default function CustomizePage() {
                     <div style={{flex:1}}>
                       <div style={{...sb}}>Colour</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
-                        {MAIN_PALETTE.slice(0,8).map(h=>swatch(h,textColor===h,()=>{setTextColor(h);if(textObjRef.current){textObjRef.current.set({fill:h});fcRef.current?.renderAll();syncTexture();}}))}
+                        {MAIN_PALETTE.slice(0,8).map(h=>swatch(h,textColor===h,()=>{setTextColor(h);if(textObjRef.current){textObjRef.current.set({fill:h});fcRef.current?.renderAll();syncTexture();}},undefined,38))}
                         <label title="Custom colour" style={{
-                          width:22,height:22,borderRadius:"50%",cursor:"pointer",
+                          width:38,height:38,borderRadius:"50%",cursor:"pointer",
                           display:"flex",alignItems:"center",justifyContent:"center",
                           border:`1.5px dashed ${V.ac}`,background:V.aclt,flexShrink:0,
                           fontSize:13,color:V.ac,overflow:"hidden",position:"relative",
