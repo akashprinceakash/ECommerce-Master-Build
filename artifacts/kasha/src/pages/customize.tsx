@@ -527,26 +527,42 @@ export default function CustomizePage() {
   // ── Texture sync ─────────────────────────────────────────────────────────
   const syncTexture = useCallback(async () => {
     const mv: any=mvRef.current; const fc: any=fcRef.current;
-    if (!mv||!fc||!mats.length) return;
-    // Claim a sequence slot — any older in-flight call will see it's stale and abort.
+    if (!mv||!fc||!mats.length) { console.warn("[ST] early-exit mv=",!!mv,"fc=",!!fc,"mats=",mats.length); return; }
     const mySeq = ++syncSeqRef.current;
+    console.log("[ST] start seq=",mySeq,"bg=",fc.backgroundColor);
     try {
       if (typeof fc.discardActiveObject === "function") fc.discardActiveObject();
-      fc.renderAll(); await raf(); if (mySeq!==syncSeqRef.current) return;
-      fc.renderAll(); await raf(); if (mySeq!==syncSeqRef.current) return;
+      fc.renderAll(); await raf(); if (mySeq!==syncSeqRef.current) { console.log("[ST] abort1 seq=",mySeq); return; }
+      fc.renderAll(); await raf(); if (mySeq!==syncSeqRef.current) { console.log("[ST] abort2 seq=",mySeq); return; }
       const rawEl: HTMLCanvasElement|undefined = typeof fc.getElement==="function" ? fc.getElement() : undefined;
       const dataUrl = rawEl ? rawEl.toDataURL("image/png",1.0) : fc.toDataURL({format:"png",quality:1.0,multiplier:1});
-      if (!dataUrl||dataUrl.length<100) return;
-      if (mySeq!==syncSeqRef.current) return;
+      console.log("[ST] dataUrl len=",dataUrl?.length,"seq=",mySeq);
+      if (!dataUrl||dataUrl.length<100) { console.warn("[ST] dataUrl too short"); return; }
+      if (mySeq!==syncSeqRef.current) { console.log("[ST] abort3 seq=",mySeq); return; }
       lastTextureUrlRef.current = dataUrl;
       const tex = await mv.createTexture(dataUrl);
-      if (mySeq!==syncSeqRef.current) return; // abort if superseded during texture upload
+      if (mySeq!==syncSeqRef.current) { console.log("[ST] abort4 seq=",mySeq); return; }
+      console.log("[ST] applying texture seq=",mySeq,"mats=",mats.length);
       for (const entry of mats) {
-        const pbr=entry?.mat?.pbrMetallicRoughness; if(!pbr) continue;
+        const pbr=entry?.mat?.pbrMetallicRoughness; if(!pbr) { console.warn("[ST] no pbr for mat"); continue; }
         const slot=pbr.baseColorTexture;
-        try { slot?.setTexture?.(tex); try{pbr.setBaseColorFactor([1,1,1,1]);}catch{}; break; }
-        catch { try { if(slot&&typeof slot.texture!=="undefined"){slot.texture=tex;try{pbr.setBaseColorFactor([1,1,1,1]);}catch{};break;} }catch{} }
+        console.log("[ST] slot=",slot,"setTexture=",typeof slot?.setTexture);
+        try {
+          if (slot && typeof slot.setTexture === "function") {
+            slot.setTexture(tex);
+            console.log("[ST] setTexture OK for mat",entry.idx);
+          } else {
+            console.warn("[ST] slot missing setTexture for mat",entry.idx,"slot=",slot);
+          }
+          try{pbr.setBaseColorFactor([1,1,1,1]);}catch{}
+        } catch (e2) {
+          console.error("[ST] setTexture threw for mat",entry.idx,":",e2);
+          try { if(slot&&typeof (slot as any).texture!=="undefined"){(slot as any).texture=tex;try{pbr.setBaseColorFactor([1,1,1,1]);}catch{};} }catch{}
+        }
       }
+      // NOTE: No break — every material gets the canvas texture so that all
+      // visible parts of the garment (body, collar, sleeves — each a separate
+      // glTF material) are updated in one pass.
     } catch (e) { console.error("[customize] syncTexture failed:",e); }
   }, [mats]);
 
