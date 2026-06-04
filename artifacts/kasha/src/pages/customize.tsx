@@ -3756,23 +3756,30 @@ export default function CustomizePage() {
             }}>
               {CAMERA_VIEWS.map(v=>{
                 const isA=cameraView===v.id;
+                const hi=isA?"#c9a84c":"#b0a898";
+                const fill=isA?"rgba(201,168,76,0.18)":"rgba(232,228,220,0.6)";
+                // Distinct inline SVG shirt illustration per view:
+                // front — body highlighted, back — flipped with "B" label,
+                // right — right sleeve highlighted, left — left sleeve highlighted
+                const svgMap: Record<string,string>={
+                  front:`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="${hi}" stroke-width="2"/><rect x="19" y="28" width="22" height="34" rx="1" fill="${fill}"/></svg>`,
+                  back:`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M38 4L50 12L56 32L46 34L46 64H14L14 34L4 32L10 12L22 4L26 6C28 8 32 8 34 6Z" fill="#e8e4dc" stroke="${hi}" stroke-width="2"/><rect x="19" y="28" width="22" height="34" rx="1" fill="${fill}"/><text x="30" y="50" text-anchor="middle" font-size="8" fill="${hi}" font-family="sans-serif" font-weight="700">B</text></svg>`,
+                  right:`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="${hi}" stroke-width="2"/><path d="M50 12L56 32L46 34L42 14Z" fill="${fill}" stroke="${hi}" stroke-width="1.2"/></svg>`,
+                  left:`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="${hi}" stroke-width="2"/><path d="M10 12L4 32L14 34L18 14Z" fill="${fill}" stroke="${hi}" stroke-width="1.2"/></svg>`,
+                };
                 return(
                   <button key={v.id} onClick={()=>setCameraView(v.id as any)} style={{
-                    width:38,height:38,borderRadius:10,border:"none",cursor:"pointer",padding:0,
-                    background:isA?V.aclt:V.sf2,
+                    display:"flex",flexDirection:"column",alignItems:"center",gap:1,
+                    cursor:"pointer",padding:"5px 6px",borderRadius:10,border:"none",
+                    background:isA?V.aclt:"transparent",
                     boxShadow:isA?`inset 0 0 0 1.5px ${V.ac}`:"none",
-                    display:"flex",alignItems:"center",justifyContent:"center",
-                    overflow:"hidden",flexShrink:0,transition:"all .2s",
+                    flexShrink:0,transition:"all .2s",
                   }}>
-                    {product?.thumbnailUrl
-                      ? <img src={product.thumbnailUrl} alt={v.label} style={{
-                          width:"100%",height:"100%",objectFit:"cover",
-                          opacity:isA?1:0.5,
-                          filter:v.id==="back"?"brightness(0.7)":v.id==="right"||v.id==="left"?"brightness(0.85)":"none",
-                          transform:v.id==="back"?"scaleX(-1)":"none",
-                        }}/>
-                      : <span style={{fontSize:14,opacity:isA?1:0.4}}>👕</span>
-                    }
+                    <div style={{width:28,height:32}} dangerouslySetInnerHTML={{__html:svgMap[v.id]||svgMap.front}}/>
+                    <span style={{fontSize:7,letterSpacing:".05em",fontFamily:"'Jost',sans-serif",
+                      color:isA?V.ac:V.mu,fontWeight:isA?700:400,textTransform:"uppercase"}}>
+                      {v.label}
+                    </span>
                   </button>
                 );
               })}
