@@ -129,14 +129,30 @@ function placementAngle(placement: string): number {
 // collar-right: text may extend leftward freely; clamp only the right edge.
 const COLLAR_UV_LEFT = 12, COLLAR_UV_RIGHT = 519;
 const COLLAR_MARGIN  = 4; // px clearance from zone boundary
-// After -90° rotation a logo's WIDTH spans the collar HEIGHT direction in UV space.
-// Keep collar logos at 14px — matches the 14px font cap for collar text.
-const COLLAR_LOGO_MAX_PX = 14;
+
+// Max logo size (%) allowed per placement — caps the slider (logos only, not text)
+const PLACEMENT_MAX_PCT: Record<string, number> = {
+  "front-left":   20,
+  "front-right":  20,
+  "left-sleeve":  25,
+  "right-sleeve": 25,
+  "back-center":  40,
+  "back-top":     40,
+  "collar-left":  15,
+  "collar-right": 15,
+};
+
+// UV reference width (px out of 1024) for scaleToWidth per placement.
+// Collar uses a smaller ref so % values produce collar-appropriate pixel sizes —
+// after -90° rotation the logo's pre-rotation width = its visual height on the collar.
+const PLACEMENT_UV_REF: Record<string, number> = {
+  "collar-left":  300,
+  "collar-right": 300,
+};
+
 function logoMaxW(position: string, logoSizePct: number): number {
-  const base = Math.round(logoSizePct * (1024 / 100));
-  return (position === "collar-left" || position === "collar-right")
-    ? Math.min(base, COLLAR_LOGO_MAX_PX)
-    : base;
+  const ref = PLACEMENT_UV_REF[position] ?? 1024;
+  return Math.round(logoSizePct * ref / 100);
 }
 function clampCollarText(obj: any, position: string): void {
   if (position !== "collar-left" && position !== "collar-right") {
@@ -2311,10 +2327,12 @@ export default function CustomizePage() {
                   {logoPreview&&(
                     <div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px",borderRadius:12,background:V.sf2,border:`1px solid ${V.bd}`}}>
                       <div>
-                        <div style={{...sb}}>Size — <span style={{color:V.ac}}>{(logoSize*0.376).toFixed(1)}&Prime; × {logoObjRef.current?((logoSize*0.376)*(logoObjRef.current.height/logoObjRef.current.width)).toFixed(1):(logoSize*0.376).toFixed(1)}&Prime;</span> <span style={{color:V.mu,fontWeight:400}}>({logoSize}%)</span></div>
-                        <input type="range" min={5} max={60} value={logoSize} onChange={e=>{const v=+e.target.value;setLogoSize(v);if(logoObjRef.current){const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};logoObjRef.current.scaleToWidth(logoMaxW(logoPosition,v));logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(logoPosition)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
+                        {(()=>{const lMax=PLACEMENT_MAX_PCT[logoPosition]??20;const lVal=Math.min(logoSize,lMax);const lPct=Math.round((lVal-5)/Math.max(1,lMax-5)*100);return(<>
+                        <div style={{...sb}}>Size — <span style={{color:V.ac}}>{(lVal*0.376).toFixed(1)}&Prime; × {logoObjRef.current?((lVal*0.376)*(logoObjRef.current.height/logoObjRef.current.width)).toFixed(1):(lVal*0.376).toFixed(1)}&Prime;</span> <span style={{color:V.mu,fontWeight:400}}>({lVal}%)</span></div>
+                        <input type="range" min={5} max={lMax} value={lVal} onChange={e=>{const v=+e.target.value;setLogoSize(v);if(logoObjRef.current){const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};logoObjRef.current.scaleToWidth(logoMaxW(logoPosition,v));logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(logoPosition)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
                           style={{width:"100%",accentColor:V.tx,cursor:"pointer",height:4,borderRadius:2,
-                            background:`linear-gradient(to right,${V.tx} 0%,${V.tx} ${Math.round((logoSize-5)/55*100)}%,#c4bfb8 ${Math.round((logoSize-5)/55*100)}%,#c4bfb8 100%)`}}/>
+                            background:`linear-gradient(to right,${V.tx} 0%,${V.tx} ${lPct}%,#c4bfb8 ${lPct}%,#c4bfb8 100%)`}}/>
+                        </>);})()}
                       </div>
                     </div>
                   )}
@@ -2339,7 +2357,7 @@ export default function CustomizePage() {
                             const isA=logoPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                             return(
-                              <div key={c.key} onClick={()=>{setLogoPosition(c.key as any);setCameraView(PLACEMENT_VIEW[c.key]??"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key),flipY:placementFlipY(c.key),angle:placementAngle(c.key)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
+                              <div key={c.key} onClick={()=>{setLogoPosition(c.key as any);setLogoSize(s=>Math.min(s,PLACEMENT_MAX_PCT[c.key]??20));setCameraView(PLACEMENT_VIEW[c.key]??"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key),flipY:placementFlipY(c.key),angle:placementAngle(c.key)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
                                 display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",
                                 padding:"6px 2px",borderRadius:9,transition:"all .18s",
                                 border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
@@ -3490,7 +3508,7 @@ export default function CustomizePage() {
                             const isA=logoPosition===c.key;
                             const svg=`<svg viewBox="0 0 60 68" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 4L10 12L4 32L14 34L14 64H46L46 34L56 32L50 12L38 4L34 6C32 8 28 8 26 6Z" fill="#e8e4dc" stroke="#1a1a18" stroke-width="1.5"/>${c.back?`<text x="30" y="54" text-anchor="middle" font-size="6" fill="#999" font-family="sans-serif">back</text>`:""}<circle cx="${c.cx}" cy="${c.cy}" r="3.5" fill="${isA?"#c9a84c":"#aaa"}"/></svg>`;
                             return(
-                              <div key={c.key} onClick={()=>{setLogoPosition(c.key);setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key),flipY:placementFlipY(c.key),angle:placementAngle(c.key)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
+                              <div key={c.key} onClick={()=>{setLogoPosition(c.key);setLogoSize(s=>Math.min(s,PLACEMENT_MAX_PCT[c.key]??20));setCameraView(PLACEMENT_VIEW[c.key]||"front");setModelPaused(true);const mv_=mvRef.current as any;if(mv_){mv_.removeAttribute("auto-rotate");mv_.removeAttribute("auto-rotate-delay");}if(logoObjRef.current){const pos=LOGO_POSITIONS[c.key]||{left:512,top:512};logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",flipX:placementFlipX(c.key),flipY:placementFlipY(c.key),angle:placementAngle(c.key)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}} style={{
                                 display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",
                                 padding:"8px 4px",borderRadius:9,transition:"all .18s",
                                 border:`1.5px solid ${isA?V.ac:V.bd}`,background:isA?V.aclt:"transparent",
@@ -3510,7 +3528,7 @@ export default function CustomizePage() {
                       <div style={sb}>Logo size</div>
                       <span style={{fontSize:11,color:V.tx,fontWeight:600,fontFamily:"'Jost',sans-serif"}}>{logoSize}%</span>
                     </div>
-                    <input type="range" min={10} max={100} step={5} value={logoSize}
+                    <input type="range" min={5} max={PLACEMENT_MAX_PCT[logoPosition]??20} step={1} value={Math.min(logoSize,PLACEMENT_MAX_PCT[logoPosition]??20)}
                       onChange={e=>{const v=+e.target.value;setLogoSize(v);if(logoObjRef.current){const pos=LOGO_POSITIONS[logoPosition]||{left:512,top:512};logoObjRef.current.scaleToWidth(logoMaxW(logoPosition,v));logoObjRef.current.set({left:pos.left,top:pos.top,originX:"center",originY:"center",angle:placementAngle(logoPosition)});logoObjRef.current.setCoords();fcRef.current?.renderAll();syncTexture();}}}
                       style={{width:"100%",height:4,background:V.bd2,borderRadius:2,outline:"none",WebkitAppearance:"none",appearance:"none",accentColor:V.ac}}/>
                   </div>
