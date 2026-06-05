@@ -541,8 +541,10 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Personalise This T-Shirt — hidden for women until women's 3D studio is ready */}
-            {SHOW_CUSTOMIZATION && (product?.gender || "").toLowerCase() !== "women" && (
+            {/* Personalise — enabled for Men's T-Shirts/Polos only; disabled for women and all bottoms until their 3D studio is ready */}
+            {SHOW_CUSTOMIZATION &&
+             (product?.gender || "").toLowerCase() !== "women" &&
+             !["trouser","pant","skort","skirt","short"].some(k=>(product?.category||"").toLowerCase().includes(k)) && (
               <button
                 onClick={() => setPersonalizeOpen(true)}
                 style={{
