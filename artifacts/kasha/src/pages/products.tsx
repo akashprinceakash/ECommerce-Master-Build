@@ -706,7 +706,7 @@ function ProductCard({ product, imgSrc, cardIndex = 0 }: ProductCardProps) {
         return colorLabel ? (
           <p className="flex items-center gap-1.5 mb-1" style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 9, letterSpacing: "0.18em", color: "rgba(0,0,0,0.42)", textTransform: "uppercase" }}>
             {swatchHex && (
-              <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: swatchHex, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />
+              <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: "50%", background: swatchHex, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />
             )}
             {colorLabel}
           </p>

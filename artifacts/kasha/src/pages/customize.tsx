@@ -1963,6 +1963,15 @@ export default function CustomizePage() {
                       </>
                     )}
 
+                    {(isPrintMode||(!isPatternMode&&!isPrintMode))&&(
+                      <div style={{display:"flex",gap:8,padding:"9px 12px",borderRadius:8,background:"rgba(201,168,76,0.06)",border:"1px solid rgba(201,168,76,0.22)"}}>
+                        <span style={{fontSize:14,flexShrink:0,marginTop:1}}>⚠️</span>
+                        <p style={{margin:0,fontFamily:"'Jost',sans-serif",fontSize:10,lineHeight:1.6,color:V.tx,letterSpacing:".02em"}}>
+                          <strong>Tip:</strong> If you've applied a <strong>Print</strong> and want to change the <strong>Base Body</strong> or <strong>Collar Color</strong>, click <strong>↺ Reset</strong> first — then select your color and reapply the print if needed.
+                        </p>
+                      </div>
+                    )}
+
                     {isPrintMode&&(
                       <>
                         <TargetRow title="Full Body" desc="Apply a premium print to the entire garment" showPrint printFor="all"/>

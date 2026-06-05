@@ -792,8 +792,10 @@ export default function Home() {
                 </div>
                 {/* Body */}
                 <div style={{ padding: "13px 16px 16px" }}>
-                  <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.2em", color: GOLD, textTransform: "uppercase", marginBottom: 4 }}>{b.num}</div>
-                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 500, color: "#1a1f2e", marginBottom: 6 }}>{b.title}</div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.2em", color: GOLD, textTransform: "uppercase", flexShrink: 0 }}>{b.num}</span>
+                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 500, color: "#1a1f2e" }}>{b.title}</span>
+                  </div>
                   <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 16, color: "rgba(20,28,60,0.72)", letterSpacing: "0.04em", lineHeight: 1.7, marginBottom: 10 }}>{b.desc}</div>
                   <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 14 }}>
                     {b.tags.map((t) => (
