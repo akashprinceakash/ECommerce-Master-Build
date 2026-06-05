@@ -19,6 +19,7 @@ export const productsTable = pgTable("products", {
   available: boolean("available").notNull().default(true),
   sizes: text("sizes").array().notNull().default(["S", "M", "L", "XL"]),
   defaultColor: text("default_color").notNull().default("#FFFFFF"),
+  colorLabel: text("color_label"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [

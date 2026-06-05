@@ -109,7 +109,7 @@ router.post("/admin/products", requireAuth, async (req, res): Promise<void> => {
   const adminId = await requireAdmin(req, res);
   if (!adminId) return;
 
-  const { name, description, category, gender, productType, subType, sku, stock, priceInPaise, modelUrl, thumbnailUrl, additionalImages, available, sizes, defaultColor } = req.body;
+  const { name, description, category, gender, productType, subType, sku, stock, priceInPaise, modelUrl, thumbnailUrl, additionalImages, available, sizes, defaultColor, colorLabel } = req.body;
   if (!name || !description || !category || !priceInPaise || !modelUrl) {
     res.status(400).json({ error: "Missing required fields" }); return;
   }
@@ -130,6 +130,7 @@ router.post("/admin/products", requireAuth, async (req, res): Promise<void> => {
     available: available ?? true,
     sizes: sizes ?? ["S", "M", "L", "XL"],
     defaultColor: defaultColor ?? "#FFFFFF",
+    colorLabel: colorLabel?.trim() || null,
   }).returning();
   res.status(201).json(product);
 });
@@ -141,7 +142,7 @@ router.put("/admin/products/:id", requireAuth, async (req, res): Promise<void> =
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
 
-  const { name, description, priceInPaise, category, modelUrl, thumbnailUrl, available, gender, productType, subType, sku, stock, additionalImages, sizes, defaultColor } = req.body;
+  const { name, description, priceInPaise, category, modelUrl, thumbnailUrl, available, gender, productType, subType, sku, stock, additionalImages, sizes, defaultColor, colorLabel } = req.body;
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
   if (name !== undefined) updateData.name = name;
   if (description !== undefined) updateData.description = description;
@@ -158,6 +159,7 @@ router.put("/admin/products/:id", requireAuth, async (req, res): Promise<void> =
   if (additionalImages !== undefined) updateData.additionalImages = additionalImages || null;
   if (sizes !== undefined) updateData.sizes = sizes;
   if (defaultColor !== undefined) updateData.defaultColor = defaultColor;
+  if (colorLabel !== undefined) updateData.colorLabel = colorLabel?.trim() || null;
 
   const [product] = await db.update(productsTable).set(updateData).where(eq(productsTable.id, id)).returning();
   if (!product) { res.status(404).json({ error: "Product not found" }); return; }

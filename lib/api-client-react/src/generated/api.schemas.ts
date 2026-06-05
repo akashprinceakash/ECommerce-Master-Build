@@ -34,6 +34,8 @@ export interface Product {
   available: boolean;
   sizes: string[];
   defaultColor: string;
+  /** @nullable */
+  colorLabel?: string | null;
   createdAt: string;
 }
 

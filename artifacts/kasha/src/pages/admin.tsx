@@ -32,6 +32,7 @@ interface Product {
   available: boolean;
   sizes: string[];
   defaultColor: string;
+  colorLabel?: string | null;
 }
 
 interface UserDesign {
@@ -70,6 +71,7 @@ const EMPTY_FORM = {
   available: true,
   sizes: ["S", "M", "L", "XL"],
   defaultColor: "#ffffff",
+  colorLabel: "",
 };
 
 function isLightHex(hex: string): boolean {
@@ -596,6 +598,7 @@ export default function AdminPage() {
       subType: p.subType ?? "",
       sku: p.sku ?? "",
       stock: p.stock ?? 100,
+      colorLabel: p.colorLabel ?? "",
     });
     setEditingId(p.id);
     setShowForm(true);
@@ -880,6 +883,11 @@ export default function AdminPage() {
                       <input type="color" value={form.defaultColor} onChange={e => setForm(f => ({ ...f, defaultColor: e.target.value }))} className="w-10 h-10 cursor-pointer border border-input rounded-none p-0" />
                       <span className="text-sm text-muted-foreground">{form.defaultColor}</span>
                     </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs tracking-widest text-muted-foreground uppercase">Color Label</label>
+                    <Input value={form.colorLabel ?? ""} onChange={e => setForm(f => ({ ...f, colorLabel: e.target.value }))} placeholder="e.g. Navy Floral Print, Sky Blue & Brown" className="rounded-none" />
+                    <p className="text-[10px] text-muted-foreground leading-tight">Customer-facing colour name shown on product cards. Leave blank to auto-derive from product name.</p>
                   </div>
 
                   {/* 3D Model Upload */}

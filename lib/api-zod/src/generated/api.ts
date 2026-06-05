@@ -38,6 +38,7 @@ export const ListProductsResponseItem = zod.object({
   available: zod.boolean(),
   sizes: zod.array(zod.string()),
   defaultColor: zod.string(),
+  colorLabel: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 export const ListProductsResponse = zod.array(ListProductsResponseItem);
@@ -65,6 +66,7 @@ export const GetProductResponse = zod.object({
   available: zod.boolean(),
   sizes: zod.array(zod.string()),
   defaultColor: zod.string(),
+  colorLabel: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -231,6 +233,7 @@ export const GetCartResponse = zod.object({
         available: zod.boolean(),
         sizes: zod.array(zod.string()),
         defaultColor: zod.string(),
+        colorLabel: zod.string().nullish(),
         createdAt: zod.coerce.date(),
       }),
       customization: zod
@@ -305,6 +308,7 @@ export const UpdateCartItemResponse = zod.object({
     available: zod.boolean(),
     sizes: zod.array(zod.string()),
     defaultColor: zod.string(),
+    colorLabel: zod.string().nullish(),
     createdAt: zod.coerce.date(),
   }),
   customization: zod
@@ -385,6 +389,7 @@ export const ListOrdersResponseItem = zod.object({
         available: zod.boolean(),
         sizes: zod.array(zod.string()),
         defaultColor: zod.string(),
+        colorLabel: zod.string().nullish(),
         createdAt: zod.coerce.date(),
       }),
       customization: zod
@@ -479,6 +484,7 @@ export const GetOrderResponse = zod.object({
         available: zod.boolean(),
         sizes: zod.array(zod.string()),
         defaultColor: zod.string(),
+        colorLabel: zod.string().nullish(),
         createdAt: zod.coerce.date(),
       }),
       customization: zod

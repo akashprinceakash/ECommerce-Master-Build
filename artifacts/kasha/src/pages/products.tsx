@@ -10,7 +10,7 @@ import { type Gender, getLastGender as _getLastGender, setLastGender } from "@/l
 import { getAssetUrl } from "@/lib/api";
 import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
 import { useUser, useClerk } from "@clerk/react";
-import { getProductColorLabel } from "@/lib/product-color";
+import { getProductColorLabel, colorLabelToSwatchHex } from "@/lib/product-color";
 
 type ItemType = "tshirts" | "bottoms";
 type StyleFilter = "solids" | "patterns" | "prints" | "trousers" | "shorts" | "skorts";
@@ -691,10 +691,11 @@ function ProductCard({ product, imgSrc, cardIndex = 0 }: ProductCardProps) {
       </h3>
       {(() => {
         const colorLabel = getProductColorLabel(product);
+        const swatchHex = colorLabelToSwatchHex(colorLabel);
         return colorLabel ? (
           <p className="flex items-center gap-1.5 mb-1" style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 9, letterSpacing: "0.18em", color: "rgba(0,0,0,0.42)", textTransform: "uppercase" }}>
-            {product.defaultColor && product.defaultColor.toLowerCase() !== "#ffffff" && product.defaultColor.toLowerCase() !== "#fff" && (
-              <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: product.defaultColor, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />
+            {swatchHex && (
+              <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: swatchHex, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />
             )}
             {colorLabel}
           </p>

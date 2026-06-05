@@ -12,7 +12,7 @@ import { useCart } from "@/contexts/CartContext";
 import { getAssetUrl } from "@/lib/api";
 import { SHOW_CUSTOMIZATION } from "@/lib/features";
 import { PersonalizeModal } from "@/components/layout/PersonalizeModal";
-import { getProductColorLabel } from "@/lib/product-color";
+import { getProductColorLabel, colorLabelToSwatchHex } from "@/lib/product-color";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -349,10 +349,11 @@ export default function ProductDetailPage() {
               <h1 className="text-3xl md:text-4xl font-black text-black mb-2 leading-tight">{product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+.*$/, "")}</h1>
               {(() => {
                 const colorLabel = getProductColorLabel(product);
+                const swatchHex = colorLabelToSwatchHex(colorLabel);
                 return colorLabel ? (
                   <div className="flex items-center gap-2 mb-3">
-                    {product.defaultColor && product.defaultColor.toLowerCase() !== "#ffffff" && product.defaultColor.toLowerCase() !== "#fff" && (
-                      <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: "50%", background: product.defaultColor, border: "1px solid rgba(0,0,0,0.18)", flexShrink: 0 }} />
+                    {swatchHex && (
+                      <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: "50%", background: swatchHex, border: "1px solid rgba(0,0,0,0.18)", flexShrink: 0 }} />
                     )}
                     <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.22em", color: "rgba(0,0,0,0.45)", textTransform: "uppercase" }}>
                       {colorLabel}

@@ -620,6 +620,8 @@ components:
             type: string
         defaultColor:
           type: string
+        colorLabel:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
