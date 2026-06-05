@@ -837,129 +837,65 @@ export default function CustomizePage() {
 
   // ── Primary colour (fabric/solid) ────────────────────────────────────────
   //
-  // Three paths depending on whether an all-over print is active:
+  // When an all-over print is active (allOverPrintId set AND allOverPrintSourceRef
+  // contains the cached raw tile), applyPrimary ALWAYS recomposes: it fills the
+  // canvas background with the new colour and draws the print on top, then calls
+  // syncTexture to upload the result.  This mirrors Pattern T-shirt behaviour
+  // where applyKashaDesign recolours the design without clearing it — the print
+  // stays visible and the background colour changes immediately.
   //
-  // A. Print active + raw tile cached (allOverPrintId && src):
-  //    Recompose immediately — fill background with new colour, draw print on
-  //    top, upload via syncTexture.  Print stays visible, colour updates.
-  //    On any exception: applies tint hint + fires syncTexture, then returns.
-  //    Never falls through to path C — the print state is always preserved.
+  // When no print is active the default solid-colour path runs instead.
   //
-  // B. Print active + raw tile LOST (allOverPrintId set, src === null):
-  //    The in-memory ref was discarded (hot-reload, page restore, etc.).
-  //    Apply the solid colour instantly so the user sees something change,
-  //    then kick off an async reload of the print tile.  Once the tile is
-  //    ready, recompose and syncTexture — the print reappears with the new
-  //    background colour.  allOverPrintId is NOT cleared so the async
-  //    recompose can finish correctly.
-  //
-  // C. No print active (allOverPrintId === null):
-  //    Apply solid colour to the canvas and upload via syncTexture.
-  //
-  // NOTE: opts is kept for backward compat (some call sites still pass
-  // {recompose:true}) but has no effect — routing is driven by the presence
-  // of an active print, not by the caller.
+  // NOTE: opts is kept for backward compat but no longer affects routing;
+  // the recompose decision is driven entirely by the presence of an active print.
   const applyPrimary = (hex: string, opts?: {recompose?: boolean}) => {
-    void opts;
+    void opts; // recompose is now automatic — see comment above
     setPrimaryColor(hex);
     const fc=fcRef.current;
     baseBgRef.current=hex;
+
+    // ── recompose path: keep print, change its background colour ──────────────
+    // Activates automatically whenever an all-over print is active, so every
+    // colour swatch, colour picker, and colour modal correctly preserves the
+    // print while updating the background — same as how Pattern T-shirts keep
+    // the bespoke design through applyKashaDesign colour changes.
     const src=allOverPrintSourceRef.current;
-    console.log("[applyPrimary]", { hex, allOverPrintId, hasSrc: !!src, hasCanvas: !!fc, mats: mats.length });
-
-    // ── Helper: instant tint hint on the model materials ──────────────────
-    const applyTintHint = (colour: string) => {
-      const mv=mvRef.current as any;
-      if (!mats.length||!mv) return;
-      const r=parseInt(colour.slice(1,3)||"ff",16)/255;
-      const g=parseInt(colour.slice(3,5)||"ff",16)/255;
-      const b=parseInt(colour.slice(5,7)||"ff",16)/255;
-      const lin=(c:number)=>Math.pow(Math.max(0,Math.min(1,c)),2.2);
-      for (const entry of mats) {
-        try { entry.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([lin(r),lin(g),lin(b),1]); } catch {}
-      }
-      try { mv.requestUpdate?.(); } catch {}
-    };
-
-    // ── Helper: build composed tile (colour + print) and apply to canvas ──
-    const doRecompose = (tile: HTMLCanvasElement, colour: string, canvas: fabric.Canvas) => {
+    if (allOverPrintId && src && fc) {
+      // Build a new composed tile: solid colour fill + print image on top.
+      // Reuses the cached raw print canvas — no network round-trip needed.
       const composed=document.createElement("canvas");
       composed.width=ALL_OVER_TILE_PX; composed.height=ALL_OVER_TILE_PX;
       const cCtx=composed.getContext("2d");
       if (cCtx) {
-        cCtx.fillStyle=colour;
+        cCtx.fillStyle=hex;
         cCtx.fillRect(0,0,ALL_OVER_TILE_PX,ALL_OVER_TILE_PX);
-        cCtx.drawImage(tile,0,0);
+        cCtx.drawImage(src,0,0);
       }
-      (canvas as any).backgroundColor=new fabric.Pattern({source:composed,repeat:"repeat"});
-      canvas.renderAll();
-    };
-
-    // ── Helper: fire syncTexture immediately + 200 ms belt-and-suspenders ─
-    const fireSyncTexture = () => {
+      (fc as any).backgroundColor=new fabric.Pattern({source:composed,repeat:"repeat"});
+      fc.renderAll();
+      // Step A: instant tint hint
+      const mv=mvRef.current as any;
+      if (mats.length && mv) {
+        const r=parseInt(hex.slice(1,3)||"ff",16)/255;
+        const g=parseInt(hex.slice(3,5)||"ff",16)/255;
+        const b=parseInt(hex.slice(5,7)||"ff",16)/255;
+        const lin=(c:number)=>Math.pow(Math.max(0,Math.min(1,c)),2.2);
+        for (const entry of mats) {
+          try { entry.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([lin(r),lin(g),lin(b),1]); } catch {}
+        }
+        try { mv.requestUpdate?.(); } catch {}
+      }
+      // Upload the recomposed texture (same reliable path as clearAllOverPrint/Reset)
       syncTexture();
       if (applyPrimaryTimeoutRef.current) clearTimeout(applyPrimaryTimeoutRef.current);
       applyPrimaryTimeoutRef.current=setTimeout(()=>{
         applyPrimaryTimeoutRef.current=null;
         if (fcRef.current) syncTextureRef.current?.();
       },200);
-    };
-
-    // ── Path A: print active + tile cached ────────────────────────────────
-    if (allOverPrintId && src && fc) {
-      try {
-        doRecompose(src, hex, fc);
-        applyTintHint(hex);
-        fireSyncTexture();
-      } catch (e) {
-        console.warn("[applyPrimary] Path A recompose failed:", e);
-        // Canvas update failed — at least apply tint hint so user sees feedback
-        applyTintHint(hex);
-        fireSyncTexture();
-      }
-      return; // always return from Path A — never fall through to Path C
+      return;
     }
 
-    // ── Path B: print active + tile lost ─────────────────────────────────
-    if (allOverPrintId && !src && fc) {
-      // Apply solid colour immediately so the user sees the change right away.
-      setFabricBg(fc, hex);
-      applyTintHint(hex);
-      syncTexture();
-      // Now reload the raw print tile in the background and recompose.
-      const capturedPrintId = allOverPrintId;
-      const patDef = PATTERNS.find((p: PatternDef) => p.id === capturedPrintId);
-      if (patDef) {
-        (async () => {
-          try {
-            const img = await loadHTMLImage(patternUrl(patDef.file));
-            const off = document.createElement("canvas");
-            off.width=ALL_OVER_TILE_PX; off.height=ALL_OVER_TILE_PX;
-            const rawCtx = off.getContext("2d");
-            if (rawCtx) {
-              rawCtx.imageSmoothingEnabled=true;
-              rawCtx.imageSmoothingQuality="high";
-              rawCtx.drawImage(img,0,0,ALL_OVER_TILE_PX,ALL_OVER_TILE_PX);
-            }
-            allOverPrintSourceRef.current = off;
-            // Recompose with the freshly loaded tile and the latest colour
-            const latestFc = fcRef.current;
-            const latestHex = baseBgRef.current;
-            if (latestFc && latestHex) {
-              doRecompose(off, latestHex, latestFc);
-              syncTextureRef.current?.();
-              setTimeout(()=>{ if (fcRef.current) syncTextureRef.current?.(); }, 200);
-            }
-          } catch (reloadErr) {
-            console.warn("[applyPrimary] print tile reload failed", reloadErr);
-            // solid colour already applied above — user still sees the colour change
-          }
-        })();
-      }
-      return; // do NOT fall through — allOverPrintId must stay set for the async recompose
-    }
-
-    // ── Path C: no print active (or recompose threw) ─────────────────────
+    // ── default path: solid colour (clears any active print) ─────────────────
     if (allOverPrintId) setAllOverPrintId(null);
     setFabricBg(fc,hex);
 

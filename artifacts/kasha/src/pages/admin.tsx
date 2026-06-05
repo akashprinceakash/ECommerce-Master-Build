@@ -1400,10 +1400,9 @@ export default function AdminPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-3 mb-2">
                           <span className="font-semibold text-sm">{enq.name}</span>
-                          <a href={`https://mail.google.com/mail/u/0/?to=${encodeURIComponent(enq.email)}&su=${encodeURIComponent("Re: " + enq.inquiryType + " Enquiry")}&fs=1&tf=cm`}
-                            target="_blank" rel="noreferrer"
+                          <a href={`mailto:${enq.email}?subject=Re: ${encodeURIComponent(enq.inquiryType + " Enquiry")}`}
                             className="text-primary text-xs underline underline-offset-2 hover:opacity-80 truncate"
-                            title="Reply in Gmail"
+                            title="Click to reply"
                           >{enq.email}</a>
                           <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{enq.inquiryType}</span>
                           {enq.stylePreference && (
@@ -1417,8 +1416,7 @@ export default function AdminPage() {
                         <p className="text-xs text-muted-foreground mt-2 opacity-60">{new Date(enq.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</p>
                       </div>
                       <div className="flex flex-col gap-2 shrink-0">
-                        <a href={`https://mail.google.com/mail/u/0/?to=${encodeURIComponent(enq.email)}&su=${encodeURIComponent("Re: " + enq.inquiryType + " Enquiry — KA.SHA")}&fs=1&tf=cm`}
-                          target="_blank" rel="noreferrer"
+                        <a href={`mailto:${enq.email}?subject=Re: ${encodeURIComponent(enq.inquiryType + " Enquiry — KA.SHA")}`}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-primary text-primary rounded-none hover:bg-primary hover:text-primary-foreground transition-colors"
                         >
                           <Mail className="w-3 h-3" /> Reply
