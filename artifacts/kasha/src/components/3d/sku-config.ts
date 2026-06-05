@@ -122,6 +122,70 @@ export const DEFAULT_PATTERN_COLORS: PatternColors = {
   label: "Blue + Black",
 };
 
+// ── Descriptive colour name → hex (for new SKU format) ───────────────────────
+// Keys are UPPERCASE to match the uppercased SKU used inside parseSku().
+// Convention: first SKU part = primary/base colour → colorB (light channel)
+//             second SKU part = accent/dark colour  → colorA (dark channel)
+export const DESCRIPTIVE_COLOR_HEX: Record<string, string> = {
+  BLACK:        "#1a1a1a",
+  WHITE:        "#f5f5f5",
+  GREY:         "#808080",
+  GRAY:         "#808080",
+  CHARCOAL:     "#36454f",
+  SILVER:       "#b4b4b4",
+  IVORY:        "#f0ead6",
+  CREAM:        "#f0e8d2",
+  BEIGE:        "#dcc8af",
+  SAND:         "#c2b280",
+  STONE:        "#b2a99a",
+  CAMEL:        "#c19a6b",
+  TAN:          "#d2b48c",
+  KHAKI:        "#4a3a1a",
+  GOLD:         "#c9a84c",
+  YELLOW:       "#f5dc32",
+  AMBER:        "#ffbf00",
+  ARTICHOKE:    "#8f9779",
+  OLIVE:        "#6b6b14",
+  OLIVEGREEN:   "#3a6b1a",
+  SAGE:         "#8fa67a",
+  EUCALYPTUS:   "#5c8d72",
+  FERN:         "#4f7942",
+  MINT:         "#98e4c0",
+  FORESTGREEN:  "#226b3e",
+  GREEN:        "#1f7a45",
+  NAVY:         "#1a2c5e",
+  ROYALBLUE:    "#1a1a6b",
+  SKYBLUE:      "#87ceeb",
+  POWDERBLUE:   "#b0c4de",
+  COBALT:       "#1a1a8e",
+  BLUE:         "#1e5ecd",
+  TEAL:         "#1a6b6b",
+  SLATE:        "#708090",
+  RED:          "#c0392b",
+  CRIMSON:      "#6b1a1a",
+  MAROON:       "#7b241c",
+  BURGUNDY:     "#6b1a3a",
+  RUST:         "#b7410e",
+  CORAL:        "#e87a48",
+  PINK:         "#FF69B4",
+  ROSE:         "#e88a9a",
+  BLUSH:        "#f0c0b0",
+  DUSTYROSE:    "#dcae96",
+  RASPBERRY:    "#6b1a4a",
+  PURPLE:       "#5a1a6b",
+  LAVENDER:     "#dcb4f0",
+  INDIGO:       "#4b0082",
+  PLUM:         "#4a1a6b",
+  MAUVE:        "#6b4a4a",
+  BROWN:        "#654321",
+  CHOCOLATE:    "#6b3a1a",
+  COGNAC:       "#6b4a1a",
+  ESPRESSO:     "#3a1a1a",
+  ORANGE:       "#ff8c00",
+  CLAY:         "#c4603b",
+  TERRACOTTA:   "#c4603b",
+};
+
 // ── Print SKU → PatternDef.id mapping ────────────────────────────────────────
 // Each SKU maps directly to the PatternDef.id of the same name, which in turn
 // references the physical file public/patterns/KS1000BGP001.jpeg etc.
@@ -254,23 +318,59 @@ export function parseSku(sku: string): SkuResult {
     return { type: "solid", sku: upper, colorCode: code, hex };
   }
 
-  // ── Pattern: KS1001B-XX … KS1005B-XX  (also accept without suffix → use default colors)
-  const patternMatch = upper.match(/^KS(100[1-5])B(?:-([A-Z]{2,3}))?$/);
+  // ── Pattern: KS1001B-XX … KS1005B  ──────────────────────────────────────────
+  // Handles both legacy abbreviated suffixes (GB, BB, RB …) and new descriptive
+  // colour names (artichoke-brown, navy-black, red-white …).
+  const patternMatch = upper.match(/^KS(100[1-5])B(?:-(.+))?$/);
   if (patternMatch) {
-    const patNum = parseInt(patternMatch[1], 10);
-    const suffix = patternMatch[2] ?? "BB";
-    const colors = PATTERN_SUFFIX_COLORS[suffix] ?? DEFAULT_PATTERN_COLORS;
+    const patNum  = parseInt(patternMatch[1], 10);
+    const rawSuffix = (patternMatch[2] ?? "").trim();
+    const designId  = `KS${patternMatch[1]}B`;
+
+    // ── Legacy abbreviated suffix (in PATTERN_SUFFIX_COLORS) or no suffix ───
+    if (!rawSuffix || PATTERN_SUFFIX_COLORS[rawSuffix]) {
+      const colors = PATTERN_SUFFIX_COLORS[rawSuffix] ?? DEFAULT_PATTERN_COLORS;
+      return {
+        type: "pattern",
+        sku: upper,
+        designId,
+        patternNumber: patNum,
+        suffix: rawSuffix || "BB",
+        colorA: colors.colorA,
+        colorB: colors.colorB,
+        colorLabel: colors.label,
+      };
+    }
+
+    // ── Descriptive colour-name suffix: e.g. ARTICHOKE-BROWN, NAVY-BLACK ────
+    // Parts are separated by hyphens inside the suffix portion.
+    // Convention (mirrors PATTERN_SUFFIX_COLORS):
+    //   part[0] = primary / base colour  → colorB (light channel)
+    //   part[1] = accent / dark colour   → colorA (dark channel)
+    const colorParts = rawSuffix.split("-").filter(Boolean);
+    const c1 = colorParts[0] ?? "";
+    const c2 = colorParts[1] ?? "";
+
+    const colorB = DESCRIPTIVE_COLOR_HEX[c1] ?? DEFAULT_PATTERN_COLORS.colorB;
+    const colorA = c2
+      ? (DESCRIPTIVE_COLOR_HEX[c2] ?? DEFAULT_PATTERN_COLORS.colorA)
+      : DEFAULT_PATTERN_COLORS.colorA;
+
+    const toTitle = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
+    const colorLabel = colorParts.map(toTitle).join(" + ");
+
     return {
       type: "pattern",
       sku: upper,
-      designId: `KS${patternMatch[1]}B`,
+      designId,
       patternNumber: patNum,
-      suffix,
-      colorA: colors.colorA,
-      colorB: colors.colorB,
-      colorLabel: colors.label,
+      suffix: rawSuffix,
+      colorA,
+      colorB,
+      colorLabel,
     };
   }
 
   return { type: "unknown", sku: upper };
 }
+
