@@ -820,6 +820,10 @@ export default function CustomizePage() {
     setPrimaryColor(hex);
     const fc=fcRef.current;
     baseBgRef.current=hex;
+    // Increment the request-ID so any in-flight applyAllOverPrint (still waiting
+    // for its async image download) sees the mismatch and aborts instead of
+    // overwriting this colour choice when the download eventually completes.
+    kdRequestIdRef.current++;
     // If a full-body print is active, clear it so the colour shows
     if (allOverPrintId) setAllOverPrintId(null);
     setFabricBg(fc,hex);
@@ -931,9 +935,14 @@ export default function CustomizePage() {
   const applyAllOverPrint = useCallback(async (p: PatternDef) => {
     const fc=fcRef.current; if(!fc) return;
     kdRequestIdRef.current++;
+    const myKdId = kdRequestIdRef.current; // capture before async gap
     const hasDesign = !!activeKashaDesign;
     try {
       const img=await loadHTMLImage(patternUrl(p.file));
+      // Guard: if the user picked a colour or reset while the image was
+      // downloading, kdRequestIdRef will have been incremented by applyPrimary
+      // or applyZoneColor — bail out so we don't overwrite the user's choice.
+      if (myKdId !== kdRequestIdRef.current) return;
       const off=document.createElement("canvas");off.width=ALL_OVER_TILE_PX;off.height=ALL_OVER_TILE_PX;
       const ctx=off.getContext("2d"); if(ctx){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";ctx.drawImage(img,0,0,ALL_OVER_TILE_PX,ALL_OVER_TILE_PX);}
       // When a KA.SHA design is active, the print becomes the BASE texture — the design stays on top.
