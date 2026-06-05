@@ -409,7 +409,7 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            <p className="text-[11px] text-gray-400 tracking-wide">All prices inclusive of GST &nbsp;·&nbsp; Free shipping on all orders</p>
+            <p className="text-[11px] text-gray-400 tracking-wide">All prices inclusive of GST</p>
             <p className="text-gray-600 leading-relaxed text-sm">{product.description}</p>
 
             {/* Size Selector */}
