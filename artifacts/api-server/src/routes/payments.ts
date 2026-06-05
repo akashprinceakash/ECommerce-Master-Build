@@ -34,6 +34,7 @@ router.get("/payment/config", (_req, res): void => {
 /* ──────────────────────────────────────────────────────
    Shipping rates — called before checkout to show cost
 ────────────────────────────────────────────────────── */
+
 router.post("/shipping/rates", requireAuth, async (req, res): Promise<void> => {
   const { pincode, itemCount = 1, orderValueRupees = 0 } = req.body ?? {};
   if (!pincode || !/^\d{6}$/.test(String(pincode))) {
