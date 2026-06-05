@@ -12,7 +12,7 @@ if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
 }
 
-router.post("/api/contact", async (req, res) => {
+router.post("/contact", async (req, res) => {
   const { name, email, inquiryType, stylePreference, message } = req.body as {
     name?: string;
     email?: string;
