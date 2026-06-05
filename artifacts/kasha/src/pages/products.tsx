@@ -198,7 +198,7 @@ export default function ProductsPage() {
     if (gender) setLastGender(gender);
   }, [gender]);
 
-  const { data: rawProducts, isLoading, error } = useListProducts(
+  const { data: rawProducts, isLoading, error, refetch } = useListProducts(
     {},
     { query: { queryKey: getListProductsQueryKey({}) } }
   );
@@ -448,7 +448,14 @@ export default function ProductsPage() {
               </div>
             ) : error ? (
               <div className="py-20 text-center text-neutral-900/45">
-                <p>Failed to load products. Please try again later.</p>
+                <p className="mb-4">Failed to load products. Please try again.</p>
+                <button
+                  onClick={() => refetch()}
+                  className="text-[10px] uppercase px-6 py-3 border border-neutral-300 hover:border-neutral-900 transition-colors"
+                  style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.28em" }}
+                >
+                  Try Again
+                </button>
               </div>
             ) : isBottomsEmpty ? (
               <div

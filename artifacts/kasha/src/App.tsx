@@ -27,7 +27,14 @@ import SizeGuidePage from "@/pages/legal/size-guide";
 import ConnectPage from "@/pages/connect";
 import LookbookPage from "@/pages/lookbook";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 5000),
+    },
+  },
+});
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
