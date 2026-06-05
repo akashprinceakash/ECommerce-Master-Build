@@ -299,6 +299,11 @@ export default function CustomizePage() {
   const [mats, setMats] = useState<MatEntry[]>([]);
   const syncTextureRef = useRef<(()=>void)|null>(null);
   const lastTextureUrlRef = useRef("");
+  // Sequence counter — incremented on every syncTexture call so older in-flight
+  // calls can detect they've been superseded and bail out before writing to the
+  // model-viewer. This prevents the print-then-colour race where the slower
+  // print sync finishes after the colour sync and stamps the old texture back.
+  const syncSeqRef = useRef(0);
   const applyPrimaryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Fabric canvas ────────────────────────────────────────────────────────
@@ -543,36 +548,53 @@ export default function CustomizePage() {
   // ── Texture sync ─────────────────────────────────────────────────────────
   const syncTexture = useCallback(async () => {
     const mv: any=mvRef.current; const fc: any=fcRef.current;
-    if (!mv||!fc||!mats.length) return;
+    if (!mv||!fc||!mats.length) { console.warn("[ST] early-exit mv=",!!mv,"fc=",!!fc,"mats=",mats.length); return; }
+    const mySeq = ++syncSeqRef.current;
+    console.log("[ST] start seq=",mySeq,"bg=",fc.backgroundColor);
     try {
       if (typeof fc.discardActiveObject === "function") fc.discardActiveObject();
-      // Two renderAll+raf passes guarantee Fabric has fully composited the
-      // background before we read pixels — no sequence abort needed here
-      // because concurrent calls are harmless: the last writer wins and all
-      // are reading the same canvas state.
-      fc.renderAll(); await raf();
-      fc.renderAll(); await raf();
+      fc.renderAll(); await raf(); if (mySeq!==syncSeqRef.current) { console.log("[ST] abort1 seq=",mySeq); return; }
+      fc.renderAll(); await raf(); if (mySeq!==syncSeqRef.current) { console.log("[ST] abort2 seq=",mySeq); return; }
       const rawEl: HTMLCanvasElement|undefined = typeof fc.getElement==="function" ? fc.getElement() : undefined;
       const dataUrl = rawEl ? rawEl.toDataURL("image/png",1.0) : fc.toDataURL({format:"png",quality:1.0,multiplier:1});
-      if (!dataUrl||dataUrl.length<100) return;
+      console.log("[ST] dataUrl len=",dataUrl?.length,"seq=",mySeq);
+      if (!dataUrl||dataUrl.length<100) { console.warn("[ST] dataUrl too short"); return; }
+      if (mySeq!==syncSeqRef.current) { console.log("[ST] abort3 seq=",mySeq); return; }
       lastTextureUrlRef.current = dataUrl;
       const tex = await mv.createTexture(dataUrl);
+      if (mySeq!==syncSeqRef.current) { console.log("[ST] abort4 seq=",mySeq); return; }
+      console.log("[ST] applying texture seq=",mySeq,"mats=",mats.length);
       for (const entry of mats) {
-        const pbr=entry?.mat?.pbrMetallicRoughness; if(!pbr) continue;
+        const pbr=entry?.mat?.pbrMetallicRoughness; if(!pbr) { console.warn("[ST] no pbr for mat"); continue; }
         const slot=pbr.baseColorTexture;
+        console.log("[ST] slot=",slot,"setTexture=",typeof slot?.setTexture);
         try {
           if (slot && typeof slot.setTexture === "function") {
-            // null→tex forces model-viewer to set material.needsUpdate=true
-            // even when transitioning between two non-null textures.
+            // Clear the slot first (null → tex) so model-viewer always sets
+            // material.needsUpdate = true even when transitioning between two
+            // non-null textures (e.g. print → solid colour).  Without the null
+            // step, model-viewer's internal previousThreeTexture check may skip
+            // the needsUpdate flag and the GPU texture is never re-uploaded.
             try { slot.setTexture(null); } catch {}
             slot.setTexture(tex);
+            console.log("[ST] setTexture OK for mat",entry.idx);
+          } else {
+            console.warn("[ST] slot missing setTexture for mat",entry.idx,"slot=",slot);
           }
           try{pbr.setBaseColorFactor([1,1,1,1]);}catch{}
         } catch (e2) {
+          console.error("[ST] setTexture threw for mat",entry.idx,":",e2);
           try { if(slot&&typeof (slot as any).texture!=="undefined"){(slot as any).texture=tex;try{pbr.setBaseColorFactor([1,1,1,1]);}catch{};} }catch{}
         }
       }
+      // NOTE: No break — every material gets the canvas texture so that all
+      // visible parts of the garment (body, collar, sleeves — each a separate
+      // glTF material) are updated in one pass.
+      // Nudge model-viewer to re-render after material mutations (LitElement lifecycle).
       try { (mv as any).requestUpdate?.(); } catch {}
+      // updateFraming() forces a full Three.js scene re-render via the Lit
+      // update cycle — acts as a belt-and-suspenders render trigger when
+      // requestUpdate() alone isn't enough to flush the new texture.
       try { (mv as any).updateFraming?.(); } catch {}
     } catch (e) { console.error("[customize] syncTexture failed:",e); }
   }, [mats]);
@@ -871,20 +893,22 @@ export default function CustomizePage() {
       canvas.renderAll();
     };
 
+    // ── Helper: fire syncTexture immediately + 200 ms belt-and-suspenders ─
+    const fireSyncTexture = () => {
+      syncTexture();
+      if (applyPrimaryTimeoutRef.current) clearTimeout(applyPrimaryTimeoutRef.current);
+      applyPrimaryTimeoutRef.current=setTimeout(()=>{
+        applyPrimaryTimeoutRef.current=null;
+        if (fcRef.current) syncTextureRef.current?.();
+      },200);
+    };
+
     // ── Path A: print active + tile cached ────────────────────────────────
     if (allOverPrintId && src && fc) {
       try {
         doRecompose(src, hex, fc);
         applyTintHint(hex);
-        // Delay syncTexture by 50 ms so React re-renders triggered by
-        // setPrimaryColor / closing the colour modal can't race the upload.
-        // baseBgRef.current check ensures we skip a stale sync if the user
-        // clicked another swatch before the timeout fires.
-        if (applyPrimaryTimeoutRef.current) clearTimeout(applyPrimaryTimeoutRef.current);
-        applyPrimaryTimeoutRef.current = setTimeout(() => {
-          applyPrimaryTimeoutRef.current = null;
-          if (baseBgRef.current === hex) syncTextureRef.current?.();
-        }, 50);
+        fireSyncTexture();
         return; // done — print preserved, colour updated
       } catch (e) {
         console.warn("[applyPrimary] recompose failed, falling back to solid", e);
