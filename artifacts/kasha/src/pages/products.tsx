@@ -519,6 +519,8 @@ function getProductAltText(product: {
   gender?: string | null;
   subType?: string | null;
   defaultColor?: string | null;
+  sku?: string | null;
+  colorLabel?: string | null;
 }): string {
   const cat = (product.category || "").toLowerCase();
   const gender = (product.gender || "").toLowerCase();
@@ -560,6 +562,8 @@ interface ProductCardProps {
     gender?: string | null;
     subType?: string | null;
     defaultColor?: string | null;
+    sku?: string | null;
+    colorLabel?: string | null;
   };
   imgSrc?: string;
   /** Position in the grid — used to decide eager vs lazy loading */
