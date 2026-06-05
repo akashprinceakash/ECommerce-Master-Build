@@ -6,3 +6,4 @@ export * from "./orders";
 export * from "./settings";
 export * from "./sku-assets";
 export * from "./lookbook";
+export * from "./contact";
