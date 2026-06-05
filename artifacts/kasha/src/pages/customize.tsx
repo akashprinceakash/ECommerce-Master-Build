@@ -385,6 +385,7 @@ export default function CustomizePage() {
   const [colorSubMode, setColorSubMode] = useState<"full"|"parts"|null>(null);
 
   const [showOtherDesigns, setShowOtherDesigns] = useState(false);
+  const [printGalleryLimit, setPrintGalleryLimit] = useState(12);
   // User-selected style from Step 1 (overrides SKU-derived type).
   // Seeded from ?style= URL param when arriving via CustomizeEntryModal.
   const [userStyle, setUserStyle] = useState<"solid"|"print"|"pattern"|null>(_entryStyle);
@@ -1594,7 +1595,7 @@ export default function CustomizePage() {
         {/* Center: studio name — hidden on very small screens to avoid overlap */}
         <div style={{display:"flex",alignItems:"center",gap:6}} className="studio-title-center">
           <span style={{
-            fontFamily:"'Jost',sans-serif",fontSize:10,letterSpacing:".14em",
+            fontFamily:"'Jost',sans-serif",fontSize:15,letterSpacing:".14em",
             textTransform:"uppercase",color:V.mu,fontWeight:500,
           }}>
             {isTypeMode
@@ -2004,11 +2005,13 @@ export default function CustomizePage() {
               // Click any thumbnail → immediately apply all-over
               const PrintGallery = ()=>{
                 const gp=visiblePatterns.filter(p=>p.label.startsWith("GP"));
+                const gpVisible=gp.slice(0,printGalleryLimit);
+                const hasMore=printGalleryLimit<gp.length;
                 return(
                   <div style={{display:"flex",flexDirection:"column",gap:12}}>
                     <div style={{...sb}}>Choose your print</div>
                     <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                      {gp.map(p=>{
+                      {gpVisible.map(p=>{
                         const active=allOverPrintId===p.id;
                         return(
                           <div key={p.id} onClick={()=>{applyAllOverPrint(p);saveHistory();}} style={{
@@ -2026,6 +2029,13 @@ export default function CustomizePage() {
                         );
                       })}
                     </div>
+                    {hasMore&&(
+                      <button onClick={()=>setPrintGalleryLimit(l=>l+12)} style={{
+                        padding:"8px 0",borderRadius:99,border:`1px solid ${V.bd}`,
+                        background:"transparent",color:V.mu,fontSize:10,fontWeight:500,
+                        cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",
+                      }}>Load more ({gp.length-printGalleryLimit} remaining)</button>
+                    )}
                     {allOverPrintId&&(
                       <button onClick={()=>{clearAllOverPrint();clearAllZonePrints();saveHistory();}} style={{
                         padding:"7px 0",borderRadius:99,border:`1px solid rgba(196,92,92,.35)`,
@@ -3003,7 +3013,7 @@ export default function CustomizePage() {
                   )}
                   <div style={{fontSize:9,color:V.mu,fontFamily:"'Jost',sans-serif",letterSpacing:".04em",marginBottom:4,fontStyle:"italic"}}>Single-click to preview · Double-click to apply</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5}}>
-                    {visiblePatterns.map(p=>{
+                    {visiblePatterns.slice(0,printGalleryLimit).map(p=>{
                       const sel=activePrintId===p.id;
                       const allApplied=allOverPrintId===p.id;
                       const inZone=Object.values(zonePrintIds).includes(p.id);
@@ -3012,19 +3022,27 @@ export default function CustomizePage() {
                           style={{
                             position:"relative",padding:0,aspectRatio:"1/1",
                             borderRadius:8,overflow:"hidden",cursor:"pointer",
-                            background:`url(${patternUrl(p.file)}) center/cover`,
                             border:sel?`2px solid ${V.ac}`:`1.5px solid transparent`,
                             outline:sel?`2px solid rgba(201,168,76,0.25)`:undefined,
                             outlineOffset:sel?"1px":undefined,
                             transition:"all 0.2s",
                             boxShadow:sel?`0 0 0 1px ${V.ac},0 2px 8px rgba(201,168,76,0.2)`:"none",
                           }}>
+                          <img src={patternUrl(p.file)} alt={p.label} loading="lazy" decoding="async"
+                            style={{width:"100%",height:"100%",objectFit:"cover",display:"block",pointerEvents:"none"}}/>
                           {allApplied&&<span style={{position:"absolute",top:2,right:2,fontSize:6,fontWeight:800,background:V.ac,color:V.tx,padding:"1px 4px",borderRadius:3}}>ALL</span>}
                           {!allApplied&&inZone&&<span style={{position:"absolute",top:2,right:2,fontSize:6,fontWeight:800,background:V.ac,color:V.tx,padding:"1px 4px",borderRadius:3}}>ZONE</span>}
                         </button>
                       );
                     })}
                   </div>
+                  {printGalleryLimit<visiblePatterns.length&&(
+                    <button onClick={()=>setPrintGalleryLimit(l=>l+12)} style={{
+                      padding:"7px 0",borderRadius:8,border:`1px solid ${V.bd}`,
+                      background:"transparent",color:V.mu,fontSize:10,fontWeight:500,
+                      cursor:"pointer",fontFamily:"'Jost',sans-serif",letterSpacing:".04em",
+                    }}>Load more ({visiblePatterns.length-printGalleryLimit} remaining)</button>
+                  )}
                   {activePrintId&&(()=>{
                     const p=PATTERNS.find(x=>x.id===activePrintId); if(!p) return null;
                     return(
@@ -4083,10 +4101,8 @@ export default function CustomizePage() {
                     transition:"all .2s",
                     boxShadow:isActive?`0 4px 16px rgba(201,168,76,0.3)`:"none",
                   }}>
-                    <div style={{
-                      width:"100%",aspectRatio:"1",
-                      background:`url(${patternUrl(p.file)}) center/cover`,
-                    }}/>
+                    <img src={patternUrl(p.file)} alt={p.label} loading="lazy" decoding="async"
+                      style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}/>
                     <div style={{
                       padding:"5px 6px",background:isActive?V.aclt:V.sf2,
                       fontFamily:"'Jost',sans-serif",fontSize:9,
