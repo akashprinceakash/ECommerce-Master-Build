@@ -48,9 +48,11 @@ export async function getShippingRates(
       pickup_postcode: PICKUP_PINCODE,
       delivery_postcode: deliveryPincode,
       weight: String(Math.max(0.1, weightKg)),
+      length: "35",
+      breadth: "30",
+      height: "5",
       cod: "0",
       declared_value: String(Math.ceil(orderValueRupees)),
-      order_id: `RATE-${Date.now()}`,
     });
 
     const res = await fetch(`${BASE}/courier/serviceability/?${params.toString()}`, {
