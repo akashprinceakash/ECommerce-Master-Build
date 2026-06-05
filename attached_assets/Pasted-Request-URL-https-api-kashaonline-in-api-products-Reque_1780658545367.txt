@@ -1,0 +1,81 @@
+Request URL
+https://api.kashaonline.in/api/products
+Request Method
+GET
+Status Code
+500 Internal Server Error
+Remote Address
+216.24.57.7:443
+Referrer Policy
+strict-origin-when-cross-origin
+access-control-allow-credentials
+true
+access-control-allow-origin
+https://kashaonline.in
+alt-svc
+h3=":443"; ma=86400
+cf-cache-status
+DYNAMIC
+cf-ray
+a06ecb8d4e6ab294-MAA
+content-encoding
+br
+content-length
+37
+content-type
+application/json; charset=utf-8
+date
+Fri, 05 Jun 2026 11:21:41 GMT
+etag
+W/"23-o/cRpgPrUfUfg2+TZm80psJa9Pg"
+priority
+u=1,i
+rndr-id
+2e293452-d129-4d96
+server
+cloudflare
+server-timing
+cfExtPri
+vary
+Origin
+vary
+Accept-Encoding
+x-powered-by
+Express
+x-render-origin-server
+Render
+:authority
+api.kashaonline.in
+:method
+GET
+:path
+/api/products
+:scheme
+https
+accept
+*/*
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-GB,en-US;q=0.9,en;q=0.8,kn;q=0.7,hi;q=0.6
+authorization
+Bearer eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18zRHZXeXVxbmZpZ3RlaUtmMkhzcXZRNzA4ZTQiLCJtIjoibyIsIm9pYXQiOjE3ODA2NTg0NDEsInR5cCI6IkpXVCJ9.eyJhenAiOiJodHRwczovL2thc2hhb25saW5lLmluIiwiZXhwIjoxNzgwNjU4NTE4LCJmdmEiOlsxMiwtMV0sImlhdCI6MTc4MDY1ODQ1OCwiaXNzIjoiaHR0cHM6Ly9jbGVyay5rYXNoYW9ubGluZS5pbiIsIm5iZiI6MTc4MDY1ODQ0OCwic2lkIjoic2Vzc18zRWlPMjQwRmYyUXhDb2ZwQXRvUGdyVkk5NjIiLCJzdHMiOiJhY3RpdmUiLCJzdWIiOiJ1c2VyXzNEdmxHbzBtTEJwS1pZR0lEVmpqWHBMY0YyRSIsInYiOjJ9.qC0UWt3GnOTfbE56sqoiPIKOROJX1FWopiNmGjsLsisTNkLXDMgbj25AwEc1Xa7L7-V7kyvYWq4dOcwQn2mJeJy5s_hL46tT-OykQefWb4cNnKg6uaQnQ4xmzCrcuWVsKhkwS7xMcWDALONr7zalQS3Flc981JBXY39XOMO1jO0Zk3SyI6OZCc049Jja8ROMn-SFLVR7T5LNGt_8PZw2BD8Rrs1Aceqdspmelyq68ypKCe7VqEAAfAsaynad0_9uV8QB6UuoKKNbSChYGJ9s547BF_k1SxpGZ2F0-YM2bwxSxu47lOnD5poNZYcFwI4_55Prqb7PyTtlfiyxXvNJZA
+origin
+https://kashaonline.in
+priority
+u=1, i
+referer
+https://kashaonline.in/
+sec-ch-ua
+"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"
+sec-ch-ua-mobile
+?1
+sec-ch-ua-platform
+"Android"
+sec-fetch-dest
+empty
+sec-fetch-mode
+cors
+sec-fetch-site
+same-site
+user-agent
