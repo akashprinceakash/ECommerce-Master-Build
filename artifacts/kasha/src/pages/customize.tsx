@@ -1952,7 +1952,7 @@ export default function CustomizePage() {
                         <TargetRow title="Pattern Design" desc="Recolour accent panels, trims, collar and sleeves" showColour colourFor="base" showPrint printFor="accent"/>
                         {activeKashaDesign&&(
                           <div style={{padding:"10px 14px",borderRadius:10,background:V.sf2,border:`1px solid ${V.bd}`,display:"flex",gap:10,alignItems:"center"}}>
-                            {activeKashaDesign.thumbnail&&<img src={activeKashaDesign.thumbnail} alt="" style={{width:36,height:36,objectFit:"cover",borderRadius:6,border:`1px solid ${V.bd}`,flexShrink:0}}/>}
+                            {(product?.thumbnailUrl||activeKashaDesign.thumbnail)&&<img src={product?.thumbnailUrl||activeKashaDesign.thumbnail||undefined} alt="" style={{width:36,height:36,objectFit:"cover",objectPosition:"top",borderRadius:6,border:`1px solid ${V.bd}`,flexShrink:0}}/>}
                             <div style={{flex:1}}>
                               <div style={{fontSize:9,color:V.mu,letterSpacing:".08em",textTransform:"uppercase" as const,fontFamily:"'Jost',sans-serif"}}>Active design</div>
                               <div style={{fontSize:11,fontFamily:"'Jost',sans-serif",fontWeight:600,color:V.tx,marginTop:2}}>{activeKashaDesign.label}</div>
