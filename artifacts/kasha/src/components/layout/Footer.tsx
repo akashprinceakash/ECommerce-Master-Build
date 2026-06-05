@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { CustomizeEntryModal } from "./CustomizeEntryModal";
+import { SHOW_LOOKBOOK } from "@/lib/features";
 
 const GOLD = "#B8925A";
 const MUTED = "rgba(0,0,0,0.68)";
@@ -192,9 +193,11 @@ export function Footer() {
               <li>
                 <FooterLink href="/heritage">About Ka.Sha</FooterLink>
               </li>
-              <li>
-                <FooterLink href="/lookbook">Lookbook</FooterLink>
-              </li>
+              {SHOW_LOOKBOOK && (
+                <li>
+                  <FooterLink href="/lookbook">Lookbook</FooterLink>
+                </li>
+              )}
               <li>
                 <FooterLink href="/size-guide">Size Guide</FooterLink>
               </li>
