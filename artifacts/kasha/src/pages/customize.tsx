@@ -390,6 +390,9 @@ export default function CustomizePage() {
   const [activePrintId, setActivePrintId] = useState<string|null>(null);
   const [allOverPrintId, setAllOverPrintId] = useState<string|null>(null);
   const baseBgRef = useRef("#ffffff");
+  // Raw (uncoloured) print tile stored so applyPrimary can recompose it with a
+  // new background colour without re-fetching the image from the network.
+  const allOverPrintSourceRef = useRef<HTMLCanvasElement|null>(null);
   const [zonePrintIds, setZonePrintIds] = useState<Record<Exclude<PatternZone,"all">,string|null>>({
     front:null, back:null, collar:null, leftSleeve:null, rightSleeve:null,
   });
@@ -816,11 +819,61 @@ export default function CustomizePage() {
   }, [logoPreview, logoPosition, logoSize, syncTexture, toast]);
 
   // ── Primary colour (fabric/solid) ────────────────────────────────────────
-  const applyPrimary = (hex: string) => {
+  //
+  // opts.recompose = true  →  "Base Body → Colour" with an active print:
+  //   keep the print visible but bake the new colour as its background fill.
+  //   This is the "updateMaterial(color, print)" approach — colour fills the
+  //   canvas background, print image is drawn on top, then syncTexture uploads
+  //   the composited result.  allOverPrintId is NOT cleared so the print gallery
+  //   selection stays highlighted and the print source is preserved for further
+  //   colour tweaks without re-fetching the image.
+  //
+  // default (opts unset)  →  solid colour replaces the print entirely.
+  //   Called by every "Full Body → Colour" path (legacy swatches, flat-UI colour
+  //   modal with colorModalFor="all", KA.SHA design base, history restore etc.).
+  const applyPrimary = (hex: string, opts?: {recompose?: boolean}) => {
     setPrimaryColor(hex);
     const fc=fcRef.current;
     baseBgRef.current=hex;
-    // If a full-body print is active, clear it so the colour shows
+
+    // ── recompose path: keep print, change its background colour ──────────────
+    const src=allOverPrintSourceRef.current;
+    if (opts?.recompose && allOverPrintId && src && fc) {
+      // Build a new composed tile: solid colour fill + print image on top.
+      // Reuses the cached raw print canvas — no network round-trip needed.
+      const composed=document.createElement("canvas");
+      composed.width=ALL_OVER_TILE_PX; composed.height=ALL_OVER_TILE_PX;
+      const cCtx=composed.getContext("2d");
+      if (cCtx) {
+        cCtx.fillStyle=hex;
+        cCtx.fillRect(0,0,ALL_OVER_TILE_PX,ALL_OVER_TILE_PX);
+        cCtx.drawImage(src,0,0);
+      }
+      (fc as any).backgroundColor=new fabric.Pattern({source:composed,repeat:"repeat"});
+      fc.renderAll();
+      // Step A: instant tint hint
+      const mv=mvRef.current as any;
+      if (mats.length && mv) {
+        const r=parseInt(hex.slice(1,3)||"ff",16)/255;
+        const g=parseInt(hex.slice(3,5)||"ff",16)/255;
+        const b=parseInt(hex.slice(5,7)||"ff",16)/255;
+        const lin=(c:number)=>Math.pow(Math.max(0,Math.min(1,c)),2.2);
+        for (const entry of mats) {
+          try { entry.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([lin(r),lin(g),lin(b),1]); } catch {}
+        }
+        try { mv.requestUpdate?.(); } catch {}
+      }
+      // Upload the recomposed texture (same reliable path as clearAllOverPrint/Reset)
+      syncTexture();
+      if (applyPrimaryTimeoutRef.current) clearTimeout(applyPrimaryTimeoutRef.current);
+      applyPrimaryTimeoutRef.current=setTimeout(()=>{
+        applyPrimaryTimeoutRef.current=null;
+        if (fcRef.current) syncTextureRef.current?.();
+      },200);
+      return;
+    }
+
+    // ── default path: solid colour (clears any active print) ─────────────────
     if (allOverPrintId) setAllOverPrintId(null);
     setFabricBg(fc,hex);
 
@@ -840,23 +893,16 @@ export default function CustomizePage() {
       const r=parseInt(hex.slice(1,3)||"ff",16)/255;
       const g=parseInt(hex.slice(3,5)||"ff",16)/255;
       const b=parseInt(hex.slice(5,7)||"ff",16)/255;
-      // sRGB → approximate linear (gamma 2.2) — used as an immediate visual hint
       const lin=(c:number)=>Math.pow(Math.max(0,Math.min(1,c)),2.2);
       const lR=lin(r),lG=lin(g),lB=lin(b);
 
       // ── Step A: instant visual hint via baseColorFactor ────────────────────
-      // Tints the 3D model to the chosen colour on the very next frame, before
-      // the async texture upload completes.  Keeps the UX responsive.
       for (const entry of capturedMats) {
         try { entry.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([lR,lG,lB,1]); } catch {}
       }
       try { mv.requestUpdate?.(); } catch {}
 
       // ── Step B: fast 4×4 solid-colour texture (clean case only) ────────────
-      // Only used when there is no active print and no canvas overlay objects, so
-      // there is nothing to bake — the tiny canvas is guaranteed to match the full
-      // canvas output.  When needsFullBake is true we rely exclusively on Step C
-      // (syncTexture) so that print textures and overlays are handled correctly.
       if (!needsFullBake) {
         (async () => {
           try {
@@ -866,7 +912,6 @@ export default function CustomizePage() {
             ctx.fillStyle=hex; ctx.fillRect(0,0,4,4);
             const url=sc.toDataURL("image/png");
             const tex=await mv.createTexture(url);
-            // Guard: user switched colour while we awaited
             if (baseBgRef.current!==hex) return;
             for (const entry of capturedMats) {
               try {
@@ -882,19 +927,13 @@ export default function CustomizePage() {
             try { mv.requestUpdate?.(); } catch {}
             try { mv.updateFraming?.(); } catch {}
           } catch(e) {
-            console.warn("[applyPrimary] solid texture failed, factor-only fallback:",e);
+            console.warn("[applyPrimary] solid texture failed:",e);
           }
         })();
       }
     }
 
     // ── Step C: full canvas bake via syncTexture ──────────────────────────────
-    // Runs when a print or overlay exists.  syncTexture renders the Fabric canvas
-    // (now with solid-colour background after setFabricBg above) and uploads the
-    // result via createTexture + null-trick setTexture — the exact same path that
-    // Reset / clearAllOverPrint uses, which is confirmed to always work.
-    // A 200 ms belt-and-suspenders retry fires in case the first call is aborted
-    // by a concurrent debounced sync.
     if (needsFullBake) {
       syncTexture();
       if (applyPrimaryTimeoutRef.current) clearTimeout(applyPrimaryTimeoutRef.current);
@@ -934,12 +973,27 @@ export default function CustomizePage() {
     const hasDesign = !!activeKashaDesign;
     try {
       const img=await loadHTMLImage(patternUrl(p.file));
+      // Raw tile — draw only the print image, no background fill yet.
+      // Stored in allOverPrintSourceRef so applyPrimary can recompose it
+      // cheaply (no re-fetch) whenever the base colour changes.
       const off=document.createElement("canvas");off.width=ALL_OVER_TILE_PX;off.height=ALL_OVER_TILE_PX;
-      const ctx=off.getContext("2d"); if(ctx){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";ctx.drawImage(img,0,0,ALL_OVER_TILE_PX,ALL_OVER_TILE_PX);}
-      // When a KA.SHA design is active, the print becomes the BASE texture — the design stays on top.
-      // Only clear the design when there is no active pattern (standalone all-over print).
+      const rawCtx=off.getContext("2d");
+      if(rawCtx){rawCtx.imageSmoothingEnabled=true;rawCtx.imageSmoothingQuality="high";rawCtx.drawImage(img,0,0,ALL_OVER_TILE_PX,ALL_OVER_TILE_PX);}
+      allOverPrintSourceRef.current=off;
+
+      // Composed tile: base colour fill FIRST, print drawn ON TOP.
+      // This implements the "updateMaterial(color, print)" contract so that
+      // the current garment colour is always baked into the pattern texture
+      // and visible through any transparent areas of the print.
+      const composed=document.createElement("canvas");composed.width=ALL_OVER_TILE_PX;composed.height=ALL_OVER_TILE_PX;
+      const cCtx=composed.getContext("2d");
+      if(cCtx){
+        cCtx.fillStyle=baseBgRef.current||"#1a1a1a";
+        cCtx.fillRect(0,0,ALL_OVER_TILE_PX,ALL_OVER_TILE_PX);
+        cCtx.drawImage(off,0,0);
+      }
       if (!hasDesign) { /* no design active — print takes full canvas */ }
-      const pattern=new fabric.Pattern({source:off,repeat:"repeat"});
+      const pattern=new fabric.Pattern({source:composed,repeat:"repeat"});
       (fc as any).backgroundColor=pattern;
       fc.renderAll();
       setAllOverPrintId(p.id); setActivePrintId(p.id);
@@ -955,6 +1009,7 @@ export default function CustomizePage() {
 
   const clearAllOverPrint = useCallback(()=>{
     const fc=fcRef.current; if(!fc) return;
+    allOverPrintSourceRef.current=null; // discard cached print tile
     setFabricBg(fc,baseBgRef.current||"#1a1a1a");
     fc.renderAll(); setAllOverPrintId(null); syncTexture();
   }, [syncTexture]);
@@ -3883,12 +3938,14 @@ export default function CustomizePage() {
               const pickedVal = colorModalFor==="pattern" ? patColorB : colorModalFor==="base" ? patColorA : primaryColor;
               const displayCol = pendingColorPick ?? pickedVal;
               const applyCol = (col: string) => {
-                if(colorModalFor==="all"||colorModalFor==="base-body"){
-                  // "Full Body" or "Base Body" colour: clear any active print and set
-                  // the solid colour as the canvas background so the 3D model updates
-                  // immediately.  applyPrimary handles the print→colour transition
-                  // (null-trick + syncTexture) identically to how Reset does it.
+                if(colorModalFor==="all"){
+                  // "Full Body → Colour": solid colour replaces the print entirely.
                   applyPrimary(col);
+                } else if(colorModalFor==="base-body"){
+                  // "Base Body → Colour": recompose the print tile with the new colour
+                  // as background so both the colour and print are visible together.
+                  // Falls back to solid colour if no print is active.
+                  applyPrimary(col,{recompose:true});
                 } else if(colorModalFor==="base"){
                   setPatColorA(col);
                   applyPatternColors(col, patColorB);
@@ -3929,7 +3986,7 @@ export default function CustomizePage() {
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   <div style={{width:36,height:36,borderRadius:8,background:displayCol,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
                   <input type="color" value={displayCol}
-                    onChange={e=>{if(colorModalFor==='all'||colorModalFor==='base-body'){applyPrimary(e.target.value);}else if(colorModalFor==='base'){setPatColorA(e.target.value);applyPatternColors(e.target.value,patColorB);}else if(colorModalFor==='collar'){applyZoneColor('collar',e.target.value);}else{setPatColorB(e.target.value);applyPatternColors(patColorA,e.target.value);}setPendingColorPick(null);}}
+                    onChange={e=>{if(colorModalFor==='all'){applyPrimary(e.target.value);}else if(colorModalFor==='base-body'){applyPrimary(e.target.value,{recompose:true});}else if(colorModalFor==='base'){setPatColorA(e.target.value);applyPatternColors(e.target.value,patColorB);}else if(colorModalFor==='collar'){applyZoneColor('collar',e.target.value);}else{setPatColorB(e.target.value);applyPatternColors(patColorA,e.target.value);}setPendingColorPick(null);}}
                     style={{width:44,height:36,padding:2,border:`1.5px solid ${V.bd}`,borderRadius:8,cursor:"pointer",background:V.sf2}}/>
                   <input type="text" defaultValue={displayCol}
                     onBlur={e=>{
