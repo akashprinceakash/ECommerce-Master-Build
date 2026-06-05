@@ -837,25 +837,30 @@ export default function CustomizePage() {
 
   // ── Primary colour (fabric/solid) ────────────────────────────────────────
   //
-  // opts.recompose = true  →  "Base Body → Colour" with an active print:
-  //   keep the print visible but bake the new colour as its background fill.
-  //   This is the "updateMaterial(color, print)" approach — colour fills the
-  //   canvas background, print image is drawn on top, then syncTexture uploads
-  //   the composited result.  allOverPrintId is NOT cleared so the print gallery
-  //   selection stays highlighted and the print source is preserved for further
-  //   colour tweaks without re-fetching the image.
+  // When an all-over print is active (allOverPrintId set AND allOverPrintSourceRef
+  // contains the cached raw tile), applyPrimary ALWAYS recomposes: it fills the
+  // canvas background with the new colour and draws the print on top, then calls
+  // syncTexture to upload the result.  This mirrors Pattern T-shirt behaviour
+  // where applyKashaDesign recolours the design without clearing it — the print
+  // stays visible and the background colour changes immediately.
   //
-  // default (opts unset)  →  solid colour replaces the print entirely.
-  //   Called by every "Full Body → Colour" path (legacy swatches, flat-UI colour
-  //   modal with colorModalFor="all", KA.SHA design base, history restore etc.).
+  // When no print is active the default solid-colour path runs instead.
+  //
+  // NOTE: opts is kept for backward compat but no longer affects routing;
+  // the recompose decision is driven entirely by the presence of an active print.
   const applyPrimary = (hex: string, opts?: {recompose?: boolean}) => {
+    void opts; // recompose is now automatic — see comment above
     setPrimaryColor(hex);
     const fc=fcRef.current;
     baseBgRef.current=hex;
 
     // ── recompose path: keep print, change its background colour ──────────────
+    // Activates automatically whenever an all-over print is active, so every
+    // colour swatch, colour picker, and colour modal correctly preserves the
+    // print while updating the background — same as how Pattern T-shirts keep
+    // the bespoke design through applyKashaDesign colour changes.
     const src=allOverPrintSourceRef.current;
-    if (opts?.recompose && allOverPrintId && src && fc) {
+    if (allOverPrintId && src && fc) {
       // Build a new composed tile: solid colour fill + print image on top.
       // Reuses the cached raw print canvas — no network round-trip needed.
       const composed=document.createElement("canvas");
@@ -3975,13 +3980,13 @@ export default function CustomizePage() {
               const displayCol = pendingColorPick ?? pickedVal;
               const applyCol = (col: string) => {
                 if(colorModalFor==="all"){
-                  // "Full Body → Colour": solid colour replaces the print entirely.
+                  // "Full Body → Colour": applyPrimary auto-recomposes if a print is
+                  // active (keeps print, changes background), otherwise applies solid.
                   applyPrimary(col);
                 } else if(colorModalFor==="base-body"){
-                  // "Base Body → Colour": recompose the print tile with the new colour
-                  // as background so both the colour and print are visible together.
-                  // Falls back to solid colour if no print is active.
-                  applyPrimary(col,{recompose:true});
+                  // "Base Body → Colour": same auto-recompose behaviour; opts kept
+                  // for backward compat but no longer needed.
+                  applyPrimary(col);
                 } else if(colorModalFor==="base"){
                   setPatColorA(col);
                   applyPatternColors(col, patColorB);
