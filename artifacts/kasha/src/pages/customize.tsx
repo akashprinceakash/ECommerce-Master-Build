@@ -842,7 +842,8 @@ export default function CustomizePage() {
   // A. Print active + raw tile cached (allOverPrintId && src):
   //    Recompose immediately — fill background with new colour, draw print on
   //    top, upload via syncTexture.  Print stays visible, colour updates.
-  //    On any exception falls through to path C as a safety net.
+  //    On any exception: applies tint hint + fires syncTexture, then returns.
+  //    Never falls through to path C — the print state is always preserved.
   //
   // B. Print active + raw tile LOST (allOverPrintId set, src === null):
   //    The in-memory ref was discarded (hot-reload, page restore, etc.).
@@ -864,6 +865,7 @@ export default function CustomizePage() {
     const fc=fcRef.current;
     baseBgRef.current=hex;
     const src=allOverPrintSourceRef.current;
+    console.log("[applyPrimary]", { hex, allOverPrintId, hasSrc: !!src, hasCanvas: !!fc, mats: mats.length });
 
     // ── Helper: instant tint hint on the model materials ──────────────────
     const applyTintHint = (colour: string) => {
@@ -909,11 +911,13 @@ export default function CustomizePage() {
         doRecompose(src, hex, fc);
         applyTintHint(hex);
         fireSyncTexture();
-        return; // done — print preserved, colour updated
       } catch (e) {
-        console.warn("[applyPrimary] recompose failed, falling back to solid", e);
-        // fall through to path C
+        console.warn("[applyPrimary] Path A recompose failed:", e);
+        // Canvas update failed — at least apply tint hint so user sees feedback
+        applyTintHint(hex);
+        fireSyncTexture();
       }
+      return; // always return from Path A — never fall through to Path C
     }
 
     // ── Path B: print active + tile lost ─────────────────────────────────
