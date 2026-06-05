@@ -1,0 +1,88 @@
+Request URL
+https://www.kashaonline.in/api/contact
+Request Method
+POST
+Status Code
+500 Internal Server Error
+Remote Address
+64.29.17.1:443
+Referrer Policy
+strict-origin-when-cross-origin
+access-control-allow-credentials
+true
+access-control-allow-origin
+https://www.kashaonline.in
+cache-control
+public, max-age=0, must-revalidate
+cf-cache-status
+DYNAMIC
+cf-ray
+a06d3e29aed9ff6e-BOM
+content-encoding
+br
+content-length
+102
+content-security-policy
+default-src 'none'
+content-type
+text/html; charset=utf-8
+date
+Fri, 05 Jun 2026 06:50:24 GMT
+rndr-id
+ca68f71d-b5de-4b1a
+server
+Vercel
+strict-transport-security
+max-age=63072000
+vary
+Origin
+vary
+Accept-Encoding
+x-content-type-options
+nosniff
+x-powered-by
+Express
+x-render-origin-server
+Render
+x-vercel-cache
+MISS
+x-vercel-id
+bom1::j4pwd-1780642223571-86e236c2b9a1
+:authority
+www.kashaonline.in
+:method
+POST
+:path
+/api/contact
+:scheme
+https
+accept
+*/*
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-GB,en-US;q=0.9,en;q=0.8,kn;q=0.7,hi;q=0.6
+content-length
+142
+content-type
+application/json
+cookie
+_tccl_visitor=89448cc9-3172-4b04-b103-b23341b5d9cd; __clerk_db_jwt_O1G8t5X3=dvb_3DtXsKy6to2bGXtHAt1dyy7Mkyl; __client_uat_O1G8t5X3=0; __client_uat=1780450657; __client_uat_t3bNUF0P=1780450657; clerk_active_context=sess_3EbcM2bQfzx20jAYcBu9PAgAlsy:; rzp_unified_session_id=SxqokpOHhWddFy; __session=eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18zRHZXeXVxbmZpZ3RlaUtmMkhzcXZRNzA4ZTQiLCJtIjoibyIsIm9pYXQiOjE3ODA2NDIxNzMsInR5cCI6IkpXVCJ9.eyJhenAiOiJodHRwczovL3d3dy5rYXNoYW9ubGluZS5pbiIsImV4cCI6MTc4MDY0MjI3OCwiZnZhIjpbMzE5MSwtMV0sImlhdCI6MTc4MDY0MjIxOCwiaXNzIjoiaHR0cHM6Ly9jbGVyay5rYXNoYW9ubGluZS5pbiIsIm5iZiI6MTc4MDY0MjIwOCwic2lkIjoic2Vzc18zRWJjTTJiUWZ6eDIwakFZY0J1OVBBZ0Fsc3kiLCJzdHMiOiJhY3RpdmUiLCJzdWIiOiJ1c2VyXzNEdmxHbzBtTEJwS1pZR0lEVmpqWHBMY0YyRSIsInYiOjJ9.QjNXsRCFKvyXU2mzqk1_L7QNpGAiyqV2WVNlSTeh8wz8oMItdT2A7YekMnz96x2O3kWwcpBft_QFu5utSYhxPseTiyiVQ1PSescxkWD0D0bA0yJSBFBgvAM2SO4zOzLc7dEcnB5Cd7L4bjj3CUmajnOegDGZAJzC1cTrgbH--mg2J2yiutfenPjada7igcnrV7AOnzPZDvP1UTdrZO3vBlvEZ-3FwzQ5ILE0MRXAIIYjby3h6lUqsVjpFrF_dbKDF22FwGHi9F1qCyWG8-RJvTNJeR2EmWYe-mpRopor7cAPyg2lyxfU-rq2u4JEExno00QkNGWvbM5Fh-wiE75CQQ; __session_t3bNUF0P=eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18zRHZXeXVxbmZpZ3RlaUtmMkhzcXZRNzA4ZTQiLCJtIjoibyIsIm9pYXQiOjE3ODA2NDIxNzMsInR5cCI6IkpXVCJ9.eyJhenAiOiJodHRwczovL3d3dy5rYXNoYW9ubGluZS5pbiIsImV4cCI6MTc4MDY0MjI3OCwiZnZhIjpbMzE5MSwtMV0sImlhdCI6MTc4MDY0MjIxOCwiaXNzIjoiaHR0cHM6Ly9jbGVyay5rYXNoYW9ubGluZS5pbiIsIm5iZiI6MTc4MDY0MjIwOCwic2lkIjoic2Vzc18zRWJjTTJiUWZ6eDIwakFZY0J1OVBBZ0Fsc3kiLCJzdHMiOiJhY3RpdmUiLCJzdWIiOiJ1c2VyXzNEdmxHbzBtTEJwS1pZR0lEVmpqWHBMY0YyRSIsInYiOjJ9.QjNXsRCFKvyXU2mzqk1_L7QNpGAiyqV2WVNlSTeh8wz8oMItdT2A7YekMnz96x2O3kWwcpBft_QFu5utSYhxPseTiyiVQ1PSescxkWD0D0bA0yJSBFBgvAM2SO4zOzLc7dEcnB5Cd7L4bjj3CUmajnOegDGZAJzC1cTrgbH--mg2J2yiutfenPjada7igcnrV7AOnzPZDvP1UTdrZO3vBlvEZ-3FwzQ5ILE0MRXAIIYjby3h6lUqsVjpFrF_dbKDF22FwGHi9F1qCyWG8-RJvTNJeR2EmWYe-mpRopor7cAPyg2lyxfU-rq2u4JEExno00QkNGWvbM5Fh-wiE75CQQ
+origin
+https://www.kashaonline.in
+priority
+u=1, i
+referer
+https://www.kashaonline.in/connect
+sec-ch-ua
+"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"
+sec-ch-ua-mobile
+?1
+sec-ch-ua-platform
+"Android"
+sec-fetch-dest
+empty
+sec-fetch-mode
+cors
+sec-fetch-site
+same-origin
