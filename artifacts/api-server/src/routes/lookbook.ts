@@ -46,7 +46,7 @@ router.post("/lookbook-outfits", requireAuth, async (req, res): Promise<void> =>
 
 router.delete("/lookbook-outfits/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid ID" });
     return;

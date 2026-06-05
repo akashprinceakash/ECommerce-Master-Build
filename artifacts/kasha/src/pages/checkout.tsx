@@ -66,36 +66,7 @@ export default function CheckoutPage() {
     query: { queryKey: getGetUserProfileQueryKey() }
   });
 
-  // ── Sync localStorage cart → server when a guest just signed in ───────
-  const hasSyncedRef = useRef(false);
-  useEffect(() => {
-    if (!isSignedIn || isLoadingCart || hasSyncedRef.current) return;
-    if (guestCart.length === 0) return;
-    hasSyncedRef.current = true;
-
-    const doSync = async () => {
-      try {
-        const token = await getToken();
-        const headers: Record<string, string> = { "Content-Type": "application/json" };
-        if (token) headers["Authorization"] = `Bearer ${token}`;
-        await Promise.all(
-          guestCart.map(item =>
-            fetch(`${getApiUrl()}/api/cart/items`, {
-              method: "POST",
-              headers,
-              body: JSON.stringify({ productId: item.productId, quantity: item.quantity, size: item.size }),
-            }).catch(() => null)
-          )
-        );
-        clearGuestCart();
-        queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
-      } catch {
-        hasSyncedRef.current = false;
-      }
-    };
-
-    doSync();
-  }, [isSignedIn, isLoadingCart]);
+  // Guest cart sync is now handled globally by GuestCartSyncer in App.tsx
 
   const [formData, setFormData] = useState({
     shippingName: "",

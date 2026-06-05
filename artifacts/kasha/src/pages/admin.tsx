@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Plus, Pencil, Trash2, Upload, X, Check,
-  ShieldCheck, Package, Users, Eye, ArrowLeft, BarChart3, ShoppingBag, UserCog, Download, ImageIcon,
+  ShieldCheck, Package, Users, Eye, ArrowLeft, BarChart3, ShoppingBag, UserCog, Download, ImageIcon, Mail,
 } from "lucide-react";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { AdminOrders } from "@/components/admin/AdminOrders";
@@ -457,7 +457,7 @@ export default function AdminPage() {
   const modelFileRef = useRef<HTMLInputElement>(null);
   const thumbFileRef = useRef<HTMLInputElement>(null);
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "orders" | "users" | "designs" | "site" | "skuassets">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "orders" | "users" | "designs" | "site" | "skuassets" | "enquiries">("dashboard");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
@@ -516,6 +516,15 @@ export default function AdminPage() {
     queryKey: ["admin-hidden-patterns"],
     queryFn: () => apiFetch("/api/admin/site-settings/hidden-patterns"),
     enabled: isAdmin === true && activeTab === "skuassets",
+  });
+
+  const { data: enquiries = [], isLoading: loadingEnquiries, refetch: refetchEnquiries } = useQuery<{
+    id: number; name: string; email: string; inquiryType: string; stylePreference: string | null;
+    message: string; emailSent: boolean; createdAt: string;
+  }[]>({
+    queryKey: ["admin-enquiries"],
+    queryFn: () => apiFetch("/api/admin/enquiries"),
+    enabled: isAdmin === true && activeTab === "enquiries",
   });
   const hiddenPatterns: string[] = hiddenPatternsData?.hiddenPatterns ?? [];
   const [savingHidden, setSavingHidden] = useState(false);
@@ -775,6 +784,7 @@ export default function AdminPage() {
             { id: "designs", label: "Designs", icon: Users, count: designs.length },
             { id: "site", label: "Site", icon: ImageIcon, count: 0 },
             { id: "skuassets", label: "SKU Assets", icon: Upload, count: skuAssets.length },
+            { id: "enquiries", label: "Enquiries", icon: Mail, count: enquiries.length },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1358,6 +1368,81 @@ export default function AdminPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── ENQUIRIES TAB ── */}
+        {activeTab === "enquiries" && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-semibold">Customer Enquiries</h2>
+                <p className="text-sm text-muted-foreground mt-1">Messages submitted via the Contact Us form. Reply directly by clicking the email address.</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => refetchEnquiries()} className="rounded-none text-xs tracking-widest">
+                Refresh
+              </Button>
+            </div>
+            {loadingEnquiries ? (
+              <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+            ) : enquiries.length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground">
+                <Mail className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">No enquiries yet.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {enquiries.map(enq => (
+                  <div key={enq.id} className="border border-border rounded-sm p-5 bg-card">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-3 mb-2">
+                          <span className="font-semibold text-sm">{enq.name}</span>
+                          <a href={`mailto:${enq.email}?subject=Re: ${encodeURIComponent(enq.inquiryType + " Enquiry")}`}
+                            className="text-primary text-xs underline underline-offset-2 hover:opacity-80 truncate"
+                            title="Click to reply"
+                          >{enq.email}</a>
+                          <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{enq.inquiryType}</span>
+                          {enq.stylePreference && (
+                            <span className="text-xs text-muted-foreground">Style: {enq.stylePreference}</span>
+                          )}
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${enq.emailSent ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"}`}>
+                            {enq.emailSent ? "Email sent" : "Email pending"}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{enq.message}</p>
+                        <p className="text-xs text-muted-foreground mt-2 opacity-60">{new Date(enq.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</p>
+                      </div>
+                      <div className="flex flex-col gap-2 shrink-0">
+                        <a href={`mailto:${enq.email}?subject=Re: ${encodeURIComponent(enq.inquiryType + " Enquiry — KA.SHA")}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-primary text-primary rounded-none hover:bg-primary hover:text-primary-foreground transition-colors"
+                        >
+                          <Mail className="w-3 h-3" /> Reply
+                        </a>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Delete enquiry from ${enq.name}?`)) return;
+                            try {
+                              const { getToken } = (window as any).Clerk?.session ?? {};
+                              const token = typeof getToken === "function" ? await getToken() : null;
+                              const headers: Record<string, string> = {};
+                              if (token) headers["Authorization"] = `Bearer ${token}`;
+                              await fetch(`${getApiUrl()}/api/admin/enquiries/${enq.id}`, { method: "DELETE", headers });
+                              queryClient.setQueryData(["admin-enquiries"], (old: typeof enquiries) =>
+                                old ? old.filter(e => e.id !== enq.id) : old
+                              );
+                            } catch { toast({ title: "Failed to delete", variant: "destructive" }); }
+                          }}
+                          className="px-3 py-1.5 text-xs font-medium text-destructive border border-destructive/30 rounded-none hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

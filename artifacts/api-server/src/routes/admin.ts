@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, desc } from "drizzle-orm";
 import { db, productsTable, customizationsTable } from "@workspace/db";
+import { contactEnquiriesTable } from "@workspace/db/schema";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import { clerkClient } from "@clerk/express";
 import multer from "multer";
@@ -334,6 +335,23 @@ router.get("/admin/check", requireAuth, async (req, res): Promise<void> => {
   const adminId = await requireAdmin(req, res);
   if (!adminId) return;
   res.json({ isAdmin: true });
+});
+
+// ── Contact Enquiries ─────────────────────────────────────────────────────────
+router.get("/admin/enquiries", requireAuth, async (req, res): Promise<void> => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  const rows = await db.select().from(contactEnquiriesTable).orderBy(desc(contactEnquiriesTable.createdAt));
+  res.json(rows);
+});
+
+router.delete("/admin/enquiries/:id", requireAuth, async (req, res): Promise<void> => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  const id = Number(req.params["id"]);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  await db.delete(contactEnquiriesTable).where(eq(contactEnquiriesTable.id, id));
+  res.json({ ok: true });
 });
 
 export default router;
