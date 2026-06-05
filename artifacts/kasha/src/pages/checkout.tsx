@@ -261,6 +261,13 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentResult, setPaymentResult] = useState<PaymentResult>(null);
 
+  // Force online payment if any item is a bespoke/customised order
+  useEffect(() => {
+    if (cart?.items.some(i => i.customization != null)) {
+      setPaymentMethod("online");
+    }
+  }, [cart]);
+
   useEffect(() => {
     if (paymentResult?.type !== "success") return;
     const t = setTimeout(() => setLocation(`/orders/${paymentResult.orderId}`), 3500);
@@ -410,6 +417,9 @@ export default function CheckoutPage() {
   const totalGst = cart.items.reduce((s, item) => s + calcGst(item.product.priceInPaise, item.quantity), 0);
   const subtotalExclGst = cart.totalInPaise - totalGst;
   const grandTotal = cart.totalInPaise + (shippingRate?.chargeInPaise ?? 0);
+
+  // ── Bespoke / customised items cannot be COD ─────────────────────────
+  const hasBespokeItems = cart.items.some(i => i.customization != null);
 
   return (
     <Layout>
@@ -586,28 +596,40 @@ export default function CheckoutPage() {
               <div className="pt-8">
                 <h2 className="font-serif text-xl font-medium mb-6 border-b border-border/50 pb-2">Payment Method</h2>
 
+                {/* COD not available for customised/bespoke items */}
+                {hasBespokeItems && (
+                  <div className="p-3 border border-amber-200 bg-amber-50 mb-4 flex items-start gap-2">
+                    <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <p className="text-xs text-amber-700">Your order contains a <strong>customised / bespoke item</strong>. Cash on Delivery is not available for bespoke orders — prepaid only.</p>
+                  </div>
+                )}
+
                 {/* Payment method selector */}
                 <div className="grid grid-cols-2 gap-3 mb-6">
                   {(["online", "cod"] as const).map((method) => {
+                    const isCodDisabled = method === "cod" && hasBespokeItems;
                     const active = paymentMethod === method;
                     return (
                       <button
                         key={method}
                         type="button"
-                        onClick={() => setPaymentMethod(method)}
+                        disabled={isCodDisabled}
+                        onClick={() => !isCodDisabled && setPaymentMethod(method)}
                         className="flex flex-col items-start gap-1.5 p-4 border text-left transition-all"
                         style={{
-                          borderColor: active ? "hsl(var(--primary))" : "hsl(var(--border) / 0.5)",
-                          background: active ? "hsl(var(--primary) / 0.04)" : "hsl(var(--secondary) / 0.05)",
-                          outline: active ? "1px solid hsl(var(--primary))" : "none",
+                          borderColor: isCodDisabled ? "hsl(var(--border) / 0.25)" : active ? "hsl(var(--primary))" : "hsl(var(--border) / 0.5)",
+                          background: isCodDisabled ? "hsl(var(--secondary) / 0.03)" : active ? "hsl(var(--primary) / 0.04)" : "hsl(var(--secondary) / 0.05)",
+                          outline: active && !isCodDisabled ? "1px solid hsl(var(--primary))" : "none",
+                          opacity: isCodDisabled ? 0.45 : 1,
+                          cursor: isCodDisabled ? "not-allowed" : "pointer",
                         }}
                       >
                         <div className="flex items-center gap-2 w-full">
                           <span
                             className="w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                            style={{ borderColor: active ? "hsl(var(--primary))" : "#aaa" }}
+                            style={{ borderColor: active && !isCodDisabled ? "hsl(var(--primary))" : "#aaa" }}
                           >
-                            {active && (
+                            {active && !isCodDisabled && (
                               <span
                                 className="w-1.5 h-1.5 rounded-full"
                                 style={{ background: "hsl(var(--primary))" }}
@@ -624,7 +646,7 @@ export default function CheckoutPage() {
                         <p className="text-xs text-muted-foreground pl-5">
                           {method === "online"
                             ? "UPI, card, netbanking via Razorpay"
-                            : "Pay when your order arrives"}
+                            : isCodDisabled ? "Not available for bespoke orders" : "Pay when your order arrives"}
                         </p>
                       </button>
                     );

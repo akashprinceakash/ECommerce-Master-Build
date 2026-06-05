@@ -409,7 +409,7 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* <p className="text-[11px] text-gray-400 tracking-wide">Inclusive of all taxes &nbsp;·&nbsp; Free shipping on all orders</p> */}
+            <p className="text-[11px] text-gray-400 tracking-wide">All prices inclusive of GST &nbsp;·&nbsp; Free shipping on all orders</p>
             <p className="text-gray-600 leading-relaxed text-sm">{product.description}</p>
 
             {/* Size Selector */}
@@ -470,16 +470,21 @@ export default function ProductDetailPage() {
                 ];
                 return (
                   <div className="mt-4 space-y-3">
-                    <p className="text-[11px] font-bold tracking-[0.12em] text-black">
-                      CUSTOM MEASUREMENTS <span className="font-normal text-gray-400">(optional, in inches)</span>
-                    </p>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <p className="text-[11px] font-bold tracking-[0.12em] text-black">
+                        CUSTOM MEASUREMENTS <span className="font-normal text-gray-400">(optional, in inches)</span>
+                      </p>
+                      <Link href="/size-guide" className="text-[10px] text-primary underline underline-offset-2 hover:opacity-70 tracking-wider">
+                        View Size Guide →
+                      </Link>
+                    </div>
                     <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                       <p className="text-[10px] font-bold text-amber-800 tracking-wide leading-relaxed uppercase">
                         All measurements below are body measurements, not garment measurements. Please specify if your inputs are garment measurements.
                       </p>
                     </div>
                     <p className="text-[10px] text-gray-400 leading-relaxed">
-                      Leave blank to use standard sizing. Fill in for a tailored fit.
+                      Leave blank to use standard sizing. Fill in for a tailored fit. Refer to the <Link href="/size-guide" className="underline hover:text-primary transition-colors">size guide</Link> for how to measure yourself.
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       {fields.map(({key, label}) => {

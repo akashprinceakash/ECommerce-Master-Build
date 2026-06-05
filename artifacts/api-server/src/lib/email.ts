@@ -28,6 +28,7 @@ export interface OrderConfirmationData {
   shippingCity: string;
   shippingState: string;
   shippingPostalCode: string;
+  invoicePdf?: Buffer;
   shippingPhone: string;
   awb?: string | null;
   trackingUrl?: string | null;
@@ -161,6 +162,15 @@ export async function sendOrderConfirmation(data: OrderConfirmationData): Promis
   const html = buildHtml(data);
   const text = `KA.SHA — Order #${data.orderNumber} Confirmed\n\nThank you ${data.customerName}!\n\nYour order has been confirmed. Total: ${formatPrice(data.totalInPaise)}\n\nView your orders at https://kashaonline.in/orders`;
 
+  const attachments = data.invoicePdf
+    ? [{
+        content: data.invoicePdf.toString("base64"),
+        filename: `KASHA-Invoice-${String(data.orderNumber).padStart(6, "0")}.pdf`,
+        type: "application/pdf",
+        disposition: "attachment" as const,
+      }]
+    : [];
+
   try {
     await sgMail.send({
       to: data.customerEmail,
@@ -169,8 +179,9 @@ export async function sendOrderConfirmation(data: OrderConfirmationData): Promis
       subject: `KA.SHA — Order #${data.orderNumber} Confirmed`,
       text,
       html,
+      attachments,
     });
-    logger.info({ to: data.customerEmail, orderNumber: data.orderNumber }, "Order confirmation email sent");
+    logger.info({ to: data.customerEmail, orderNumber: data.orderNumber, hasInvoice: !!data.invoicePdf }, "Order confirmation email sent");
   } catch (err: unknown) {
     logger.error({ err, to: data.customerEmail }, "Failed to send order confirmation email");
   }

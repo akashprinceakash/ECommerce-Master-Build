@@ -236,7 +236,10 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
           <div className="border-t border-gray-200 px-5 py-5 space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-[12px] font-bold tracking-[0.08em] text-gray-700">ESTIMATED TOTAL</span>
-              <span className="text-[16px] font-bold text-black">{formatPrice(totalInPaise)}</span>
+              <div className="text-right">
+                <span className="text-[16px] font-bold text-black">{formatPrice(totalInPaise)}</span>
+                <p className="text-[10px] text-gray-400 tracking-wide">incl. GST</p>
+              </div>
             </div>
 
             {isGuest ? (

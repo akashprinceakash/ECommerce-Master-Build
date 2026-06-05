@@ -701,7 +701,8 @@ function ProductCard({ product, imgSrc, cardIndex = 0 }: ProductCardProps) {
         ) : null;
       })()}
       <p style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", color: "#B8925A" }}>
-        {formatPrice(product.priceInPaise)}
+        {formatPrice(product.priceInPaise)}&nbsp;
+        <span style={{ fontSize: 8, color: "rgba(0,0,0,0.38)", letterSpacing: "0.08em", fontWeight: 400 }}>incl. GST</span>
       </p>
     </Link>
   );

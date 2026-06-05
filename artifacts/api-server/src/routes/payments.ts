@@ -149,6 +149,31 @@ async function runFulfillment(
       }
 
       if (customerEmail) {
+        let invoicePdf: Buffer | undefined;
+        try {
+          invoicePdf = await generateInvoicePdf({
+            orderNumber: order.id,
+            orderDate: order.createdAt ?? new Date(),
+            customerName: order.shippingName,
+            customerEmail,
+            shippingAddress: order.shippingAddress,
+            shippingCity: order.shippingCity,
+            shippingState: order.shippingState,
+            shippingPostalCode: order.shippingPostalCode,
+            shippingPhone: order.shippingPhone,
+            items: itemsWithProducts.map((it) => ({
+              name: it.product?.name ?? "KA.SHA Product",
+              size: it.size,
+              quantity: it.quantity,
+              priceInPaise: it.priceInPaise,
+            })),
+            shippingChargeInPaise: order.shippingChargeInPaise ?? 0,
+            totalInPaise: order.totalInPaise,
+          });
+        } catch (pdfErr) {
+          logger.error({ pdfErr, orderId: order.id }, "Invoice PDF generation failed — sending email without attachment");
+        }
+
         await sendOrderConfirmation({
           orderNumber: order.id,
           customerName: order.shippingName,
@@ -168,6 +193,7 @@ async function runFulfillment(
           shippingPhone: order.shippingPhone,
           awb: sr.awb,
           trackingUrl: sr.trackingUrl,
+          invoicePdf,
         });
       }
     } catch (e) {
@@ -355,6 +381,13 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
   const cartResult = await validateCheckoutCart(userId);
   if ("error" in cartResult) { res.status(400).json({ error: cartResult.error }); return; }
   const { cartItemsWithProducts, itemsTotalInPaise } = cartResult;
+
+  // Block COD for customised / bespoke items
+  const hasBespokeItem = cartItemsWithProducts.some(i => i.customizationId != null);
+  if (hasBespokeItem) {
+    res.status(400).json({ error: "Cash on Delivery is not available for customised/bespoke orders. Please choose online payment." });
+    return;
+  }
 
   const totalInPaise = itemsTotalInPaise + shippingChargeInPaise;
 
