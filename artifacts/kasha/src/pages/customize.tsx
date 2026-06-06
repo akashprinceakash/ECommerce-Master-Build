@@ -83,12 +83,11 @@ const SIZES = ["XS","S","M","L","XL","XXL"];
 
 // Garment part zones
 const PART_ZONES: { id: Exclude<PatternZone,"all">; label: string }[] = [
-  { id:"collar",        label:"Collar"         },
-  { id:"collarPlacket", label:"Collar Placket" },
-  { id:"front",         label:"Front"          },
-  { id:"back",          label:"Back"           },
-  { id:"leftSleeve",    label:"Left Sleeve"    },
-  { id:"rightSleeve",   label:"Right Sleeve"   },
+  { id:"collar",      label:"Collar"       },
+  { id:"front",       label:"Front"        },
+  { id:"back",        label:"Back"         },
+  { id:"leftSleeve",  label:"Left Sleeve"  },
+  { id:"rightSleeve", label:"Right Sleeve" },
 ];
 
 // Named placement positions → fabric canvas coordinates (1024×1024 UV space)
@@ -412,7 +411,7 @@ export default function CustomizePage() {
   // new background colour without re-fetching the image from the network.
   const allOverPrintSourceRef = useRef<HTMLCanvasElement|null>(null);
   const [zonePrintIds, setZonePrintIds] = useState<Record<Exclude<PatternZone,"all">,string|null>>({
-    front:null, back:null, collar:null, collarPlacket:null, leftSleeve:null, rightSleeve:null,
+    front:null, back:null, collar:null, leftSleeve:null, rightSleeve:null,
   });
   const [printMode, setPrintMode] = useState<"fullBody"|"parts">("fullBody");
 
@@ -426,7 +425,7 @@ export default function CustomizePage() {
   // ── Parts step state ─────────────────────────────────────────────────────
   const [activePartZone, setActivePartZone] = useState<Exclude<PatternZone,"all">>("collar");
   const [zoneColors, setZoneColors] = useState<Record<Exclude<PatternZone,"all">,string>>({
-    collar:"", collarPlacket:"", front:"", back:"", leftSleeve:"", rightSleeve:"",
+    collar:"", front:"", back:"", leftSleeve:"", rightSleeve:"",
   });
 
   // ── Logo step state ──────────────────────────────────────────────────────
@@ -964,31 +963,23 @@ export default function CustomizePage() {
   };
 
   // ── Per-zone colour ──────────────────────────────────────────────────────
-  // Internal helper — draws a solid colour rect for one zone without syncing
-  const _paintZoneRect = useCallback((fc: any, zone: Exclude<PatternZone,"all">, hex: string) => {
-    fc.getObjects().filter((o:any)=>o?.data?.kashaZoneColor===zone).forEach((o:any)=>fc.remove(o));
-    if (!hex) return;
+  const applyZoneColor = useCallback((zone: Exclude<PatternZone,"all">, hex: string) => {
+    const fc=fcRef.current; if(!fc) return;
+    kdRequestIdRef.current++;
+    const existing=fc.getObjects().filter((o:any)=>o?.data?.kashaZoneColor===zone);
+    if (existing.length) fc.remove(...existing);
+    if (!hex) { setZoneColors(prev=>({...prev,[zone]:""})); fc.renderAll(); syncTexture(); return; }
     const preset=ZONE_PRESETS[zone];
     const rect=new fabric.Rect({left:preset.left,top:preset.top,width:preset.w,height:preset.h,fill:hex,selectable:false,evented:false,originX:"left",originY:"top"});
     (rect as any).data={kashaZoneColor:zone};
     fc.add(rect);
     (fc as any).sendObjectToBack?.(rect);
-  }, []);
-
-  const applyZoneColor = useCallback((zone: Exclude<PatternZone,"all">, hex: string) => {
-    const fc=fcRef.current; if(!fc) return;
-    kdRequestIdRef.current++;
-    _paintZoneRect(fc, zone, hex);
-    // Collar placket always mirrors the collar — applies to every code path
-    if (zone==="collar") _paintZoneRect(fc, "collarPlacket", hex);
     const kdBase=fc.getObjects().find((o:any)=>o?.data?.tag==="__kashaKdBg__");
     if (kdBase) (fc as any).sendObjectToBack?.(kdBase);
     fc.renderAll();
-    const update: Partial<Record<Exclude<PatternZone,"all">,string>> = {[zone]:hex};
-    if (zone==="collar") update.collarPlacket=hex;
-    setZoneColors(prev=>({...prev,...update}));
+    setZoneColors(prev=>({...prev,[zone]:hex}));
     syncTexture();
-  }, [_paintZoneRect, syncTexture]);
+  }, [syncTexture]);
 
   // ── Print library ────────────────────────────────────────────────────────
   const loadHTMLImage=(url:string)=>new Promise<HTMLImageElement>((res,rej)=>{const img=new Image();img.crossOrigin="anonymous";img.onload=()=>res(img);img.onerror=rej;img.src=toProxiedUrl(url);});
@@ -1041,47 +1032,35 @@ export default function CustomizePage() {
   }, [syncTexture]);
 
   // ── Zone (part-by-part) print placement ───────────────────────────────────
-  // Internal helper — tiles img into a zone rect and returns a FabricImage
-  const _buildZonePrintImg = useCallback(async (img: HTMLImageElement, zone: Exclude<PatternZone,"all">) => {
-    const preset=ZONE_PRESETS[zone];
-    const tileSize=128;
-    const off=document.createElement("canvas");
-    off.width=preset.w; off.height=preset.h;
-    const ctx=off.getContext("2d"); if(!ctx) return null;
-    ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
-    for (let row=0; row*tileSize<preset.h; row++) {
-      for (let col=0; col*tileSize<preset.w; col++) {
-        ctx.drawImage(img, 0, 0, img.width, img.height, col*tileSize, row*tileSize, tileSize, tileSize);
-      }
-    }
-    const fimg=await fabric.FabricImage.fromURL(off.toDataURL());
-    fimg.set({ left:preset.left, top:preset.top, selectable:false, evented:false, originX:"left", originY:"top" });
-    return fimg;
-  }, []);
-
   const applyZonePrint = useCallback(async (zone: Exclude<PatternZone,"all">, p: PatternDef) => {
     const fc=fcRef.current; if(!fc) return;
+    const preset=ZONE_PRESETS[zone];
+    // Use a consistent tile size — canvas clips overflow, so edges are never squished
+    const tileSize=128;
     try {
       const img=await loadHTMLImage(patternUrl(p.file));
-      // Remove existing print for this zone (and placket if mirroring collar)
+      const off=document.createElement("canvas");
+      off.width=preset.w; off.height=preset.h;
+      const ctx=off.getContext("2d"); if(!ctx) return;
+      ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
+      // 9-arg drawImage: always scale source to tileSize×tileSize at each position.
+      // The offscreen canvas (preset.w × preset.h) clips any overflow automatically.
+      for (let row=0; row*tileSize<preset.h; row++) {
+        for (let col=0; col*tileSize<preset.w; col++) {
+          ctx.drawImage(img, 0, 0, img.width, img.height, col*tileSize, row*tileSize, tileSize, tileSize);
+        }
+      }
+      // Remove any existing print for this zone
       fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint===zone).forEach((o:any)=>fc.remove(o));
-      const fimg=await _buildZonePrintImg(img, zone);
-      if (!fimg) return;
+      const fimg=await fabric.FabricImage.fromURL(off.toDataURL());
+      fimg.set({ left:preset.left, top:preset.top, selectable:false, evented:false, originX:"left", originY:"top" });
       (fimg as any).data={kashaZonePrint:zone};
       fc.add(fimg);
-      const update: Partial<Record<Exclude<PatternZone,"all">,string>> = {[zone]:p.id};
-      // Collar placket always mirrors the collar
-      if (zone==="collar") {
-        fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint==="collarPlacket").forEach((o:any)=>fc.remove(o));
-        const cpImg=await _buildZonePrintImg(img, "collarPlacket");
-        if (cpImg) { (cpImg as any).data={kashaZonePrint:"collarPlacket"}; fc.add(cpImg); }
-        update.collarPlacket=p.id;
-      }
-      setZonePrintIds(prev=>({...prev,...update}));
+      setZonePrintIds(prev=>({...prev,[zone]:p.id}));
       fc.renderAll(); syncTexture();
       toast({title:`Print applied to ${ZONE_LABEL[zone]}`});
     } catch { toast({title:"Could not apply print",variant:"destructive"}); }
-  }, [_buildZonePrintImg, syncTexture, toast]);
+  }, [syncTexture, toast]);
 
   // ── SKU-based auto-apply ──────────────────────────────────────────────────
   // When a product page links to the customiser (via ?id=), parse the product
@@ -1217,20 +1196,14 @@ export default function CustomizePage() {
   const clearZonePrint = useCallback((zone: Exclude<PatternZone,"all">)=>{
     const fc=fcRef.current; if(!fc) return;
     fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint===zone).forEach((o:any)=>fc.remove(o));
-    const update: Partial<Record<Exclude<PatternZone,"all">,null>> = {[zone]:null};
-    // Collar placket always mirrors the collar
-    if (zone==="collar") {
-      fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint==="collarPlacket").forEach((o:any)=>fc.remove(o));
-      update.collarPlacket=null;
-    }
-    setZonePrintIds(prev=>({...prev,...update}));
+    setZonePrintIds(prev=>({...prev,[zone]:null}));
     fc.renderAll(); syncTexture();
   }, [syncTexture]);
 
   const clearAllZonePrints = useCallback(()=>{
     const fc=fcRef.current; if(!fc) return;
     fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint).forEach((o:any)=>fc.remove(o));
-    setZonePrintIds({front:null,back:null,collar:null,collarPlacket:null,leftSleeve:null,rightSleeve:null});
+    setZonePrintIds({front:null,back:null,collar:null,leftSleeve:null,rightSleeve:null});
     fc.renderAll(); syncTexture();
   }, [syncTexture]);
 
@@ -2299,8 +2272,8 @@ export default function CustomizePage() {
                             </div>
                             <div style={{...sb,marginTop:8}}>Zone colours</div>
                             <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                              {(["collar","collarPlacket","leftSleeve","rightSleeve"] as const).filter(z=>zoneColors[z]!==undefined).map(z=>{
-                                const label=z==="collar"?"Collar":z==="collarPlacket"?"Collar Placket":z==="leftSleeve"?"Left Sleeve":"Right Sleeve";
+                              {(["collar","leftSleeve","rightSleeve"] as const).filter(z=>zoneColors[z]!==undefined).map(z=>{
+                                const label=z==="collar"?"Collar":z==="leftSleeve"?"Left Sleeve":"Right Sleeve";
                                 return (
                                   <div key={z} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,background:V.sf2,border:`1px solid ${V.bd}`}}>
                                     <div style={{width:22,height:22,borderRadius:"50%",background:zoneColors[z as keyof typeof zoneColors]||primaryColor,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
@@ -3134,7 +3107,7 @@ export default function CustomizePage() {
                           const zones: {id:Exclude<typeof activePartZone,"collar">;label:string}[]=[];
                           const pzones: {id:Exclude<PatternZone,"all">;label:string}[]=[
                             {id:"front",label:"Front"},{id:"back",label:"Back"},
-                            {id:"collar",label:"Collar"},{id:"collarPlacket",label:"Placket"},{id:"leftSleeve",label:"L.Sleeve"},{id:"rightSleeve",label:"R.Sleeve"},
+                            {id:"collar",label:"Collar"},{id:"leftSleeve",label:"L.Sleeve"},{id:"rightSleeve",label:"R.Sleeve"},
                           ];
                           return(
                             <div style={{display:"flex",flexDirection:"column",gap:8}}>

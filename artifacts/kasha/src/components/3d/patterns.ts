@@ -55,27 +55,25 @@ export const PATTERNS: PatternDef[] = [
   { id: "KS1000BGP034", label: "GP 034", customerLabel: "Dusty Mauve & Aqua",     file: "KS1000BGP034.jpg", swatchColors: ["#6b4a4a", "#39b6c7"] },
 ];
 
-export type PatternZone = "all" | "front" | "back" | "leftSleeve" | "rightSleeve" | "collar" | "collarPlacket";
+export type PatternZone = "all" | "front" | "back" | "leftSleeve" | "rightSleeve" | "collar";
 
 export const ZONE_LABEL: Record<PatternZone, string> = {
-  all:           "All-Over Print",
-  front:         "Front",
-  back:          "Back",
-  leftSleeve:    "Left Sleeve",
-  rightSleeve:   "Right Sleeve",
-  collar:        "Collar",
-  collarPlacket: "Collar Placket",
+  all:         "All-Over Print",
+  front:       "Front",
+  back:        "Back",
+  leftSleeve:  "Left Sleeve",
+  rightSleeve: "Right Sleeve",
+  collar:      "Collar",
 };
 
 export interface ZonePreset { left: number; top: number; w: number; h: number; }
 
 export const ZONE_PRESETS: Record<Exclude<PatternZone, "all">, ZonePreset> = {
-  front:         { left:  10, top: 341, w: 490, h: 678 },
-  back:          { left: 524, top: 188, w: 483, h: 833 },
-  collar:        { left:  12, top: 183, w: 507, h: 166 },
-  collarPlacket: { left: 231, top: 380, w:  32, h: 180 },
-  leftSleeve:    { left: 210, top:   4, w: 398, h: 170 },
-  rightSleeve:   { left: 617, top:   2, w: 398, h: 171 },
+  front:       { left:  10, top: 341, w: 490, h: 678 },
+  back:        { left: 524, top: 188, w: 483, h: 833 },
+  collar:      { left:  12, top: 183, w: 507, h: 166 },
+  leftSleeve:  { left: 210, top:   4, w: 398, h: 170 },
+  rightSleeve: { left: 617, top:   2, w: 398, h: 171 },
 };
 
 export const ALL_OVER_TILE_PX = 256;
