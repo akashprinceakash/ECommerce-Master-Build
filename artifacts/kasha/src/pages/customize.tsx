@@ -964,23 +964,31 @@ export default function CustomizePage() {
   };
 
   // ── Per-zone colour ──────────────────────────────────────────────────────
-  const applyZoneColor = useCallback((zone: Exclude<PatternZone,"all">, hex: string) => {
-    const fc=fcRef.current; if(!fc) return;
-    kdRequestIdRef.current++;
-    const existing=fc.getObjects().filter((o:any)=>o?.data?.kashaZoneColor===zone);
-    if (existing.length) fc.remove(...existing);
-    if (!hex) { setZoneColors(prev=>({...prev,[zone]:""})); fc.renderAll(); syncTexture(); return; }
+  // Internal helper — draws a solid colour rect for one zone without syncing
+  const _paintZoneRect = useCallback((fc: any, zone: Exclude<PatternZone,"all">, hex: string) => {
+    fc.getObjects().filter((o:any)=>o?.data?.kashaZoneColor===zone).forEach((o:any)=>fc.remove(o));
+    if (!hex) return;
     const preset=ZONE_PRESETS[zone];
     const rect=new fabric.Rect({left:preset.left,top:preset.top,width:preset.w,height:preset.h,fill:hex,selectable:false,evented:false,originX:"left",originY:"top"});
     (rect as any).data={kashaZoneColor:zone};
     fc.add(rect);
     (fc as any).sendObjectToBack?.(rect);
+  }, []);
+
+  const applyZoneColor = useCallback((zone: Exclude<PatternZone,"all">, hex: string) => {
+    const fc=fcRef.current; if(!fc) return;
+    kdRequestIdRef.current++;
+    _paintZoneRect(fc, zone, hex);
+    // Collar placket always mirrors the collar — applies to every code path
+    if (zone==="collar") _paintZoneRect(fc, "collarPlacket", hex);
     const kdBase=fc.getObjects().find((o:any)=>o?.data?.tag==="__kashaKdBg__");
     if (kdBase) (fc as any).sendObjectToBack?.(kdBase);
     fc.renderAll();
-    setZoneColors(prev=>({...prev,[zone]:hex}));
+    const update: Partial<Record<Exclude<PatternZone,"all">,string>> = {[zone]:hex};
+    if (zone==="collar") update.collarPlacket=hex;
+    setZoneColors(prev=>({...prev,...update}));
     syncTexture();
-  }, [syncTexture]);
+  }, [_paintZoneRect, syncTexture]);
 
   // ── Print library ────────────────────────────────────────────────────────
   const loadHTMLImage=(url:string)=>new Promise<HTMLImageElement>((res,rej)=>{const img=new Image();img.crossOrigin="anonymous";img.onload=()=>res(img);img.onerror=rej;img.src=toProxiedUrl(url);});
@@ -1033,35 +1041,47 @@ export default function CustomizePage() {
   }, [syncTexture]);
 
   // ── Zone (part-by-part) print placement ───────────────────────────────────
+  // Internal helper — tiles img into a zone rect and returns a FabricImage
+  const _buildZonePrintImg = useCallback(async (img: HTMLImageElement, zone: Exclude<PatternZone,"all">) => {
+    const preset=ZONE_PRESETS[zone];
+    const tileSize=128;
+    const off=document.createElement("canvas");
+    off.width=preset.w; off.height=preset.h;
+    const ctx=off.getContext("2d"); if(!ctx) return null;
+    ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
+    for (let row=0; row*tileSize<preset.h; row++) {
+      for (let col=0; col*tileSize<preset.w; col++) {
+        ctx.drawImage(img, 0, 0, img.width, img.height, col*tileSize, row*tileSize, tileSize, tileSize);
+      }
+    }
+    const fimg=await fabric.FabricImage.fromURL(off.toDataURL());
+    fimg.set({ left:preset.left, top:preset.top, selectable:false, evented:false, originX:"left", originY:"top" });
+    return fimg;
+  }, []);
+
   const applyZonePrint = useCallback(async (zone: Exclude<PatternZone,"all">, p: PatternDef) => {
     const fc=fcRef.current; if(!fc) return;
-    const preset=ZONE_PRESETS[zone];
-    // Use a consistent tile size — canvas clips overflow, so edges are never squished
-    const tileSize=128;
     try {
       const img=await loadHTMLImage(patternUrl(p.file));
-      const off=document.createElement("canvas");
-      off.width=preset.w; off.height=preset.h;
-      const ctx=off.getContext("2d"); if(!ctx) return;
-      ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
-      // 9-arg drawImage: always scale source to tileSize×tileSize at each position.
-      // The offscreen canvas (preset.w × preset.h) clips any overflow automatically.
-      for (let row=0; row*tileSize<preset.h; row++) {
-        for (let col=0; col*tileSize<preset.w; col++) {
-          ctx.drawImage(img, 0, 0, img.width, img.height, col*tileSize, row*tileSize, tileSize, tileSize);
-        }
-      }
-      // Remove any existing print for this zone
+      // Remove existing print for this zone (and placket if mirroring collar)
       fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint===zone).forEach((o:any)=>fc.remove(o));
-      const fimg=await fabric.FabricImage.fromURL(off.toDataURL());
-      fimg.set({ left:preset.left, top:preset.top, selectable:false, evented:false, originX:"left", originY:"top" });
+      const fimg=await _buildZonePrintImg(img, zone);
+      if (!fimg) return;
       (fimg as any).data={kashaZonePrint:zone};
       fc.add(fimg);
-      setZonePrintIds(prev=>({...prev,[zone]:p.id}));
+      const update: Partial<Record<Exclude<PatternZone,"all">,string>> = {[zone]:p.id};
+      // Collar placket always mirrors the collar
+      if (zone==="collar") {
+        fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint==="collarPlacket").forEach((o:any)=>fc.remove(o));
+        const cpImg=await _buildZonePrintImg(img, "collarPlacket");
+        if (cpImg) { (cpImg as any).data={kashaZonePrint:"collarPlacket"}; fc.add(cpImg); }
+        update.collarPlacket=p.id;
+      }
+      setZonePrintIds(prev=>({...prev,...update}));
       fc.renderAll(); syncTexture();
       toast({title:`Print applied to ${ZONE_LABEL[zone]}`});
     } catch { toast({title:"Could not apply print",variant:"destructive"}); }
-  }, [syncTexture, toast]);
+  }, [_buildZonePrintImg, syncTexture, toast]);
 
   // ── SKU-based auto-apply ──────────────────────────────────────────────────
   // When a product page links to the customiser (via ?id=), parse the product
@@ -1197,7 +1217,13 @@ export default function CustomizePage() {
   const clearZonePrint = useCallback((zone: Exclude<PatternZone,"all">)=>{
     const fc=fcRef.current; if(!fc) return;
     fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint===zone).forEach((o:any)=>fc.remove(o));
-    setZonePrintIds(prev=>({...prev,[zone]:null}));
+    const update: Partial<Record<Exclude<PatternZone,"all">,null>> = {[zone]:null};
+    // Collar placket always mirrors the collar
+    if (zone==="collar") {
+      fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint==="collarPlacket").forEach((o:any)=>fc.remove(o));
+      update.collarPlacket=null;
+    }
+    setZonePrintIds(prev=>({...prev,...update}));
     fc.renderAll(); syncTexture();
   }, [syncTexture]);
 
@@ -3997,7 +4023,6 @@ export default function CustomizePage() {
                   applyPatternColors(col, patColorB);
                 } else if(colorModalFor==="collar"){
                   applyZoneColor("collar",col);
-                  applyZoneColor("collarPlacket",col);
                 } else {
                   setPatColorB(col);
                   applyPatternColors(patColorA, col);
@@ -4033,7 +4058,7 @@ export default function CustomizePage() {
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   <div style={{width:36,height:36,borderRadius:8,background:displayCol,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
                   <input type="color" value={displayCol}
-                    onChange={e=>{if(colorModalFor==='all'){applyPrimary(e.target.value);}else if(colorModalFor==='base-body'){applyPrimary(e.target.value,{recompose:true});}else if(colorModalFor==='base'){setPatColorA(e.target.value);applyPatternColors(e.target.value,patColorB);}else if(colorModalFor==='collar'){applyZoneColor('collar',e.target.value);applyZoneColor('collarPlacket',e.target.value);}else{setPatColorB(e.target.value);applyPatternColors(patColorA,e.target.value);}setPendingColorPick(null);}}
+                    onChange={e=>{if(colorModalFor==='all'){applyPrimary(e.target.value);}else if(colorModalFor==='base-body'){applyPrimary(e.target.value,{recompose:true});}else if(colorModalFor==='base'){setPatColorA(e.target.value);applyPatternColors(e.target.value,patColorB);}else if(colorModalFor==='collar'){applyZoneColor('collar',e.target.value);}else{setPatColorB(e.target.value);applyPatternColors(patColorA,e.target.value);}setPendingColorPick(null);}}
                     style={{width:44,height:36,padding:2,border:`1.5px solid ${V.bd}`,borderRadius:8,cursor:"pointer",background:V.sf2}}/>
                   <input type="text" defaultValue={displayCol}
                     onBlur={e=>{
@@ -4097,7 +4122,6 @@ export default function CustomizePage() {
                     applyZonePrint("leftSleeve",chosen); applyZonePrint("rightSleeve",chosen);
                   } else if(printModalFor==="collar"){
                     applyZonePrint("collar",chosen);
-                    applyZonePrint("collarPlacket",chosen);
                   } else if(printModalFor==="accent"){
                     applyPatternDesignPrint(chosen);
                   } else {
