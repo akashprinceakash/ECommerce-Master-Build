@@ -83,11 +83,12 @@ const SIZES = ["XS","S","M","L","XL","XXL"];
 
 // Garment part zones
 const PART_ZONES: { id: Exclude<PatternZone,"all">; label: string }[] = [
-  { id:"collar",      label:"Collar"       },
-  { id:"front",       label:"Front"        },
-  { id:"back",        label:"Back"         },
-  { id:"leftSleeve",  label:"Left Sleeve"  },
-  { id:"rightSleeve", label:"Right Sleeve" },
+  { id:"collar",        label:"Collar"         },
+  { id:"collarPlacket", label:"Collar Placket" },
+  { id:"front",         label:"Front"          },
+  { id:"back",          label:"Back"           },
+  { id:"leftSleeve",    label:"Left Sleeve"    },
+  { id:"rightSleeve",   label:"Right Sleeve"   },
 ];
 
 // Named placement positions → fabric canvas coordinates (1024×1024 UV space)
@@ -411,7 +412,7 @@ export default function CustomizePage() {
   // new background colour without re-fetching the image from the network.
   const allOverPrintSourceRef = useRef<HTMLCanvasElement|null>(null);
   const [zonePrintIds, setZonePrintIds] = useState<Record<Exclude<PatternZone,"all">,string|null>>({
-    front:null, back:null, collar:null, leftSleeve:null, rightSleeve:null,
+    front:null, back:null, collar:null, collarPlacket:null, leftSleeve:null, rightSleeve:null,
   });
   const [printMode, setPrintMode] = useState<"fullBody"|"parts">("fullBody");
 
@@ -425,7 +426,7 @@ export default function CustomizePage() {
   // ── Parts step state ─────────────────────────────────────────────────────
   const [activePartZone, setActivePartZone] = useState<Exclude<PatternZone,"all">>("collar");
   const [zoneColors, setZoneColors] = useState<Record<Exclude<PatternZone,"all">,string>>({
-    collar:"", front:"", back:"", leftSleeve:"", rightSleeve:"",
+    collar:"", collarPlacket:"", front:"", back:"", leftSleeve:"", rightSleeve:"",
   });
 
   // ── Logo step state ──────────────────────────────────────────────────────
@@ -1203,7 +1204,7 @@ export default function CustomizePage() {
   const clearAllZonePrints = useCallback(()=>{
     const fc=fcRef.current; if(!fc) return;
     fc.getObjects().filter((o:any)=>o?.data?.kashaZonePrint).forEach((o:any)=>fc.remove(o));
-    setZonePrintIds({front:null,back:null,collar:null,leftSleeve:null,rightSleeve:null});
+    setZonePrintIds({front:null,back:null,collar:null,collarPlacket:null,leftSleeve:null,rightSleeve:null});
     fc.renderAll(); syncTexture();
   }, [syncTexture]);
 
@@ -2272,8 +2273,8 @@ export default function CustomizePage() {
                             </div>
                             <div style={{...sb,marginTop:8}}>Zone colours</div>
                             <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                              {(["collar","leftSleeve","rightSleeve"] as const).filter(z=>zoneColors[z]!==undefined).map(z=>{
-                                const label=z==="collar"?"Collar":z==="leftSleeve"?"Left Sleeve":"Right Sleeve";
+                              {(["collar","collarPlacket","leftSleeve","rightSleeve"] as const).filter(z=>zoneColors[z]!==undefined).map(z=>{
+                                const label=z==="collar"?"Collar":z==="collarPlacket"?"Collar Placket":z==="leftSleeve"?"Left Sleeve":"Right Sleeve";
                                 return (
                                   <div key={z} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,background:V.sf2,border:`1px solid ${V.bd}`}}>
                                     <div style={{width:22,height:22,borderRadius:"50%",background:zoneColors[z as keyof typeof zoneColors]||primaryColor,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
@@ -3107,7 +3108,7 @@ export default function CustomizePage() {
                           const zones: {id:Exclude<typeof activePartZone,"collar">;label:string}[]=[];
                           const pzones: {id:Exclude<PatternZone,"all">;label:string}[]=[
                             {id:"front",label:"Front"},{id:"back",label:"Back"},
-                            {id:"collar",label:"Collar"},{id:"leftSleeve",label:"L.Sleeve"},{id:"rightSleeve",label:"R.Sleeve"},
+                            {id:"collar",label:"Collar"},{id:"collarPlacket",label:"Placket"},{id:"leftSleeve",label:"L.Sleeve"},{id:"rightSleeve",label:"R.Sleeve"},
                           ];
                           return(
                             <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -3996,6 +3997,7 @@ export default function CustomizePage() {
                   applyPatternColors(col, patColorB);
                 } else if(colorModalFor==="collar"){
                   applyZoneColor("collar",col);
+                  applyZoneColor("collarPlacket",col);
                 } else {
                   setPatColorB(col);
                   applyPatternColors(patColorA, col);
@@ -4031,7 +4033,7 @@ export default function CustomizePage() {
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   <div style={{width:36,height:36,borderRadius:8,background:displayCol,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
                   <input type="color" value={displayCol}
-                    onChange={e=>{if(colorModalFor==='all'){applyPrimary(e.target.value);}else if(colorModalFor==='base-body'){applyPrimary(e.target.value,{recompose:true});}else if(colorModalFor==='base'){setPatColorA(e.target.value);applyPatternColors(e.target.value,patColorB);}else if(colorModalFor==='collar'){applyZoneColor('collar',e.target.value);}else{setPatColorB(e.target.value);applyPatternColors(patColorA,e.target.value);}setPendingColorPick(null);}}
+                    onChange={e=>{if(colorModalFor==='all'){applyPrimary(e.target.value);}else if(colorModalFor==='base-body'){applyPrimary(e.target.value,{recompose:true});}else if(colorModalFor==='base'){setPatColorA(e.target.value);applyPatternColors(e.target.value,patColorB);}else if(colorModalFor==='collar'){applyZoneColor('collar',e.target.value);applyZoneColor('collarPlacket',e.target.value);}else{setPatColorB(e.target.value);applyPatternColors(patColorA,e.target.value);}setPendingColorPick(null);}}
                     style={{width:44,height:36,padding:2,border:`1.5px solid ${V.bd}`,borderRadius:8,cursor:"pointer",background:V.sf2}}/>
                   <input type="text" defaultValue={displayCol}
                     onBlur={e=>{
@@ -4095,6 +4097,7 @@ export default function CustomizePage() {
                     applyZonePrint("leftSleeve",chosen); applyZonePrint("rightSleeve",chosen);
                   } else if(printModalFor==="collar"){
                     applyZonePrint("collar",chosen);
+                    applyZonePrint("collarPlacket",chosen);
                   } else if(printModalFor==="accent"){
                     applyPatternDesignPrint(chosen);
                   } else {
