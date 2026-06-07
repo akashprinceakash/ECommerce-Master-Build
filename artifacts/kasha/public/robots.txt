@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
 
+# Product images — do not index or archive
+Disallow: /api/public/thumbnails/
+Disallow: /api/public/models/
+Disallow: /api/r2-proxy
+
 Sitemap: https://www.kashaonline.in/sitemap.xml

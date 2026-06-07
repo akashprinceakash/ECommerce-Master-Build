@@ -91,6 +91,7 @@ app.use("/api/public", (req, res, next) => {
 
   const serveFile = (filePath: string, mime: string) => {
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.setHeader("X-Robots-Tag", "noindex, noarchive");
     res.setHeader("Content-Type", mime);
     res.sendFile(filePath);
   };
