@@ -53,7 +53,7 @@ router.get("/products/:id", async (req, res): Promise<void> => {
       return;
     }
     const [product] = await db.select().from(productsTable).where(eq(productsTable.id, id));
-    if (!product) {
+    if (!product || !product.available) {
       res.status(404).json({ error: "Product not found" });
       return;
     }
