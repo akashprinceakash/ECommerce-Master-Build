@@ -197,19 +197,31 @@ function ProcessOrderPanel({
   confirmPending, syncPending, pickupPending,
 }: ProcessOrderPanelProps) {
   const s = order.status;
-  const isPending   = s === "pending";
-  const isCancelled = s === "cancelled";
-  const isConfirmed = !isPending && !isCancelled;
-  const hasShiprocket = !!order.shiprocketOrderId;
-  const hasShipment   = !!order.shiprocketShipmentId;
-  const isDone = s === "shipped" || s === "delivered";
+  const isPending      = s === "pending";
+  const isCancelled    = s === "cancelled";
+  const isConfirmed    = !isPending && !isCancelled;
+  const hasShiprocket  = !!order.shiprocketOrderId;
+  const hasAwb         = !!order.shiprocketAwb;          // AWB is the real gate for label + pickup
+  const isDone         = s === "shipped" || s === "delivered";
   const isReadyOrBeyond = s === "ready_to_ship" || s === "shipped" || s === "delivered";
+
+  // Derive a human-readable Shiprocket status label
+  const srStatus = (() => {
+    if (!hasShiprocket) return null;
+    if (s === "delivered")     return { label: "Delivered",         colour: "text-emerald-700" };
+    if (s === "shipped")       return { label: "Shipped",           colour: "text-violet-700"  };
+    if (s === "ready_to_ship") return { label: "Pickup Scheduled",  colour: "text-indigo-700"  };
+    if (hasAwb)                return { label: "AWB Assigned",      colour: "text-sky-700"     };
+    return                            { label: "NEW",               colour: "text-amber-700"   };
+  })();
 
   // Step states
   const step1State: StepState = isPending ? "active" : "done";
   const step2State: StepState = isPending ? "locked" : "active";
-  const step3State: StepState = !isConfirmed ? "locked" : hasShipment ? "active" : "locked";
-  const step4State: StepState = isDone ? "done" : (!hasShiprocket ? "locked" : "active");
+  const step3State: StepState = !isConfirmed ? "locked" : hasAwb ? "active" : "locked";
+  const step4State: StepState = isDone ? "done" : (!hasAwb ? "locked" : "active");
+
+  const AWB_HINT = 'Go to your Shiprocket dashboard \u2192 click "Ship Now" on this order to generate an AWB, then come back here.';
 
   const steps = [
     {
@@ -244,14 +256,14 @@ function ProcessOrderPanel({
     {
       n: 3, state: step3State,
       title: "Print Shipping Label",
-      desc: hasShipment
-        ? `AWB: ${order.shiprocketAwb ?? "assigned"}`
+      desc: hasAwb
+        ? `AWB: ${order.shiprocketAwb}`
         : isConfirmed && !hasShiprocket
-          ? "Shiprocket sync pending…"
+          ? "Sync to Shiprocket first (step above)"
           : isConfirmed
-            ? "Awaiting AWB assignment from Shiprocket"
+            ? AWB_HINT
             : "Confirm order first",
-      action: hasShipment ? (
+      action: hasAwb ? (
         <button
           onClick={() => printShippingLabel(order.id)}
           className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-3 py-1.5 border border-slate-300 text-slate-700 hover:bg-slate-50 transition"
@@ -272,15 +284,17 @@ function ProcessOrderPanel({
     },
     {
       n: 4, state: step4State,
-      title: "Ship Now",
+      title: "Request Pickup",
       desc: isDone
         ? `${STATUS_LABEL[s] ?? s} — status updates automatically via webhooks`
         : isReadyOrBeyond
           ? "Pickup already scheduled"
-          : hasShiprocket
+          : hasAwb
             ? "Request courier pickup from Shiprocket"
-            : "Awaiting Shiprocket order ID",
-      action: !isDone && !isReadyOrBeyond && hasShiprocket ? (
+            : isConfirmed
+              ? AWB_HINT
+              : "Confirm order first",
+      action: !isDone && !isReadyOrBeyond && hasAwb ? (
         <button
           disabled={pickupPending}
           onClick={onRequestPickup}
@@ -294,11 +308,39 @@ function ProcessOrderPanel({
   ];
 
   return (
-    <div className="border border-primary/20 bg-primary/[0.02] p-4 space-y-1">
-      <div className="flex items-center justify-between mb-3">
+    <div className="border border-primary/20 bg-primary/[0.02] p-4 space-y-3">
+      <div className="flex items-center justify-between">
         <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Process Order</span>
         <span className="text-[10px] text-muted-foreground/60">Status updates automatically via Shiprocket webhooks</span>
       </div>
+
+      {/* Shiprocket status bar */}
+      {hasShiprocket && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 bg-white border border-border/60 text-[11px]">
+          <span className="text-muted-foreground">Shiprocket Order</span>
+          <span className="font-mono font-semibold">#{order.shiprocketOrderId}</span>
+          {srStatus && (
+            <>
+              <span className="text-muted-foreground">·  Status</span>
+              <span className={`font-semibold ${srStatus.colour}`}>{srStatus.label}</span>
+            </>
+          )}
+          {hasAwb ? (
+            <>
+              <span className="text-muted-foreground">·  AWB</span>
+              <span className="font-mono font-semibold text-emerald-700">{order.shiprocketAwb}</span>
+            </>
+          ) : (
+            <span className="text-amber-700 font-medium">·  No AWB yet — click "Ship Now" in the Shiprocket dashboard to generate one</span>
+          )}
+          {order.trackingUrl && (
+            <a href={order.trackingUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline ml-auto">
+              Track →
+            </a>
+          )}
+        </div>
+      )}
+
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {steps.map((step) => (
           <div
