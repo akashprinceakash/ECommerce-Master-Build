@@ -46,10 +46,12 @@ router.post("/webhooks/shiprocket", async (req, res) => {
   res.status(200).json({ ok: true }); // Respond immediately to avoid timeout retries
 
   try {
-    // Optional secret validation (Shiprocket may send token in header or body)
+    // Optional secret validation — checks all headers Shiprocket may use
     if (WEBHOOK_SECRET) {
-      const headerToken = req.headers["x-shiprocket-api-token"] as string | undefined
-        ?? req.headers["authorization"]?.replace(/^Bearer\s+/i, "");
+      const headerToken =
+        (req.headers["x-api-key"] as string | undefined) ??
+        (req.headers["x-shiprocket-api-token"] as string | undefined) ??
+        req.headers["authorization"]?.replace(/^Bearer\s+/i, "");
       const bodyToken = req.body?.token as string | undefined;
       if (headerToken !== WEBHOOK_SECRET && bodyToken !== WEBHOOK_SECRET) {
         logger.warn("Shiprocket webhook: secret mismatch — skipping");
