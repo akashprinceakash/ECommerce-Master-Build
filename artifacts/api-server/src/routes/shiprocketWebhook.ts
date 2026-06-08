@@ -42,6 +42,11 @@ function canProgress(current: string, next: string): boolean {
  * Configure webhook URL in Shiprocket dashboard → Settings → Webhooks.
  * Optionally set SHIPROCKET_WEBHOOK_SECRET env var and configure the same token in Shiprocket.
  */
+// GET — reachability probe (Shiprocket "Test Webhook" button may issue a GET first)
+router.get("/webhooks/shiprocket", (_req, res) => {
+  res.status(200).json({ ok: true, service: "kasha-shiprocket-webhook" });
+});
+
 router.post("/webhooks/shiprocket", async (req, res) => {
   res.status(200).json({ ok: true }); // Respond immediately to avoid timeout retries
 
