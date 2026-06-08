@@ -59,3 +59,9 @@ id = "9rRetHrvKbgLgoKJJ7Thk"
 uri = "file://kasha-customization.zip"
 type = "unspecified"
 title = "KA.SHA Customization Studio — Full Source"
+
+[[outputs]]
+id = "SBcfAQ13bZk9jL08H3j8k"
+uri = "file://KA.SHA — Application Documentation.md"
+type = "text"
+title = "KA.SHA — Complete Application Documentation"
