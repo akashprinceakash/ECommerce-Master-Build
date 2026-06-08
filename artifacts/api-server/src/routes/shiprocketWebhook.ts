@@ -36,11 +36,11 @@ function canProgress(current: string, next: string): boolean {
 }
 
 // GET — reachability probe
-router.get("/webhooks/shiprocket", (_req, res) => {
-  res.status(200).json({ ok: true, service: "kasha-shiprocket-webhook" });
+router.get("/webhooks/fulfillment", (_req, res) => {
+  res.status(200).json({ ok: true, service: "kasha-fulfillment-webhook" });
 });
 
-router.post("/webhooks/shiprocket", async (req, res) => {
+router.post("/webhooks/fulfillment", async (req, res) => {
   // ── DEBUG BLOCK ──────────────────────────────────────────────────────────
   console.log("=== SHIPROCKET WEBHOOK HIT ===");
   console.log("METHOD:", req.method);
