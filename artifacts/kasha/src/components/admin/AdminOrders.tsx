@@ -47,6 +47,73 @@ interface AdminOrder {
   }>;
 }
 
+// Build and download a CSV of the given orders.
+function exportOrdersCSV(orders: AdminOrder[], label: string) {
+  const esc = (v: string | number | null | undefined) => {
+    const s = String(v ?? "").replace(/"/g, '""');
+    return `"${s}"`;
+  };
+
+  const row = (...cells: (string | number | null | undefined)[]) =>
+    cells.map(esc).join(",");
+
+  const rows: string[] = [];
+
+  // Header
+  rows.push(row(
+    "Order #", "Date", "Status",
+    "Customer Name", "Email", "Phone",
+    "Ship Address", "City", "State", "Pincode",
+    "Product", "Category", "Size", "Qty", "Item Price (₹)",
+    "Order Total (₹)", "Shipping Charge (₹)",
+    "Payment ID", "Razorpay Order ID",
+    "Shiprocket Order #", "AWB", "Tracking URL",
+  ));
+
+  for (const o of orders) {
+    const date = new Date(o.createdAt).toLocaleDateString("en-IN");
+    const total = (o.totalInPaise / 100).toFixed(2);
+    const shipping = o.shippingChargeInPaise != null ? (o.shippingChargeInPaise / 100).toFixed(2) : "";
+
+    if (o.items.length === 0) {
+      rows.push(row(
+        o.id, date, o.status,
+        o.customerName, o.customerEmail, o.shippingPhone,
+        o.shippingAddress, o.shippingCity, o.shippingState, o.shippingPostalCode,
+        "", "", "", "", "",
+        total, shipping,
+        o.paymentId ?? "", o.razorpayOrderId ?? "",
+        o.shiprocketOrderId ?? "", o.shiprocketAwb ?? "", o.trackingUrl ?? "",
+      ));
+    } else {
+      for (const it of o.items) {
+        const itemPrice = ((it.priceInPaise * it.quantity) / 100).toFixed(2);
+        rows.push(row(
+          o.id, date, o.status,
+          o.customerName, o.customerEmail, o.shippingPhone,
+          o.shippingAddress, o.shippingCity, o.shippingState, o.shippingPostalCode,
+          it.product?.name ?? "Unknown", it.product?.category ?? "",
+          it.size, it.quantity, itemPrice,
+          total, shipping,
+          o.paymentId ?? "", o.razorpayOrderId ?? "",
+          o.shiprocketOrderId ?? "", o.shiprocketAwb ?? "", o.trackingUrl ?? "",
+        ));
+      }
+    }
+  }
+
+  const csv = rows.join("\r\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `kasha-orders-${label}-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 // Trigger a browser download of a data URL as a file.
 function downloadDataUrl(dataUrl: string, filename: string) {
   const a = document.createElement("a");
@@ -199,8 +266,8 @@ export function AdminOrders() {
 
   return (
     <div>
-      {/* Filter pills */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      {/* Filter pills + CSV export */}
+      <div className="flex flex-wrap items-center gap-2 mb-6">
         {(["all", ...STATUSES] as const).map(s => {
           const count = s === "all" ? orders.length : orders.filter(o => o.status === s).length;
           return (
@@ -217,6 +284,16 @@ export function AdminOrders() {
             </button>
           );
         })}
+
+        <button
+          onClick={() => exportOrdersCSV(filtered, filter)}
+          disabled={filtered.length === 0}
+          className="ml-auto flex items-center gap-1.5 text-xs px-4 py-1.5 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 disabled:opacity-40 disabled:cursor-not-allowed uppercase tracking-wider transition"
+          title={`Export ${filtered.length} order${filtered.length === 1 ? "" : "s"} as CSV`}
+        >
+          <Download className="w-3.5 h-3.5" />
+          Export CSV ({filtered.length})
+        </button>
       </div>
 
       {filtered.length === 0 ? (
