@@ -1371,7 +1371,7 @@ export default function CustomizePage() {
       if(created?.id) sessionCustomizationIdRef.current=created.id;
       return created;
     },
-    onSuccess:()=>{toast({title:"Design Saved ✓",description:"Visit Your Profile → Bespoke Designs to view your saved design."});queryClient.invalidateQueries({queryKey:["customization",id]});},
+    onSuccess:()=>{toast({title:"Design Saved ✓",description:"Your design has been saved.",action:<button onClick={()=>setLocation("/profile")} style={{fontSize:11,fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",padding:"4px 10px",borderRadius:6,border:"1px solid rgba(201,168,76,0.6)",background:"transparent",cursor:"pointer",color:"#c9a84c",whiteSpace:"nowrap"}}>View Designs →</button>});queryClient.invalidateQueries({queryKey:["customization",id]});},
     onError:(e:any)=>toast({title:"Error",description:e.message,variant:"destructive"}),
   });
   const [cartAdded, setCartAdded] = useState(false);
@@ -1570,7 +1570,7 @@ export default function CustomizePage() {
       }}>
         {/* Left: back + logo */}
         <div style={{display:"flex",alignItems:"center",gap:14,minWidth:180}}>
-          <Link href={_fromSource === "modal" ? "/products" : id ? `/products/${id}` : "/products"} style={{
+          <Link href={_fromSource === "saved" ? "/profile" : _fromSource === "modal" ? "/products" : id ? `/products/${id}` : "/products"} style={{
             color:V.mu,fontSize:11,textDecoration:"none",
             display:"flex",alignItems:"center",gap:5,
             padding:"5px 12px",borderRadius:40,
@@ -2356,8 +2356,8 @@ export default function CustomizePage() {
                     </div>
                   )}
 
-                  {/* Logo placement — mobile only (desktop uses right panel) */}
-                  {logoPreview&&screenW<768&&(()=>{
+                  {/* Logo placement */}
+                  {logoPreview&&(()=>{
                     const CHIPS=[
                       {key:"front-left",   label:"Chest Left",   cx:39,cy:40},
                       {key:"front-right",  label:"Chest Right",  cx:21,cy:40},

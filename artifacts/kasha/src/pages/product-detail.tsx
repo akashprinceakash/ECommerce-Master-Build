@@ -281,7 +281,7 @@ export default function ProductDetailPage() {
                 />
               ))}
 
-              {!product.available && (
+              {product.stock === 0 && (
                 <div className="absolute top-4 left-4 bg-black text-white text-[10px] font-bold tracking-[0.15em] px-3 py-1 z-10">
                   SOLD OUT
                 </div>
@@ -363,11 +363,7 @@ export default function ProductDetailPage() {
               })()}
               <div className="flex items-center gap-4 flex-wrap">
                 <p className="text-2xl font-bold text-black">{formatPrice(product.priceInPaise)}</p>
-                {product.available ? (
-                  <span className="text-[10px] font-bold tracking-[0.15em] text-green-600 bg-green-50 border border-green-200 px-2 py-0.5">
-                    IN STOCK
-                  </span>
-                ) : (
+                {product.stock === 0 && (
                   <span className="text-[10px] font-bold tracking-[0.15em] text-red-600 bg-red-50 border border-red-200 px-2 py-0.5">
                     SOLD OUT
                   </span>
