@@ -1,0 +1,113 @@
+Please review and improve the invoice PDF layout and formatting to make it fully production-ready and professional.
+
+### High Priority Fixes
+
+1. **Fix Currency Formatting**
+
+   * Remove the unwanted "/" character appearing before amounts.
+   * Current:
+
+     * Rs. /1.00
+     * Rs. /116.24
+     * Rs. /137.16
+   * Expected:
+
+     * ₹1.00
+     * ₹116.24
+     * ₹137.16
+   * Ensure this is fixed throughout the invoice.
+
+2. **Fix Email Alignment**
+
+   * The customer email is wrapping onto the next line incorrectly.
+   * Current:
+     Email:
+     [customer@email.com](mailto:customer@email.com)
+   * Expected:
+     Email: [customer@email.com](mailto:customer@email.com)
+   * Ensure proper alignment and spacing.
+
+3. **Verify Address Formatting**
+
+   * Check the customer address mapping.
+   * Ensure city, state, and pincode are consistent and correctly displayed.
+   * Verify there are no mismatched locations or incorrect state/pincode combinations.
+
+4. **Fix GST Note Text**
+
+   * Current text contains formatting issues:
+     Item GST: 5% ("d Rs. 1,000) or 12% (> Rs. 1,000)
+   * Replace with:
+     "IGST applied for inter-state transactions. GST on apparel products is 5% for items priced up to Rs. 1,000 and 12% for items priced above Rs. 1,000 (HSN: 61099010). Shipping GST: 18%."
+
+### Layout & Alignment Improvements
+
+5. **Improve Invoice Information Section**
+
+   * Add better spacing between:
+
+     * Invoice Number
+     * Order Number
+     * Date
+     * Payment Method
+     * Payment ID
+   * Make the section easier to scan.
+
+6. **Improve Product Table Alignment**
+
+   * Ensure columns align perfectly:
+
+     * Item Description
+     * HSN
+     * Qty
+     * Unit Price
+     * GST
+     * Amount
+   * Qty and GST should be center aligned.
+   * Unit Price and Amount should be right aligned.
+
+7. **Improve Seller Contact Section**
+
+   * Display as:
+
+     * Email: [support@kashaonline.in](mailto:support@kashaonline.in)
+     * Phone: +91 XXXXX XXXXX
+     * Website: [www.kashaonline.in](http://www.kashaonline.in)
+   * Ensure consistent spacing and formatting.
+
+8. **Improve Footer Layout**
+
+   * Add proper spacing above the footer.
+   * Add a divider line before:
+
+     * Return policy text
+     * Computer-generated invoice disclaimer
+   * Prevent the footer from appearing cramped.
+
+9. **Improve Capitalization & Typography**
+
+   * Ensure proper capitalization for all states, cities, and labels.
+   * Example:
+
+     * Andhra Pradesh (not Andhra pradesh)
+   * Maintain consistent font sizing and spacing throughout the invoice.
+
+10. **Improve Total Amount Section**
+
+    * Make the final amount more prominent.
+    * Example:
+      TOTAL PAYABLE ₹138.16
+    * Use bold font, proper spacing, and a top border to separate it from tax calculations.
+
+### Final Goal
+
+The invoice should look like a professionally generated e-commerce tax invoice with:
+
+* Perfect alignment
+* Consistent spacing
+* Correct GST wording
+* Clean typography
+* Proper currency formatting
+* Professional branding
+* Single-page responsive layout
+* No visual glitches, overlapping text, wrapping issues, or formatting inconsistencies.
