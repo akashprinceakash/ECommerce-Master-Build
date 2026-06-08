@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import { KASHA_LOGO_B64 } from "./logo-b64";
 
 const GSTIN = "07AJWPS2501D1Z6";
 const COMPANY_NAME = "PS FASHION";
@@ -8,6 +9,8 @@ const ADDRESS_LINE2 = "New Delhi — 110049";
 const SUPPORT_EMAIL = "support@kashaonline.in";
 const SUPPORT_PHONE = "+91 95608 89594";
 const HSN_CODE = "61099010";
+
+const logoBuffer = Buffer.from(KASHA_LOGO_B64, "base64");
 
 function gstRate(priceInPaise: number): number {
   return priceInPaise <= 100000 ? 0.05 : 0.12;
@@ -49,27 +52,29 @@ export function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
     doc.on("error", reject);
 
     // ── Helpers ─────────────────────────────────────────────────────────
-    const W = 495; // usable width
+    const W = 495; // usable width (A4 595pt - 2×50pt margins)
     const GOLD = "#B8925A";
     const BLACK = "#111111";
     const MUTED = "#666666";
     const LIGHT = "#F5F2EC";
 
-    // ── Header ──────────────────────────────────────────────────────────
-    doc.rect(50, 50, W, 72).fill(BLACK);
-    doc.font("Helvetica-Bold").fontSize(18).fillColor("#FFFFFF")
-      .text("KA·SHA", 50, 68, { width: W, align: "center" });
-    doc.font("Helvetica").fontSize(8).fillColor(GOLD)
-      .text("GOLF & SPORTSWEAR", 50, 90, { width: W, align: "center", characterSpacing: 3 });
+    // ── Logo ─────────────────────────────────────────────────────────────
+    // Logo is landscape ~2.55:1. At width=200pt → height≈78pt
+    const LOGO_W = 200;
+    const LOGO_H = 78;
+    const LOGO_X = 50 + (W - LOGO_W) / 2;
+    doc.image(logoBuffer, LOGO_X, 44, { width: LOGO_W, height: LOGO_H });
+
+    // ── Gold divider under logo ───────────────────────────────────────────
+    doc.moveTo(50, 130).lineTo(545, 130).strokeColor(GOLD).lineWidth(1).stroke();
 
     // ── TAX INVOICE label ────────────────────────────────────────────────
-    doc.moveDown(0.3);
     doc.font("Helvetica-Bold").fontSize(13).fillColor(BLACK)
-      .text("TAX INVOICE", 50, 136, { width: W, align: "center" });
-    doc.moveTo(50, 153).lineTo(545, 153).strokeColor(GOLD).lineWidth(1).stroke();
+      .text("TAX INVOICE", 50, 138, { width: W, align: "center" });
+    doc.moveTo(50, 156).lineTo(545, 156).strokeColor(GOLD).lineWidth(1).stroke();
 
     // ── Seller info (left) + Invoice meta (right) ────────────────────────
-    const Y_META = 160;
+    const Y_META = 163;
     doc.font("Helvetica-Bold").fontSize(9).fillColor(BLACK)
       .text(COMPANY_NAME, 50, Y_META);
     doc.font("Helvetica").fontSize(8).fillColor(MUTED)
@@ -169,7 +174,6 @@ export function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
     const totalBefore = subtotalExclGst + data.shippingChargeInPaise;
     const grandTotal = totalBefore + totalGst;
 
-    // Seller is registered in Delhi (GSTIN 07). Intra-state = customer in Delhi.
     const isIntraState = data.shippingState.trim().toLowerCase() === "delhi";
 
     function totalRow(label: string, value: string, bold = false) {
@@ -217,7 +221,6 @@ export function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
       .text("Returns accepted as per KA.SHA return policy available on kashaonline.in", 50, 796, { width: W, align: "center" })
       .text("This is a computer-generated invoice and does not require a physical signature.", 50, 806, { width: W, align: "center" });
 
-    // ── Seal the document — MUST be last ────────────────────────────────
     doc.end();
   });
 }

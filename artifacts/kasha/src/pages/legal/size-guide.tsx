@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 
 const GOLD = "#B8925A";
@@ -17,19 +17,13 @@ function MeasurementTable({ headers, rows }: { headers: string[]; rows: Row[] })
         <thead>
           <tr style={{ background: "#0A0A0A" }}>
             {headers.map((h, i) => (
-              <th
-                key={i}
-                style={{
-                  padding: "12px 18px",
-                  textAlign: i === 0 ? "left" : "center",
-                  color: GOLD,
-                  fontWeight: 600,
-                  letterSpacing: "0.2em",
-                  fontSize: 11,
-                  textTransform: "uppercase",
-                  whiteSpace: "nowrap",
-                }}
-              >
+              <th key={i} style={{
+                padding: "12px 18px",
+                textAlign: i === 0 ? "left" : "center",
+                color: GOLD, fontWeight: 600,
+                letterSpacing: "0.2em", fontSize: 11,
+                textTransform: "uppercase", whiteSpace: "nowrap",
+              }}>
                 {h}
               </th>
             ))}
@@ -37,23 +31,17 @@ function MeasurementTable({ headers, rows }: { headers: string[]; rows: Row[] })
         </thead>
         <tbody>
           {rows.map((row, ri) => (
-            <tr
-              key={ri}
-              style={{ background: ri % 2 === 0 ? "#fff" : "#F5F2EC", transition: "background 0.15s" }}
-            >
+            <tr key={ri} style={{ background: ri % 2 === 0 ? "#fff" : "#F5F2EC" }}>
               {row.map((cell, ci) => (
-                <td
-                  key={ci}
-                  style={{
-                    padding: "11px 18px",
-                    textAlign: ci === 0 ? "left" : "center",
-                    color: ci === 0 ? TX : MUTED,
-                    fontWeight: ci === 0 ? 700 : 400,
-                    letterSpacing: ci === 0 ? "0.15em" : "0.06em",
-                    fontSize: 13,
-                    borderBottom: "1px solid rgba(0,0,0,0.05)",
-                  }}
-                >
+                <td key={ci} style={{
+                  padding: "11px 18px",
+                  textAlign: ci === 0 ? "left" : "center",
+                  color: ci === 0 ? TX : MUTED,
+                  fontWeight: ci === 0 ? 700 : 400,
+                  letterSpacing: ci === 0 ? "0.15em" : "0.06em",
+                  fontSize: 13,
+                  borderBottom: "1px solid rgba(0,0,0,0.05)",
+                }}>
                   {cell}
                 </td>
               ))}
@@ -65,27 +53,158 @@ function MeasurementTable({ headers, rows }: { headers: string[]; rows: Row[] })
   );
 }
 
-function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+type ChartView = "body" | "garment";
+
+interface SectionData {
+  title: string;
+  body: { headers: string[]; rows: Row[] };
+  garment: { headers: string[]; rows: Row[] };
+}
+
+function Section({ data, view }: { data: SectionData; view: ChartView }) {
+  const table = view === "body" ? data.body : data.garment;
+  const subtitle = view === "body"
+    ? "Body measurements · inches"
+    : "Garment measurements · inches";
   return (
     <div style={{ marginBottom: 52 }}>
       <div style={{ marginBottom: 20 }}>
         <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(22px, 2.5vw, 30px)", fontWeight: 400, color: TX, letterSpacing: "0.02em", marginBottom: 6 }}>
-          {title}
+          {data.title}
         </h2>
-        {subtitle && (
-          <p style={{ fontFamily: FONT_UI, fontSize: 12, letterSpacing: "0.12em", color: "rgba(0,0,0,0.4)", textTransform: "uppercase" }}>
-            {subtitle}
-          </p>
-        )}
+        <p style={{ fontFamily: FONT_UI, fontSize: 12, letterSpacing: "0.12em", color: "rgba(0,0,0,0.4)", textTransform: "uppercase" }}>
+          {subtitle}
+        </p>
         <div style={{ width: 32, height: 1, background: GOLD, marginTop: 10 }} />
       </div>
-      {children}
+      <MeasurementTable headers={table.headers} rows={table.rows} />
     </div>
   );
 }
 
+function GenderDivider({ label }: { label: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 36 }}>
+      <div style={{ height: 1, flex: 1, background: "rgba(0,0,0,0.08)" }} />
+      <span style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.45em", color: GOLD, textTransform: "uppercase", whiteSpace: "nowrap" }}>
+        {label}
+      </span>
+      <div style={{ height: 1, flex: 1, background: "rgba(0,0,0,0.08)" }} />
+    </div>
+  );
+}
+
+// ── Chart data ────────────────────────────────────────────────────────────────
+
+const MEN_TSHIRT: SectionData = {
+  title: "T-Shirts",
+  body: {
+    headers: ["Size", "Chest", "Length", "Shoulder", "Sleeve Length"],
+    rows: [
+      ["XS", 34, 29, 16, "8.5"],
+      ["S", 36, 29, "16.5", "8.5"],
+      ["M", 38, 29, 17, 9],
+      ["L", 40, 29, "17.5", "9.5"],
+      ["XL", 42, 29, 18, "9.5"],
+      ["XXL", 45, 29, 19, 10],
+    ],
+  },
+  garment: {
+    headers: ["Size", "Chest", "Length", "Shoulder", "Sleeve Length"],
+    rows: [
+      ["XS", 38, 28, 16, "8.5"],
+      ["S", 40, 29, "16.5", "8.5"],
+      ["M", 42, 29, 17, 9],
+      ["L", 44, 29, "17.5", "9.5"],
+      ["XL", 46, 29, 18, "9.5"],
+      ["XXL", 49, 29, 19, 10],
+    ],
+  },
+};
+
+const MEN_PANTS: SectionData = {
+  title: "Pants",
+  body: {
+    headers: ["Size", "Waist", "Length", "Hip", "Thigh"],
+    rows: [
+      ["XS", 28, 42, 36, 21],
+      ["S", 30, 42, 38, 22],
+      ["M", 32, 42, 40, 23],
+      ["L", 34, 42, 42, 24],
+      ["XL", 36, 42, 44, 25],
+      ["XXL", 38, 42, 46, 26],
+    ],
+  },
+  garment: {
+    headers: ["Size", "Waist", "Length", "Hip", "Thigh"],
+    rows: [
+      ["XS", 28, 42, "38.5", "23.5"],
+      ["S", 30, 42, "40.5", "24.5"],
+      ["M", 32, 42, "42.5", "25.5"],
+      ["L", 34, 42, "44.5", "26.5"],
+      ["XL", 36, 42, "46.5", "27.5"],
+      ["XXL", 38, 42, "48.5", "28.5"],
+    ],
+  },
+};
+
+const MEN_SHORTS: SectionData = {
+  title: "Shorts",
+  body: {
+    headers: ["Size", "Waist", "Length", "Hip", "Thigh"],
+    rows: [
+      ["XS", 28, "19.5", 36, 21],
+      ["S", 30, "19.5", 38, 22],
+      ["M", 32, 20, 40, 23],
+      ["L", 34, 20, 42, 24],
+      ["XL", 36, "20.5", 44, 25],
+      ["XXL", 38, 21, 46, 26],
+    ],
+  },
+  garment: {
+    headers: ["Size", "Waist", "Length", "Hip", "Thigh"],
+    rows: [
+      ["XS", 28, "19.5", "38.5", "24.5"],
+      ["S", 30, "19.5", "40.5", "25.5"],
+      ["M", 32, 20, "42.5", "26.5"],
+      ["L", 34, 20, "44.5", "27.5"],
+      ["XL", 36, "20.5", "46.5", "28.5"],
+      ["XXL", 38, 21, "48.5", "29.5"],
+    ],
+  },
+};
+
+const WOMEN_TSHIRT: SectionData = {
+  title: "T-Shirts",
+  body: {
+    headers: ["Size", "Chest", "Length", "Shoulder", "Sleeve Length", "Waist"],
+    rows: [
+      ["XS", 32, "24.5", 13, "6.5", 30],
+      ["S", 34, 25, "13.5", "6.5", 32],
+      ["M", 36, "25.5", 14, 7, 34],
+      ["L", 38, "25.5", "14.5", "7.5", 36],
+      ["XL", 40, 26, 15, "7.5", 38],
+      ["XXL", 45, 26, "15.5", "7.5", 43],
+    ],
+  },
+  garment: {
+    headers: ["Size", "Chest", "Length", "Shoulder", "Sleeve Length", "Waist"],
+    rows: [
+      ["XS", 35, "24.5", 13, "6.5", 33],
+      ["S", 37, 25, "13.5", "6.5", 35],
+      ["M", 39, "25.5", 14, 7, 37],
+      ["L", 41, "25.5", "14.5", 7, 39],
+      ["XL", 43, 26, 15, "7.5", 41],
+      ["XXL", 45, 26, "15.5", "7.5", 43],
+    ],
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function SizeGuidePage() {
   useEffect(() => { document.title = "Size Guide — Ka.Sha"; }, []);
+  const [view, setView] = useState<ChartView>("body");
 
   return (
     <Layout>
@@ -97,19 +216,19 @@ export default function SizeGuidePage() {
         <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(28px, 4vw, 52px)", fontWeight: 400, color: TX, letterSpacing: "0.02em", marginBottom: 14 }}>
           Size Guide
         </h1>
-        <p style={{ fontFamily: FONT_UI, fontSize: 13, letterSpacing: "0.1em", color: MUTED, maxWidth: 560, margin: "0 auto", lineHeight: 1.8 }}>
-          All measurements are in <strong>inches</strong> and represent body measurements — not garment measurements.
+        <p style={{ fontFamily: FONT_UI, fontSize: 13, letterSpacing: "0.1em", color: MUTED, maxWidth: 580, margin: "0 auto", lineHeight: 1.8 }}>
+          Toggle between <strong>body measurements</strong> (your actual body) and <strong>garment measurements</strong> (finished garment dimensions).
           When between sizes, we recommend sizing up for a more relaxed fit.
         </p>
       </div>
 
       <div style={{ background: BG, minHeight: "calc(100vh - 64px)" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto", padding: "60px 24px 80px" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", padding: "60px 24px 80px" }}>
 
           {/* Tip banner */}
           <div style={{
             background: "rgba(184,146,90,0.08)", border: "1px solid rgba(184,146,90,0.3)",
-            padding: "14px 20px", marginBottom: 48, display: "flex", alignItems: "flex-start", gap: 12,
+            padding: "14px 20px", marginBottom: 36, display: "flex", alignItems: "flex-start", gap: 12,
           }}>
             <span style={{ color: GOLD, fontSize: 18, lineHeight: 1, marginTop: 1 }}>✦</span>
             <p style={{ fontFamily: FONT_UI, fontSize: 12, letterSpacing: "0.08em", color: MUTED, lineHeight: 1.7 }}>
@@ -117,82 +236,60 @@ export default function SizeGuidePage() {
             </p>
           </div>
 
+          {/* ── Chart type toggle ── */}
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 52 }}>
+            <div style={{
+              display: "inline-flex",
+              border: `1px solid rgba(184,146,90,0.4)`,
+              overflow: "hidden",
+            }}>
+              {(["body", "garment"] as ChartView[]).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  style={{
+                    padding: "10px 28px",
+                    fontFamily: FONT_UI,
+                    fontSize: 10,
+                    letterSpacing: "0.3em",
+                    textTransform: "uppercase",
+                    border: "none",
+                    cursor: "pointer",
+                    background: view === v ? TX : "transparent",
+                    color: view === v ? "#fff" : MUTED,
+                    transition: "background 0.2s, color 0.2s",
+                  }}
+                >
+                  {v === "body" ? "Body Measurements" : "Garment Measurements"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Context note */}
+          <div style={{
+            background: view === "body" ? "rgba(10,10,10,0.03)" : "rgba(184,146,90,0.06)",
+            border: `1px solid ${view === "body" ? "rgba(0,0,0,0.08)" : "rgba(184,146,90,0.2)"}`,
+            padding: "10px 16px", marginBottom: 48,
+            fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.06em", color: MUTED, lineHeight: 1.6,
+          }}>
+            {view === "body"
+              ? "↑ These are your body measurements. Use a measuring tape directly on your body to find the right size."
+              : "↑ These are the finished garment dimensions — the actual size of the clothing after production."}
+          </div>
+
           {/* ── MEN ── */}
           <div style={{ marginBottom: 60 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 36 }}>
-              <div style={{ height: 1, flex: 1, background: "rgba(0,0,0,0.08)" }} />
-              <span style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.45em", color: GOLD, textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                Men
-              </span>
-              <div style={{ height: 1, flex: 1, background: "rgba(0,0,0,0.08)" }} />
-            </div>
-
-            <Section title="T-Shirts" subtitle="Body measurements · inches">
-              <MeasurementTable
-                headers={["Size", "Chest", "Length", "Shoulder", "Sleeve Length"]}
-                rows={[
-                  ["XS", 34, 29, 16, "8.5"],
-                  ["S", 36, 29, "16.5", "8.5"],
-                  ["M", 38, 29, 17, 9],
-                  ["L", 40, 29, "17.5", "9.5"],
-                  ["XL", 42, 29, 18, "9.5"],
-                  ["XXL", 45, 29, 19, 10],
-                ]}
-              />
-            </Section>
-
-            <Section title="Pants" subtitle="Body measurements · inches">
-              <MeasurementTable
-                headers={["Size", "Waist", "Length", "Hip", "Thigh"]}
-                rows={[
-                  ["XS", 28, 42, 36, 21],
-                  ["S", 30, 42, 38, 22],
-                  ["M", 32, 42, 40, 23],
-                  ["L", 34, 42, 42, 24],
-                  ["XL", 36, 42, 44, 25],
-                  ["XXL", 38, 42, 46, 26],
-                ]}
-              />
-            </Section>
-
-            <Section title="Shorts" subtitle="Body measurements · inches">
-              <MeasurementTable
-                headers={["Size", "Waist", "Length", "Hip", "Thigh"]}
-                rows={[
-                  ["XS", 28, "19.5", 36, 21],
-                  ["S", 30, "19.5", 38, 22],
-                  ["M", 32, 20, 40, 23],
-                  ["L", 34, 20, 42, 24],
-                  ["XL", 36, "20.5", 44, 25],
-                  ["XXL", 38, 21, 46, 26],
-                ]}
-              />
-            </Section>
+            <GenderDivider label="Men" />
+            <Section data={MEN_TSHIRT} view={view} />
+            <Section data={MEN_PANTS} view={view} />
+            <Section data={MEN_SHORTS} view={view} />
           </div>
 
           {/* ── WOMEN ── */}
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 36 }}>
-              <div style={{ height: 1, flex: 1, background: "rgba(0,0,0,0.08)" }} />
-              <span style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.45em", color: GOLD, textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                Women
-              </span>
-              <div style={{ height: 1, flex: 1, background: "rgba(0,0,0,0.08)" }} />
-            </div>
-
-            <Section title="T-Shirts" subtitle="Body measurements · inches">
-              <MeasurementTable
-                headers={["Size", "Chest", "Length", "Shoulder", "Sleeve Length", "Waist"]}
-                rows={[
-                  ["XS", 32, "24.5", 13, "6.5", 30],
-                  ["S", 34, 25, "13.5", "6.5", 32],
-                  ["M", 36, "25.5", 14, 7, 34],
-                  ["L", 38, "25.5", "14.5", "7.5", 36],
-                  ["XL", 40, 26, 15, "7.5", 38],
-                  ["XXL", 45, 26, "15.5", "7.5", 43],
-                ]}
-              />
-            </Section>
+            <GenderDivider label="Women" />
+            <Section data={WOMEN_TSHIRT} view={view} />
           </div>
 
           {/* How to measure */}
