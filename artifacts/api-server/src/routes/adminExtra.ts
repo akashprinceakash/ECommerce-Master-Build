@@ -7,6 +7,7 @@ import type { Request, Response } from "express";
 import { createShiprocketOrder } from "../lib/shiprocket";
 import { sendOrderConfirmation } from "../lib/email";
 import { logger } from "../lib/logger";
+import { generateInvoicePdf } from "../lib/invoice";
 
 const router: IRouter = Router();
 
@@ -388,6 +389,59 @@ router.delete("/admin/users/:id", requireAuth, async (req, res): Promise<void> =
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: e?.message ?? "Failed to delete user" });
+  }
+});
+
+// GET /admin/orders/:id/invoice — download invoice PDF as admin (bypasses userId check)
+router.get("/orders/:id/invoice", requireAuth, async (req: Request, res: Response) => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+
+  const orderId = parseInt(String(req.params.id), 10);
+  if (isNaN(orderId)) { res.status(400).json({ error: "Invalid order id" }); return; }
+
+  try {
+    const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
+    if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+
+    const items = await db
+      .select({ name: productsTable.name, quantity: orderItemsTable.quantity, priceInPaise: orderItemsTable.priceInPaise, size: orderItemsTable.size })
+      .from(orderItemsTable)
+      .leftJoin(productsTable, eq(orderItemsTable.productId, productsTable.id))
+      .where(eq(orderItemsTable.orderId, orderId));
+
+    let customerEmail = "";
+    try {
+      const clerkUser = await clerkClient.users.getUser(order.userId);
+      customerEmail = clerkUser.emailAddresses.find(e => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ?? "";
+    } catch (_) { /* ignore */ }
+
+    const pdf = await generateInvoicePdf({
+      orderNumber: order.id,
+      orderDate: order.createdAt,
+      customerName: order.shippingName,
+      customerEmail,
+      shippingAddress: order.shippingAddress,
+      shippingCity: order.shippingCity,
+      shippingState: order.shippingState,
+      shippingPostalCode: order.shippingPostalCode,
+      shippingPhone: order.shippingPhone,
+      items: items.map(i => ({
+        name: i.name ?? "KA.SHA Product",
+        size: i.size ?? "",
+        quantity: i.quantity,
+        priceInPaise: i.priceInPaise,
+      })),
+      shippingChargeInPaise: order.shippingChargeInPaise ?? 0,
+      totalInPaise: order.totalInPaise,
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="KASHA-Invoice-${String(orderId).padStart(6, "0")}.pdf"`);
+    res.send(pdf);
+  } catch (e: any) {
+    logger.error({ err: e }, "Admin invoice generation failed");
+    res.status(500).json({ error: "Failed to generate invoice" });
   }
 });
 

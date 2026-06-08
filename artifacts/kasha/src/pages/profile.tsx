@@ -16,11 +16,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Palette, Shield } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 
 export default function ProfilePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const searchStr = useSearch();
+  const defaultTab = new URLSearchParams(searchStr).get("tab") === "designs" ? "designs" : "profile";
 
   const { data: profile, isLoading: isLoadingProfile } = useGetUserProfile({
     query: { queryKey: getGetUserProfileQueryKey() }
@@ -122,7 +124,7 @@ export default function ProfilePage() {
 
           {/* Main Content Tabs */}
           <div className="md:col-span-3">
-            <Tabs defaultValue="profile" className="w-full">
+            <Tabs defaultValue={defaultTab} className="w-full">
               <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent mb-8">
                 <TabsTrigger 
                   value="profile" 

@@ -1371,7 +1371,7 @@ export default function CustomizePage() {
       if(created?.id) sessionCustomizationIdRef.current=created.id;
       return created;
     },
-    onSuccess:()=>{toast({title:"Design Saved ✓",description:"Visit Your Profile → Bespoke Designs to view your saved design."});queryClient.invalidateQueries({queryKey:["customization",id]});},
+    onSuccess:()=>{toast({title:"Design Saved ✓",description:(<span>Design saved. <Link href="/profile?tab=designs" style={{textDecoration:"underline",fontWeight:600}}>View Bespoke Designs →</Link></span>)});queryClient.invalidateQueries({queryKey:["customization",id]});},
     onError:(e:any)=>toast({title:"Error",description:e.message,variant:"destructive"}),
   });
   const [cartAdded, setCartAdded] = useState(false);
@@ -1570,7 +1570,7 @@ export default function CustomizePage() {
       }}>
         {/* Left: back + logo */}
         <div style={{display:"flex",alignItems:"center",gap:14,minWidth:180}}>
-          <Link href={_fromSource === "modal" ? "/products" : id ? `/products/${id}` : "/products"} style={{
+          <Link href={_fromSource === "modal" ? "/products" : _fromSource === "saved" ? "/profile?tab=designs" : id ? `/products/${id}` : "/products"} style={{
             color:V.mu,fontSize:11,textDecoration:"none",
             display:"flex",alignItems:"center",gap:5,
             padding:"5px 12px",borderRadius:40,
@@ -3924,7 +3924,7 @@ export default function CustomizePage() {
                         )}
                       </div>
                     )}
-                    {textPlaced&&(
+                    {(textInput.trim().length > 0 || textPlaced)&&(
                       <div>
                         <div style={{...sb,marginBottom:8}}>Text</div>
                         {chipGrid(

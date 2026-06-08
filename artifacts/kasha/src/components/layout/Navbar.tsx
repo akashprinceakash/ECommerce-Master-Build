@@ -250,7 +250,7 @@ export function Navbar() {
                   style={{ borderBottom: "1px solid rgba(0,0,0,0.08)" }}
                 >
                   <p className="text-sm font-medium text-neutral-900">
-                    {user?.fullName || "Account"}
+                    {user?.fullName?.trim() || user?.firstName?.trim() || user?.primaryEmailAddress?.emailAddress?.split("@")[0] || "Account"}
                   </p>
                   <p
                     className="text-xs truncate"

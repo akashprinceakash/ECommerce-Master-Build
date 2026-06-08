@@ -114,6 +114,29 @@ function exportOrdersCSV(orders: AdminOrder[], label: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// Download invoice PDF for an order (admin endpoint, no user-ownership check).
+async function downloadInvoice(orderId: number) {
+  try {
+    const clerk = (window as any).Clerk;
+    const token = clerk?.session ? await clerk.session.getToken() : null;
+    const res = await fetch(`/api/admin/orders/${orderId}/invoice`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error("Invoice not available");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `KASHA-Invoice-${String(orderId).padStart(6, "0")}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch (e: any) {
+    alert("Invoice download failed: " + (e?.message ?? "Unknown error"));
+  }
+}
+
 // Trigger a browser download of a data URL as a file.
 function downloadDataUrl(dataUrl: string, filename: string) {
   const a = document.createElement("a");
@@ -416,6 +439,16 @@ export function AdminOrders() {
                         {s}
                       </button>
                     ))}
+                    {o.status !== "pending" && (
+                      <button
+                        onClick={() => downloadInvoice(o.id)}
+                        className="flex items-center gap-1 text-[10px] uppercase tracking-wider px-3 py-1.5 border border-slate-300 text-slate-600 hover:bg-slate-50 transition"
+                        title="Download invoice PDF"
+                      >
+                        <Download className="w-3 h-3" />
+                        Invoice
+                      </button>
+                    )}
                     {o.paymentId && o.status !== "cancelled" && (
                       <button
                         disabled={refunding === o.id}
@@ -442,12 +475,24 @@ export function AdminOrders() {
                 <div className="text-xs uppercase tracking-wider text-muted-foreground">Full Order</div>
                 <div id="full-order-title" className="text-xl font-bold font-mono">#{viewOrder.id}</div>
               </div>
-              <button
-                onClick={() => setViewOrder(null)}
-                className="p-2 hover:bg-muted rounded transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {viewOrder.status !== "pending" && (
+                  <button
+                    onClick={() => downloadInvoice(viewOrder.id)}
+                    className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-3 py-1.5 border border-slate-300 text-slate-600 hover:bg-slate-50 transition"
+                    title="Download invoice PDF"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Print Invoice
+                  </button>
+                )}
+                <button
+                  onClick={() => setViewOrder(null)}
+                  className="p-2 hover:bg-muted rounded transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div className="p-5 space-y-6">

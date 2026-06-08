@@ -1,0 +1,39 @@
+The client is reporting the following issues:
+
+Text Placement Issue
+"Text placement no other choice after logo upload pl check"
+
+Meaning: After uploading a logo in the customization studio, the customer is unable to select or change the text placement. The available text placement options may be missing or not working.
+
+Saved Design Profile Link
+"Customer shirt... saved to your profile message should have link to go directly there."
+
+Meaning: When a customer saves a design and sees the confirmation message ("Shirt saved to your profile"), the message should contain a clickable link/button that takes them directly to their Saved Designs/Profile page.
+
+Profile Name Display on Home Page
+"On home page below Your Profile icon name is as such"
+
+Meaning: There is likely an issue with how the customer's name is displayed below the Profile icon on the homepage. The client wants this checked and corrected.
+
+Back Navigation in Saved Designs
+"Saved design Edit - when we go into one edit... Back should go to all Saved Designs on Bespoke Design page."
+
+Meaning: When a user opens a saved design for editing and then clicks Back, they should return to the Saved Designs list page, not to another page or the homepage.
+
+Expected Flow:
+Saved Designs List → Open Design → Edit Design → Back → Saved Designs List
+
+Incorrect Sold Out Badge
+"Sold Out message is appearing on the shirt when we go back from an Edit Design from Bespoke Designs."
+
+Meaning: After editing a saved design and returning to the Bespoke Designs page, the shirt is incorrectly displaying a "Sold Out" label even though the product is available. This appears to be a bug related to state management or product data loading.
+
+The client is asking two things:
+
+How to process the order
+
+They are not sure what the next step is after moving the order from Pending to Confirmed.
+
+How to print the invoice
+
+They do not see any Print, Invoice, or Export option on the order page, so they cannot generate a printable invoice.
