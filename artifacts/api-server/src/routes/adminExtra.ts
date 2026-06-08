@@ -4,7 +4,7 @@ import { db, ordersTable, orderItemsTable, productsTable, customizationsTable, u
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import { clerkClient } from "@clerk/express";
 import type { Request, Response } from "express";
-import { createShiprocketOrder, getShiprocketLabel } from "../lib/shiprocket";
+import { createShiprocketOrder, getShiprocketLabel, requestShiprocketPickup } from "../lib/shiprocket";
 import { sendOrderConfirmation } from "../lib/email";
 import { logger } from "../lib/logger";
 import { generateInvoicePdf } from "../lib/invoice";
@@ -412,6 +412,40 @@ router.get("/admin/orders/:id/shipping-label", requireAuth, async (req: Request,
   } catch (e: any) {
     logger.error({ err: e }, "Admin shipping label generation failed");
     res.status(500).json({ error: "Failed to generate label" });
+  }
+});
+
+// POST /admin/orders/:id/request-pickup — request Shiprocket courier pickup for a shipment
+router.post("/admin/orders/:id/request-pickup", requireAuth, async (req: Request, res: Response) => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+
+  const orderId = parseInt(String(req.params.id), 10);
+  if (isNaN(orderId)) { res.status(400).json({ error: "Invalid order id" }); return; }
+
+  try {
+    const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
+    if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+    if (!order.shiprocketShipmentId) {
+      res.status(400).json({ error: "No Shiprocket shipment ID — sync to Shiprocket first" }); return;
+    }
+
+    const result = await requestShiprocketPickup(order.shiprocketShipmentId);
+
+    if (result.success) {
+      // Update status to ready_to_ship if it can still progress
+      const progressable = ["confirmed", "processing"].includes(order.status);
+      if (progressable) {
+        await db.update(ordersTable).set({ status: "ready_to_ship" }).where(eq(ordersTable.id, orderId));
+      }
+      logger.info({ orderId, shipmentId: order.shiprocketShipmentId }, "Pickup requested successfully");
+      res.json({ success: true, message: result.message });
+    } else {
+      res.status(502).json({ error: result.message });
+    }
+  } catch (e: any) {
+    logger.error({ err: e }, "Admin request-pickup failed");
+    res.status(500).json({ error: "Failed to request pickup" });
   }
 });
 

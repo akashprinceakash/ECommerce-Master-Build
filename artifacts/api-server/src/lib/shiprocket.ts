@@ -237,6 +237,35 @@ export async function createShiprocketOrder(
 }
 
 /**
+ * Request a pickup from Shiprocket for the given shipment ID.
+ * Returns { success, message } — success=true means pickup was scheduled.
+ */
+export async function requestShiprocketPickup(shipmentId: string): Promise<{ success: boolean; message: string }> {
+  if (!EMAIL || !PASSWORD) return { success: false, message: "Shiprocket credentials not configured" };
+  try {
+    const token = await getToken();
+    const res = await fetch(`${BASE}/courier/generate/pickup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ shipment_id: [parseInt(shipmentId, 10)] }),
+    });
+    const data = (await res.json()) as { pickup_status?: number; response?: { pickup_scheduled_date?: string } };
+    if (!res.ok) {
+      logger.warn({ status: res.status, shipmentId, data }, "Shiprocket pickup request failed");
+      return { success: false, message: `Shiprocket returned ${res.status}` };
+    }
+    const scheduled = data.response?.pickup_scheduled_date ?? "";
+    return {
+      success: true,
+      message: scheduled ? `Pickup scheduled for ${scheduled}` : "Pickup request sent to Shiprocket",
+    };
+  } catch (e) {
+    logger.error({ e, shipmentId }, "Error requesting Shiprocket pickup");
+    return { success: false, message: "Network error contacting Shiprocket" };
+  }
+}
+
+/**
  * Fetch a printable shipping label PDF URL from Shiprocket for a given shipment ID.
  * Returns the label URL string or null if unavailable.
  */
