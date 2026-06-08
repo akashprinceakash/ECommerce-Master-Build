@@ -604,6 +604,8 @@ router.get("/orders/:orderId/invoice", requireAuth, async (req, res): Promise<vo
     })),
     shippingChargeInPaise: order.shippingChargeInPaise ?? 0,
     totalInPaise: order.totalInPaise,
+    paymentMethod: order.paymentMethod,
+    paymentId: order.paymentId,
   });
 
   res.setHeader("Content-Type", "application/pdf");
