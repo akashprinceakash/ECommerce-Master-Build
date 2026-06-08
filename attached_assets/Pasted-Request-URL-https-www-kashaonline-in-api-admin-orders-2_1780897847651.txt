@@ -1,0 +1,84 @@
+Request URL
+https://www.kashaonline.in/api/admin/orders/25/invoice
+Request Method
+GET
+Status Code
+404 Not Found
+Remote Address
+64.29.17.1:443
+Referrer Policy
+strict-origin-when-cross-origin
+access-control-allow-credentials
+true
+cache-control
+public, max-age=0, must-revalidate
+cf-cache-status
+DYNAMIC
+cf-ray
+a0859909caab8ee9-BOM
+content-encoding
+br
+content-length
+121
+content-security-policy
+default-src 'none'
+content-type
+text/html; charset=utf-8
+date
+Mon, 08 Jun 2026 05:46:44 GMT
+rndr-id
+e4e31b71-3cfe-4fbf
+server
+Vercel
+strict-transport-security
+max-age=63072000
+vary
+Origin
+vary
+Accept-Encoding
+x-content-type-options
+nosniff
+x-powered-by
+Express
+x-render-origin-server
+Render
+x-vercel-cache
+MISS
+x-vercel-id
+bom1::zdpg4-1780897604130-435e36ef8db0
+:authority
+www.kashaonline.in
+:method
+GET
+:path
+/api/admin/orders/25/invoice
+:scheme
+https
+accept
+*/*
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-GB,en-US;q=0.9,en;q=0.8,kn;q=0.7,hi;q=0.6
+authorization
+Bearer eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18zRHZXeXVxbmZpZ3RlaUtmMkhzcXZRNzA4ZTQiLCJtIjoibyIsIm9pYXQiOjE3ODA4OTc1ODMsInR5cCI6IkpXVCJ9.eyJhenAiOiJodHRwczovL3d3dy5rYXNoYW9ubGluZS5pbiIsImV4cCI6MTc4MDg5NzY0MywiZnZhIjpbNDMsLTFdLCJpYXQiOjE3ODA4OTc1ODMsImlzcyI6Imh0dHBzOi8vY2xlcmsua2FzaGFvbmxpbmUuaW4iLCJuYmYiOjE3ODA4OTc1NzMsInNpZCI6InNlc3NfM0VxOHZQbDVqamFNZ1JNYnlMc1A1MTc2VjB0Iiwic3RzIjoiYWN0aXZlIiwic3ViIjoidXNlcl8zRHZsR28wbUxCcEtaWUdJRFZqalhwTGNGMkUiLCJ2IjoyfQ.jZjZZcLD6DirAVxhERmp5PejXr7lh2FGlz43BLSOkZ6jMCi412RoPvhu2KXBfz492A1o53YAfMsgzzaVpcB-ndTbKjB9XCPdVNMiOGDOfCEWtKWdYnLjtwKCvY75pncJCt0tUVYNLTBH6ku8tXC4aUiFKs8_A6NOh6TcdqNDd5a6-fJo9_45bTHoCorYKMdR83SQEHODnh9uBxLi-LwJagD54RRTx5UecT4TZbE6BhHEMoTExA2svzPFeInBw5l9M-yvfcEB3Dix0nui0npH705V9U-Sv8hp04JL6SYZxUWcNwXpSyoVM_EDkTiYN8-SqlPHVx9_kRoOr03vMe2QmQ
+cookie
+_tccl_visitor=89448cc9-3172-4b04-b103-b23341b5d9cd; __clerk_db_jwt_O1G8t5X3=dvb_3DtXsKy6to2bGXtHAt1dyy7Mkyl; __client_uat_O1G8t5X3=0; __client_uat=1780894968; __client_uat_t3bNUF0P=1780894968; clerk_active_context=sess_3Eq8vPl5jjaMgRMbyLsP5176V0t:; rzp_unified_session_id=Sz1WQRKndu8CNU; __session=eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18zRHZXeXVxbmZpZ3RlaUtmMkhzcXZRNzA4ZTQiLCJtIjoibyIsIm9pYXQiOjE3ODA4OTc1ODMsInR5cCI6IkpXVCJ9.eyJhenAiOiJodHRwczovL3d3dy5rYXNoYW9ubGluZS5pbiIsImV4cCI6MTc4MDg5NzY0MywiZnZhIjpbNDMsLTFdLCJpYXQiOjE3ODA4OTc1ODMsImlzcyI6Imh0dHBzOi8vY2xlcmsua2FzaGFvbmxpbmUuaW4iLCJuYmYiOjE3ODA4OTc1NzMsInNpZCI6InNlc3NfM0VxOHZQbDVqamFNZ1JNYnlMc1A1MTc2VjB0Iiwic3RzIjoiYWN0aXZlIiwic3ViIjoidXNlcl8zRHZsR28wbUxCcEtaWUdJRFZqalhwTGNGMkUiLCJ2IjoyfQ.jZjZZcLD6DirAVxhERmp5PejXr7lh2FGlz43BLSOkZ6jMCi412RoPvhu2KXBfz492A1o53YAfMsgzzaVpcB-ndTbKjB9XCPdVNMiOGDOfCEWtKWdYnLjtwKCvY75pncJCt0tUVYNLTBH6ku8tXC4aUiFKs8_A6NOh6TcdqNDd5a6-fJo9_45bTHoCorYKMdR83SQEHODnh9uBxLi-LwJagD54RRTx5UecT4TZbE6BhHEMoTExA2svzPFeInBw5l9M-yvfcEB3Dix0nui0npH705V9U-Sv8hp04JL6SYZxUWcNwXpSyoVM_EDkTiYN8-SqlPHVx9_kRoOr03vMe2QmQ; __session_t3bNUF0P=eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18zRHZXeXVxbmZpZ3RlaUtmMkhzcXZRNzA4ZTQiLCJtIjoibyIsIm9pYXQiOjE3ODA4OTc1ODMsInR5cCI6IkpXVCJ9.eyJhenAiOiJodHRwczovL3d3dy5rYXNoYW9ubGluZS5pbiIsImV4cCI6MTc4MDg5NzY0MywiZnZhIjpbNDMsLTFdLCJpYXQiOjE3ODA4OTc1ODMsImlzcyI6Imh0dHBzOi8vY2xlcmsua2FzaGFvbmxpbmUuaW4iLCJuYmYiOjE3ODA4OTc1NzMsInNpZCI6InNlc3NfM0VxOHZQbDVqamFNZ1JNYnlMc1A1MTc2VjB0Iiwic3RzIjoiYWN0aXZlIiwic3ViIjoidXNlcl8zRHZsR28wbUxCcEtaWUdJRFZqalhwTGNGMkUiLCJ2IjoyfQ.jZjZZcLD6DirAVxhERmp5PejXr7lh2FGlz43BLSOkZ6jMCi412RoPvhu2KXBfz492A1o53YAfMsgzzaVpcB-ndTbKjB9XCPdVNMiOGDOfCEWtKWdYnLjtwKCvY75pncJCt0tUVYNLTBH6ku8tXC4aUiFKs8_A6NOh6TcdqNDd5a6-fJo9_45bTHoCorYKMdR83SQEHODnh9uBxLi-LwJagD54RRTx5UecT4TZbE6BhHEMoTExA2svzPFeInBw5l9M-yvfcEB3Dix0nui0npH705V9U-Sv8hp04JL6SYZxUWcNwXpSyoVM_EDkTiYN8-SqlPHVx9_kRoOr03vMe2QmQ
+priority
+u=1, i
+referer
+https://www.kashaonline.in/admin
+sec-ch-ua
+"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"
+sec-ch-ua-mobile
+?1
+sec-ch-ua-platform
+"Android"
+sec-fetch-dest
+empty
+sec-fetch-mode
+cors
+sec-fetch-site
+same-origin
+user-agent
+Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Mobile Safari/537.36

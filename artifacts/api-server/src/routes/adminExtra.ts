@@ -393,7 +393,7 @@ router.delete("/admin/users/:id", requireAuth, async (req, res): Promise<void> =
 });
 
 // GET /admin/orders/:id/invoice — download invoice PDF as admin (bypasses userId check)
-router.get("/orders/:id/invoice", requireAuth, async (req: Request, res: Response) => {
+router.get("/admin/orders/:id/invoice", requireAuth, async (req: Request, res: Response) => {
   const adminId = await requireAdmin(req, res);
   if (!adminId) return;
 
