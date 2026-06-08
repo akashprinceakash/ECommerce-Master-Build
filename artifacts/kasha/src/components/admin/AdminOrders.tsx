@@ -22,6 +22,7 @@ interface AdminOrder {
   razorpayOrderId: string | null;
   razorpaySignature: string | null;
   shiprocketOrderId: string | null;
+  shiprocketShipmentId: number | null;
   shiprocketAwb: string | null;
   trackingUrl: string | null;
   shippingChargeInPaise: number | null;
@@ -112,6 +113,22 @@ function exportOrdersCSV(orders: AdminOrder[], label: string) {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Open Shiprocket shipping label in a new tab.
+async function printShippingLabel(orderId: number) {
+  try {
+    const clerk = (window as any).Clerk;
+    const token = clerk?.session ? await clerk.session.getToken() : null;
+    const res = await fetch(`/api/admin/orders/${orderId}/shipping-label`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { alert(data.error || "Shipping label not available for this order."); return; }
+    if (data.labelUrl) window.open(data.labelUrl, "_blank");
+  } catch (e: any) {
+    alert("Failed to fetch label: " + (e?.message ?? "Unknown error"));
+  }
 }
 
 // Download invoice PDF for an order (admin endpoint, no user-ownership check).
@@ -439,6 +456,16 @@ export function AdminOrders() {
                         {s}
                       </button>
                     ))}
+                    {o.shiprocketShipmentId && (
+                      <button
+                        onClick={() => printShippingLabel(o.id)}
+                        className="flex items-center gap-1 text-[10px] uppercase tracking-wider px-3 py-1.5 border border-slate-300 text-slate-600 hover:bg-slate-50 transition"
+                        title="Print shipping label"
+                      >
+                        <Truck className="w-3 h-3" />
+                        Label
+                      </button>
+                    )}
                     {o.status !== "pending" && (
                       <button
                         onClick={() => downloadInvoice(o.id)}
@@ -476,6 +503,16 @@ export function AdminOrders() {
                 <div id="full-order-title" className="text-xl font-bold font-mono">#{viewOrder.id}</div>
               </div>
               <div className="flex items-center gap-2">
+                {viewOrder.shiprocketShipmentId && (
+                  <button
+                    onClick={() => printShippingLabel(viewOrder.id)}
+                    className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-3 py-1.5 border border-slate-300 text-slate-600 hover:bg-slate-50 transition"
+                    title="Print shipping label"
+                  >
+                    <Truck className="w-3.5 h-3.5" />
+                    Shipping Label
+                  </button>
+                )}
                 {viewOrder.status !== "pending" && (
                   <button
                     onClick={() => downloadInvoice(viewOrder.id)}

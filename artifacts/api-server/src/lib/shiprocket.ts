@@ -117,6 +117,7 @@ export interface ShiprocketOrderInput {
 
 export interface ShiprocketOrderResult {
   shiprocketOrderId: string | null;
+  shiprocketShipmentId: string | null;
   awb: string | null;
   trackingUrl: string | null;
   errorMessage: string | null;
@@ -134,7 +135,7 @@ export async function createShiprocketOrder(
 ): Promise<ShiprocketOrderResult> {
   if (!EMAIL || !PASSWORD) {
     logger.warn("Shiprocket not configured — skipping shipment creation");
-    return { shiprocketOrderId: null, awb: null, trackingUrl: null, errorMessage: "Shiprocket credentials not configured" };
+    return { shiprocketOrderId: null, shiprocketShipmentId: null, awb: null, trackingUrl: null, errorMessage: "Shiprocket credentials not configured" };
   }
 
   const token = await getToken();
@@ -210,25 +211,52 @@ export async function createShiprocketOrder(
   if (!res.ok) {
     const errorMessage = extractError() ?? `HTTP ${res.status}`;
     logger.error({ status: res.status, data, srOrderId: orderId }, "Shiprocket order creation failed");
-    return { shiprocketOrderId: null, awb: null, trackingUrl: null, errorMessage };
+    return { shiprocketOrderId: null, shiprocketShipmentId: null, awb: null, trackingUrl: null, errorMessage };
   }
 
   // HTTP 200 but Shiprocket may still include errors with no order_id
   if (!data.order_id) {
     const errorMessage = extractError() ?? "Shiprocket returned no order ID (possible duplicate or validation error)";
     logger.error({ data, srOrderId: orderId }, "Shiprocket 200 but no order_id");
-    return { shiprocketOrderId: null, awb: null, trackingUrl: null, errorMessage };
+    return { shiprocketOrderId: null, shiprocketShipmentId: null, awb: null, trackingUrl: null, errorMessage };
   }
 
-  logger.info({ orderId: input.orderId, srOrder: data.order_id }, "Shiprocket order created");
+  logger.info({ orderId: input.orderId, srOrder: data.order_id, shipmentId: data.shipment_id }, "Shiprocket order created");
 
   const awb = data.awb_code ?? null;
   const trackingUrl = awb ? `https://shiprocket.co/tracking/${awb}` : null;
+  const shiprocketShipmentId = data.shipment_id ? String(data.shipment_id) : null;
 
   return {
     shiprocketOrderId: String(data.order_id),
+    shiprocketShipmentId,
     awb,
     trackingUrl,
     errorMessage: null,
   };
+}
+
+/**
+ * Fetch a printable shipping label PDF URL from Shiprocket for a given shipment ID.
+ * Returns the label URL string or null if unavailable.
+ */
+export async function getShiprocketLabel(shipmentId: string): Promise<string | null> {
+  if (!EMAIL || !PASSWORD) return null;
+  try {
+    const token = await getToken();
+    const res = await fetch(`${BASE}/courier/generate/label`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ shipment_id: [parseInt(shipmentId, 10)] }),
+    });
+    if (!res.ok) {
+      logger.warn({ status: res.status, shipmentId }, "Shiprocket label generation failed");
+      return null;
+    }
+    const data = (await res.json()) as { label_url?: string; response?: { label_url?: string } };
+    return data.label_url ?? data.response?.label_url ?? null;
+  } catch (e) {
+    logger.error({ e, shipmentId }, "Error fetching Shiprocket label");
+    return null;
+  }
 }

@@ -4,7 +4,7 @@ import { db, ordersTable, orderItemsTable, productsTable, customizationsTable, u
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import { clerkClient } from "@clerk/express";
 import type { Request, Response } from "express";
-import { createShiprocketOrder } from "../lib/shiprocket";
+import { createShiprocketOrder, getShiprocketLabel } from "../lib/shiprocket";
 import { sendOrderConfirmation } from "../lib/email";
 import { logger } from "../lib/logger";
 import { generateInvoicePdf } from "../lib/invoice";
@@ -389,6 +389,29 @@ router.delete("/admin/users/:id", requireAuth, async (req, res): Promise<void> =
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: e?.message ?? "Failed to delete user" });
+  }
+});
+
+// GET /admin/orders/:id/shipping-label — get Shiprocket printable label URL for an order
+router.get("/admin/orders/:id/shipping-label", requireAuth, async (req: Request, res: Response) => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+
+  const orderId = parseInt(String(req.params.id), 10);
+  if (isNaN(orderId)) { res.status(400).json({ error: "Invalid order id" }); return; }
+
+  try {
+    const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
+    if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+    if (!order.shiprocketShipmentId) { res.status(404).json({ error: "No shipment ID on record — label unavailable" }); return; }
+
+    const labelUrl = await getShiprocketLabel(order.shiprocketShipmentId);
+    if (!labelUrl) { res.status(404).json({ error: "Failed to generate label from Shiprocket" }); return; }
+
+    res.json({ labelUrl });
+  } catch (e: any) {
+    logger.error({ err: e }, "Admin shipping label generation failed");
+    res.status(500).json({ error: "Failed to generate label" });
   }
 });
 

@@ -5,7 +5,7 @@ import { eq, and, inArray, sql } from "drizzle-orm";
 import { clerkClient } from "@clerk/express";
 import {
   db, cartsTable, cartItemsTable, productsTable,
-  ordersTable, orderItemsTable, customizationsTable,
+  ordersTable, orderItemsTable, customizationsTable, orderEventsTable,
 } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import { createShiprocketOrder, getShippingRates } from "../lib/shiprocket";
@@ -145,8 +145,35 @@ async function runFulfillment(
 
       if (sr.shiprocketOrderId) {
         await db.update(ordersTable)
-          .set({ shiprocketOrderId: sr.shiprocketOrderId, shiprocketAwb: sr.awb, trackingUrl: sr.trackingUrl })
+          .set({
+            shiprocketOrderId: sr.shiprocketOrderId,
+            shiprocketShipmentId: sr.shiprocketShipmentId,
+            shiprocketAwb: sr.awb,
+            trackingUrl: sr.trackingUrl,
+          })
           .where(eq(ordersTable.id, order.id));
+
+        // Record Shiprocket creation event
+        await db.insert(orderEventsTable).values({
+          orderId: order.id,
+          eventType: "shiprocket_created",
+          title: "Shipment Created",
+          description: `Shiprocket Order #${sr.shiprocketOrderId}`,
+        });
+
+        // If AWB was assigned immediately (prepaid courier), record it
+        if (sr.awb) {
+          await db.insert(orderEventsTable).values({
+            orderId: order.id,
+            eventType: "awb_assigned",
+            title: "AWB Assigned",
+            description: `Tracking: ${sr.awb}`,
+          });
+          // Advance status to processing since AWB is assigned
+          await db.update(ordersTable)
+            .set({ status: "processing" })
+            .where(eq(ordersTable.id, order.id));
+        }
       }
 
       if (customerEmail) {
@@ -283,6 +310,9 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
       }),
     ),
   );
+
+  // Record order placed event
+  void db.insert(orderEventsTable).values({ orderId: order.id, eventType: "order_placed", title: "Order Placed", description: "Awaiting payment" });
 
   res.json({ orderId: rzpOrder.id, dbOrderId: order.id, amount: rzpOrder.amount, currency: rzpOrder.currency, keyId });
 });
@@ -426,6 +456,12 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
     ),
   );
 
+  // Record events for COD order (placed + confirmed in one step)
+  void (async () => {
+    await db.insert(orderEventsTable).values({ orderId: order.id, eventType: "order_placed", title: "Order Placed", description: "Cash on Delivery" });
+    await db.insert(orderEventsTable).values({ orderId: order.id, eventType: "payment_confirmed", title: "Order Confirmed", description: "COD order confirmed" });
+  })();
+
   // Run fulfillment in background (cart clear, stock deduction, Shiprocket, email)
   void runFulfillment(order, userId);
 
@@ -515,6 +551,9 @@ async function confirmOrder(
     return existing;
   }
 
+  // Record payment verified event
+  void db.insert(orderEventsTable).values({ orderId, eventType: "payment_verified", title: "Payment Verified", description: `Payment ID: ${paymentId}` });
+
   await runFulfillment(updated, userId);
   return updated;
 }
@@ -578,6 +617,7 @@ router.get("/orders/:orderId/invoice", requireAuth, async (req, res): Promise<vo
 async function buildFullOrder(orderId: number) {
   const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId));
   const items   = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, orderId));
+  const events  = await db.select().from(orderEventsTable).where(eq(orderEventsTable.orderId, orderId));
   const itemsWithDetails = await Promise.all(items.map(async (it) => {
     const [product] = await db.select().from(productsTable).where(eq(productsTable.id, it.productId));
     let customization = null;
@@ -587,7 +627,7 @@ async function buildFullOrder(orderId: number) {
     }
     return { ...it, product, customization };
   }));
-  return { ...order, items: itemsWithDetails };
+  return { ...order, items: itemsWithDetails, events };
 }
 
 export default router;

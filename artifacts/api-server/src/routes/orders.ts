@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, and, desc } from "drizzle-orm";
-import { db, ordersTable, orderItemsTable, productsTable, customizationsTable } from "@workspace/db";
+import { eq, and, desc, asc } from "drizzle-orm";
+import { db, ordersTable, orderItemsTable, productsTable, customizationsTable, orderEventsTable } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -10,6 +10,12 @@ async function buildOrderResponse(order: typeof ordersTable.$inferSelect) {
     .select()
     .from(orderItemsTable)
     .where(eq(orderItemsTable.orderId, order.id));
+
+  const events = await db
+    .select()
+    .from(orderEventsTable)
+    .where(eq(orderEventsTable.orderId, order.id))
+    .orderBy(asc(orderEventsTable.createdAt));
 
   const itemsWithDetails = await Promise.all(
     items.map(async (item) => {
@@ -23,7 +29,7 @@ async function buildOrderResponse(order: typeof ordersTable.$inferSelect) {
     })
   );
 
-  return { ...order, items: itemsWithDetails };
+  return { ...order, items: itemsWithDetails, events };
 }
 
 router.get("/orders", requireAuth, async (req, res): Promise<void> => {

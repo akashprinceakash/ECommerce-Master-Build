@@ -855,6 +855,29 @@ components:
         - priceInPaise
         - product
 
+    OrderEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        eventType:
+          type: string
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - orderId
+        - eventType
+        - title
+        - createdAt
+
     Order:
       type: object
       properties:
@@ -864,7 +887,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, confirmed, processing, shipped, delivered, cancelled]
+          enum: [pending, confirmed, processing, ready_to_ship, shipped, in_transit, out_for_delivery, delivered, returned, cancelled]
         totalInPaise:
           type: integer
         shippingName:
@@ -881,10 +904,20 @@ components:
           type: string
         paymentId:
           type: ["string", "null"]
+        shiprocketOrderId:
+          type: ["string", "null"]
+        shiprocketAwb:
+          type: ["string", "null"]
+        trackingUrl:
+          type: ["string", "null"]
         items:
           type: array
           items:
             $ref: "#/components/schemas/OrderItem"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderEvent"
         createdAt:
           type: string
           format: date-time
@@ -903,6 +936,7 @@ components:
         - shippingPostalCode
         - shippingPhone
         - items
+        - events
         - createdAt
         - updatedAt
 

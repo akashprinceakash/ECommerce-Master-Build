@@ -150,14 +150,28 @@ export interface OrderItem {
   customization?: Customization | null;
 }
 
+export interface OrderEvent {
+  id: number;
+  orderId: number;
+  eventType: string;
+  title: string;
+  /** @nullable */
+  description?: string | null;
+  createdAt: string;
+}
+
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
 export const OrderStatus = {
   pending: "pending",
   confirmed: "confirmed",
   processing: "processing",
+  ready_to_ship: "ready_to_ship",
   shipped: "shipped",
+  in_transit: "in_transit",
+  out_for_delivery: "out_for_delivery",
   delivered: "delivered",
+  returned: "returned",
   cancelled: "cancelled",
 } as const;
 
@@ -174,7 +188,14 @@ export interface Order {
   shippingPhone: string;
   /** @nullable */
   paymentId?: string | null;
+  /** @nullable */
+  shiprocketOrderId?: string | null;
+  /** @nullable */
+  shiprocketAwb?: string | null;
+  /** @nullable */
+  trackingUrl?: string | null;
   items: OrderItem[];
+  events: OrderEvent[];
   createdAt: string;
   updatedAt: string;
 }

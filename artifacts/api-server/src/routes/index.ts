@@ -13,9 +13,11 @@ import r2proxyRouter from "./r2proxy";
 import skuAssetsRouter from "./skuAssets";
 import contactRouter from "./contact";
 import lookbookRouter from "./lookbook";
+import shiprocketWebhookRouter from "./shiprocketWebhook";
 
 const router: IRouter = Router();
 
+router.use(shiprocketWebhookRouter);
 router.use(healthRouter);
 router.use(productsRouter);
 router.use(customizationsRouter);

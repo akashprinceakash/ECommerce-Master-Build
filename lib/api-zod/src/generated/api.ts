@@ -352,8 +352,12 @@ export const ListOrdersResponseItem = zod.object({
     "pending",
     "confirmed",
     "processing",
+    "ready_to_ship",
     "shipped",
+    "in_transit",
+    "out_for_delivery",
     "delivered",
+    "returned",
     "cancelled",
   ]),
   totalInPaise: zod.number(),
@@ -364,6 +368,9 @@ export const ListOrdersResponseItem = zod.object({
   shippingPostalCode: zod.string(),
   shippingPhone: zod.string(),
   paymentId: zod.string().nullish(),
+  shiprocketOrderId: zod.string().nullish(),
+  shiprocketAwb: zod.string().nullish(),
+  trackingUrl: zod.string().nullish(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -415,6 +422,16 @@ export const ListOrdersResponseItem = zod.object({
         .optional(),
     }),
   ),
+  events: zod.array(
+    zod.object({
+      id: zod.number(),
+      orderId: zod.number(),
+      eventType: zod.string(),
+      title: zod.string(),
+      description: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -447,8 +464,12 @@ export const GetOrderResponse = zod.object({
     "pending",
     "confirmed",
     "processing",
+    "ready_to_ship",
     "shipped",
+    "in_transit",
+    "out_for_delivery",
     "delivered",
+    "returned",
     "cancelled",
   ]),
   totalInPaise: zod.number(),
@@ -459,6 +480,9 @@ export const GetOrderResponse = zod.object({
   shippingPostalCode: zod.string(),
   shippingPhone: zod.string(),
   paymentId: zod.string().nullish(),
+  shiprocketOrderId: zod.string().nullish(),
+  shiprocketAwb: zod.string().nullish(),
+  trackingUrl: zod.string().nullish(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -508,6 +532,16 @@ export const GetOrderResponse = zod.object({
           zod.null(),
         ])
         .optional(),
+    }),
+  ),
+  events: zod.array(
+    zod.object({
+      id: zod.number(),
+      orderId: zod.number(),
+      eventType: zod.string(),
+      title: zod.string(),
+      description: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
     }),
   ),
   createdAt: zod.coerce.date(),
