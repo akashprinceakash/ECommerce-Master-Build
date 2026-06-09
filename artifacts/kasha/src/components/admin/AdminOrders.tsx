@@ -48,6 +48,9 @@ interface AdminOrder {
       partsEnabled?: any;
       canvasData?: string | null;
       previewImageUrl?: string | null;
+      frontImageUrl?: string | null;
+      backImageUrl?: string | null;
+      sideImageUrl?: string | null;
     } | null;
   }>;
 }
@@ -125,15 +128,36 @@ async function renderCanvasJsonToPng(canvasJson: string, width = 2048, height = 
 
 async function exportDesignAllSides(customization: NonNullable<AdminOrder["items"][number]["customization"]>, prefix: string): Promise<{ count: number; errors: string[] }> {
   let count = 0; const errors: string[] = [];
-  if (customization.previewImageUrl) {
+
+  // Download all saved view images
+  const viewUrls: Array<{ url: string; filename: string }> = [
+    { url: customization.frontImageUrl ?? "", filename: `${prefix}-front-view.png` },
+    { url: customization.backImageUrl ?? "",  filename: `${prefix}-back-view.png` },
+    { url: customization.sideImageUrl ?? "",  filename: `${prefix}-side-view.png` },
+    { url: customization.previewImageUrl ?? "", filename: `${prefix}-3d-preview.png` },
+  ];
+
+  const downloadedUrls = new Set<string>();
+  for (const { url, filename } of viewUrls) {
+    if (!url || downloadedUrls.has(url)) continue;
+    downloadedUrls.add(url);
     try {
-      const res = await fetch(customization.previewImageUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob(); const url = URL.createObjectURL(blob);
-      downloadDataUrl(url, `${prefix}-3d-preview.png`); setTimeout(() => URL.revokeObjectURL(url), 1000); count++;
-    } catch (e: any) { errors.push(`preview: ${e.message || e}`); }
+      if (url.startsWith("data:")) {
+        downloadDataUrl(url, filename); count++;
+      } else {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        downloadDataUrl(objectUrl, filename);
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+        count++;
+      }
+    } catch (e: any) { errors.push(`${filename}: ${e.message || e}`); }
   }
-  if (customization.canvasData) {
+
+  // Also export canvas texture if no view images were saved
+  if (count === 0 && customization.canvasData) {
     try {
       const parsed = JSON.parse(customization.canvasData);
       const canvasJSON = parsed.canvasJSON || parsed;
@@ -143,6 +167,7 @@ async function exportDesignAllSides(customization: NonNullable<AdminOrder["items
       else errors.push("canvas: render returned null");
     } catch (e: any) { errors.push(`canvas: ${e.message || e}`); }
   }
+
   return { count, errors };
 }
 
@@ -709,28 +734,33 @@ export function AdminOrders() {
                   const c = it.customization;
                   return (
                     <div key={it.id} className="border border-border p-4 bg-muted/10">
-                      <div className="flex items-start gap-4">
-                        <div className="w-32 h-32 flex-shrink-0 bg-white border border-border overflow-hidden flex items-center justify-center">
-                          {c?.previewImageUrl ? (
-                            <img src={c.previewImageUrl} alt="" className="w-full h-full object-cover" />
-                          ) : it.product?.thumbnailUrl ? (
-                            <img src={getAssetUrl(it.product.thumbnailUrl)} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-xs text-muted-foreground">No preview</span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium">{it.product?.name ?? "Unknown product"}</div>
-                          {it.product?.category && (
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">
-                              {it.product.category === "pattern" ? "Pattern T-Shirt" : "Fabric T-Shirt"}
+                      <div className="flex-1 min-w-0">
+                        {/* Product header */}
+                        <div className="flex items-center gap-3 mb-3">
+                          {(c?.previewImageUrl || it.product?.thumbnailUrl) && (
+                            <div className="w-14 h-14 flex-shrink-0 bg-white border border-border overflow-hidden flex items-center justify-center">
+                              {c?.previewImageUrl
+                                ? <img src={c.previewImageUrl} alt="" className="w-full h-full object-cover" />
+                                : <img src={getAssetUrl(it.product!.thumbnailUrl!)} alt="" className="w-full h-full object-cover" />}
                             </div>
                           )}
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Size <span className="font-semibold text-foreground">{it.size}</span> · Qty <span className="font-semibold text-foreground">{it.quantity}</span> · {formatPrice(it.priceInPaise * it.quantity)}
+                          <div>
+                            <div className="font-medium">{it.product?.name ?? "Unknown product"}</div>
+                            {it.product?.category && (
+                              <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">
+                                {it.product.category === "pattern" ? "Pattern T-Shirt" : "Fabric T-Shirt"}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              Size <span className="font-semibold text-foreground">{it.size}</span> · Qty <span className="font-semibold text-foreground">{it.quantity}</span> · {formatPrice(it.priceInPaise * it.quantity)}
+                            </div>
                           </div>
-                          {c && (
-                            <div className="mt-2 text-xs space-y-0.5">
+                        </div>
+
+                        {c && (
+                          <>
+                            {/* Design meta */}
+                            <div className="text-xs space-y-0.5 mb-3">
                               <div><span className="text-muted-foreground">Bespoke design:</span> <span className="font-medium">{c.name}</span></div>
                               {c.color && (
                                 <div className="flex items-center gap-2">
@@ -743,31 +773,62 @@ export function AdminOrders() {
                                 <div><span className="text-muted-foreground">Pattern / preset:</span> <span className="font-mono">{c.partsEnabled.presetName}</span></div>
                               )}
                             </div>
+
+                            {/* All design views thumbnail strip */}
+                            {(() => {
+                              const views: Array<{ label: string; url: string }> = [];
+                              const seen = new Set<string>();
+                              const tryAdd = (url: string | null | undefined, label: string) => {
+                                if (url && !seen.has(url)) { seen.add(url); views.push({ label, url }); }
+                              };
+                              tryAdd(c.frontImageUrl,   "Front");
+                              tryAdd(c.backImageUrl,    "Back");
+                              tryAdd(c.sideImageUrl,    "Side");
+                              tryAdd(c.previewImageUrl, "3D Preview");
+                              if (views.length === 0) return null;
+                              return (
+                                <div className="mb-3">
+                                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-semibold">Design Views</div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {views.map(({ label, url }) => (
+                                      <div key={url} className="text-center">
+                                        <div className="w-24 h-24 bg-white border border-border overflow-hidden flex items-center justify-center">
+                                          <img src={url} alt={label} className="w-full h-full object-contain" />
+                                        </div>
+                                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground mt-1">{label}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </>
+                        )}
+
+                        {/* Export button */}
+                        <div className="flex flex-wrap gap-2">
+                          {c ? (
+                            <button
+                              disabled={exporting === it.id}
+                              onClick={async () => {
+                                setExporting(it.id);
+                                const prefix = `kasha-order-${viewOrder.id}-item-${it.id}`;
+                                const { count, errors } = await exportDesignAllSides(c, prefix);
+                                setExporting(null);
+                                if (count === 0) {
+                                  toast({ title: "Nothing to export", description: errors.length ? `Export failed: ${errors.join("; ")}` : "This design has no preview or canvas data saved.", variant: "destructive" });
+                                } else {
+                                  toast({ title: `Exported ${count} file${count === 1 ? "" : "s"}`, description: errors.length ? `Some assets failed: ${errors.join("; ")}` : "PNG files downloaded." });
+                                }
+                              }}
+                              className="text-[10px] uppercase tracking-wider px-3 py-1.5 border border-primary bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition flex items-center gap-1.5"
+                            >
+                              {exporting === it.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                              Download All Design Views
+                            </button>
+                          ) : (
+                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Stock item — no bespoke design</span>
                           )}
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {c ? (
-                              <button
-                                disabled={exporting === it.id}
-                                onClick={async () => {
-                                  setExporting(it.id);
-                                  const prefix = `kasha-order-${viewOrder.id}-item-${it.id}`;
-                                  const { count, errors } = await exportDesignAllSides(c, prefix);
-                                  setExporting(null);
-                                  if (count === 0) {
-                                    toast({ title: "Nothing to export", description: errors.length ? `Export failed: ${errors.join("; ")}` : "This design has no preview or canvas data saved.", variant: "destructive" });
-                                  } else {
-                                    toast({ title: `Exported ${count} file${count === 1 ? "" : "s"}`, description: errors.length ? `Some assets failed: ${errors.join("; ")}` : "PNG files downloaded." });
-                                  }
-                                }}
-                                className="text-[10px] uppercase tracking-wider px-3 py-1.5 border border-primary bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition flex items-center gap-1.5"
-                              >
-                                {exporting === it.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-                                Export Design as PNG (all sides)
-                              </button>
-                            ) : (
-                              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Stock item — no bespoke design</span>
-                            )}
-                          </div>
                         </div>
                       </div>
                     </div>

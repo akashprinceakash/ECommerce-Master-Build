@@ -35,9 +35,15 @@ function toTitleCase(s: string): string {
 // ── Public interfaces ─────────────────────────────────────────────────────────
 export interface InvoiceItem {
   name: string;
+  sku?: string;
   size: string;
   quantity: number;
   priceInPaise: number;
+}
+
+export interface DesignView {
+  label: string;
+  buffer: Buffer;
 }
 
 export interface InvoiceData {
@@ -55,6 +61,7 @@ export interface InvoiceData {
   totalInPaise: number;
   paymentMethod?: string;
   paymentId?: string | null;
+  designViews?: DesignView[];
 }
 
 // ── PDF generation ────────────────────────────────────────────────────────────
@@ -214,22 +221,28 @@ export function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
       subtotalExclGst += base;
       totalItemGst    += gst;
 
-      doc.rect(L, y, W, 24).fill(i % 2 === 0 ? "#FAFAF7" : WHITE);
-      const rY = y + 8;
+      const ROW_H = item.sku ? 38 : 26;
+      doc.rect(L, y, W, ROW_H).fill(i % 2 === 0 ? "#FAFAF7" : WHITE);
+      const nameY = y + 7;
+      const numY  = item.sku ? y + 13 : y + 9;
       const displayName = item.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "");
 
       doc.font("Helvetica").fontSize(8).fillColor(BLACK)
-        .text(`${displayName} (${item.size})`,  C.desc.x,  rY, { width: C.desc.w,  align: C.desc.align,  ellipsis: true });
-      doc.fillColor(MUTED)
-        .text(HSN_CODE,                          C.hsn.x,   rY, { width: C.hsn.w,   align: C.hsn.align   })
-        .text(String(item.quantity),             C.qty.x,   rY, { width: C.qty.w,   align: C.qty.align   });
+        .text(`${displayName} (${item.size})`, C.desc.x, nameY, { width: C.desc.w, align: C.desc.align, ellipsis: true });
+      if (item.sku) {
+        doc.font("Helvetica-Bold").fontSize(7).fillColor(GOLD)
+          .text(`STYLE NO: ${item.sku}`, C.desc.x, nameY + 11, { width: C.desc.w, align: "left" });
+      }
+      doc.font("Helvetica").fontSize(8).fillColor(MUTED)
+        .text(HSN_CODE,                          C.hsn.x,   numY, { width: C.hsn.w,   align: C.hsn.align   })
+        .text(String(item.quantity),             C.qty.x,   numY, { width: C.qty.w,   align: C.qty.align   });
       doc.fillColor(BLACK)
-        .text(fmt(item.priceInPaise),            C.rate.x,  rY, { width: C.rate.w,  align: C.rate.align  });
+        .text(fmt(item.priceInPaise),            C.rate.x,  numY, { width: C.rate.w,  align: C.rate.align  });
       doc.fillColor(MUTED)
-        .text(`${Math.round(rate * 100)}%`,      C.gst.x,   rY, { width: C.gst.w,   align: C.gst.align   });
+        .text(`${Math.round(rate * 100)}%`,      C.gst.x,   numY, { width: C.gst.w,   align: C.gst.align   });
       doc.fillColor(BLACK)
-        .text(fmt(lineTotal),                    C.total.x, rY, { width: C.total.w, align: C.total.align });
-      y += 24;
+        .text(fmt(lineTotal),                    C.total.x, numY, { width: C.total.w, align: C.total.align });
+      y += ROW_H;
     }
 
     // ── Shipping row ──────────────────────────────────────────────────────
@@ -342,6 +355,61 @@ export function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
       .text("Returns accepted as per KA.SHA return policy available on kashaonline.in", L, fy, { width: W, align: "center" });
     fy += 9;
     doc.text("This is a computer-generated invoice and does not require a physical signature.", L, fy, { width: W, align: "center" });
+
+    // ── Production Design Sheet (page 2) ─────────────────────────────────
+    if (data.designViews && data.designViews.length > 0) {
+      doc.addPage();
+
+      // Header bar
+      doc.rect(L, 44, W, 22).fill(BLACK);
+      doc.font("Helvetica-Bold").fontSize(9).fillColor(WHITE)
+        .text("PRODUCTION DESIGN SHEET", L + 4, 51, { width: W - 8, align: "left" });
+      doc.font("Helvetica").fontSize(8).fillColor(GOLD)
+        .text(`Order #${data.orderNumber}  ·  ${data.customerName}`, L + 4, 51, { width: W - 8, align: "right" });
+
+      // Subtitle
+      doc.font("Helvetica").fontSize(7.5).fillColor(MUTED)
+        .text("This sheet shows the exact bespoke design ordered. Use all views for accurate production.", L, 74, { width: W, align: "center" });
+
+      hline(85, GOLD, 0.5);
+
+      // Grid: 3 images per row, max 2 rows = 6 images
+      const COLS      = 3;
+      const IMG_W     = 145;
+      const IMG_H     = 145;
+      const CELL_W    = IMG_W + 10;
+      const CELL_H    = IMG_H + 20;
+      const GRID_LEFT = L + (W - COLS * CELL_W) / 2;
+
+      data.designViews.forEach((view, idx) => {
+        const col = idx % COLS;
+        const row = Math.floor(idx / COLS);
+        if (row > 1) return; // max 2 rows
+
+        const cx = GRID_LEFT + col * CELL_W;
+        const cy = 92 + row * (CELL_H + 12);
+
+        // White image box with border
+        doc.rect(cx, cy, IMG_W, IMG_H).fill("#FFFFFF").stroke("#E5E0D8");
+        try {
+          doc.image(view.buffer, cx + 2, cy + 2, { width: IMG_W - 4, height: IMG_H - 4, fit: [IMG_W - 4, IMG_H - 4], align: "center", valign: "center" });
+        } catch {
+          // If image embed fails, show placeholder text
+          doc.font("Helvetica").fontSize(7).fillColor(MUTED)
+            .text("(image unavailable)", cx, cy + IMG_H / 2 - 4, { width: IMG_W, align: "center" });
+        }
+
+        // Label below image
+        doc.font("Helvetica-Bold").fontSize(7).fillColor(BLACK)
+          .text(view.label.toUpperCase(), cx, cy + IMG_H + 4, { width: IMG_W, align: "center" });
+      });
+
+      // Footer note
+      const noteY = 92 + 2 * (CELL_H + 12) + 8;
+      hline(Math.max(noteY, 460), GOLD, 0.5);
+      doc.font("Helvetica").fontSize(7).fillColor(MUTED)
+        .text("Confidential — For internal production use only. Views shown are from the bespoke design studio at the time of order placement.", L, Math.max(noteY, 460) + 6, { width: W, align: "center" });
+    }
 
     doc.end();
   });

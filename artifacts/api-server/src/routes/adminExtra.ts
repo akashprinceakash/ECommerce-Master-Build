@@ -449,6 +449,20 @@ router.post("/admin/orders/:id/request-pickup", requireAuth, async (req: Request
   }
 });
 
+// Helper: fetch an image URL (or data URL) as a Buffer for PDF embedding
+async function fetchImageBuffer(url: string): Promise<Buffer | null> {
+  try {
+    if (url.startsWith("data:")) {
+      const comma = url.indexOf(",");
+      if (comma === -1) return null;
+      return Buffer.from(url.slice(comma + 1), "base64");
+    }
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    return Buffer.from(await res.arrayBuffer());
+  } catch { return null; }
+}
+
 // GET /admin/orders/:id/invoice — download invoice PDF as admin (bypasses userId check)
 router.get("/admin/orders/:id/invoice", requireAuth, async (req: Request, res: Response) => {
   const adminId = await requireAdmin(req, res);
@@ -461,11 +475,41 @@ router.get("/admin/orders/:id/invoice", requireAuth, async (req: Request, res: R
     const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
     if (!order) { res.status(404).json({ error: "Order not found" }); return; }
 
-    const items = await db
-      .select({ name: productsTable.name, quantity: orderItemsTable.quantity, priceInPaise: orderItemsTable.priceInPaise, size: orderItemsTable.size })
+    const rawItems = await db
+      .select({
+        name: productsTable.name,
+        sku: productsTable.sku,
+        quantity: orderItemsTable.quantity,
+        priceInPaise: orderItemsTable.priceInPaise,
+        size: orderItemsTable.size,
+        customizationId: orderItemsTable.customizationId,
+      })
       .from(orderItemsTable)
       .leftJoin(productsTable, eq(orderItemsTable.productId, productsTable.id))
       .where(eq(orderItemsTable.orderId, orderId));
+
+    // Gather design image URLs from customizations (front, back, side, preview)
+    const VIEW_KEYS: Array<{ key: keyof typeof customizationsTable.$inferSelect; label: string }> = [
+      { key: "frontImageUrl",    label: "Front View" },
+      { key: "backImageUrl",     label: "Back View" },
+      { key: "sideImageUrl",     label: "Side View" },
+      { key: "previewImageUrl",  label: "3D Preview" },
+    ];
+
+    const designViews: { label: string; buffer: Buffer }[] = [];
+    const seenUrls = new Set<string>();
+    for (const it of rawItems) {
+      if (!it.customizationId) continue;
+      const [c] = await db.select().from(customizationsTable).where(eq(customizationsTable.id, it.customizationId)).limit(1);
+      if (!c) continue;
+      for (const { key, label } of VIEW_KEYS) {
+        const url = c[key] as string | null;
+        if (!url || seenUrls.has(url)) continue;
+        seenUrls.add(url);
+        const buf = await fetchImageBuffer(url);
+        if (buf) designViews.push({ label, buffer: buf });
+      }
+    }
 
     let customerEmail = "";
     try {
@@ -483,8 +527,9 @@ router.get("/admin/orders/:id/invoice", requireAuth, async (req: Request, res: R
       shippingState: order.shippingState,
       shippingPostalCode: order.shippingPostalCode,
       shippingPhone: order.shippingPhone,
-      items: items.map(i => ({
+      items: rawItems.map(i => ({
         name: i.name ?? "KA.SHA Product",
+        sku: i.sku ?? undefined,
         size: i.size ?? "",
         quantity: i.quantity,
         priceInPaise: i.priceInPaise,
@@ -493,6 +538,7 @@ router.get("/admin/orders/:id/invoice", requireAuth, async (req: Request, res: R
       totalInPaise: order.totalInPaise,
       paymentMethod: order.paymentMethod,
       paymentId: order.paymentId,
+      designViews: designViews.length > 0 ? designViews : undefined,
     });
 
     res.setHeader("Content-Type", "application/pdf");
