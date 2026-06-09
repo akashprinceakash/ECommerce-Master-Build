@@ -85,7 +85,7 @@ function SubSection({ label }: { label: string }) {
     <div
       style={{
         fontFamily: FONT_UI,
-        fontSize: 10,
+        fontSize: 12,
         letterSpacing: "0.24em",
         color: GOLD,
         textTransform: "uppercase",
@@ -101,8 +101,8 @@ function FaqSection({ num, title, children }: { num: string; title: string; chil
   return (
     <section style={{ marginBottom: 44 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 14, borderBottom: `0.5px solid ${BORDER}`, paddingBottom: 14, marginBottom: 8 }}>
-        <span style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.3em", color: GOLD, textTransform: "uppercase" }}>{num}</span>
-        <h2 style={{ fontFamily: FONT_UI, fontSize: 17, fontWeight: 500, letterSpacing: "0.1em", color: DARK, textTransform: "uppercase", margin: 0 }}>{title}</h2>
+        <span style={{ fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.3em", color: GOLD, textTransform: "uppercase" }}>{num}</span>
+        <h2 style={{ fontFamily: FONT_UI, fontSize: 20, fontWeight: 500, letterSpacing: "0.1em", color: DARK, textTransform: "uppercase", margin: 0 }}>{title}</h2>
       </div>
       {children}
     </section>
@@ -168,24 +168,24 @@ export default function FaqPage() {
 
           {/* ── Masthead ── */}
           <div style={{ borderBottom: `0.5px solid ${BORDER}`, paddingBottom: 28, marginBottom: 40 }}>
-            <div style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.3em", color: GOLD, textTransform: "uppercase", marginBottom: 12 }}>
+            <div style={{ fontFamily: FONT_UI, fontSize: 12, letterSpacing: "0.3em", color: GOLD, textTransform: "uppercase", marginBottom: 12 }}>
               Ka · Sha — Golfwear
             </div>
-            <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "clamp(22px, 4vw, 34px)", fontWeight: 300, letterSpacing: "0.1em", color: DARK, textTransform: "uppercase", lineHeight: 1.3, margin: 0 }}>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "clamp(28px, 4vw, 40px)", fontWeight: 300, letterSpacing: "0.1em", color: DARK, textTransform: "uppercase", lineHeight: 1.3, margin: 0 }}>
               Golf Apparel — Your Questions, Answered
             </h1>
-            <p style={{ fontFamily: FONT_UI, fontSize: 14, lineHeight: 1.8, color: "#666", marginTop: 16, maxWidth: 640 }}>
+            <p style={{ fontFamily: FONT_UI, fontSize: 16, lineHeight: 1.85, color: "#666", marginTop: 16, maxWidth: 640 }}>
               Everything you need to know about choosing, fitting and caring for golf clothing — for men and women. Built on three generations of textile knowledge and over thirty years of playing the game.
             </p>
           </div>
 
           {/* ── Overview banner ── */}
           <div style={{ background: BG_DARK, borderLeft: `3px solid ${GOLD}`, padding: "36px 44px", marginBottom: 48 }}>
-            <div style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.3em", color: GOLD, textTransform: "uppercase", marginBottom: 14 }}>Why Ka.Sha</div>
-            <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, fontWeight: 300, letterSpacing: "0.06em", color: "#fff", lineHeight: 1.5, marginBottom: 12 }}>
+            <div style={{ fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.3em", color: GOLD, textTransform: "uppercase", marginBottom: 14 }}>Why Ka.Sha</div>
+            <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 26, fontWeight: 300, letterSpacing: "0.06em", color: "#fff", lineHeight: 1.5, marginBottom: 12 }}>
               Made exactly as you want it.
             </div>
-            <div style={{ fontFamily: FONT_UI, fontSize: 14, lineHeight: 1.8, color: "rgba(255,255,255,0.6)", maxWidth: 600 }}>
+            <div style={{ fontFamily: FONT_UI, fontSize: 16, lineHeight: 1.85, color: "rgba(255,255,255,0.6)", maxWidth: 600 }}>
               Many of the questions below come down to fit, fabric and comfort. Ka.Sha removes the guesswork — bespoke, custom-fit golfwear from India in sizes XS to 5XL, with dry-fit four-way-stretch fabric, UV 40+ protection, and personalisation on print, colour, logo and text. One piece or five hundred.
             </div>
           </div>
@@ -195,91 +195,91 @@ export default function FaqPage() {
           ══════════════════════════════════════════════════ */}
           <FaqSection num="01" title="General Golf Apparel">
             <details className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                 What should I look for in golf apparel?
               </summary>
-              <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>
+              <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>
                 Focus on three things. <strong>Comfort</strong> — the garment should not be too fitted, or it restricts your swing; choose a dry-fit fabric for hot climates and a slightly insulating one for cold, wet conditions. <strong>Style</strong> — pick a colour and cut that suit your personality, since golfwear is now a genuine fashion statement. <strong>Price</strong> — golf is an expensive game, so balance cost against the comfort and look you want.
               </div>
             </details>
 
             <details className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                 What fabric is best for golf shirts and pants?
               </summary>
-              <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>
+              <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>
                 It depends on the climate, and the principle is the same for tops and bottoms. In warm weather a lightweight dry-fit fabric performs best; in colder weather a slightly heavier, insulating fabric works better.
               </div>
             </details>
 
             <details className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                 Is moisture-wicking fabric necessary for golf clothes?
               </summary>
-              <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>
+              <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>
                 In warm to hot climates, yes. Moisture-wicking fabric stops the garment sticking to your body, which would otherwise make swinging the club restrictive.
               </div>
             </details>
 
             <details className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                 What's the difference between regular athletic wear and golf-specific apparel?
               </summary>
-              <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>
+              <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>
                 Much athletic wear is tight-fitting, which is not ideal for golf. Because the game is played over several hours, fitted garments can cause chafing and rashes. Golf-specific apparel is cut to allow a full swing and stay comfortable over a long round.
               </div>
             </details>
 
             <details className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                 How do I choose the right size for golf apparel?
               </summary>
-              <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>
+              <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>
                 Take a garment from your wardrobe that already fits well, measure it, and choose a piece with roughly the same measurements — allowing some tolerance, as exact matches aren't possible across different fabrics. At Ka.Sha, custom sizing removes this guesswork entirely.
               </div>
             </details>
 
             <details className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                 Are golf clothes worth the extra cost compared to regular sportswear?
               </summary>
-              <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>
+              <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>
                 It's subjective. If you value comfort and style over price, then yes — golf-specific apparel is designed for the demands and duration of the game in a way regular sportswear is not.
               </div>
             </details>
 
             <details className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                 What colours are appropriate for golf apparel?
               </summary>
-              <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>
+              <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>
                 Golf was once seen as an older man's sport, so early apparel was largely monochrome. Today it's a fashion statement, so choose colours that suit your personality — within any rules your club sets.
               </div>
             </details>
 
             <details className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                 Can I wear regular T-shirts on the golf course?
               </summary>
-              <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>
+              <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>
                 It depends on the club. Many require collared shirts and knee-length shorts, and may have other restrictions. Always check the rules of the course you plan to visit.
               </div>
             </details>
 
             <details className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                 What's the dress code for golf clubs regarding apparel?
               </summary>
-              <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>
+              <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>
                 Dress codes vary by course, but in general expect a collared shirt with trousers, knee-length shorts or a skort, plus golf or sports shoes. Always confirm with the specific club beforehand.
               </div>
             </details>
 
             <details className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+              <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                 How do I care for and wash golf apparel to make it last?
               </summary>
-              <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>
+              <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>
                 Golf apparel is like any other garment — follow the care label inside and it will last well. Ka.Sha pieces machine wash at 30°C on gentle, hang dry, and take a cool iron, avoiding any logo placements.
               </div>
             </details>
@@ -299,10 +299,10 @@ export default function FaqPage() {
               { q: "What's the difference between performance polos and regular polos for golf?", a: "Largely a matter of naming, but in practice a performance polo is built for play — dry-fit fabric with a comfortable fit — whereas a regular polo may be snug, well-fitted and made in any fabric, not necessarily dry-fit." },
             ].map(({ q, a }) => (
               <details key={q} className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-                <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+                <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                   {q}
                 </summary>
-                <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>{a}</div>
+                <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>{a}</div>
               </details>
             ))}
 
@@ -317,10 +317,10 @@ export default function FaqPage() {
               { q: "What waist style is best for golf pants — flat front or pleated?", a: "Both work for golf. The choice comes down to personal preference." },
             ].map(({ q, a }) => (
               <details key={q} className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-                <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+                <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                   {q}
                 </summary>
-                <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>{a}</div>
+                <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>{a}</div>
               </details>
             ))}
 
@@ -334,10 +334,10 @@ export default function FaqPage() {
               { q: "Are there knee-length golf shorts for men?", a: "Yes — knee-length is the most common short length for golf." },
             ].map(({ q, a }) => (
               <details key={q} className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-                <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+                <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                   {q}
                 </summary>
-                <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>{a}</div>
+                <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>{a}</div>
               </details>
             ))}
           </FaqSection>
@@ -357,10 +357,10 @@ export default function FaqPage() {
               { q: "Are there UV-protection golf shirts for women?", a: "Yes. Check the tag or product details, as some brands offer it. Ka.Sha women's shirts include UV 40+ fabric." },
             ].map(({ q, a }) => (
               <details key={q} className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-                <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+                <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                   {q}
                 </summary>
-                <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>{a}</div>
+                <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>{a}</div>
               </details>
             ))}
 
@@ -375,10 +375,10 @@ export default function FaqPage() {
               { q: "What waist height is best for women's golf pants (high-waisted, mid-rise)?", a: "Both high-waisted and mid-rise styles are available — choose what is most comfortable for you." },
             ].map(({ q, a }) => (
               <details key={q} className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-                <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+                <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                   {q}
                 </summary>
-                <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>{a}</div>
+                <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>{a}</div>
               </details>
             ))}
 
@@ -394,24 +394,24 @@ export default function FaqPage() {
               { q: "What's the best material for women's golf shorts in hot weather?", a: "A lightweight, dry-fit fabric with some stretch is best for hot weather." },
             ].map(({ q, a }) => (
               <details key={q} className="faq-item" style={{ borderBottom: "0.5px solid #e2ddd4" }}>
-                <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 14, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.5, fontFamily: FONT_UI }}>
+                <summary className="faq-summary" style={{ listStyle: "none", cursor: "pointer", padding: "18px 36px 18px 0", position: "relative", fontSize: 16, fontWeight: 500, letterSpacing: "0.02em", color: DARK, lineHeight: 1.6, fontFamily: FONT_UI }}>
                   {q}
                 </summary>
-                <div style={{ padding: "0 36px 22px 0", fontSize: 13.5, lineHeight: 1.8, color: MUTED, fontFamily: FONT_UI }}>{a}</div>
+                <div style={{ padding: "0 36px 22px 0", fontSize: 15.5, lineHeight: 1.85, color: MUTED, fontFamily: FONT_UI }}>{a}</div>
               </details>
             ))}
           </FaqSection>
 
           {/* ── CTA strip ── */}
           <div style={{ background: BG_DARK, padding: "30px 40px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, marginTop: 16, flexWrap: "wrap" }}>
-            <div style={{ fontFamily: FONT_UI, fontSize: 14, fontWeight: 300, letterSpacing: "0.1em", color: "#fff", textTransform: "uppercase", lineHeight: 1.5 }}>
+            <div style={{ fontFamily: FONT_UI, fontSize: 16, fontWeight: 300, letterSpacing: "0.1em", color: "#fff", textTransform: "uppercase", lineHeight: 1.5 }}>
               Still have a question? Build your bespoke fit with Ka.Sha.
             </div>
             <a
               href="/customize"
               style={{
                 fontFamily: FONT_UI,
-                fontSize: 10,
+                fontSize: 12,
                 letterSpacing: "0.24em",
                 color: DARK,
                 background: GOLD,
