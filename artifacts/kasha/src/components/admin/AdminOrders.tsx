@@ -805,14 +805,14 @@ export function AdminOrders() {
                           </>
                         )}
 
-                        {/* Export button */}
+                        {/* Export button — always shown */}
                         <div className="flex flex-wrap gap-2">
-                          {c ? (
-                            <button
-                              disabled={exporting === it.id}
-                              onClick={async () => {
-                                setExporting(it.id);
-                                const prefix = `kasha-order-${viewOrder.id}-item-${it.id}`;
+                          <button
+                            disabled={exporting === it.id}
+                            onClick={async () => {
+                              setExporting(it.id);
+                              const prefix = `kasha-order-${viewOrder.id}-item-${it.id}`;
+                              if (c) {
                                 const { count, errors } = await exportDesignAllSides(c, prefix);
                                 setExporting(null);
                                 if (count === 0) {
@@ -820,15 +820,31 @@ export function AdminOrders() {
                                 } else {
                                   toast({ title: `Exported ${count} file${count === 1 ? "" : "s"}`, description: errors.length ? `Some assets failed: ${errors.join("; ")}` : "PNG files downloaded." });
                                 }
-                              }}
-                              className="text-[10px] uppercase tracking-wider px-3 py-1.5 border border-primary bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition flex items-center gap-1.5"
-                            >
-                              {exporting === it.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-                              Download All Design Views
-                            </button>
-                          ) : (
-                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Stock item — no bespoke design</span>
-                          )}
+                              } else if (it.product?.thumbnailUrl) {
+                                // Stock item — download the product thumbnail
+                                try {
+                                  const url = getAssetUrl(it.product.thumbnailUrl) ?? it.product.thumbnailUrl;
+                                  const res = await fetch(url);
+                                  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                                  const blob = await res.blob();
+                                  const objectUrl = URL.createObjectURL(blob);
+                                  downloadDataUrl(objectUrl, `${prefix}-product-image.png`);
+                                  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+                                  toast({ title: "Downloaded product image" });
+                                } catch (e: any) {
+                                  toast({ title: "Download failed", description: e?.message ?? "Could not download image", variant: "destructive" });
+                                }
+                                setExporting(null);
+                              } else {
+                                setExporting(null);
+                                toast({ title: "No image available", description: "This product has no image on file.", variant: "destructive" });
+                              }
+                            }}
+                            className="text-[10px] uppercase tracking-wider px-3 py-1.5 border border-primary bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition flex items-center gap-1.5"
+                          >
+                            {exporting === it.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                            {c ? "Download All Design Views" : "Download Product Image"}
+                          </button>
                         </div>
                       </div>
                     </div>
