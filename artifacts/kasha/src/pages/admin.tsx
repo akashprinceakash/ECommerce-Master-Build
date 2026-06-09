@@ -147,6 +147,94 @@ async function apiFetch(path: string, opts?: RequestInit): Promise<any> {
   return res.status === 204 ? null : res.json();
 }
 
+// ── Design Left Panel ─────────────────────────────────────────────────────────
+function DesignLeftPanel({ design, mvReady, viewerRef, textureReady, canvasDataLoading }: {
+  design: UserDesign;
+  mvReady: boolean;
+  viewerRef: React.RefObject<any>;
+  textureReady: boolean;
+  canvasDataLoading: boolean;
+}) {
+  const [activeView, setActiveView] = useState<"front" | "back" | "side">("front");
+  const snapshots = [
+    { key: "front" as const, label: "FRONT", url: design.frontImageUrl },
+    { key: "back"  as const, label: "BACK",  url: design.backImageUrl  },
+    { key: "side"  as const, label: "SIDE",  url: design.sideImageUrl  },
+  ].filter(s => !!s.url);
+
+  const hasSnapshots = snapshots.length > 0;
+
+  // Show 3D viewer only once canvasData has loaded and contains a texture
+  if (design.productModelUrl && mvReady && textureReady) {
+    return (
+      <div className="flex-1 min-h-[300px] md:min-h-[500px] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
+        <model-viewer
+          ref={viewerRef}
+          src={design.productModelUrl}
+          camera-controls
+          auto-rotate
+          rotation-per-second="8deg"
+          shadow-intensity="1"
+          environment-image="neutral"
+          exposure="1"
+          style={{ width: "100%", height: "100%", minHeight: "300px", "--poster-color": "transparent" } as any}
+        />
+      </div>
+    );
+  }
+
+  // Snapshot image gallery (shown while canvas data loads or when no texture available)
+  if (hasSnapshots) {
+    const active = snapshots.find(s => s.key === activeView) ?? snapshots[0];
+    return (
+      <div className="flex-1 min-h-[300px] md:min-h-[500px] flex flex-col" style={{ background: "rgba(0,0,0,0.6)" }}>
+        {/* Main image */}
+        <div className="flex-1 flex items-center justify-center p-4 relative">
+          <img
+            src={active.url!}
+            alt={active.label}
+            className="max-w-full max-h-full object-contain"
+            style={{ maxHeight: "420px" }}
+          />
+          {canvasDataLoading && (
+            <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/50 text-white/50 text-[10px] rounded px-2 py-1">
+              <Loader2 className="w-3 h-3 animate-spin" /> loading 3D…
+            </div>
+          )}
+        </div>
+        {/* Tabs */}
+        {snapshots.length > 1 && (
+          <div className="flex border-t border-white/10">
+            {snapshots.map(s => (
+              <button
+                key={s.key}
+                onClick={() => setActiveView(s.key)}
+                className={`flex-1 py-2.5 text-[10px] tracking-[0.15em] font-medium transition-colors ${
+                  activeView === s.key
+                    ? "text-white bg-white/10"
+                    : "text-white/40 hover:text-white/70"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Nothing available
+  return (
+    <div className="flex-1 min-h-[300px] md:min-h-[500px] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
+      <div className="flex flex-col items-center gap-3 text-white/40 p-8">
+        <Package className="w-12 h-12" />
+        <p className="text-sm">No preview available</p>
+      </div>
+    </div>
+  );
+}
+
 // ── Design Viewer Modal ───────────────────────────────────────────────────────
 function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: () => void }) {
   const [mvReady, setMvReady] = useState(false);
@@ -269,27 +357,14 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
           <X className="w-5 h-5" />
         </button>
 
-        {/* 3D Viewer */}
-        <div className="flex-1 min-h-[300px] md:min-h-[500px] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
-          {design.productModelUrl && mvReady ? (
-            <model-viewer
-              ref={viewerRef}
-              src={design.productModelUrl}
-              camera-controls
-              auto-rotate
-              rotation-per-second="8deg"
-              shadow-intensity="1"
-              environment-image="neutral"
-              exposure="1"
-              style={{ width: "100%", height: "100%", minHeight: "300px", "--poster-color": "transparent" } as any}
-            />
-          ) : (
-            <div className="flex flex-col items-center gap-3 text-white/40 p-8">
-              <Package className="w-12 h-12" />
-              <p className="text-sm">No 3D model available</p>
-            </div>
-          )}
-        </div>
+        {/* Left panel: 3D viewer when texture is ready, snapshot gallery otherwise */}
+        <DesignLeftPanel
+          design={design}
+          mvReady={mvReady}
+          viewerRef={viewerRef}
+          textureReady={!!parsedDesign.textureUrl}
+          canvasDataLoading={fullCanvasData === undefined}
+        />
 
         {/* Info Panel */}
         <div className="w-full md:w-72 p-6 overflow-y-auto" style={{ borderLeft: "1px solid rgba(255,255,255,0.1)" }}>
@@ -426,38 +501,6 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
                     )}
                   </div>
                 ))}
-              </div>
-            </div>
-          )}
-
-          {/* Fallback: legacy single preview + flat texture */}
-          {!design.frontImageUrl && (design.previewImageUrl || parsedDesign.textureUrl) && (
-            <div className="mt-5 grid grid-cols-2 gap-2">
-              {design.previewImageUrl && (
-                <div>
-                  <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">3D Preview</p>
-                  <div className="rounded-lg overflow-hidden border border-white/10 bg-black/40">
-                    <img src={design.previewImageUrl} alt="3D Preview" className="w-full aspect-square object-contain" />
-                  </div>
-                </div>
-              )}
-              {parsedDesign.textureUrl && (
-                <div>
-                  <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Flat Texture</p>
-                  <div className="rounded-lg overflow-hidden border border-white/10" style={{ background: parsedDesign.canvasBg ?? "#222" }}>
-                    <img src={parsedDesign.textureUrl} alt="Flat Texture" className="w-full aspect-square object-contain" />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Flat Texture always shown when 3-view is available */}
-          {design.frontImageUrl && parsedDesign.textureUrl && (
-            <div className="mt-3">
-              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Flat Texture</p>
-              <div className="rounded-lg overflow-hidden border border-white/10" style={{ background: parsedDesign.canvasBg ?? "#222" }}>
-                <img src={parsedDesign.textureUrl} alt="Flat Texture" className="w-full aspect-square object-contain" />
               </div>
             </div>
           )}
