@@ -80,7 +80,7 @@ function buildHtml(d: OrderConfirmationData): string {
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #EDE9E4;">
         <tr>
           <td style="background:#111;padding:32px 40px;text-align:center;">
-            <p style="margin:0;font-family:'Cormorant Garamond',Garamond,'Times New Roman',serif;font-size:26px;font-weight:500;letter-spacing:0.2em;color:#fff;">KA·SHA</p>
+            <p style="margin:0;font-family:'Cormorant Garamond',Garamond,'Times New Roman',serif;font-size:26px;font-weight:500;letter-spacing:0.2em;color:#fff;">KA.SHA</p>
             <p style="margin:6px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;letter-spacing:0.25em;color:#B8925A;text-transform:uppercase;">Golf &amp; Sportswear</p>
           </td>
         </tr>

@@ -107,7 +107,7 @@ async function exportPartPNGs(design: UserDesign) {
 
     ctx.font = "18px sans-serif";
     ctx.fillStyle = isLightHex(color) ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.4)";
-    ctx.fillText("KA·SHA", 256, 290);
+    ctx.fillText("KA.SHA", 256, 290);
     ctx.fillText(color.toUpperCase(), 256, 320);
 
     const link = document.createElement("a");
