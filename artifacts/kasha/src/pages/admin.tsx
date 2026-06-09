@@ -83,39 +83,46 @@ function isLightHex(hex: string): boolean {
   } catch { return false; }
 }
 
-async function exportPartPNGs(design: UserDesign) {
-  const canvasData = design.canvasData ? JSON.parse(design.canvasData) : {};
-  const partColors: Record<string, string> = canvasData.partColors ?? {};
-  const parts = ["collar", "front", "back", "leftSleeve", "rightSleeve"] as const;
+async function exportDesignImages(design: UserDesign): Promise<{ count: number; errors: string[] }> {
+  const slug = (design.name ?? "design").replace(/\s+/g, "-");
+  const views: Array<{ url: string; label: string }> = [
+    { url: design.frontImageUrl   ?? "", label: "front"   },
+    { url: design.backImageUrl    ?? "", label: "back"    },
+    { url: design.sideImageUrl    ?? "", label: "side"    },
+    { url: design.previewImageUrl ?? "", label: "preview" },
+  ].filter(v => !!v.url);
 
-  for (const part of parts) {
-    const color = partColors[part] ?? "#CCCCCC";
-    const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext("2d")!;
+  // Deduplicate identical URLs (e.g. side == preview in some designs)
+  const seen = new Set<string>();
+  const unique = views.filter(v => { if (seen.has(v.url)) return false; seen.add(v.url); return true; });
 
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, 512, 512);
+  let count = 0;
+  const errors: string[] = [];
+  const token = await getToken();
+  const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
-    const textColor = isLightHex(color) ? "rgba(0,0,0,0.75)" : "rgba(255,255,255,0.85)";
-    ctx.fillStyle = textColor;
-    ctx.font = "bold 36px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(part.replace(/([A-Z])/g, " $1").trim().toUpperCase(), 256, 230);
-
-    ctx.font = "18px sans-serif";
-    ctx.fillStyle = isLightHex(color) ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.4)";
-    ctx.fillText("KA.SHA", 256, 290);
-    ctx.fillText(color.toUpperCase(), 256, 320);
-
-    const link = document.createElement("a");
-    link.download = `${(design.name ?? "design").replace(/\s+/g, "-")}-${part}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-    await new Promise(r => setTimeout(r, 150));
+  for (const { url, label } of unique) {
+    const filename = `${slug}-${label}.png`;
+    try {
+      if (url.startsWith("data:")) {
+        const a = document.createElement("a"); a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        count++;
+      } else {
+        const proxyUrl = `${getApiUrl()}/api/admin/download-proxy?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+        const res = await fetch(proxyUrl, { headers: authHeaders });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a"); a.href = objectUrl; a.download = filename;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+        count++;
+      }
+      await new Promise(r => setTimeout(r, 150));
+    } catch (e: any) { errors.push(`${label}: ${e.message || e}`); }
   }
+  return { count, errors };
 }
 
 async function getToken(): Promise<string | null> {
@@ -484,9 +491,9 @@ export default function AdminPage() {
         if (token) headers["Authorization"] = `Bearer ${token}`;
         const res = await fetch(`${getApiUrl()}/api/admin/check`, { headers });
         setIsAdmin(res.ok);
-      } catch { setIsAdmin(false); }
+      } catch { /* leave existing isAdmin state — don't flip to false on a transient error */ }
     });
-  }, [user]);
+  }, [user?.id]); // stable dependency: re-run only when the signed-in user actually changes
 
   const { data: products = [], isLoading: loadingProducts } = useQuery<Product[]>({
     queryKey: ["admin-products"],
@@ -1108,8 +1115,16 @@ export default function AdminPage() {
                           size="sm"
                           variant="outline"
                           className="rounded-none text-[10px] tracking-widest flex items-center justify-center gap-1 text-amber-700 hover:text-amber-800 hover:bg-amber-50 hover:border-amber-300"
-                          title="Export part colour PNGs"
-                          onClick={() => exportPartPNGs(d)}
+                          title="Download design views"
+                          onClick={async () => {
+                            if (!d.frontImageUrl && !d.backImageUrl && !d.sideImageUrl && !d.previewImageUrl) {
+                              alert("No design images saved for this customization yet.");
+                              return;
+                            }
+                            const { count, errors } = await exportDesignImages(d);
+                            if (count === 0) alert(errors.length ? `Export failed: ${errors.join("; ")}` : "No design images to download.");
+                            else if (errors.length) alert(`Downloaded ${count} file(s). Some failed: ${errors.join("; ")}`);
+                          }}
                         >
                           <Download className="w-3 h-3" />
                         </Button>
