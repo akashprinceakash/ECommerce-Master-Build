@@ -3,7 +3,7 @@ import { apiFetch } from "@/lib/adminApi";
 import { formatPrice } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { getAssetUrl } from "@/lib/api";
+import { getAssetUrl, getApiUrl } from "@/lib/api";
 import {
   Loader2, ChevronDown, ChevronRight, MapPin, CreditCard, Package,
   Eye, Download, X, Truck, RefreshCw, RotateCcw, CheckCircle2,
@@ -137,6 +137,9 @@ async function exportDesignAllSides(customization: NonNullable<AdminOrder["items
     { url: customization.previewImageUrl ?? "", filename: `${prefix}-3d-preview.png` },
   ];
 
+  const token = await getAdminToken();
+  const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
   const downloadedUrls = new Set<string>();
   for (const { url, filename } of viewUrls) {
     if (!url || downloadedUrls.has(url)) continue;
@@ -145,7 +148,8 @@ async function exportDesignAllSides(customization: NonNullable<AdminOrder["items
       if (url.startsWith("data:")) {
         downloadDataUrl(url, filename); count++;
       } else {
-        const res = await fetch(url);
+        const proxyUrl = `${getApiUrl()}/api/admin/download-proxy?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+        const res = await fetch(proxyUrl, { headers: authHeaders });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const blob = await res.blob();
         const objectUrl = URL.createObjectURL(blob);
@@ -821,14 +825,17 @@ export function AdminOrders() {
                                   toast({ title: `Exported ${count} file${count === 1 ? "" : "s"}`, description: errors.length ? `Some assets failed: ${errors.join("; ")}` : "PNG files downloaded." });
                                 }
                               } else if (it.product?.thumbnailUrl) {
-                                // Stock item — download the product thumbnail
+                                // Stock item — download the product thumbnail via proxy
                                 try {
-                                  const url = getAssetUrl(it.product.thumbnailUrl) ?? it.product.thumbnailUrl;
-                                  const res = await fetch(url);
+                                  const assetUrl = getAssetUrl(it.product.thumbnailUrl) ?? it.product.thumbnailUrl;
+                                  const filename = `${prefix}-product-image.png`;
+                                  const token = await getAdminToken();
+                                  const proxyUrl = `${getApiUrl()}/api/admin/download-proxy?url=${encodeURIComponent(assetUrl)}&filename=${encodeURIComponent(filename)}`;
+                                  const res = await fetch(proxyUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
                                   if (!res.ok) throw new Error(`HTTP ${res.status}`);
                                   const blob = await res.blob();
                                   const objectUrl = URL.createObjectURL(blob);
-                                  downloadDataUrl(objectUrl, `${prefix}-product-image.png`);
+                                  downloadDataUrl(objectUrl, filename);
                                   setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
                                   toast({ title: "Downloaded product image" });
                                 } catch (e: any) {

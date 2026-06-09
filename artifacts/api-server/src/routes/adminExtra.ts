@@ -550,4 +550,52 @@ router.get("/admin/orders/:id/invoice", requireAuth, async (req: Request, res: R
   }
 });
 
+// ── Asset download proxy ─────────────────────────────────────────────────────
+// Fetches a remote or local asset server-side and streams it back so the
+// browser never has to do a cross-origin fetch() for blob downloads.
+router.get("/admin/download-proxy", requireAuth, async (req, res): Promise<void> => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+
+  const rawUrl = req.query["url"] as string | undefined;
+  if (!rawUrl) { res.status(400).json({ error: "url query param required" }); return; }
+
+  let targetUrl: string;
+  try {
+    const parsed = new URL(rawUrl);
+    const allowed = ["kashaonline.in", "api.kashaonline.in", "localhost"];
+    const isAllowed = allowed.some(h => parsed.hostname === h || parsed.hostname.endsWith("." + h))
+      || parsed.hostname.endsWith(".r2.dev")
+      || parsed.hostname.endsWith(".cloudflare.com")
+      || parsed.hostname.endsWith(".replit.dev")
+      || parsed.hostname.endsWith(".replit.app");
+    if (!isAllowed) { res.status(400).json({ error: "Disallowed download origin" }); return; }
+    targetUrl = parsed.toString();
+  } catch {
+    // Relative path — resolve against own API base
+    const host = req.headers["host"] ?? "localhost";
+    const proto = req.headers["x-forwarded-proto"] ?? "http";
+    targetUrl = `${proto}://${host}${rawUrl.startsWith("/") ? "" : "/"}${rawUrl}`;
+  }
+
+  try {
+    const upstream = await fetch(targetUrl);
+    if (!upstream.ok) { res.status(502).json({ error: `Upstream ${upstream.status}` }); return; }
+
+    const contentType = upstream.headers.get("content-type") ?? "application/octet-stream";
+    const rawFilename = req.query["filename"] as string | undefined;
+    const filename = rawFilename ? encodeURIComponent(rawFilename) : "download";
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Cache-Control", "no-store");
+
+    const buf = await upstream.arrayBuffer();
+    res.send(Buffer.from(buf));
+  } catch (e: any) {
+    logger.error({ err: e }, "download-proxy failed");
+    res.status(500).json({ error: "Download failed" });
+  }
+});
+
 export default router;
