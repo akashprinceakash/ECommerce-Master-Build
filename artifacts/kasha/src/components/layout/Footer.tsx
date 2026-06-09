@@ -202,6 +202,9 @@ export function Footer() {
                 <FooterLink href="/size-guide">Size Guide</FooterLink>
               </li>
               <li>
+                <FooterLink href="/faq">Golf Apparel FAQ</FooterLink>
+              </li>
+              <li>
               <FooterLink href="/connect">Connect with Us</FooterLink>
               </li>
               <li>

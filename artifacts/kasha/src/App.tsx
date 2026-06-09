@@ -26,6 +26,7 @@ import IpPolicyPage from "@/pages/legal/ip-policy";
 import SizeGuidePage from "@/pages/legal/size-guide";
 import ConnectPage from "@/pages/connect";
 import LookbookPage from "@/pages/lookbook";
+import FaqPage from "@/pages/faq";
 import { SHOW_LOOKBOOK } from "@/lib/features";
 
 const queryClient = new QueryClient({
@@ -120,6 +121,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/ip-policy" component={IpPolicyPage} />
           <Route path="/size-guide" component={SizeGuidePage} />
           <Route path="/connect" component={ConnectPage} />
+          <Route path="/faq" component={FaqPage} />
           {SHOW_LOOKBOOK && <Route path="/lookbook" component={LookbookPage} />}
 
           <ProtectedRoute path="/cart" component={CartPage} />
