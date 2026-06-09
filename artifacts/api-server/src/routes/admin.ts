@@ -335,6 +335,36 @@ router.get("/admin/customizations", requireAuth, async (req, res): Promise<void>
   })));
 });
 
+router.get("/admin/customizations/:id", requireAuth, async (req, res): Promise<void> => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  const id = Number(req.params["id"]);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const rows = await db
+    .select({
+      id: customizationsTable.id,
+      userId: customizationsTable.userId,
+      canvasData: customizationsTable.canvasData,
+    })
+    .from(customizationsTable)
+    .where(eq(customizationsTable.id, id))
+    .limit(1);
+
+  if (!rows.length) { res.status(404).json({ error: "Not found" }); return; }
+  const row = rows[0];
+
+  let userEmail = row.userId;
+  let userName  = row.userId;
+  try {
+    const u = await clerkClient.users.getUser(row.userId);
+    userEmail = u.emailAddresses.find(e => e.id === u.primaryEmailAddressId)?.emailAddress ?? row.userId;
+    userName  = [u.firstName, u.lastName].filter(Boolean).join(" ") || userEmail;
+  } catch {}
+
+  res.json({ ...row, userEmail, userName });
+});
+
 router.get("/admin/check", requireAuth, async (req, res): Promise<void> => {
   const adminId = await requireAdmin(req, res);
   if (!adminId) return;

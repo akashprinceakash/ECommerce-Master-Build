@@ -151,6 +151,19 @@ async function apiFetch(path: string, opts?: RequestInit): Promise<any> {
 function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: () => void }) {
   const [mvReady, setMvReady] = useState(false);
   const viewerRef = useRef<any>(null);
+  // Lazy-fetch canvasData for this single design (not returned by the list endpoint)
+  const [fullCanvasData, setFullCanvasData] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await apiFetch(`/api/admin/customizations/${design.id}`);
+        if (!cancelled) setFullCanvasData(data?.canvasData ?? null);
+      } catch { if (!cancelled) setFullCanvasData(null); }
+    })();
+    return () => { cancelled = true; };
+  }, [design.id]);
 
   useEffect(() => {
     if (!document.querySelector('script[data-mv-loader]')) {
@@ -165,10 +178,12 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
     }
   }, []);
 
-  // Parse all the rich design data we now persist alongside each customization
+  // Parse all the rich design data we now persist alongside each customization.
+  // Use lazily-fetched canvasData so the list endpoint stays fast (no OOM).
+  const effectiveCanvasData = fullCanvasData !== undefined ? fullCanvasData : design.canvasData;
   const parsedDesign = useMemo(() => {
     try {
-      const parsed = design.canvasData ? JSON.parse(design.canvasData) : {};
+      const parsed = effectiveCanvasData ? JSON.parse(effectiveCanvasData) : {};
       const canvasJSON = (() => {
         try {
           return typeof parsed.canvasJSON === "string"
@@ -204,7 +219,7 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
     } catch {
       return { matColors: [], objectCount: 0, counts: {}, texts: [], logoCount: 0, shapeCount: 0 } as any;
     }
-  }, [design]);
+  }, [effectiveCanvasData, design.partsEnabled]);
 
   // Restore exact design on model load — uses the SAME robust iterate-all
   // pattern as the customizer so it works on arbitrary GLBs.
