@@ -1,0 +1,81 @@
+Request URL
+https://api.kashaonline.in/api/admin/customizations/72
+Request Method
+GET
+Status Code
+404 Not Found
+Remote Address
+216.24.57.7:443
+Referrer Policy
+strict-origin-when-cross-origin
+access-control-allow-credentials
+true
+access-control-allow-origin
+https://www.kashaonline.in
+alt-svc
+h3=":443"; ma=86400
+cf-cache-status
+DYNAMIC
+cf-ray
+a08fc48b2fd4fd22-SIN
+content-encoding
+br
+content-length
+120
+content-security-policy
+default-src 'none'
+content-type
+text/html; charset=utf-8
+date
+Tue, 09 Jun 2026 11:24:03 GMT
+rndr-id
+6d354ec3-0e66-4f08
+server
+cloudflare
+vary
+Origin
+vary
+Accept-Encoding
+x-content-type-options
+nosniff
+x-powered-by
+Express
+x-render-origin-server
+Render
+:authority
+api.kashaonline.in
+:method
+GET
+:path
+/api/admin/customizations/72
+:scheme
+https
+accept
+*/*
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-GB,en-US;q=0.9,en;q=0.8,kn;q=0.7,hi;q=0.6
+authorization
+Bearer eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18zRHZXeXVxbmZpZ3RlaUtmMkhzcXZRNzA4ZTQiLCJtIjoibyIsIm9pYXQiOjE3ODEwMDQxNzEsInR5cCI6IkpXVCJ9.eyJhenAiOiJodHRwczovL3d3dy5rYXNoYW9ubGluZS5pbiIsImV4cCI6MTc4MTAwNDI3NSwiZnZhIjpbNjQsLTFdLCJpYXQiOjE3ODEwMDQyMTUsImlzcyI6Imh0dHBzOi8vY2xlcmsua2FzaGFvbmxpbmUuaW4iLCJuYmYiOjE3ODEwMDQyMDUsInNpZCI6InNlc3NfM0V0YU9TNWh1Mm1pY3kzN2RDTUJVekhVM0Z0Iiwic3RzIjoiYWN0aXZlIiwic3ViIjoidXNlcl8zRHZsR28wbUxCcEtaWUdJRFZqalhwTGNGMkUiLCJ2IjoyfQ.S4bHsnF_WJQAY81hsUAsQRtwFi49wJ4rK7czYxA4NNtDde6_tbpb4CQ6MCqFM7xF_cDVE-aD7tj9TXVYTOLg0ARez1KAt6L5VaDgMxHteBDHYZ-nK8n77ZXfsgr33dCOz8VbwdNHP7gytbGhsE1Ec3gtq9iq76CdkF3iD1ao6GMwLe-vwdGpAP-SqW3Q7CC70D9hGQGpRySZBmdbMgYEbILoZqHV8M1-dMkZDfbcJcdH4S1X-3QebfscrOgjvk49dPhkBy4ZWvxoYfnhj-bOPLH8iXcWGlAibb9vnekZiyvO1yjaaZH_uC_yeQDH2Kxi3_nAsd9CLVR6k6sfJ4yfxQ
+content-type
+application/json
+origin
+https://www.kashaonline.in
+priority
+u=1, i
+referer
+https://www.kashaonline.in/
+sec-ch-ua
+"Google Chrome";v="149", "Chromium";v="149", "Not)A;Brand";v="24"
+sec-ch-ua-mobile
+?1
+sec-ch-ua-platform
+"Android"
+sec-fetch-dest
+empty
+sec-fetch-mode
+cors
+sec-fetch-site
+same-site
+user-age
