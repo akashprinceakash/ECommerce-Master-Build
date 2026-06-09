@@ -67,21 +67,27 @@ function buildHtml(d: OrderConfirmationData): string {
 
   return `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+</head>
 <body style="margin:0;padding:0;background:#FAFAF7;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#FAFAF7;">
     <tr><td align="center" style="padding:40px 20px;">
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #EDE9E4;">
         <tr>
           <td style="background:#111;padding:32px 40px;text-align:center;">
-            <p style="margin:0;font-family:Georgia,serif;font-size:22px;font-weight:500;letter-spacing:0.15em;color:#fff;">KA·SHA</p>
+            <p style="margin:0;font-family:'Cormorant Garamond',Garamond,'Times New Roman',serif;font-size:26px;font-weight:500;letter-spacing:0.2em;color:#fff;">KA·SHA</p>
             <p style="margin:6px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;letter-spacing:0.25em;color:#B8925A;text-transform:uppercase;">Golf &amp; Sportswear</p>
           </td>
         </tr>
         <tr>
           <td style="padding:40px 40px 0;text-align:center;">
             <p style="margin:0 0 8px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.2em;color:#B8925A;text-transform:uppercase;">Order Confirmed</p>
-            <h1 style="margin:0;font-family:Georgia,serif;font-size:28px;font-weight:400;color:#111;">Thank you, ${d.customerName.split(" ")[0]}.</h1>
+            <h1 style="margin:0;font-family:'Cormorant Garamond',Garamond,'Times New Roman',serif;font-size:32px;font-weight:400;color:#111;">Thank you, ${d.customerName.split(" ")[0]}.</h1>
             <p style="margin:12px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#666;line-height:1.6;">
               Your order #${d.orderNumber} has been confirmed and is being prepared for dispatch.
             </p>
@@ -113,8 +119,8 @@ function buildHtml(d: OrderConfirmationData): string {
         </tr>
         <tr>
           <td style="padding:32px 40px;text-align:center;">
-            <a href="https://kashaonline.in/orders" style="display:inline-block;background:#111;color:#fff;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;text-decoration:none;padding:14px 32px;">
-              View My Orders
+            <a href="https://kashaonline.in/orders/${d.orderNumber}" style="display:inline-block;background:#111;color:#fff;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;text-decoration:none;padding:14px 32px;">
+              View My Order
             </a>
           </td>
         </tr>
