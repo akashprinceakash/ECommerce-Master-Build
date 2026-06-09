@@ -48,3 +48,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Generated exports (large files — not needed in repo)
+exports/
