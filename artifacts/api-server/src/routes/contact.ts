@@ -1,5 +1,5 @@
 import { Router } from "express";
-import sgMail from "@sendgrid/mail";
+import { Resend } from "resend";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { db } from "@workspace/db";
@@ -7,13 +7,11 @@ import { contactEnquiriesTable } from "@workspace/db/schema";
 
 const router = Router();
 
-const SENDGRID_API_KEY = process.env["SENDGRID_API_KEY"] ?? "";
-const FROM_EMAIL = process.env["SENDGRID_FROM_EMAIL"] ?? "orders@kashaonline.in";
-const ADMIN_EMAIL = "pranaysomaia715@gmail.com";
+const RESEND_API_KEY = process.env["RESEND_API_KEY"] ?? "";
+const FROM_EMAIL     = "orders@kashaonline.in";
+const ADMIN_EMAIL    = "pranaysomaia715@gmail.com";
 
-if (SENDGRID_API_KEY) {
-  sgMail.setApiKey(SENDGRID_API_KEY);
-}
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
 router.post("/contact", async (req, res) => {
   const { name, email, inquiryType, stylePreference, message } = req.body as {
@@ -40,11 +38,11 @@ router.post("/contact", async (req, res) => {
 
   res.json({ ok: true });
 
-  if (SENDGRID_API_KEY && row) {
+  if (resend && row) {
     const subject = `${inquiryType ?? "General"} Enquiry from ${name}`;
     const html = `
       <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#FAFAF7;">
-        <p style="font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:#B8925A;margin:0 0 20px;">Ka.Sha — Website Enquiry</p>
+        <p style="font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:#B8925A;margin:0 0 20px;">KA.SHA — Website Enquiry</p>
         <h2 style="font-size:22px;font-weight:400;color:#1a1a18;margin:0 0 24px;">${subject}</h2>
         <table style="width:100%;border-collapse:collapse;font-size:14px;color:#444;">
           <tr><td style="padding:8px 0;color:#888;width:140px;">Name</td><td style="padding:8px 0;">${name}</td></tr>
@@ -58,23 +56,21 @@ router.post("/contact", async (req, res) => {
         </div>
       </div>
     `;
-    sgMail
-      .send({
-        to: ADMIN_EMAIL,
-        from: { email: FROM_EMAIL, name: "Ka.SHA Website" },
-        replyTo: { email, name },
-        subject,
-        html,
-      })
-      .then(() => {
-        db.update(contactEnquiriesTable)
-          .set({ emailSent: true })
-          .where(eq(contactEnquiriesTable.id, row.id))
-          .catch((e: unknown) => logger.warn({ err: e }, "Could not mark enquiry email_sent"));
-      })
-      .catch((err: unknown) => {
-        logger.warn({ err }, "SendGrid failed — enquiry already saved to DB");
-      });
+
+    resend.emails.send({
+      to: ADMIN_EMAIL,
+      from: `KA.SHA Website <${FROM_EMAIL}>`,
+      replyTo: `${name} <${email}>`,
+      subject,
+      html,
+    }).then(() => {
+      db.update(contactEnquiriesTable)
+        .set({ emailSent: true })
+        .where(eq(contactEnquiriesTable.id, row.id))
+        .catch((e: unknown) => logger.warn({ err: e }, "Could not mark enquiry email_sent"));
+    }).catch((err: unknown) => {
+      logger.warn({ err }, "Resend failed for contact enquiry — message already saved to DB");
+    });
   }
 });
 

@@ -1,14 +1,12 @@
-import sgMail from "@sendgrid/mail";
+import { Resend } from "resend";
 import { logger } from "./logger";
 
-const SENDGRID_API_KEY = process.env["SENDGRID_API_KEY"] ?? "";
-const FROM_EMAIL = process.env["SENDGRID_FROM_EMAIL"] ?? "orders@kashaonline.in";
-const FROM_NAME = "KA.SHA Golf & Sportswear";
-const ADMIN_CC_EMAIL = "pranaysomaia715@gmail.com";
+const RESEND_API_KEY  = process.env["RESEND_API_KEY"] ?? "";
+const FROM_EMAIL      = "orders@kashaonline.in";
+const FROM_NAME       = "KA.SHA Golf & Sportswear";
+const ADMIN_CC_EMAIL  = "pranaysomaia715@gmail.com";
 
-if (SENDGRID_API_KEY) {
-  sgMail.setApiKey(SENDGRID_API_KEY);
-}
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
 export interface OrderEmailItem {
   name: string;
@@ -28,40 +26,35 @@ export interface OrderConfirmationData {
   shippingCity: string;
   shippingState: string;
   shippingPostalCode: string;
-  invoicePdf?: Buffer;
   shippingPhone: string;
+  invoicePdf?: Buffer;
   awb?: string | null;
   trackingUrl?: string | null;
 }
 
 function formatPrice(paise: number): string {
-  return `₹${(paise / 100).toLocaleString("en-IN")}`;
+  return `Rs. ${(paise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function buildHtml(d: OrderConfirmationData): string {
   const shippingCharge = d.shippingChargeInPaise ?? 0;
 
-  const itemRows = d.items
-    .map(
-      (it) => `
-      <tr>
-        <td style="padding:12px 0;border-bottom:1px solid #F0EDE8;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#333;">
-          ${it.name}<br/>
-          <span style="color:#888;font-size:12px;">Size: ${it.size} &nbsp;·&nbsp; Qty: ${it.quantity}</span>
-        </td>
-        <td style="padding:12px 0;border-bottom:1px solid #F0EDE8;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#333;text-align:right;">
-          ${formatPrice(it.priceInPaise * it.quantity)}
-        </td>
-      </tr>`,
-    )
-    .join("");
+  const itemRows = d.items.map((it) => `
+    <tr>
+      <td style="padding:12px 0;border-bottom:1px solid #F0EDE8;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#333;">
+        ${it.name}<br/>
+        <span style="color:#888;font-size:12px;">Size: ${it.size} &nbsp;·&nbsp; Qty: ${it.quantity}</span>
+      </td>
+      <td style="padding:12px 0;border-bottom:1px solid #F0EDE8;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#333;text-align:right;">
+        ${formatPrice(it.priceInPaise * it.quantity)}
+      </td>
+    </tr>`).join("");
 
-  const shippingRow = shippingCharge > 0
-    ? `<tr>
-        <td style="padding:8px 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#888;">Shipping</td>
-        <td style="padding:8px 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#888;text-align:right;">${formatPrice(shippingCharge)}</td>
-      </tr>`
-    : "";
+  const shippingRow = shippingCharge > 0 ? `
+    <tr>
+      <td style="padding:8px 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#888;">Shipping</td>
+      <td style="padding:8px 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#888;text-align:right;">${formatPrice(shippingCharge)}</td>
+    </tr>` : "";
 
   const trackingSection = d.trackingUrl
     ? `<p style="margin:16px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#555;">
@@ -79,16 +72,12 @@ function buildHtml(d: OrderConfirmationData): string {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#FAFAF7;">
     <tr><td align="center" style="padding:40px 20px;">
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #EDE9E4;">
-
-        <!-- Header -->
         <tr>
           <td style="background:#111;padding:32px 40px;text-align:center;">
             <p style="margin:0;font-family:Georgia,serif;font-size:22px;font-weight:500;letter-spacing:0.15em;color:#fff;">KA·SHA</p>
             <p style="margin:6px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;letter-spacing:0.25em;color:#B8925A;text-transform:uppercase;">Golf &amp; Sportswear</p>
           </td>
         </tr>
-
-        <!-- Title -->
         <tr>
           <td style="padding:40px 40px 0;text-align:center;">
             <p style="margin:0 0 8px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.2em;color:#B8925A;text-transform:uppercase;">Order Confirmed</p>
@@ -98,8 +87,6 @@ function buildHtml(d: OrderConfirmationData): string {
             </p>
           </td>
         </tr>
-
-        <!-- Order Items -->
         <tr>
           <td style="padding:32px 40px 0;">
             <p style="margin:0 0 16px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#888;">Order Summary</p>
@@ -113,21 +100,17 @@ function buildHtml(d: OrderConfirmationData): string {
             </table>
           </td>
         </tr>
-
-        <!-- Shipping -->
         <tr>
           <td style="padding:32px 40px 0;">
             <p style="margin:0 0 12px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#888;">Delivering To</p>
             <p style="margin:0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#333;line-height:1.8;">
               ${d.shippingAddress}<br/>
-              ${d.shippingCity}, ${d.shippingState} — ${d.shippingPostalCode}<br/>
+              ${d.shippingCity}, ${d.shippingState} - ${d.shippingPostalCode}<br/>
               ${d.shippingPhone}
             </p>
             ${trackingSection}
           </td>
         </tr>
-
-        <!-- CTA -->
         <tr>
           <td style="padding:32px 40px;text-align:center;">
             <a href="https://kashaonline.in/orders" style="display:inline-block;background:#111;color:#fff;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;text-decoration:none;padding:14px 32px;">
@@ -135,8 +118,6 @@ function buildHtml(d: OrderConfirmationData): string {
             </a>
           </td>
         </tr>
-
-        <!-- Footer -->
         <tr>
           <td style="border-top:1px solid #F0EDE8;padding:24px 40px;text-align:center;">
             <p style="margin:0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:#999;line-height:1.8;">
@@ -145,7 +126,6 @@ function buildHtml(d: OrderConfirmationData): string {
             </p>
           </td>
         </tr>
-
       </table>
     </td></tr>
   </table>
@@ -154,8 +134,8 @@ function buildHtml(d: OrderConfirmationData): string {
 }
 
 export async function sendOrderConfirmation(data: OrderConfirmationData): Promise<void> {
-  if (!SENDGRID_API_KEY) {
-    logger.warn("SendGrid not configured — skipping order confirmation email");
+  if (!resend) {
+    logger.warn("Resend not configured (RESEND_API_KEY missing) — skipping order confirmation email");
     return;
   }
 
@@ -163,26 +143,21 @@ export async function sendOrderConfirmation(data: OrderConfirmationData): Promis
   const text = `KA.SHA — Order #${data.orderNumber} Confirmed\n\nThank you ${data.customerName}!\n\nYour order has been confirmed. Total: ${formatPrice(data.totalInPaise)}\n\nView your orders at https://kashaonline.in/orders`;
 
   const attachments = data.invoicePdf
-    ? [{
-        content: data.invoicePdf.toString("base64"),
-        filename: `KASHA-Invoice-${String(data.orderNumber).padStart(6, "0")}.pdf`,
-        type: "application/pdf",
-        disposition: "attachment" as const,
-      }]
+    ? [{ filename: `KASHA-Invoice-${String(data.orderNumber).padStart(6, "0")}.pdf`, content: data.invoicePdf }]
     : [];
 
   try {
-    await sgMail.send({
+    await resend.emails.send({
       to: data.customerEmail,
       cc: ADMIN_CC_EMAIL,
-      from: { email: FROM_EMAIL, name: FROM_NAME },
+      from: `${FROM_NAME} <${FROM_EMAIL}>`,
       subject: `KA.SHA — Order #${data.orderNumber} Confirmed`,
       text,
       html,
       attachments,
     });
-    logger.info({ to: data.customerEmail, orderNumber: data.orderNumber, hasInvoice: !!data.invoicePdf }, "Order confirmation email sent");
+    logger.info({ to: data.customerEmail, orderNumber: data.orderNumber, hasInvoice: !!data.invoicePdf }, "Order confirmation email sent via Resend");
   } catch (err: unknown) {
-    logger.error({ err, to: data.customerEmail }, "Failed to send order confirmation email");
+    logger.error({ err, to: data.customerEmail }, "Failed to send order confirmation email via Resend");
   }
 }
