@@ -736,7 +736,7 @@ export default function CheckoutPage() {
                 <span>{formatPrice(subtotalExclGst)}</span>
               </div>
               <div className="flex justify-between text-muted-foreground text-xs">
-                <span>GST (5% / 12% incl.)</span>
+                <span>GST (5% / 18% incl.)</span>
                 <span>{formatPrice(totalGst)}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
