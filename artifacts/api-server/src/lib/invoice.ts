@@ -16,7 +16,7 @@ const logoBuffer = Buffer.from(KASHA_LOGO_B64, "base64");
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function gstRate(paise: number): number {
-  return paise <= 100_000 ? 0.05 : 0.12;
+  return paise < 250_000 ? 0.05 : 0.18;   // <₹2,500 → 5%, ₹2,500+ → 18%
 }
 
 /** Plain rupee format — no Unicode special chars (PDFKit built-in fonts are Latin-1) */
@@ -293,18 +293,20 @@ export function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
       totalRow("Shipping (excl. GST)", fmt(shippingBase));
     }
 
+    const itemPct = data.items.length > 0 ? Math.round(gstRate(data.items[0].priceInPaise) * 100) : 5;
+    const halfPct = itemPct / 2;  // 2.5 for 5% slab, 9 for 18% slab
+
     if (isIntraState) {
       const cgstItem = Math.round(totalItemGst / 2);
-      totalRow("Item CGST (2.5%)",      fmt(cgstItem));
-      totalRow("Item SGST (2.5%)",      fmt(totalItemGst - cgstItem));
+      totalRow(`Item CGST (${halfPct}%)`,      fmt(cgstItem));
+      totalRow(`Item SGST (${halfPct}%)`,      fmt(totalItemGst - cgstItem));
       if (shippingGst > 0) {
         const cgstShip = Math.round(shippingGst / 2);
         totalRow("Shipping CGST (9%)",  fmt(cgstShip));
         totalRow("Shipping SGST (9%)",  fmt(shippingGst - cgstShip));
       }
     } else {
-      const pct = data.items.length > 0 ? Math.round(gstRate(data.items[0].priceInPaise) * 100) : 5;
-      totalRow(`Item IGST (${pct}%)`,    fmt(totalItemGst));
+      totalRow(`Item IGST (${itemPct}%)`,    fmt(totalItemGst));
       if (shippingGst > 0) {
         totalRow("Shipping IGST (18%)", fmt(shippingGst));
       }
@@ -323,8 +325,8 @@ export function generateInvoicePdf(data: InvoiceData): Promise<Buffer> {
     // ── GST note ─────────────────────────────────────────────────────────
     y += 8;
     const gstNote = isIntraState
-      ? `CGST + SGST applied (intra-state: seller and buyer both in Delhi). Item GST: 5% for apparel up to Rs. 1,000 and 12% above Rs. 1,000. Shipping GST: 18%. HSN: ${HSN_CODE}.`
-      : `IGST applied (inter-state transaction). Item GST: 5% for apparel items priced up to Rs. 1,000 and 12% for items priced above Rs. 1,000. Shipping GST: 18%. HSN: ${HSN_CODE}.`;
+      ? `CGST + SGST applied (intra-state: seller and buyer both in Delhi). Item GST: 5% for apparel below Rs. 2,500 and 18% for Rs. 2,500 and above. Shipping GST: 18%. HSN: ${HSN_CODE}.`
+      : `IGST applied (inter-state transaction). Item GST: 5% for apparel items priced below Rs. 2,500 and 18% for Rs. 2,500 and above. Shipping GST: 18%. HSN: ${HSN_CODE}.`;
     doc.font("Helvetica").fontSize(7).fillColor(MUTED)
       .text(gstNote, L, y, { width: W });
     y += doc.heightOfString(gstNote, { width: W }) + 6;
