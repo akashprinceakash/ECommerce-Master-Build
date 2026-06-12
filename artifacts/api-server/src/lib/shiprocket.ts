@@ -70,6 +70,7 @@ export async function getShippingRates(
           courier_name?: string;
           freight_charge?: number;
           rate?: number;
+          is_recommended?: number; // 1 = Shiprocket's recommended courier for this route
         }>;
       };
     };
@@ -77,11 +78,13 @@ export async function getShippingRates(
     const couriers = data?.data?.available_courier_companies ?? [];
     if (couriers.length === 0) return null;
 
-    // Pick the cheapest available courier
-    const sorted = [...couriers].sort(
-      (a, b) => (a.freight_charge ?? a.rate ?? 999) - (b.freight_charge ?? b.rate ?? 999),
-    );
-    const best = sorted[0];
+    // Prefer Shiprocket's recommended courier — it matches what gets assigned at shipment time.
+    // Falling back to cheapest causes under-collection when only a premium courier is available.
+    const recommended = couriers.find(c => c.is_recommended === 1);
+    const best = recommended ?? [...couriers].sort(
+      (a, b) => (a.freight_charge ?? a.rate ?? 9999) - (b.freight_charge ?? b.rate ?? 9999),
+    )[0];
+
     const rateRupees = best.freight_charge ?? best.rate ?? 0;
 
     return {
