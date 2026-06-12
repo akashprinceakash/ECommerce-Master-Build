@@ -36,12 +36,12 @@ router.get("/payment/config", (_req, res): void => {
 ────────────────────────────────────────────────────── */
 
 router.post("/shipping/rates", requireAuth, async (req, res): Promise<void> => {
-  const { pincode, itemCount = 1, orderValueRupees = 0 } = req.body ?? {};
+  const { pincode, itemCount = 1, orderValueRupees = 0, cod = false } = req.body ?? {};
   if (!pincode || !/^\d{6}$/.test(String(pincode))) {
     res.status(400).json({ error: "Invalid pincode" }); return;
   }
   const weightKg = Math.max(0.1, Number(itemCount) * 0.4);
-  const result = await getShippingRates(String(pincode), weightKg, Number(orderValueRupees));
+  const result = await getShippingRates(String(pincode), weightKg, Number(orderValueRupees), Boolean(cod));
   if (!result) {
     res.json({ chargeInPaise: 9900, courierName: "Standard Delivery" }); return;
   }
@@ -141,6 +141,7 @@ async function runFulfillment(
           sellingPrice: Math.round((it.product?.priceInPaise ?? it.priceInPaise) / 100),
         })),
         totalInRupees: Math.round(order.totalInPaise / 100),
+        paymentMethod: order.paymentMethod === "cod" ? "cod" : "online",
       });
 
       if (sr.shiprocketOrderId) {

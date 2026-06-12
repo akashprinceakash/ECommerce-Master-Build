@@ -39,6 +39,7 @@ export async function getShippingRates(
   deliveryPincode: string,
   weightKg: number,
   orderValueRupees: number,
+  cod = false,
 ): Promise<ShiprocketRateResult | null> {
   if (!EMAIL || !PASSWORD) return null;
 
@@ -51,7 +52,7 @@ export async function getShippingRates(
       length: "35",
       breadth: "30",
       height: "5",
-      cod: "0",
+      cod: cod ? "1" : "0",
       declared_value: String(Math.ceil(orderValueRupees)),
     });
 
@@ -116,6 +117,7 @@ export interface ShiprocketOrderInput {
   shippingPostalCode: string;
   items: ShiprocketItem[];
   totalInRupees: number;
+  paymentMethod?: "online" | "cod";
 }
 
 export interface ShiprocketOrderResult {
@@ -170,7 +172,7 @@ export async function createShiprocketOrder(
       tax: 0,
       hsn: 61099010,
     })),
-    payment_method: "Prepaid",
+    payment_method: input.paymentMethod === "cod" ? "COD" : "Prepaid",
     sub_total: input.totalInRupees,
     length: 35,
     breadth: 30,

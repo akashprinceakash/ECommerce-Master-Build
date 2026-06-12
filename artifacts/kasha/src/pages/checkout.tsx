@@ -34,9 +34,9 @@ const INDIAN_STATES = [
   "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi", "Jammu and Kashmir", "Ladakh",
 ];
 
-/** GST rate for apparel (inclusive pricing): 5% ≤ ₹1000, 12% > ₹1000 */
+/** GST rate for apparel (inclusive pricing): 5% < ₹2,500, 18% ≥ ₹2,500 */
 function gstRate(priceInPaise: number) {
-  return priceInPaise <= 100000 ? 0.05 : 0.12;
+  return priceInPaise < 250000 ? 0.05 : 0.18;
 }
 
 function calcGst(priceInPaise: number, qty: number) {
@@ -92,6 +92,9 @@ export default function CheckoutPage() {
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  // Must be declared before the rate-fetch effect so it can be a dependency
+  const [paymentMethod, setPaymentMethod] = useState<"online" | "cod">("online");
 
   // ── Shipping rate fetch ───────────────────────────────────────────────
   const [shippingRate, setShippingRate] = useState<ShippingRate | null>(null);
@@ -241,6 +244,7 @@ export default function CheckoutPage() {
             pincode,
             itemCount: cart.items.reduce((s, i) => s + i.quantity, 0),
             orderValueRupees: Math.round(cart.totalInPaise / 100),
+            cod: paymentMethod === "cod",
           }),
         });
         if (res.ok) {
@@ -255,9 +259,8 @@ export default function CheckoutPage() {
     }, 600);
 
     return () => { if (rateTimerRef.current) clearTimeout(rateTimerRef.current); };
-  }, [formData.shippingPostalCode, cart]);
+  }, [formData.shippingPostalCode, cart, paymentMethod]);
 
-  const [paymentMethod, setPaymentMethod] = useState<"online" | "cod">("online");
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentResult, setPaymentResult] = useState<PaymentResult>(null);
 

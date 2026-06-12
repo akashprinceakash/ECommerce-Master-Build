@@ -13,7 +13,7 @@ import { useAuth } from "@clerk/react";
 import type { LucideIcon } from "lucide-react";
 
 function gstRate(priceInPaise: number) {
-  return priceInPaise <= 100000 ? 0.05 : 0.12;
+  return priceInPaise < 250000 ? 0.05 : 0.18;
 }
 function calcGst(priceInPaise: number, qty: number) {
   const total = priceInPaise * qty;
