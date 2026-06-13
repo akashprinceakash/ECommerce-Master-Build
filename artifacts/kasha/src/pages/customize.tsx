@@ -696,6 +696,34 @@ export default function CustomizePage() {
           } catch { /* malformed canvasJSON — canvas keeps objects from step 2 */ }
         }
 
+        // ── 3b. Restore React UI state from tagged canvas objects ────────
+        // logo
+        const logoObj = fc.getObjects().find((o: any) => o?.data?.kashaLogo) as fabric.FabricImage | undefined;
+        if (logoObj) {
+          logoObjRef.current = logoObj;
+          setLogoPlaced(true);
+          const src = (logoObj as any).getSrc?.() ?? (logoObj as any)._element?.src ?? null;
+          if (src) setLogoPreview(src);
+        }
+        // text
+        const textObj = fc.getObjects().find((o: any) => o?.data?.tag === "user-text");
+        if (textObj) {
+          textObjRef.current = textObj as any;
+          setTextPlaced(true);
+          const txt = (textObj as any).text ?? "";
+          if (txt) setTextInput(txt);
+          const fill = (textObj as any).fill;
+          if (fill && typeof fill === "string") setTextColor(fill);
+          const fs = (textObj as any).fontSize;
+          if (fs) setTextFontSize(fs);
+          const ff = (textObj as any).fontFamily;
+          if (ff) setTextFont(ff);
+          const fw = (textObj as any).fontWeight;
+          setTextBold(fw === "700" || fw === 700 || fw === "bold");
+          setTextItalic((textObj as any).fontStyle === "italic");
+          setTextUnderline(!!(textObj as any).underline);
+        }
+
         // ── 4. Re-apply all-over print background ───────────────────────
         // fabric.Pattern doesn't survive JSON serialisation (the offscreen
         // canvas source becomes stale), so we rebuild it from the stored ID.
@@ -795,8 +823,8 @@ export default function CustomizePage() {
     const fc = fcRef.current; if (!fc) return;
     setPatRecoloring(true);
     try {
-      await applyKashaDesignWithPrint(fc, activeKashaDesign, patColorA, patternUrl(p.file));
-      syncTexture();
+      await applyKashaDesignWithPrint(fc, activeKashaDesign, patColorA, toProxiedUrl(patternUrl(p.file)));
+      syncTextureRef.current?.();
     } finally { setPatRecoloring(false); }
   }, [activeKashaDesign, patColorA, syncTexture]);
 

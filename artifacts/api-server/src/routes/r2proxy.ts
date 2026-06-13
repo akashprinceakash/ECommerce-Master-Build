@@ -60,6 +60,7 @@ router.get("/r2-proxy", async (req, res): Promise<void> => {
         const contentType = result.ContentType ?? "application/octet-stream";
         res.setHeader("Content-Type", contentType);
         res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("X-Robots-Tag", "noindex, noarchive");
         if (result.ContentLength) {
           res.setHeader("Content-Length", String(result.ContentLength));
@@ -91,6 +92,7 @@ router.get("/r2-proxy", async (req, res): Promise<void> => {
     const contentType = upstream.headers.get("content-type") ?? "application/octet-stream";
     res.setHeader("Content-Type", contentType);
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("X-Robots-Tag", "noindex, noarchive");
     const contentLength = upstream.headers.get("content-length");
     if (contentLength) res.setHeader("Content-Length", contentLength);

@@ -118,7 +118,7 @@ export default function CartPage() {
                           <h3 className="text-[15px] font-bold text-black hover:underline">{item.product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}</h3>
                         </Link>
                         <p className="font-bold text-black whitespace-nowrap">
-                          {formatPrice(item.product.priceInPaise * item.quantity)}
+                          {formatPrice(((item.product.priceInPaise) + ((item.customization as any)?.customizationChargeInPaise ?? 0)) * item.quantity)}
                         </p>
                       </div>
                       <p className="text-[12px] text-gray-500">Size: {item.size}</p>

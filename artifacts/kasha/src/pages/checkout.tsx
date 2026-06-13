@@ -417,7 +417,7 @@ export default function CheckoutPage() {
   }
 
   // ── GST breakdown ────────────────────────────────────────────────────
-  const totalGst = cart.items.reduce((s, item) => s + calcGst(item.product.priceInPaise, item.quantity), 0);
+  const totalGst = cart.items.reduce((s, item) => s + calcGst((item.product.priceInPaise) + ((item.customization as any)?.customizationChargeInPaise ?? 0), item.quantity), 0);
   const subtotalExclGst = cart.totalInPaise - totalGst;
   const grandTotal = cart.totalInPaise + (shippingRate?.chargeInPaise ?? 0);
 
@@ -723,7 +723,7 @@ export default function CheckoutPage() {
                     {item.customization && <p className="text-xs italic text-primary mt-1">{item.customization.name}</p>}
                   </div>
                   <div className="text-sm font-medium">
-                    {formatPrice(item.product.priceInPaise * item.quantity)}
+                    {formatPrice(((item.product.priceInPaise) + ((item.customization as any)?.customizationChargeInPaise ?? 0)) * item.quantity)}
                   </div>
                 </div>
               ))}

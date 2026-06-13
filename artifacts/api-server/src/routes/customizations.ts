@@ -18,7 +18,7 @@ router.get("/customizations", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/customizations", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
-  const { productId, name, color, size, partsEnabled, canvasData, previewImageUrl, frontImageUrl, backImageUrl, sideImageUrl } = req.body;
+  const { productId, name, color, size, partsEnabled, canvasData, previewImageUrl, frontImageUrl, backImageUrl, sideImageUrl, customizationCharge } = req.body;
   if (!productId || !color || !size) {
     res.status(400).json({ error: "Missing required fields" });
     return;
@@ -37,6 +37,7 @@ router.post("/customizations", requireAuth, async (req, res): Promise<void> => {
       frontImageUrl: frontImageUrl ?? null,
       backImageUrl: backImageUrl ?? null,
       sideImageUrl: sideImageUrl ?? null,
+      customizationChargeInPaise: typeof customizationCharge === "number" ? Math.round(customizationCharge * 100) : 0,
     })
     .returning();
   res.status(201).json(customization);
@@ -86,7 +87,7 @@ router.put("/customizations/:id", requireAuth, async (req, res): Promise<void> =
     res.status(400).json({ error: "Invalid ID" });
     return;
   }
-  const { name, color, size, partsEnabled, canvasData, previewImageUrl, frontImageUrl, backImageUrl, sideImageUrl } = req.body;
+  const { name, color, size, partsEnabled, canvasData, previewImageUrl, frontImageUrl, backImageUrl, sideImageUrl, customizationCharge } = req.body;
   const updateData: Record<string, unknown> = {};
   if (name !== undefined) updateData.name = name;
   if (color !== undefined) updateData.color = color;
@@ -97,6 +98,7 @@ router.put("/customizations/:id", requireAuth, async (req, res): Promise<void> =
   if (frontImageUrl !== undefined) updateData.frontImageUrl = frontImageUrl;
   if (backImageUrl !== undefined) updateData.backImageUrl = backImageUrl;
   if (sideImageUrl !== undefined) updateData.sideImageUrl = sideImageUrl;
+  if (typeof customizationCharge === "number") updateData.customizationChargeInPaise = Math.round(customizationCharge * 100);
 
   const [updated] = await db
     .update(customizationsTable)

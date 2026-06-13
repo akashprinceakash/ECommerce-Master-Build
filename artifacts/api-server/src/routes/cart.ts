@@ -35,7 +35,7 @@ async function buildCartResponse(userId: string) {
   );
 
   const totalInPaise = itemsWithDetails.reduce(
-    (sum, item) => sum + (item.product?.priceInPaise ?? 0) * item.quantity,
+    (sum, item) => sum + ((item.product?.priceInPaise ?? 0) + ((item.customization as any)?.customizationChargeInPaise ?? 0)) * item.quantity,
     0
   );
 
