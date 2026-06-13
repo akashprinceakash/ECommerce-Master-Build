@@ -1016,7 +1016,7 @@ export default function CustomizePage() {
       setAllOverPrintId(p.id); setActivePrintId(p.id);
       for (const entry of mats) { try{entry.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]);}catch{} }
       try { (mvRef.current as any)?.requestUpdate?.(); } catch {}
-      syncTexture();
+      syncTextureRef.current?.();
       toast({
         title: hasDesign ? "Print applied as base texture" : "Print applied",
         description: hasDesign ? `${p.label} — pattern design remains on top.` : `${p.label} mapped across the whole garment.`,
@@ -4102,6 +4102,7 @@ export default function CustomizePage() {
                   }
                   saveHistory();
                   setPendingPrintKey(null);
+                  setPrintModalFor(null);
                 };
                 return(
                   <div key={p.id} onClick={()=>applyPrint(p)} style={{
