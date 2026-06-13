@@ -18,7 +18,7 @@ interface Props {
 // ── Canonical entry-point SKUs for fixed tiles ──────────────────────────────
 const ENTRY_SKUS = {
   solid:   "KS1000BPINK",
-  printed: "KS1000BGP004",
+  printed: "KS1000BGP003",
 } as const;
 
 const FIXED_TILE_CONFIG = [
