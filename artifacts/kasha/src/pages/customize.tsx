@@ -399,6 +399,10 @@ export default function CustomizePage() {
 
   // ── Responsive layout ─────────────────────────────────────────────────────
   const [screenW, setScreenW] = useState(() => typeof window !== "undefined" ? window.innerWidth : 1280);
+  const isXs = screenW < 480;
+  const isSm = screenW < 640;
+  const isMd = screenW < 768;
+  const isDesktop = screenW >= 768;
 
   const [primaryColor, setPrimaryColor] = useState("#ffffff");
   const [sleeveLength, setSleeveLength] = useState<"half"|"full">("half");
@@ -1589,7 +1593,7 @@ export default function CustomizePage() {
       {/* ── TOP ACTION BAR ─────────────────────────────────────────────── */}
       <header style={{
         display:"flex",alignItems:"center",justifyContent:"space-between",
-        padding:"0 20px",height:56,flexShrink:0,zIndex:50,
+        padding:isXs ? "0 12px" : "0 20px",height:isXs ? 48 : 56,flexShrink:0,zIndex:50,
         background:"rgba(250,250,247,0.97)",
         backdropFilter:"blur(20px)",
         WebkitBackdropFilter:"blur(20px)",
@@ -1597,11 +1601,11 @@ export default function CustomizePage() {
         boxShadow:"0 2px 20px rgba(26,26,24,0.05)",
       }}>
         {/* Left: back + logo */}
-        <div style={{display:"flex",alignItems:"center",gap:14,minWidth:180}}>
+        <div style={{display:"flex",alignItems:"center",gap:isXs ? 8 : 14,minWidth:180}}>
           <Link href={_fromSource === "modal" ? "/products" : _fromSource === "saved" ? "/profile?tab=designs" : id ? `/products/${id}` : "/products"} style={{
             color:V.mu,fontSize:11,textDecoration:"none",
             display:"flex",alignItems:"center",gap:5,
-            padding:"5px 12px",borderRadius:40,
+            padding:isXs ? "5px 8px" : "5px 12px",borderRadius:40,
             border:`1px solid rgba(201,168,76,0.25)`,
             transition:"all 0.25s",fontWeight:500,letterSpacing:".05em",
             fontFamily:"'Jost',sans-serif",
@@ -1615,7 +1619,7 @@ export default function CustomizePage() {
             <img
               src="https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/Kasha-logo-01.jpeg"
               alt="KA.SHA — Home"
-              style={{height:28,width:"auto",objectFit:"contain"}}
+              style={{height:isXs ? 22 : 28,width:"auto",objectFit:"contain"}}
             />
           </Link>
         </div>
@@ -1655,7 +1659,7 @@ export default function CustomizePage() {
           {!isTypeMode && (
             <Show when="signed-in">
               <button
-                onClick={screenW < 768 ? ()=>setShowMobileSaveSheet(true) : handleSave}
+                onClick={isMd ? ()=>setShowMobileSaveSheet(true) : handleSave}
                 disabled={saveMut.isPending}
                 style={{
                   padding:"7px 16px",borderRadius:40,
@@ -1692,8 +1696,8 @@ export default function CustomizePage() {
 
       {/* ── PROGRESS TRACKER BAR ─────────────────────────────────────────── */}
       <div style={{
-        display:"flex",alignItems:"center",height:56,flexShrink:0,
-        padding:"0 24px",gap:0,
+        display:"flex",alignItems:"center",height:isXs ? 44 : 56,flexShrink:0,
+        padding:isXs ? "0 10px" : "0 24px",gap:0,
         background:"#fff",
         borderBottom:`1.5px solid rgba(201,168,76,0.22)`,
         boxShadow:"0 2px 10px rgba(26,26,24,0.07)",
@@ -1721,7 +1725,7 @@ export default function CustomizePage() {
                 opacity:locked?0.5:1,
               }}>
                 <div style={{
-                  width:24,height:24,borderRadius:"50%",flexShrink:0,
+                  width:isXs ? 20 : 24,height:isXs ? 20 : 24,borderRadius:"50%",flexShrink:0,
                   display:"flex",alignItems:"center",justifyContent:"center",
                   fontSize:10,fontWeight:700,
                   background:active?V.ac:done?V.ac:"#e8e4dc",
@@ -1730,12 +1734,12 @@ export default function CustomizePage() {
                   transition:"all .3s",
                   boxShadow:active?`0 0 0 3px ${V.aclt}`:"none",
                 }}>{done?"✓":s.n}</div>
-                <span style={{
+                {!isXs && (<span style={{
                   fontSize:10,fontFamily:"'Jost',sans-serif",letterSpacing:".07em",
                   textTransform:"uppercase",fontWeight:active?700:400,
                   color:active?V.tx:done?V.ac:"#999",
                   transition:"all .3s",
-                }}>{s.label}</span>
+                }}>{s.label}</span>)}
               </div>
             </React.Fragment>
           );
@@ -1743,29 +1747,30 @@ export default function CustomizePage() {
       </div>
 
       {/* ── WORKSPACE ──────────────────────────────────────────────────────── */}
-      <div style={{display:"flex",flex:1,overflow:"hidden",flexDirection:screenW<768?"column":"row"}}>
+      <div style={{display:"flex",flex:1,overflow:"hidden",flexDirection:isMd?"column":"row"}}>
 
         {/* ── LEFT STEP PANEL ──────────────────────────────────────────────── */}
-        <div style={{
-          width:screenW<768?"100%":"40%",
-          minWidth:screenW<768?undefined:340,
-          maxWidth:screenW<768?undefined:560,
-          height:screenW>=768?"100%":undefined,
-          flex:screenW<768?"1 1 0":"0 0 40%",
-          minHeight:screenW<768?0:undefined,
-          order:screenW<768?2:1,
+        <div className="step-panel" style={{
+          width:isMd?"100%":"40%",
+          minWidth:isMd?undefined:340,
+          maxWidth:isMd?undefined:560,
+          height:isDesktop?"100%":undefined,
+          flex:isMd?"1 1 0":"0 0 40%",
+          minHeight:isMd?0:undefined,
+          order:isMd?2:1,
           display:"flex",flexDirection:"column",
-          borderRight:screenW>=768?`1px solid rgba(26,26,24,0.07)`:undefined,
-          borderTop:screenW<768?`1px solid rgba(201,168,76,0.15)`:undefined,
+          borderRight:isDesktop?`1px solid rgba(26,26,24,0.07)`:undefined,
+          borderTop:isMd?`1px solid rgba(201,168,76,0.15)`:undefined,
           background:V.sf,
           overflowY:"auto",
           overflowX:"hidden",
+          WebkitOverflowScrolling:"touch",
           scrollbarWidth:"thin",
           scrollbarColor:`${V.cream3} transparent`,
         }}>
           {/* Panel heading */}
           <div style={{
-            padding:screenW<768?"12px 16px 10px":"20px 24px 16px",flexShrink:0,
+            padding:isXs ? "10px 12px 8px" : isMd ? "12px 16px 10px" : "20px 24px 16px",flexShrink:0,
             borderBottom:`1px solid rgba(26,26,24,0.07)`,
             background:V.sf,position:"sticky",top:0,zIndex:5,
           }}>
@@ -1832,11 +1837,11 @@ export default function CustomizePage() {
                 }}
                 onMouseEnter={e=>{e.currentTarget.style.background="rgba(196,92,92,0.08)";e.currentTarget.style.borderColor="rgba(196,92,92,0.55)";}}
                 onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.borderColor="rgba(196,92,92,0.3)";}}
-              >↺ Reset</button>
+              >{isXs ? "↺" : "↺ Reset"}</button>
             </div>
           </div>
 
-          <div style={{padding:screenW<768?"14px 16px":"20px 24px",display:"flex",flexDirection:"column",gap:18,overflowX:"hidden",boxSizing:"border-box" as const,minWidth:0}}>
+          <div style={{padding:isXs ? "12px 14px" : isMd ? "14px 16px" : "20px 24px",display:"flex",flexDirection:"column",gap:18,overflowX:"hidden",boxSizing:"border-box" as const,minWidth:0}}>
 
             {/* ══════════════════ STEP 1: CHOOSE STYLE ══════════════════════ */}
             {step===1&&(
@@ -2385,7 +2390,7 @@ export default function CustomizePage() {
                   )}
 
                   {/* Logo placement — mobile only (desktop uses right panel) */}
-                  {logoPreview&&screenW<768&&(()=>{
+                  {logoPreview&&isMd&&(()=>{
                     const CHIPS=[
                       {key:"front-left",   label:"Chest Left",   cx:39,cy:40},
                       {key:"front-right",  label:"Chest Right",  cx:21,cy:40},
@@ -2477,7 +2482,7 @@ export default function CustomizePage() {
                     ))}
                   </div>
                   {/* Text placement — mobile only (desktop uses right panel) */}
-                  {screenW<768&&(()=>{
+                  {isMd&&(()=>{
                     const CHIPS=[
                       {key:"front-left",   label:"Chest Left",   cx:39,cy:40},
                       {key:"front-right",  label:"Chest Right",  cx:21,cy:40},
@@ -2549,10 +2554,10 @@ export default function CustomizePage() {
                 <div>
                   <div style={{...sb}}>Size &amp; quantity</div>
                   <div style={{borderRadius:10,overflow:"hidden",border:`1px solid ${V.bd}`}}>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",background:V.sf2,padding:"8px 12px",borderBottom:`1px solid ${V.bd}`}}>
+                    <div style={{display:"grid",gridTemplateColumns:isXs ? "1fr 1fr" : "1fr 1fr 1fr",background:V.sf2,padding:"8px 12px",borderBottom:`1px solid ${V.bd}`}}>
                       <span style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",color:V.mu}}>Size</span>
                       <span style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",color:V.mu,textAlign:"center"}}>Qty</span>
-                      <span style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",color:V.mu,textAlign:"right"}}>Chest (in)</span>
+                      <span style={{fontSize:9,fontFamily:"'Jost',sans-serif",letterSpacing:".08em",textTransform:"uppercase",color:V.mu,textAlign:"right",display:isXs ? "none" : undefined}}>Chest (in)</span>
                     </div>
                     {([
                       {s:"S",chest:"36–37"},
@@ -2562,7 +2567,7 @@ export default function CustomizePage() {
                       {s:"XXL",chest:"44–46"},
                     ]).map(({s,chest})=>(
                       <div key={s} style={{
-                        display:"grid",gridTemplateColumns:"1fr 1fr 1fr",
+                        display:"grid",gridTemplateColumns:isXs ? "1fr 1fr" : "1fr 1fr 1fr",
                         alignItems:"center",padding:"8px 12px",
                         borderBottom:`1px solid rgba(26,26,24,0.05)`,
                         background:sizeQty[s]>0?V.aclt:"transparent",
@@ -2580,7 +2585,7 @@ export default function CustomizePage() {
                             background:"transparent",cursor:"pointer",fontSize:14,color:V.mu,lineHeight:1,
                           }}>+</button>
                         </div>
-                        <span style={{fontSize:10,color:V.mu,fontFamily:"'Jost',sans-serif",textAlign:"right"}}>{chest}</span>
+                        <span style={{fontSize:10,color:V.mu,fontFamily:"'Jost',sans-serif",textAlign:"right",display:isXs ? "none" : undefined}}>{chest}</span>
                       </div>
                     ))}
                     {totalQty>4&&(
@@ -2698,11 +2703,12 @@ export default function CustomizePage() {
           {/* ── BOTTOM NAV FOOTER ──────────────────────────────────────────── */}
           <div style={{
             position:"sticky",bottom:0,
-            padding:"12px 20px",
+            padding:isXs ? "10px 12px" : "12px 20px",
+            paddingBottom:isXs ? "max(10px, env(safe-area-inset-bottom))" : undefined,
             background:"rgba(250,250,247,0.97)",
             borderTop:`1px solid rgba(201,168,76,0.18)`,
             backdropFilter:"blur(12px)",
-            display:"flex",alignItems:"center",gap:8,
+            display:"flex",alignItems:"center",gap:isXs ? 6 : 8,
             zIndex:20,flexShrink:0,
             boxShadow:"0 -4px 20px rgba(26,26,24,0.07)",
           }}>
@@ -2711,7 +2717,7 @@ export default function CustomizePage() {
               onClick={()=>setStep(s=>Math.max(initialStep,s-1))}
               disabled={step===initialStep}
               style={{
-                flex:1,padding:"11px 0",borderRadius:99,
+                flex:1,padding:"11px 0",borderRadius:99,minHeight:44,
                 border:`1.5px solid ${step===initialStep?"rgba(26,26,24,0.12)":V.bd}`,
                 background:"transparent",
                 color:step===initialStep?V.mu:V.tx,
@@ -2721,7 +2727,7 @@ export default function CustomizePage() {
               }}
               onMouseEnter={e=>{if(step>initialStep){e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.ac;}}}
               onMouseLeave={e=>{e.currentTarget.style.borderColor=step===initialStep?"rgba(26,26,24,0.12)":V.bd;e.currentTarget.style.color=step===initialStep?V.mu:V.tx;}}>
-              ← Previous Step
+              {isXs ? "←" : "← Previous Step"}
             </button>
 
             {/* Continue / Add to Cart */}
@@ -2730,7 +2736,7 @@ export default function CustomizePage() {
                 <button
                   onClick={()=>setStep(s=>Math.min(4,s+1))}
                   style={{
-                    flex:2,padding:"11px 0",borderRadius:99,
+                    flex:2,padding:"11px 0",borderRadius:99,minHeight:44,
                     border:"none",background:V.tx,color:"#fff",
                     fontSize:11,fontWeight:600,cursor:"pointer",
                     fontFamily:"'Jost',sans-serif",letterSpacing:".07em",textTransform:"uppercase",
@@ -2738,13 +2744,13 @@ export default function CustomizePage() {
                   }}
                   onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}
                   onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
-                  {step===1?"Continue to Design":step===2?"Continue to Logo & Text":"Continue to Sizing"} →
+                  {step===1?(isXs?"Design →":"Continue to Design →"):step===2?(isXs?"Logo →":"Continue to Logo & Text →"):(isXs?"Sizing →":"Continue to Sizing →")}
                 </button>
                 {!isTypeMode&&(
                   <button
                     onClick={()=>setStep(4)}
                     style={{
-                      flex:1,padding:"11px 0",borderRadius:99,
+                      flex:isXs ? "0 0 44px" : 1,padding:"11px 0",borderRadius:99,minHeight:44,
                       border:`1.5px solid ${V.ac}`,background:V.aclt,color:V.tx,
                       fontSize:10,fontWeight:600,cursor:"pointer",
                       fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",
@@ -2752,7 +2758,7 @@ export default function CustomizePage() {
                     }}
                     onMouseEnter={e=>{e.currentTarget.style.background=V.ac;}}
                     onMouseLeave={e=>{e.currentTarget.style.background=V.aclt;}}>
-                    🛒 Add to Cart
+                    {isXs ? "🛒" : "🛒 Add to Cart"}
                   </button>
                 )}
               </>
@@ -2772,7 +2778,7 @@ export default function CustomizePage() {
                   onClick={handleAddToCart}
                   disabled={cartMut.isPending}
                   style={{
-                    flex:2,padding:"11px 0",borderRadius:99,
+                    flex:2,padding:"11px 0",borderRadius:99,minHeight:44,
                     border:"none",background:V.ac,color:V.tx,
                     fontSize:11,fontWeight:600,cursor:"pointer",
                     fontFamily:"'Jost',sans-serif",letterSpacing:".07em",textTransform:"uppercase",
@@ -3759,8 +3765,8 @@ export default function CustomizePage() {
 
         {/* ── CENTER: 3D CANVAS ─────────────────────────────────────────────── */}
         <div style={{
-          flex:screenW<768?"0 0 44vh":1,
-          order:screenW<768?1:2,
+          flex:isDesktop ? 1 : isXs ? "0 0 40vh" : "0 0 44vh",
+          order:isMd?1:2,
           position:"relative",
           background:"radial-gradient(ellipse at 55% 40%, #c8c2b6 0%, #b8b1a4 60%, #a8a196 100%)",
           display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",
@@ -3806,7 +3812,7 @@ export default function CustomizePage() {
 
           {/* Product badge */}
           {/* Product badge — desktop bottom-left, mobile top-left */}
-          {screenW>=768&&(
+          {isDesktop&&(
             <div style={{
               position:"absolute",bottom:20,left:20,
               background:"rgba(250,250,247,0.94)",
@@ -3848,7 +3854,7 @@ export default function CustomizePage() {
           )}
 
           {/* Active design badge — desktop bottom-right, hidden on mobile */}
-          {(activeKashaDesign||activePrintId)&&screenW>=768&&(
+          {(activeKashaDesign||activePrintId)&&isDesktop&&(
             <div style={{
               position:"absolute",bottom:20,right:20,
               background:"rgba(250,250,247,0.94)",
@@ -3865,7 +3871,7 @@ export default function CustomizePage() {
           )}
 
           {/* Drag hint — desktop only */}
-          {screenW>=768&&(
+          {isDesktop&&(
             <div style={{
               position:"absolute",top:16,left:"50%",transform:"translateX(-50%)",
               fontFamily:"'Cormorant Garamond', serif",
@@ -3880,8 +3886,8 @@ export default function CustomizePage() {
         </div>
 
         {/* ── RIGHT PANEL: Placement chips (step 3 desktop only) ─────────── */}
-        {step===3&&screenW>=768&&(
-          <div style={{
+        {step===3&&isDesktop&&(
+          <div className="placement-right-panel" style={{
             width:200,flexShrink:0,overflowY:"auto",
             background:V.bg,
             borderLeft:`1px solid rgba(26,26,24,0.07)`,
@@ -3980,15 +3986,22 @@ export default function CustomizePage() {
         <div style={{
           position:"fixed",inset:0,zIndex:200,
           background:"rgba(26,26,24,0.45)",
-          display:"flex",alignItems:"center",justifyContent:"flex-start",
-          padding:"0 0 0 16px",
+          display:"flex",
+          alignItems:isMd ? "flex-end" : "center",
+          justifyContent:isMd ? "stretch" : "flex-start",
+          padding:isMd ? 0 : "0 0 0 16px",
         }} onClick={()=>{setColorModalFor(null);setPendingColorPick(null);}}>
           <div onClick={e=>e.stopPropagation()} style={{
-            background:V.bg,borderRadius:20,padding:"22px 20px 20px",
-            width:"min(320px, calc(100vw - 32px))",maxHeight:"90vh",overflowY:"auto",
+            background:V.bg,
+            borderRadius:isMd ? "20px 20px 0 0" : 20,
+            padding:isMd ? "6px 20px 28px" : "22px 20px 20px",
+            width:isMd ? "100%" : "min(320px, calc(100vw - 32px))",
+            maxHeight:isMd ? "82vh" : "90vh",
+            overflowY:"auto",
             boxShadow:"0 32px 80px rgba(26,26,24,0.32)",
             border:`1px solid rgba(201,168,76,0.18)`,
           }}>
+            {isMd && <div style={{width:40,height:4,borderRadius:2,background:V.bd,margin:"12px auto 16px"}}/>}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
               <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
                 Choose Colour
@@ -4087,15 +4100,22 @@ export default function CustomizePage() {
         <div style={{
           position:"fixed",inset:0,zIndex:200,
           background:"rgba(26,26,24,0.45)",
-          display:"flex",alignItems:"center",justifyContent:"flex-start",
-          padding:"0 0 0 16px",
+          display:"flex",
+          alignItems:isMd ? "flex-end" : "center",
+          justifyContent:isMd ? "stretch" : "flex-start",
+          padding:isMd ? 0 : "0 0 0 16px",
         }} onClick={()=>{setPrintModalFor(null);setPendingPrintKey(null);}}>
           <div onClick={e=>e.stopPropagation()} style={{
-            background:V.bg,borderRadius:20,padding:"22px 20px 20px",
-            width:"min(380px, calc(100vw - 32px))",maxHeight:"90vh",overflowY:"auto",
+            background:V.bg,
+            borderRadius:isMd ? "20px 20px 0 0" : 20,
+            padding:isMd ? "6px 20px 28px" : "22px 20px 20px",
+            width:isMd ? "100%" : "min(380px, calc(100vw - 32px))",
+            maxHeight:isMd ? "82vh" : "90vh",
+            overflowY:"auto",
             boxShadow:"0 32px 80px rgba(26,26,24,0.32)",
             border:`1px solid rgba(201,168,76,0.18)`,
           }}>
+            {isMd && <div style={{width:40,height:4,borderRadius:2,background:V.bd,margin:"12px auto 16px"}}/>}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
               <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,fontWeight:600,color:V.tx,letterSpacing:".02em"}}>
                 Choose Print
@@ -4244,6 +4264,7 @@ export default function CustomizePage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@200;300;400;500;600&display=swap');
         @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
         ::-webkit-scrollbar{width:3px}
         ::-webkit-scrollbar-thumb{background:${V.cream3};border-radius:2px}
         ::-webkit-scrollbar-track{background:transparent}
@@ -4255,15 +4276,18 @@ export default function CustomizePage() {
         input[type=range]{-webkit-appearance:none;appearance:none}
         details summary{list-style:none}
         details summary::-webkit-details-marker{display:none}
-        @media (max-width: 600px) {
-          .studio-title-center { display: none !important; }
-          .design-name-input { width: 90px !important; font-size: 10px !important; }
+        @media(max-width:479px){
+          .progress-label{display:none!important}
+          .studio-title-center{display:none!important}
+          .design-name-input{display:none!important}
         }
-        @media (max-width: 480px) {
-          .design-name-input { display: none !important; }
+        @media(max-width:639px){
+          .studio-title-center{display:none!important}
+          .design-name-input{width:90px!important;font-size:10px!important}
         }
-        @media (max-width: 420px) {
-          .design-name-input { display: none !important; }
+        @media(max-width:767px){
+          .placement-right-panel{display:none!important}
+          .step-panel{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
         }
       `}</style>
 
