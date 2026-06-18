@@ -1,0 +1,165 @@
+Fix only the root causes of the following issues. Reuse existing code wherever possible, avoid refactoring unrelated files, and make minimal, targeted changes.
+
+
+
+### 1. Cart Thumbnail Overwriting
+
+
+
+* User customizes a solid t-shirt (for example, Brown + text "Akash") and adds it to the cart.
+
+* User then edits the same product, adds a print along with the text, and adds it to the cart again.
+
+* Issue: The first cart item's customized thumbnail is being replaced by the latest customization's thumbnail.
+
+* Expected: Every cart item must store and display its own immutable customized thumbnail and configuration independently.
+
+
+
+### 2. Color Application Issues
+
+
+
+For both Printed and Solid t-shirts:
+
+
+
+* Selecting a color for **Base Body** is incorrectly applying it to **Full Body**.
+
+* **Collar** color application works correctly.
+
+* On the first color selection attempt, the chosen color is not applied properly.
+
+* After clicking **Reset**, the color picker defaults to an incorrect black state.
+
+
+
+Expected:
+
+
+
+* Base Body, Full Body, and Collar must maintain independent state and materials.
+
+* Colors must apply correctly on the first selection.
+
+* Reset should restore the actual default colors and state.
+
+
+
+### 3. Mobile Feature Parity
+
+
+
+Ensure mobile has feature parity with desktop and tablet views.
+
+Example:
+
+
+
+* Customization charges for text and logos are not visible on mobile.
+
+
+
+Expected:
+
+
+
+* All customization controls, pricing information, and interactions available on desktop/tablet must also be available and functional on mobile.
+
+
+
+### 4. Cart Pricing Breakdown
+
+
+
+Display:
+
+
+
+* Product price
+
+* Customization charges (text, logo, print, etc.)
+
+* Final total price
+
+
+
+Ensure customization charges are persisted and included in cart calculations.
+
+
+
+### 5. Mobile Navigation Improvements
+
+
+
+* When opening a section (Text, Logo, etc.), automatically scroll to the top of that section.
+
+* Show a floating "Scroll to Top" button when the user reaches the bottom.
+
+* Add subtle visual cues (gradient, bounce indicator, downward arrow, etc.) to indicate additional content below.
+
+
+
+### 6. Pattern Variant Not Applying on 3D Model
+
+
+
+Admin uploaded a new Pattern-1 t-shirt variant:
+
+
+
+* Base Body : `KS1000BGP006`
+
+* pattern design is : is grey
+
+* Product SKU: `KS1001B-GP006-Grey`
+
+* Thumbnail:
+
+  https://pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev/thumbnails/thumb-1780160899046-197279789.webp
+
+
+
+Issue:
+
+
+
+* SKU mapping is being saved correctly.
+
+* When opening Custom Studio, the 3D model only changes to the grey color and does not apply the uploaded pattern texture/design.
+
+
+
+Expected:
+
+
+
+
+
+
+
+### Constraints
+
+
+
+1. Make minimal code changes.
+
+2. Do not rewrite working components.
+
+3. Preserve existing APIs and data structures.
+
+4. Fix root causes only.
+
+5. Avoid introducing regressions.
+
+6. Provide a concise summary of:
+
+
+
+   * Files changed
+
+   * Root cause of each issue
+
+   * Exact fixes implemented
+
+   * Any edge cases considered

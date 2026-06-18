@@ -471,7 +471,7 @@ export default function CustomizePage() {
   // ── Sizing matrix + modal state ───────────────────────────────────────────
   const [sizeMode, setSizeMode] = useState<"standard"|"custom">("standard");
   const [sizeQty, setSizeQty] = useState<Record<string,number>>({S:0,M:0,L:0,XL:0,XXL:0});
-  const [colorModalFor, setColorModalFor] = useState<"all"|"base"|"pattern"|"base-body"|"collar"|null>(null);
+  const [colorModalFor, setColorModalFor] = useState<"all"|"base"|"pattern"|"base-body"|"collar"|"leftSleeve"|"rightSleeve"|null>(null);
   const [pendingColorPick, setPendingColorPick] = useState<string|null>(null);
   const [printModalFor, setPrintModalFor] = useState<"all"|"base-body"|"collar"|"accent"|null>(null);
   const [pendingPrintKey, setPendingPrintKey] = useState<string|null>(null);
@@ -481,6 +481,9 @@ export default function CustomizePage() {
   const historyIdx = useRef(-1);
   // Track the customization ID used in this browser session to avoid creating duplicates
   const sessionCustomizationIdRef = useRef<number | null>(null);
+  // Ref to the left step-panel scroll container (used for auto-scroll on mobile)
+  const stepPanelRef = useRef<HTMLDivElement>(null);
+  const [stepPanelCanScroll, setStepPanelCanScroll] = useState(false);
 
   // ── Cart data (needed to open CartDrawer from within the studio) ─────────
   const { data: cart } = useGetCart({
@@ -497,6 +500,27 @@ export default function CustomizePage() {
   });
 
   // ── Load model-viewer script ─────────────────────────────────────────────
+  // ── Step-panel auto-scroll + overflow indicator ───────────────────────────
+  // On mobile the step panel is a scroll container. Whenever the user advances
+  // to a new step we snap it back to the top so instructions are always visible.
+  useEffect(() => {
+    const el = stepPanelRef.current;
+    if (!el || !isMd) return;
+    el.scrollTo({ top: 0, behavior: "smooth" });
+  }, [step, isMd]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Track whether the step panel has overflow to show the gradient hint.
+  useEffect(() => {
+    const el = stepPanelRef.current;
+    if (!el) return;
+    const check = () => setStepPanelCanScroll(el.scrollHeight > el.clientHeight + 4);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    el.addEventListener("scroll", check);
+    return () => { ro.disconnect(); el.removeEventListener("scroll", check); };
+  }, [step]); // re-check after each step transition renders new content
+
   useEffect(() => {
     if (!webglAvailable) { setModelDisplayed(true); return; }
     if (document.querySelector('script[data-mv-loader]')) { setMvReady(true); return; }
@@ -1420,21 +1444,14 @@ export default function CustomizePage() {
       const textAreaSqIn = textPlaced ? Math.ceil(textH * textW) : 0;
       const hasLogoOrText = !!(logoPreview || textPlaced);
       const customizationCharge = hasLogoOrText ? (20 + logoAreaSqIn + textAreaSqIn) : 0;
-      // Save customisation — when we already have an ID, fire the PUT non-blocking so the
-      // cart add is not held hostage by the image-upload time (can take several seconds).
+      // Always create a FRESH customization record for each cart addition — never
+      // reuse an existing ID. This ensures every cart item has its own independent,
+      // immutable thumbnail snapshot and is never overwritten by later changes.
       let customizationId: number|null = null;
-      const existingId=sessionCustomizationIdRef.current??existing?.id??null;
-      if(existingId){
-        // Use the existing ID immediately; persist the updated design in the background.
-        customizationId=existingId;
-        apiFetch(`/api/customizations/${existingId}`,{method:"PUT",body:JSON.stringify({...payload})}).catch(()=>{});
-      } else {
-        try {
-          const cust=await apiFetch("/api/customizations",{method:"POST",body:JSON.stringify({...payload,customizationCharge})});
-          customizationId=cust.id??null;
-          if(customizationId) sessionCustomizationIdRef.current=customizationId;
-        } catch { /* non-blocking — cart add will still proceed */ }
-      }
+      try {
+        const cust=await apiFetch("/api/customizations",{method:"POST",body:JSON.stringify({...payload,customizationCharge})});
+        customizationId=cust.id??null;
+      } catch { /* non-blocking — cart add will still proceed */ }
       return apiFetch("/api/cart/items",{method:"POST",body:JSON.stringify({productId:id,customizationId,quantity:effectiveQty,size:effectiveSize})});
     },
     onSuccess:()=>{
@@ -1750,7 +1767,7 @@ export default function CustomizePage() {
       <div style={{display:"flex",flex:1,overflow:"hidden",flexDirection:isMd?"column":"row"}}>
 
         {/* ── LEFT STEP PANEL ──────────────────────────────────────────────── */}
-        <div className="step-panel" style={{
+        <div ref={stepPanelRef} className="step-panel" style={{
           width:isMd?"100%":"40%",
           minWidth:isMd?undefined:340,
           maxWidth:isMd?undefined:560,
@@ -1801,7 +1818,7 @@ export default function CustomizePage() {
                     if(effectiveSkuType==="pattern"){
                       applyPatternColors(PAT_COLOR_A_DEFAULT,PAT_COLOR_B_DEFAULT);
                     } else if(effectiveSkuType==="solid"){
-                      applyPrimary("#1a1a18");
+                      applyPrimary(product?.defaultColor??"#ffffff");
                     }
                     clearAllOverPrint(); clearAllZonePrints(); saveHistory();
                   } else if(step===3){
@@ -2311,7 +2328,7 @@ export default function CustomizePage() {
                                   <div key={z} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,background:V.sf2,border:`1px solid ${V.bd}`}}>
                                     <div style={{width:22,height:22,borderRadius:"50%",background:zoneColors[z as keyof typeof zoneColors]||primaryColor,border:`1.5px solid ${V.bd}`,flexShrink:0}}/>
                                     <span style={{flex:1,fontSize:11,fontFamily:"'Jost',sans-serif",color:V.tx,letterSpacing:".04em"}}>{label}</span>
-                                    <button onClick={()=>setColorModalFor("base")} style={{fontSize:9,padding:"4px 10px",borderRadius:6,border:`1px solid ${V.ac}`,background:"transparent",cursor:"pointer",fontFamily:"'Jost',sans-serif",color:V.ac,letterSpacing:".06em",textTransform:"uppercase"}}>Change</button>
+                                    <button onClick={()=>setColorModalFor(z as "collar"|"leftSleeve"|"rightSleeve")} style={{fontSize:9,padding:"4px 10px",borderRadius:6,border:`1px solid ${V.ac}`,background:"transparent",cursor:"pointer",fontFamily:"'Jost',sans-serif",color:V.ac,letterSpacing:".06em",textTransform:"uppercase"}}>Change</button>
                                   </div>
                                 );
                               })}
@@ -2530,7 +2547,28 @@ export default function CustomizePage() {
                 </div>
 
 
-              </div>
+              {/* Customisation charge — mobile only; desktop shows this in the right panel */}
+              {isMd&&(()=>{
+                const _lw=logoSize*0.376;
+                const _la=logoPreview?Math.ceil(_lw*_lw*0.75):0;
+                const _th=textFontSize*(22/1024);
+                const _tw=Math.max(1,textInput.length)*textFontSize*0.55*(22/1024);
+                const _ta=textPlaced?Math.ceil(_th*_tw):0;
+                const _tot=(!!(logoPreview||textPlaced))?(20+_la+_ta):0;
+                if(!_tot)return null;
+                return(
+                  <div style={{padding:"10px 12px",borderRadius:10,background:V.sf2,border:`1px solid ${V.bd}`,marginTop:4}}>
+                    <div style={{fontFamily:"'Jost',sans-serif",fontSize:9,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:V.mu,marginBottom:8}}>Customisation Charge</div>
+                    <div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>Base fee</span><span style={{color:V.ac,fontWeight:600}}>₹20</span></div>
+                    {logoPreview&&<div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>Logo ({_la} sq in)</span><span style={{color:V.ac,fontWeight:600}}>₹{_la}</span></div>}
+                    {textPlaced&&<div style={{display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:11,color:V.tx,marginBottom:4}}><span>Name / Text ({_ta} sq in)</span><span style={{color:V.ac,fontWeight:600}}>₹{_ta}</span></div>}
+                    <div style={{borderTop:`1px solid ${V.bd}`,marginTop:6,paddingTop:6,display:"flex",justifyContent:"space-between",fontFamily:"'Jost',sans-serif",fontSize:12,fontWeight:700,color:V.tx}}><span>Total</span><span style={{color:V.ac}}>₹{_tot}</span></div>
+                    <div style={{fontFamily:"'Jost',sans-serif",fontSize:9,color:V.mu,marginTop:5,fontStyle:"italic"}}>₹20 base + ₹1 per sq inch · name &amp; logo only · prints &amp; colours free</div>
+                  </div>
+                );
+              })()}
+
+            </div>
             )}
 
             {/* ══════════════════ STEP 4: SIZING ════════════════════════════ */}
@@ -2699,6 +2737,11 @@ export default function CustomizePage() {
             )}
 
           </div>
+          {/* Gradient overflow hint — only rendered on mobile, sticks to bottom of
+              the scroll container so users know more content awaits below */}
+          {isMd&&stepPanelCanScroll&&(
+            <div className="step-panel-gradient" aria-hidden="true"/>
+          )}
 
           {/* ── BOTTOM NAV FOOTER ──────────────────────────────────────────── */}
           <div style={{
@@ -4021,7 +4064,7 @@ export default function CustomizePage() {
 
             {/* Preset swatches — click to apply immediately */}
             {(()=>{
-              const pickedVal = colorModalFor==="pattern" ? patColorB : colorModalFor==="base" ? patColorA : primaryColor;
+              const pickedVal = colorModalFor==="pattern" ? patColorB : colorModalFor==="base" ? patColorA : colorModalFor==="collar" ? (zoneColors.collar||primaryColor) : colorModalFor==="leftSleeve" ? (zoneColors.leftSleeve||primaryColor) : colorModalFor==="rightSleeve" ? (zoneColors.rightSleeve||primaryColor) : primaryColor;
               const displayCol = pendingColorPick ?? pickedVal;
               const applyCol = (col: string) => {
                 if(colorModalFor==="all"){
@@ -4037,6 +4080,10 @@ export default function CustomizePage() {
                   applyPatternColors(col, patColorB);
                 } else if(colorModalFor==="collar"){
                   applyZoneColor("collar",col);
+                } else if(colorModalFor==="leftSleeve"){
+                  applyZoneColor("leftSleeve",col);
+                } else if(colorModalFor==="rightSleeve"){
+                  applyZoneColor("rightSleeve",col);
                 } else {
                   setPatColorB(col);
                   applyPatternColors(patColorA, col);
@@ -4287,7 +4334,12 @@ export default function CustomizePage() {
         }
         @media(max-width:767px){
           .placement-right-panel{display:none!important}
-          .step-panel{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+          .step-panel{-webkit-overflow-scrolling:touch;overscroll-behavior:contain;position:relative}
+          .step-panel-gradient{
+            position:sticky;bottom:0;left:0;right:0;height:36px;
+            background:linear-gradient(to bottom,transparent,rgba(249,247,244,0.95));
+            pointer-events:none;flex-shrink:0;margin-top:-36px;z-index:3;
+          }
         }
       `}</style>
 

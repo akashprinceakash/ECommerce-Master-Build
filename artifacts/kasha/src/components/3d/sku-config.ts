@@ -327,6 +327,16 @@ export function parseSku(sku: string): SkuResult {
     const rawSuffix = (patternMatch[2] ?? "").trim();
     const designId  = `KS${patternMatch[1]}B`;
 
+    // ── Suffix contains a print reference (GP\d{3}…) → treat as print ───────
+    // Covers admin SKUs like KS1001B-GP006-Grey where GP006 is the print ID.
+    const gpInSuffix = rawSuffix.match(/^GP(\d{3})/i);
+    if (gpInSuffix) {
+      const printNum = parseInt(gpInSuffix[1], 10);
+      const padded   = String(printNum).padStart(3, "0");
+      const patternId = `KS1000BGP${padded}`;
+      return { type: "print", sku: upper, patternId, designNumber: printNum };
+    }
+
     // ── Legacy abbreviated suffix (in PATTERN_SUFFIX_COLORS) or no suffix ───
     if (!rawSuffix || PATTERN_SUFFIX_COLORS[rawSuffix]) {
       const colors = PATTERN_SUFFIX_COLORS[rawSuffix] ?? DEFAULT_PATTERN_COLORS;

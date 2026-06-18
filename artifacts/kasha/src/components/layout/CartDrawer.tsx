@@ -187,12 +187,24 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
                           </p>
                         </Link>
                         <p className="text-[13px] font-semibold text-black whitespace-nowrap">
-                          {formatPrice(item.product.priceInPaise * item.quantity)}
+                          {formatPrice((item.product.priceInPaise + ((item.customization as any)?.customizationChargeInPaise ?? 0)) * item.quantity)}
                         </p>
                       </div>
                       <p className="text-[11px] text-gray-500 mt-0.5">Size: {item.size}</p>
                       {item.customization && (
                         <p className="text-[11px] text-gray-500">Custom: {item.customization.name}</p>
+                      )}
+                      {(item.customization as any)?.customizationChargeInPaise > 0 && (
+                        <div className="mt-1 text-[10px] text-gray-400 space-y-0.5">
+                          <div className="flex justify-between">
+                            <span>Product (×{item.quantity})</span>
+                            <span>{formatPrice(item.product.priceInPaise * item.quantity)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Customisation (×{item.quantity})</span>
+                            <span>+{formatPrice((item.customization as any).customizationChargeInPaise * item.quantity)}</span>
+                          </div>
+                        </div>
                       )}
                     </div>
                     <div className="flex items-center justify-between mt-2">
