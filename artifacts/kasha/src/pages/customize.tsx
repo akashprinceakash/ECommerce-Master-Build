@@ -2772,7 +2772,7 @@ export default function CustomizePage() {
             boxShadow:"0 -4px 20px rgba(26,26,24,0.07)",
           }}>
             {/* Back */}
-            <button
+            {/* <button
               onClick={()=>setStep(s=>Math.max(initialStep,s-1))}
               disabled={step===initialStep}
               style={{
@@ -2787,8 +2787,26 @@ export default function CustomizePage() {
               onMouseEnter={e=>{if(step>initialStep){e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.ac;}}}
               onMouseLeave={e=>{e.currentTarget.style.borderColor=step===initialStep?"rgba(26,26,24,0.12)":V.bd;e.currentTarget.style.color=step===initialStep?V.mu:V.tx;}}>
               {isXs ? "←" : "← Previous Step"}
+            </button> */}
+            {/* Back */}
+            <button
+              onClick={()=>setStep(s=>Math.max(initialStep,s-1))}
+              disabled={step===initialStep}
+              style={{
+                flex:1,padding:"11px 0",borderRadius:99,minHeight:44,
+                border:`1.5px solid ${step===initialStep?"rgba(26,26,24,0.12)":V.bd}`,
+                background:"transparent",
+                color:step===initialStep?V.mu:V.tx,
+                fontSize:11,fontWeight:900,cursor:step===initialStep?"default":"pointer",
+                fontFamily:"'Jost',sans-serif",letterSpacing:".06em",
+                transition:"all 0.25s",
+                display:"flex",alignItems:"center",justifyContent:"center",gap:6,
+              }}
+              onMouseEnter={e=>{if(step>initialStep){e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.color=V.ac;}}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor=step===initialStep?"rgba(26,26,24,0.12)":V.bd;e.currentTarget.style.color=step===initialStep?V.mu:V.tx;}}>
+              <span style={{fontSize:20,lineHeight:1,display:"inline-flex",alignItems:"center"}}>←</span>
+              {!isXs && <span>Previous Step</span>}
             </button>
-
             {/* Continue / Add to Cart */}
             {step<4 ? (
               <>
