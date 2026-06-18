@@ -1,0 +1,98 @@
+# Minimal-diff responsive changes to apply to customize.tsx
+
+## 1. After existing `const [screenW, setScreenW]` line, ADD:
+```
+const isXs = screenW < 480;
+const isSm = screenW < 640;
+const isMd = screenW < 768;
+const isDesktop = screenW >= 768;
+```
+
+## 2. REPLACE all `screenW<768` with `isMd`
+## 3. REPLACE all `screenW>=768` with `isDesktop`  
+
+## 4. Header height: `height:56` → `height: isXs ? 48 : 56`
+## 5. Header padding: `"0 20px"` → `isXs ? "0 12px" : "0 20px"`
+## 6. Header back button padding: `"5px 12px"` → `isXs ? "5px 8px" : "5px 12px"`
+## 7. Header logo height: `height:28` → `height: isXs ? 22 : 28`
+## 8. Header gap: `gap:14` → `gap: isXs ? 8 : 14`
+
+## 9. Progress bar height: `height:56` → `height: isXs ? 44 : 56`
+## 10. Progress bar padding: `"0 24px"` → `isXs ? "0 10px" : "0 24px"`
+## 11. Progress step dot: `width:24,height:24` → `width: isXs ? 20 : 24, height: isXs ? 20 : 24`
+## 12. Progress step label span: wrap in `{!isXs && (<span ...>)}`
+
+## 13. Viewer: `flex:screenW<768?"0 0 44vh":1` → `flex: isDesktop ? 1 : isXs ? "0 0 40vh" : "0 0 44vh"`
+## 14. Add className="viewer-wrap" to viewer div
+
+## 15. Left panel: add `WebkitOverflowScrolling:"touch"` and className="step-panel"
+
+## 16. Panel heading padding:
+    `screenW<768?"12px 16px 10px":"20px 24px 16px"` →
+    `isXs ? "10px 12px 8px" : isMd ? "12px 16px 10px" : "20px 24px 16px"`
+
+## 17. Panel body padding:
+    `screenW<768?"14px 16px":"20px 24px"` →
+    `isXs ? "12px 14px" : isMd ? "14px 16px" : "20px 24px"`
+
+## 18. Bottom nav padding:
+    `"12px 20px"` → `isXs ? "10px 12px" : "12px 20px"`
+    ADD after the existing padding: `paddingBottom: isXs ? "max(10px, env(safe-area-inset-bottom))" : undefined`
+
+## 19. Bottom nav gap: `gap:8` → `gap: isXs ? 6 : 8`
+
+## 20. Bottom nav Previous button text:
+    `"← Previous Step"` → `isXs ? "←" : "← Previous Step"`
+
+## 21. Bottom nav Continue button text (abbreviated on xs):
+    step===1: `isXs ? "Design →" : "Continue to Design →"`
+    step===2: `isXs ? "Logo →" : "Continue to Logo & Text →"`
+    step===3: `isXs ? "Sizing →" : "Continue to Sizing →"`
+
+## 22. Bottom nav Add to Cart icon-only on xs:
+    Cart button: `flex: isXs ? "0 0 44px" : 1`
+    Button label: `isXs ? "🛒" : "🛒 Add to Cart"`
+
+## 23. All button min-height: add `minHeight:44` to all nav/cta buttons
+
+## 24. Color modal: 
+    Container: `alignItems: isMd ? "flex-end" : "center"`, `justifyContent: isMd ? "stretch" : "flex-start"`, `padding: isMd ? 0 : "0 0 0 16px"`
+    Panel: `borderRadius: isMd ? "20px 20px 0 0" : 20`, `width: isMd ? "100%" : "min(320px, calc(100vw - 32px))"`, `maxHeight: isMd ? "82vh" : "90vh"`, `padding: isMd ? "6px 20px 28px" : "22px 20px 20px"`
+    ADD handle bar div INSIDE panel when isMd: `<div style={{width:40,height:4,borderRadius:2,background:V.bd,margin:"12px auto 16px"}}/>`
+
+## 25. Print modal: same pattern as color modal
+
+## 26. Step 4 size grid header:
+    `gridTemplateColumns:"1fr 1fr 1fr"` → `gridTemplateColumns: isXs ? "1fr 1fr" : "1fr 1fr 1fr"`
+    Chest header cell: add style `display: isXs ? "none" : undefined`
+    Chest value cell: add style `display: isXs ? "none" : undefined`
+
+## 27. Step 4 measurements grid:
+    `gridTemplateColumns:"1fr 1fr"` → already fine, stays 2-col
+
+## 28. Step 1 pattern grid (KASHA_DESIGNS):
+    `gridTemplateColumns:"repeat(3,1fr)"` → fine, keep 3-col (works at xs too with small cards)
+
+## 29. Right placement panel (step 3):
+    ADD className="placement-right-panel" (CSS hides it on mobile)
+    Mobile placement chips already inside step panel — good as-is
+
+## 30. <style> block — append at end:
+```css
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+@media(max-width:479px){
+  .progress-label{display:none!important}
+  .studio-title-center{display:none!important}
+  .design-name-input{display:none!important}
+}
+@media(max-width:639px){
+  .studio-title-center{display:none!important}
+  .design-name-input{width:90px!important;font-size:10px!important}
+}
+@media(max-width:767px){
+  .placement-right-panel{display:none!important}
+  .step-panel{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+}
+```
+
+## 31. Panel heading Reset button text: `isXs ? "↺" : "↺ Reset"`
