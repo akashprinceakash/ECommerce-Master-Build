@@ -1629,7 +1629,8 @@ export default function CustomizePage() {
           }}
           onMouseEnter={e=>{e.currentTarget.style.borderColor=V.ac;e.currentTarget.style.background=V.aclt;}}
           onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(201,168,76,0.25)";e.currentTarget.style.background="transparent";}}>
-            ← Back
+            <span style={{fontSize:isXs ? 16 : 13,lineHeight:1}}>←</span>
+            <span>Back</span>
           </Link>
           <div style={{width:1,height:18,background:`rgba(26,26,24,0.1)`}}/>
           <Link href="/" style={{display:"inline-flex",alignItems:"center"}}>
@@ -2764,7 +2765,7 @@ export default function CustomizePage() {
                 border:`1.5px solid ${step===initialStep?"rgba(26,26,24,0.12)":V.bd}`,
                 background:"transparent",
                 color:step===initialStep?V.mu:V.tx,
-                fontSize:11,fontWeight:500,cursor:step===initialStep?"default":"pointer",
+                fontSize:11,fontWeight:900,cursor:step===initialStep?"default":"pointer",
                 fontFamily:"'Jost',sans-serif",letterSpacing:".06em",
                 transition:"all 0.25s",
               }}
