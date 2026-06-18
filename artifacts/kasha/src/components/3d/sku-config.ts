@@ -259,9 +259,25 @@ export interface UnknownSkuResult {
   sku: string;
 }
 
+// Pattern design (collar/accent overlay) combined with an all-over body print.
+// SKU format: KS100NB-GPnnn-{ColorName}
+// e.g. KS1001B-GP006-Grey → KS1001B design in grey + KS1000BGP006 body print
+export interface PatternPrintSkuResult {
+  type: "pattern+print";
+  sku: string;
+  designId: string;      // e.g. "KS1001B"
+  patternNumber: number; // pattern series number
+  patternId: string;     // body print id, e.g. "KS1000BGP006"
+  designNumber: number;  // GP print number
+  colorA: string;        // dark channel for the pattern design
+  colorB: string;        // light/main channel for the pattern design
+  colorLabel: string;
+}
+
 export type SkuResult =
   | PrintSkuResult
   | PatternSkuResult
+  | PatternPrintSkuResult
   | SolidSkuResult
   | UnknownSkuResult;
 
@@ -327,14 +343,33 @@ export function parseSku(sku: string): SkuResult {
     const rawSuffix = (patternMatch[2] ?? "").trim();
     const designId  = `KS${patternMatch[1]}B`;
 
-    // ── Suffix contains a print reference (GP\d{3}…) → treat as print ───────
-    // Covers admin SKUs like KS1001B-GP006-Grey where GP006 is the print ID.
-    const gpInSuffix = rawSuffix.match(/^GP(\d{3})/i);
+    // ── Suffix contains a print reference (GP\d{3}…) → pattern + body print ──
+    // e.g. KS1001B-GP006-Grey: KS1001B design in grey, body print = KS1000BGP006.
+    const gpInSuffix = rawSuffix.match(/^GP(\d{3})(?:-(.+))?$/i);
     if (gpInSuffix) {
-      const printNum = parseInt(gpInSuffix[1], 10);
-      const padded   = String(printNum).padStart(3, "0");
+      const printNum  = parseInt(gpInSuffix[1], 10);
+      const padded    = String(printNum).padStart(3, "0");
       const patternId = `KS1000BGP${padded}`;
-      return { type: "print", sku: upper, patternId, designNumber: printNum };
+      // Parse the colour portion that follows the print ref (e.g. "Grey", "Navy-Black")
+      const colorStr  = (gpInSuffix[2] ?? "").toUpperCase();
+      const colorParts = colorStr.split("-").filter(Boolean);
+      const c1 = colorParts[0] ?? "";
+      const c2 = colorParts[1] ?? "";
+      const colorB = DESCRIPTIVE_COLOR_HEX[c1] ?? DEFAULT_PATTERN_COLORS.colorB;
+      const colorA = c2
+        ? (DESCRIPTIVE_COLOR_HEX[c2] ?? DEFAULT_PATTERN_COLORS.colorA)
+        : DEFAULT_PATTERN_COLORS.colorA;
+      return {
+        type:          "pattern+print" as const,
+        sku:           upper,
+        designId,
+        patternNumber: patNum,
+        patternId,
+        designNumber:  printNum,
+        colorA,
+        colorB,
+        colorLabel:    colorStr || "Default",
+      };
     }
 
     // ── Legacy abbreviated suffix (in PATTERN_SUFFIX_COLORS) or no suffix ───

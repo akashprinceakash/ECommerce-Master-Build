@@ -924,15 +924,13 @@ export default function CustomizePage() {
       }
       (fc as any).backgroundColor=new fabric.Pattern({source:composed,repeat:"repeat"});
       fc.renderAll();
-      // Step A: instant tint hint
+      // Reset all materials to white so the uploaded texture drives all colours
+      // (including zone-specific rects for collar/sleeves) without tinting them.
+      // The new body colour is already baked into the canvas background tile.
       const mv=mvRef.current as any;
       if (mats.length && mv) {
-        const r=parseInt(hex.slice(1,3)||"ff",16)/255;
-        const g=parseInt(hex.slice(3,5)||"ff",16)/255;
-        const b=parseInt(hex.slice(5,7)||"ff",16)/255;
-        const lin=(c:number)=>Math.pow(Math.max(0,Math.min(1,c)),2.2);
         for (const entry of mats) {
-          try { entry.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([lin(r),lin(g),lin(b),1]); } catch {}
+          try { entry.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]); } catch {}
         }
         try { mv.requestUpdate?.(); } catch {}
       }
@@ -1148,17 +1146,17 @@ export default function CustomizePage() {
     let designId: string;
     let colorOverride: {colorA:string;colorB:string} | undefined;
 
-    if (entrySkuResult.type === "pattern") {
-      // Full SKU passed in URL (e.g. KS1002B-BB) — use its design + colors
+    if (entrySkuResult.type === "pattern" || entrySkuResult.type === "pattern+print") {
+      // Full SKU passed in URL — use its design + colors
       designId = entrySkuResult.designId;
       colorOverride = { colorA: entrySkuResult.colorA, colorB: entrySkuResult.colorB };
     } else if (rawDesignParam) {
       // Bare design ID passed (e.g. "KS1002B") — use product SKU colors as fallback
       designId = rawDesignParam;
-      if (productSkuResult.type === "pattern") {
+      if (productSkuResult.type === "pattern" || productSkuResult.type === "pattern+print") {
         colorOverride = { colorA: productSkuResult.colorA, colorB: productSkuResult.colorB };
       }
-    } else if (productSkuResult.type === "pattern") {
+    } else if (productSkuResult.type === "pattern" || productSkuResult.type === "pattern+print") {
       // No entry param — derive everything from product SKU
       designId = productSkuResult.designId;
       colorOverride = { colorA: productSkuResult.colorA, colorB: productSkuResult.colorB };
@@ -1176,10 +1174,27 @@ export default function CustomizePage() {
       if (fc) setFabricBg(fc, colorOverride.colorB);
       setPrimaryColor(colorOverride.colorB);
     }
+
+    // Determine whether a body print should be applied under the pattern design.
+    // This handles SKUs like KS1001B-GP006-Grey: body = GP006 print, design on top.
+    const resolvedSku = entrySkuResult.type === "pattern+print" ? entrySkuResult
+      : productSkuResult.type === "pattern+print" ? productSkuResult : null;
+
+    if (resolvedSku) {
+      // Apply the body print first, then layer the pattern design on top of it.
+      const bodyPrint = PATTERNS.find((p: PatternDef) => p.id === resolvedSku.patternId);
+      if (bodyPrint) {
+        applyAllOverPrint(bodyPrint).then(() => {
+          handleSelectKashaDesign(design, colorOverride);
+        });
+        return;
+      }
+    }
+
     // Pass colorOverride directly so colors are applied atomically with the design,
     // and syncTexture fires with mats already populated (guaranteed by guard above).
     handleSelectKashaDesign(design, colorOverride);
-  }, [canvasReady, productType, handleSelectKashaDesign, product, mats]);
+  }, [canvasReady, productType, handleSelectKashaDesign, product, mats, applyAllOverPrint]);
 
   // PRINT auto-apply: select the correct print from the library based on SKU.
   // We only need canvasReady here — NOT mats.length. The print is applied to the
