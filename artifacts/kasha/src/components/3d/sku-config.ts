@@ -344,8 +344,9 @@ export function parseSku(sku: string): SkuResult {
     const designId  = `KS${patternMatch[1]}B`;
 
     // ── Suffix contains a print reference (GP\d{3}…) → pattern + body print ──
-    // e.g. KS1001B-GP006-Grey: KS1001B design in grey, body print = KS1000BGP006.
-    const gpInSuffix = rawSuffix.match(/^GP(\d{3})(?:-(.+))?$/i);
+    // Accepts both short (GP006) and full (KS1000BGP006) print-ID formats.
+    // e.g. KS1001B-GP006-Grey or KS1001B-KS1000BGP006-Grey
+    const gpInSuffix = rawSuffix.match(/^(?:KS1000B)?GP(\d{3})(?:-(.+))?$/i);
     if (gpInSuffix) {
       const printNum  = parseInt(gpInSuffix[1], 10);
       const padded    = String(printNum).padStart(3, "0");

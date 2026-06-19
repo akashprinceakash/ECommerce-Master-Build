@@ -1,0 +1,117 @@
+## Custom Studio Requirements and Fixes
+
+
+
+### 1. Pattern T-Shirt SKU Parsing and Automatic Asset Application
+
+
+
+**Example SKU:** `KS1001B-GP006-Grey`
+
+
+
+For SKUs in this format:
+
+
+
+* `KS1001B` → Pattern SKU
+
+* `GP006` (or `KS1000BGP006`, whichever exists in the SKU Assets section) → for Body 
+
+* `Grey` → color for Pattern 
+
+
+
+### Expected Behavior
+
+
+
+The system should automatically parse the SKU and apply the corresponding assets from the **SKU Assets** section.
+
+
+
+The admin should be able to upload pattern t-shirt assets in formats such as:
+
+
+
+* `KS1001B-Blue-Grey`
+
+* `KS1001B-KS1000BGP006-Grey`
+
+* Similar combinations of patterns, prints, and colors.
+
+
+
+### Asset Lookup Logic
+
+
+
+
+
+1. Search for an exact matching asset in the **SKU Assets** section. 
+
+2. If an exact match exists, apply it automatically. 
+
+3. If multiple combinations are available, select the best matching combination based on the parsed SKU components. 
+
+4. This asset application should happen automatically when the product is loaded into the Custom Studio. 
+
+
+
+Please refer to the attached example image for the expected result.
+
+
+
+---
+
+
+
+### 2. Base Body Color Should Not Affect the Collar
+
+
+
+### Current Issue
+
+
+
+When a user:
+
+
+
+1. Selects a solid or printed t-shirt,
+
+2. Navigates to the **Custom Studio**, and
+
+3. Changes the **Base Body Color**,
+
+
+
+the selected color is applied to the **entire t-shirt**, including the **collar**.
+
+
+
+### Expected Behavior
+
+
+
+The Base Body Color should be applied **only to the base body region** of the t-shirt. The collar and other garment sections should remain unchanged.
+
+
+
+Currently, when a print is applied to the Base Body, it behaves correctly and affects only the base body without changing the collar.
+
+
+
+### Required Fix
+
+
+
+The Base Body Color application should follow the **same masking and mapping logic used by Base Body Print application**. In other words:
+
+
+
+* Apply color only to the Base Body mesh/layer.
+
+* Do not apply the color to the collar or other sections.
+
+* Reuse the same region-selection logic that is already working correctly for Base Body Prints.

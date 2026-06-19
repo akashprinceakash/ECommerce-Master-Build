@@ -1166,22 +1166,16 @@ export default function CustomizePage() {
     }
 
     const design = KASHA_DESIGNS.find(d => d.id === designId) ?? KASHA_DESIGNS[0];
-    // Apply colorB as the body/primary garment colour *before* zone textures are placed
-    // on top, so any UV area not covered by a zone still shows the correct body colour.
-    if (colorOverride) {
-      baseBgRef.current = colorOverride.colorB;
-      const fc = fcRef.current;
-      if (fc) setFabricBg(fc, colorOverride.colorB);
-      setPrimaryColor(colorOverride.colorB);
-    }
-
     // Determine whether a body print should be applied under the pattern design.
     // This handles SKUs like KS1001B-GP006-Grey: body = GP006 print, design on top.
     const resolvedSku = entrySkuResult.type === "pattern+print" ? entrySkuResult
       : productSkuResult.type === "pattern+print" ? productSkuResult : null;
 
     if (resolvedSku) {
-      // Apply the body print first, then layer the pattern design on top of it.
+      // pattern+print: colorOverride.colorB is the accent-zone colour for the KS design
+      // (e.g. grey side-panels), NOT the garment body background.  Keep baseBgRef at
+      // its current value (white) so the GP print shows its own cream/ivory body colour.
+      // The grey is applied when handleSelectKashaDesign paints the accent zones.
       const bodyPrint = PATTERNS.find((p: PatternDef) => p.id === resolvedSku.patternId);
       if (bodyPrint) {
         applyAllOverPrint(bodyPrint).then(() => {
@@ -1189,6 +1183,16 @@ export default function CustomizePage() {
         });
         return;
       }
+      // Print not found in library — fall through to plain pattern application.
+    }
+
+    // Pure-pattern SKU: apply colorB as the body/primary garment colour *before*
+    // zone textures are placed on top, so uncovered UV areas show the correct colour.
+    if (colorOverride) {
+      baseBgRef.current = colorOverride.colorB;
+      const fc = fcRef.current;
+      if (fc) setFabricBg(fc, colorOverride.colorB);
+      setPrimaryColor(colorOverride.colorB);
     }
 
     // Pass colorOverride directly so colors are applied atomically with the design,
