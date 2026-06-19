@@ -240,6 +240,16 @@ function toProxiedUrl(url: string | null | undefined): string {
   return url;
 }
 
+/**
+ * Normalise a SKU to a canonical form for fuzzy matching against SKU Assets.
+ * Replaces the full print-SKU form (KS1000BGP006) with the shorthand (GP006).
+ */
+function normalizeSkuForMatch(sku: string): string {
+  return sku.toUpperCase().replace(/KS1000BGP(\d+)/g, (_: string, n: string) =>
+    `GP${String(parseInt(n, 10)).padStart(3, "0")}`
+  );
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Product {
   id: number; name: string; description: string;
@@ -338,6 +348,18 @@ export default function CustomizePage() {
     queryFn:  () => apiFetch("/api/products"),
     enabled:  isTypeMode,
   });
+
+  // SKU Assets — fetched on mount so the studio can auto-apply admin-uploaded
+  // textures before falling back to the parseSku pattern/print logic.
+  const { data: skuAssets = [], status: skuAssetsStatus } = useQuery<
+    Array<{id: number; sku: string; type: string; assetUrl: string; label: string | null}>
+  >({
+    queryKey: ["sku-assets-studio"],
+    queryFn:  () => apiFetch("/api/sku-assets"),
+    staleTime: 5 * 60_000,
+  });
+  // true once the query has either resolved or errored — used to gate auto-apply effects
+  const skuAssetsReady = skuAssetsStatus !== "pending";
   const defaultTypeProduct: Product | undefined = isTypeMode
     ? (() => {
         if (!allProducts) return undefined;
@@ -1085,6 +1107,34 @@ export default function CustomizePage() {
     fc.renderAll(); setAllOverPrintId(null); syncTexture();
   }, [syncTexture]);
 
+  // Variant of applyAllOverPrint that loads from an arbitrary URL (used by SKU Assets).
+  // loadHTMLImage already calls toProxiedUrl internally so R2 URLs are handled.
+  const applyAllOverPrintByUrl = useCallback(async (url: string, printId: string): Promise<void> => {
+    const fc=fcRef.current; if(!fc) return;
+    kdRequestIdRef.current++;
+    try {
+      const img=await loadHTMLImage(url);
+      const off=document.createElement("canvas");off.width=ALL_OVER_TILE_PX;off.height=ALL_OVER_TILE_PX;
+      const rawCtx=off.getContext("2d");
+      if(rawCtx){rawCtx.imageSmoothingEnabled=true;rawCtx.imageSmoothingQuality="high";rawCtx.drawImage(img,0,0,ALL_OVER_TILE_PX,ALL_OVER_TILE_PX);}
+      allOverPrintSourceRef.current=off;
+      const composed=document.createElement("canvas");composed.width=ALL_OVER_TILE_PX;composed.height=ALL_OVER_TILE_PX;
+      const cCtx=composed.getContext("2d");
+      if(cCtx){
+        cCtx.fillStyle=baseBgRef.current||"#1a1a1a";
+        cCtx.fillRect(0,0,ALL_OVER_TILE_PX,ALL_OVER_TILE_PX);
+        cCtx.drawImage(off,0,0);
+      }
+      const pattern=new fabric.Pattern({source:composed,repeat:"repeat"});
+      (fc as any).backgroundColor=pattern;
+      fc.renderAll();
+      setAllOverPrintId(printId); setActivePrintId(printId);
+      for (const entry of mats) { try{entry.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]);}catch{} }
+      try { (mvRef.current as any)?.requestUpdate?.(); } catch {}
+      syncTextureRef.current?.();
+    } catch { /* silently fail — fallback auto-apply handles the rest */ }
+  }, [mats]);
+
   // ── Zone (part-by-part) print placement ───────────────────────────────────
   const applyZonePrint = useCallback(async (zone: Exclude<PatternZone,"all">, p: PatternDef) => {
     const fc=fcRef.current; if(!fc) return;
@@ -1127,6 +1177,7 @@ export default function CustomizePage() {
   useEffect(() => {
     if (_fromSource === "saved") return; // restore effect handles saved designs
     if (!canvasReady || productType !== "pattern" || autoAppliedRef.current) return;
+    if (!skuAssetsReady) return; // wait so sku-asset effect has priority
     // Respect user's explicit style choice — don't force a pattern when the user
     // picked "solid" or "print" via the CustomizeEntryModal (?style= param).
     if (userStyle === "solid" || userStyle === "print") return;
@@ -1196,6 +1247,61 @@ export default function CustomizePage() {
     handleSelectKashaDesign(design, colorOverride);
   }, [canvasReady, productType, handleSelectKashaDesign, product, mats, applyAllOverPrint]);
 
+  // SKU ASSET auto-apply: if the admin uploaded a texture image for this product's SKU
+  // (via the Admin → SKU Assets tab), apply it as the body print — and optionally the
+  // pattern design on top — before the fallback parseSku-based effects run.
+  const autoAppliedSkuAssetRef = useRef(false);
+  useEffect(() => {
+    if (_fromSource === "saved") return;
+    if (!canvasReady || !product?.sku || autoAppliedSkuAssetRef.current) return;
+    if (!skuAssetsReady) return; // wait for the sku-assets query to settle first
+
+    // product.sku is guarded non-null above; extract to a local to satisfy TS narrowing.
+    const productSku = product.sku!;
+    const norm = normalizeSkuForMatch(productSku);
+    // Exact SKU match wins; fall back to normalised comparison
+    // (KS1001B-KS1000BGP006-Grey ≡ KS1001B-GP006-GREY etc.)
+    const asset = skuAssets.find(a => a.sku.toUpperCase() === productSku.toUpperCase())
+      ?? skuAssets.find(a => normalizeSkuForMatch(a.sku) === norm);
+
+    if (!asset) return; // no match — let the parseSku-based effects handle it
+
+    if (asset.type === "print") {
+      // Determine if a KA.SHA design layer should be applied on top of the print.
+      const skuResult = parseSku(productSku);
+      const hasLayer = skuResult.type === "pattern+print" || skuResult.type === "pattern";
+
+      // For pattern+print products, wait for model materials so the design syncs correctly.
+      if (hasLayer && !mats.length) return;
+
+      autoAppliedSkuAssetRef.current = true;
+
+      let colorOverride: {colorA: string; colorB: string} | undefined;
+      let designId: string | null = null;
+      if (hasLayer && (skuResult.type === "pattern+print" || skuResult.type === "pattern")) {
+        colorOverride = { colorA: skuResult.colorA, colorB: skuResult.colorB };
+        designId = skuResult.designId;
+      }
+      const design = designId ? KASHA_DESIGNS.find(d => d.id === designId) ?? null : null;
+
+      if (colorOverride) {
+        baseBgRef.current = colorOverride.colorB;
+        const fc = fcRef.current;
+        if (fc) setFabricBg(fc, colorOverride.colorB);
+        setPrimaryColor(colorOverride.colorB);
+      }
+
+      applyAllOverPrintByUrl(asset.assetUrl, asset.sku).then(() => {
+        if (design) {
+          autoAppliedRef.current = true; // block the pattern auto-apply from re-running
+          handleSelectKashaDesign(design, colorOverride);
+        }
+        autoAppliedPrintRef.current = true; // block the print auto-apply from re-running
+      });
+    }
+    // Future: handle asset.type === "pattern" and "solid_colour"
+  }, [canvasReady, product, skuAssets, skuAssetsReady, mats, applyAllOverPrintByUrl, handleSelectKashaDesign]);
+
   // PRINT auto-apply: select the correct print from the library based on SKU.
   // We only need canvasReady here — NOT mats.length. The print is applied to the
   // Fabric canvas immediately; the existing `useEffect([mats])` further down will
@@ -1205,6 +1311,7 @@ export default function CustomizePage() {
     if (_fromSource === "saved") return; // restore effect handles saved designs
     if (autoAppliedPrintRef.current) return;
     if (!canvasReady) return;
+    if (!skuAssetsReady) return; // wait so sku-asset effect has priority
 
     let targetPatternId: string | null = null;
 

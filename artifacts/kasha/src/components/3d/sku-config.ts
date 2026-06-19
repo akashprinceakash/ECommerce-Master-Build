@@ -345,7 +345,8 @@ export function parseSku(sku: string): SkuResult {
 
     // ── Suffix contains a print reference (GP\d{3}…) → pattern + body print ──
     // e.g. KS1001B-GP006-Grey: KS1001B design in grey, body print = KS1000BGP006.
-    const gpInSuffix = rawSuffix.match(/^GP(\d{3})(?:-(.+))?$/i);
+    // Also accept the full print-SKU form: KS1000BGP006 (equivalent to GP006).
+    const gpInSuffix = rawSuffix.match(/^(?:KS1000B)?GP(\d{3})(?:-(.+))?$/i);
     if (gpInSuffix) {
       const printNum  = parseInt(gpInSuffix[1], 10);
       const padded    = String(printNum).padStart(3, "0");
