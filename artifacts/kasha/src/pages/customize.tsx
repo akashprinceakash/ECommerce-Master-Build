@@ -3823,7 +3823,7 @@ export default function CustomizePage() {
         )}
 
         {/* ── CENTER: 3D CANVAS ─────────────────────────────────────────────── */}
-        <div style={{
+        <div className="viewer-wrap" style={{
           flex:isDesktop ? 1 : isXs ? "0 0 40vh" : "0 0 44vh",
           order:isMd?1:2,
           position:"relative",
