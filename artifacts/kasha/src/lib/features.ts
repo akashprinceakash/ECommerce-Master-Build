@@ -7,4 +7,4 @@
  */
 export const SHOW_KIDS = false;
 export const SHOW_CUSTOMIZATION = true;
-export const SHOW_LOOKBOOK = false;
+export const SHOW_LOOKBOOK = true;
