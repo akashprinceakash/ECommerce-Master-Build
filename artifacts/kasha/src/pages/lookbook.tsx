@@ -15,7 +15,7 @@ import {
 } from "@workspace/api-client-react";
 import { getAssetUrl } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, Save, X, CheckCircle, ShoppingBag, Plus, RotateCcw } from "lucide-react";
+import { Trash2, Save, X, CheckCircle, ShoppingBag, Plus, RotateCcw, Loader2 } from "lucide-react";
 
 const GOLD = "#B8925A";
 const FONT_DISPLAY = "'Cormorant Garamond', serif";
@@ -39,6 +39,70 @@ type DragState = {
   startItemY: number;
 } | null;
 
+// ── Canvas-based white/light background removal ──────────────────────────────
+async function stripBackground(src: string): Promise<string> {
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  await new Promise<void>((res, rej) => {
+    img.onload = () => res();
+    img.onerror = () => rej(new Error("img load failed"));
+    // Use a simple proxy prefix if your app has one, otherwise load directly
+    img.src = src;
+  });
+
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth || img.width;
+  c.height = img.naturalHeight || img.height;
+  const ctx = c.getContext("2d")!;
+  ctx.drawImage(img, 0, 0);
+
+  const d = ctx.getImageData(0, 0, c.width, c.height);
+  const p = d.data;
+
+  // Two-pass approach:
+  // Pass 1 – sample corners to get the dominant background colour (usually white/near-white)
+  // Pass 2 – make pixels within a tolerance of that colour transparent
+
+  // Sample a ring of pixels around the border (top/bottom rows + left/right cols)
+  const w = c.width;
+  const h = c.height;
+  const sampleIndices: number[] = [];
+  for (let x = 0; x < w; x++) {
+    sampleIndices.push((0 * w + x) * 4);          // top row
+    sampleIndices.push(((h - 1) * w + x) * 4);    // bottom row
+  }
+  for (let y = 0; y < h; y++) {
+    sampleIndices.push((y * w + 0) * 4);           // left col
+    sampleIndices.push((y * w + (w - 1)) * 4);     // right col
+  }
+
+  let totalR = 0, totalG = 0, totalB = 0;
+  for (const idx of sampleIndices) {
+    totalR += p[idx];
+    totalG += p[idx + 1];
+    totalB += p[idx + 2];
+  }
+  const n = sampleIndices.length;
+  const bgR = totalR / n;
+  const bgG = totalG / n;
+  const bgB = totalB / n;
+
+  // Tolerance: how close a pixel must be to the background colour to be erased
+  const TOLERANCE = 30;
+
+  for (let i = 0; i < p.length; i += 4) {
+    const dr = Math.abs(p[i] - bgR);
+    const dg = Math.abs(p[i + 1] - bgG);
+    const db = Math.abs(p[i + 2] - bgB);
+    if (dr < TOLERANCE && dg < TOLERANCE && db < TOLERANCE) {
+      p[i + 3] = 0; // fully transparent
+    }
+  }
+
+  ctx.putImageData(d, 0, 0);
+  return c.toDataURL("image/png");
+}
+
 export default function LookbookPage() {
   useEffect(() => { document.title = "Lookbook — Ka.Sha"; }, []);
   const { user } = useUser();
@@ -50,6 +114,8 @@ export default function LookbookPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<"builder" | "saved">("builder");
   const [hoveredCanvasItem, setHoveredCanvasItem] = useState<string | null>(null);
+  // Track which products are currently having their BG stripped
+  const [strippingIds, setStrippingIds] = useState<Set<number>>(new Set());
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const { data: orders = [] } = useListOrders({ query: { enabled: !!user, queryKey: getListOrdersQueryKey() } });
@@ -77,14 +143,32 @@ export default function LookbookPage() {
     return result;
   }, [orders]);
 
-  const addToCanvas = useCallback((product: { productId: number; name: string; thumbnailUrl: string }) => {
+  // ── Add to canvas with automatic background removal ──────────────────────
+  const addToCanvas = useCallback(async (product: { productId: number; name: string; thumbnailUrl: string }) => {
+    // Mark as stripping so the sidebar shows a spinner
+    setStrippingIds(prev => new Set(prev).add(product.productId));
+
+    let finalUrl = getAssetUrl(product.thumbnailUrl);
+    try {
+      finalUrl = await stripBackground(finalUrl);
+    } catch {
+      // If stripping fails for any reason, fall back to original URL
+      finalUrl = getAssetUrl(product.thumbnailUrl);
+    } finally {
+      setStrippingIds(prev => {
+        const next = new Set(prev);
+        next.delete(product.productId);
+        return next;
+      });
+    }
+
     setCanvasItems(prev => {
       const offset = prev.length * 22;
       return [...prev, {
         id: `${product.productId}-${Date.now()}`,
         productId: product.productId,
         name: product.name,
-        thumbnailUrl: product.thumbnailUrl,
+        thumbnailUrl: finalUrl, // use bg-stripped data URL
         x: Math.min(60 + offset, 280),
         y: Math.min(30 + offset, 180),
         width: 170,
@@ -237,46 +321,89 @@ export default function LookbookPage() {
                       width: 200, flexShrink: 0, background: "#fff",
                       border: "1px solid rgba(184,146,90,0.2)", padding: "16px 12px",
                     }}>
-                      <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.35em", color: GOLD, textTransform: "uppercase", marginBottom: 14 }}>
+                      <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.35em", color: GOLD, textTransform: "uppercase", marginBottom: 6 }}>
                         Your Garments
                       </p>
+                      {/* Hint text about auto BG removal */}
+                      <p style={{ fontFamily: FONT_UI, fontSize: 8, color: "rgba(0,0,0,0.35)", letterSpacing: "0.05em", marginBottom: 12, lineHeight: 1.5 }}>
+                        Background is removed automatically when added
+                      </p>
                       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        {purchasedProducts.map(p => (
-                          <button
-                            key={p.productId}
-                            onClick={() => addToCanvas(p)}
-                            title="Click to add to canvas"
-                            style={{
-                              display: "flex", alignItems: "center", gap: 10, padding: "8px",
-                              background: "transparent", border: "1px solid rgba(0,0,0,0.07)",
-                              cursor: "pointer", textAlign: "left", transition: "border-color 0.2s, background 0.2s",
-                              width: "100%",
-                            }}
-                            onMouseEnter={e => {
-                              (e.currentTarget as HTMLElement).style.borderColor = GOLD;
-                              (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.05)";
-                            }}
-                            onMouseLeave={e => {
-                              (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.07)";
-                              (e.currentTarget as HTMLElement).style.background = "transparent";
-                            }}
-                          >
-                            <img
-                              src={getAssetUrl(p.thumbnailUrl)}
-                              alt={p.name}
-                              style={{ width: 44, height: 44, objectFit: "contain", background: "#F5F2EC", flexShrink: 0 }}
-                            />
-                            <div style={{ minWidth: 0 }}>
-                              <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.1em", color: "#0A0A0A", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {p.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}
-                              </p>
-                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                <Plus size={9} color={GOLD} />
-                                <span style={{ fontFamily: FONT_UI, fontSize: 8, color: GOLD, letterSpacing: "0.15em" }}>ADD</span>
+                        {purchasedProducts.map(p => {
+                          const isStripping = strippingIds.has(p.productId);
+                          return (
+                            <button
+                              key={p.productId}
+                              onClick={() => !isStripping && addToCanvas(p)}
+                              disabled={isStripping}
+                              title={isStripping ? "Removing background…" : "Click to add to canvas"}
+                              style={{
+                                display: "flex", alignItems: "center", gap: 10, padding: "8px",
+                                background: "transparent", border: "1px solid rgba(0,0,0,0.07)",
+                                cursor: isStripping ? "not-allowed" : "pointer",
+                                textAlign: "left", transition: "border-color 0.2s, background 0.2s",
+                                width: "100%",
+                                opacity: isStripping ? 0.65 : 1,
+                              }}
+                              onMouseEnter={e => {
+                                if (!isStripping) {
+                                  (e.currentTarget as HTMLElement).style.borderColor = GOLD;
+                                  (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.05)";
+                                }
+                              }}
+                              onMouseLeave={e => {
+                                (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.07)";
+                                (e.currentTarget as HTMLElement).style.background = "transparent";
+                              }}
+                            >
+                              {/* Thumbnail with spinner overlay while stripping */}
+                              <div style={{ position: "relative", width: 44, height: 44, flexShrink: 0 }}>
+                                <img
+                                  src={getAssetUrl(p.thumbnailUrl)}
+                                  alt={p.name}
+                                  style={{
+                                    width: 44, height: 44, objectFit: "contain",
+                                    background: "#F5F2EC", display: "block",
+                                    filter: isStripping ? "grayscale(0.4)" : "none",
+                                    transition: "filter 0.2s",
+                                  }}
+                                />
+                                {isStripping && (
+                                  <div style={{
+                                    position: "absolute", inset: 0,
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    background: "rgba(245,242,236,0.7)",
+                                  }}>
+                                    {/* Spinning loader using CSS animation */}
+                                    <svg
+                                      width="16" height="16" viewBox="0 0 16 16"
+                                      style={{ animation: "ka-spin 0.9s linear infinite" }}
+                                    >
+                                      <style>{`@keyframes ka-spin { to { transform: rotate(360deg); } }`}</style>
+                                      <circle cx="8" cy="8" r="6" fill="none" stroke={GOLD} strokeWidth="2" strokeDasharray="28" strokeDashoffset="10" strokeLinecap="round" />
+                                    </svg>
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          </button>
-                        ))}
+
+                              <div style={{ minWidth: 0 }}>
+                                <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.1em", color: "#0A0A0A", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {p.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}
+                                </p>
+                                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                  {isStripping ? (
+                                    <span style={{ fontFamily: FONT_UI, fontSize: 8, color: GOLD, letterSpacing: "0.1em" }}>Removing BG…</span>
+                                  ) : (
+                                    <>
+                                      <Plus size={9} color={GOLD} />
+                                      <span style={{ fontFamily: FONT_UI, fontSize: 8, color: GOLD, letterSpacing: "0.15em" }}>ADD</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -302,7 +429,7 @@ export default function LookbookPage() {
                         }}
                       >
                         {/* Empty state */}
-                        {canvasItems.length === 0 && (
+                        {canvasItems.length === 0 && strippingIds.size === 0 && (
                           <div style={{
                             position: "absolute", inset: 0, display: "flex",
                             flexDirection: "column", alignItems: "center", justifyContent: "center",
@@ -319,6 +446,22 @@ export default function LookbookPage() {
                             </p>
                             <p style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.15em", color: "rgba(0,0,0,0.2)" }}>
                               Click any garment on the left to add it here
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Pending strip indicator on canvas */}
+                        {canvasItems.length === 0 && strippingIds.size > 0 && (
+                          <div style={{
+                            position: "absolute", inset: 0, display: "flex",
+                            flexDirection: "column", alignItems: "center", justifyContent: "center",
+                            pointerEvents: "none",
+                          }}>
+                            <svg width="32" height="32" viewBox="0 0 32 32" style={{ animation: "ka-spin 0.9s linear infinite", marginBottom: 14 }}>
+                              <circle cx="16" cy="16" r="12" fill="none" stroke={GOLD} strokeWidth="3" strokeDasharray="56" strokeDashoffset="20" strokeLinecap="round" />
+                            </svg>
+                            <p style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.2em", color: GOLD }}>
+                              Removing background…
                             </p>
                           </div>
                         )}
@@ -340,12 +483,12 @@ export default function LookbookPage() {
                               boxShadow: hoveredCanvasItem === item.id || dragState?.itemId === item.id
                                 ? "0 8px 32px rgba(0,0,0,0.18)" : "0 2px 8px rgba(0,0,0,0.08)",
                               transition: dragState?.itemId === item.id ? "none" : "box-shadow 0.2s",
-                              background: "#fff",
+                              // No white background – the image itself is transparent now
                               outline: hoveredCanvasItem === item.id ? `1.5px solid ${GOLD}` : "1.5px solid transparent",
                             }}
                           >
                             <img
-                              src={getAssetUrl(item.thumbnailUrl)}
+                              src={item.thumbnailUrl}
                               alt={item.name}
                               draggable={false}
                               style={{ width: "100%", display: "block", objectFit: "contain", aspectRatio: "3/4", pointerEvents: "none" }}
