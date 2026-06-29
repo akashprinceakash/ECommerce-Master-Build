@@ -903,7 +903,7 @@ export default function AdminPage() {
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs tracking-widest text-muted-foreground uppercase">Category</label>
                     <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="h-10 border border-input bg-background px-3 text-sm rounded-none">
-                      {["polo", "shorts", "trousers", "jacket", "t-shirt", "hoodie", "accessories"].map(c => (
+                      {["polo", "shorts", "trousers", "jacket", "t-shirt", "hoodie", "accessories","skorts"].map(c => (
                         <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
                       ))}
                     </select>
