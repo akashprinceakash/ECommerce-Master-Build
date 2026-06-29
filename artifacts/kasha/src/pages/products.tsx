@@ -12,7 +12,7 @@ import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
 import { useUser, useClerk } from "@clerk/react";
 import { getProductColorLabel, colorLabelToSwatchHex } from "@/lib/product-color";
 
-type ItemType = "tshirts" | "bottoms";
+type ItemType = "tshirts" | "bottoms" | "dresses";
 type StyleFilter = "solids" | "patterns" | "prints" | "trousers" | "shorts" | "skorts";
 
 type SidebarChild = { label: string; style: StyleFilter };
@@ -21,6 +21,7 @@ const TSHIRT_CATEGORIES = ["t-shirt", "polo", "fabric-tshirt", "pattern", "shirt
 const TROUSER_CATEGORIES = ["pants", "trousers"];
 const SHORTS_CATEGORIES = ["shorts"];
 const SKORT_CATEGORIES = ["skort", "skorts", "skirts"];
+const DRESS_CATEGORIES = ["dress", "dresses", "golf dress", "golf dresses"];
 const PATTERN_CATEGORIES = ["pattern"];
 const PRINT_CATEGORIES = ["t-shirt", "polo", "fabric-tshirt"];
 const PRINT_NAME_HINTS = ["print", "flair", "seasonal", "limited"];
@@ -29,7 +30,7 @@ const GENDER_SORT: Record<string, number> = { men: 0, unisex: 1, women: 2, kids:
 function typeSort(cat: string): number {
   const c = cat.toLowerCase();
   if (TSHIRT_CATEGORIES.includes(c)) return 0;
-  if ([...TROUSER_CATEGORIES, ...SHORTS_CATEGORIES, ...SKORT_CATEGORIES].includes(c)) return 1;
+  if ([...TROUSER_CATEGORIES, ...SHORTS_CATEGORIES, ...SKORT_CATEGORIES, ...DRESS_CATEGORIES].includes(c)) return 1;
   return 2;
 }
 function subTypeSort(sub: string): number {
@@ -128,6 +129,11 @@ const sidebar: SidebarSection[] = [
           { label: "Shorts", style: "shorts" },
         ],
       },
+      {
+        label: "Golf Dresses",
+        type: "dresses",
+        children: [],
+      },
     ],
   },
   ...(SHOW_KIDS ? [{
@@ -166,7 +172,7 @@ export default function ProductsPage() {
   const gender: Gender | undefined =
     genderParam === "men" || genderParam === "women" || genderParam === "kids" ? genderParam : undefined;
   const type: ItemType | undefined =
-    typeParam === "tshirts" || typeParam === "bottoms" ? typeParam : undefined;
+    typeParam === "tshirts" || typeParam === "bottoms" || typeParam === "dresses" ? typeParam : undefined;
   const styleFilter: StyleFilter | undefined =
     styleParam === "solids" || styleParam === "patterns" || styleParam === "prints" ||
     styleParam === "trousers" || styleParam === "shorts" || styleParam === "skorts"
@@ -238,6 +244,12 @@ export default function ProductsPage() {
       } else if (styleFilter === "solids") {
         list = list.filter((p) => (p.subType || "").toLowerCase() === "solid");
       }
+    } else if (type === "dresses") {
+      list = list.filter((p) => {
+        const cat = (p.category || "").toLowerCase();
+        const name = (p.name || "").toLowerCase();
+        return DRESS_CATEGORIES.includes(cat) || name.includes("dress");
+      });
     } else if (type === "bottoms") {
       if (styleFilter === "trousers") {
         list = list.filter((p) => TROUSER_CATEGORIES.includes((p.category || "").toLowerCase()));
@@ -282,7 +294,7 @@ export default function ProductsPage() {
     return q ? `/products?${q}` : "/products";
   };
 
-  const typeLabel = (t?: ItemType) => t === "tshirts" ? "Golf T-shirts" : t === "bottoms" ? "Bottoms" : null;
+  const typeLabel = (t?: ItemType) => t === "tshirts" ? "Golf T-shirts" : t === "bottoms" ? "Bottoms" : t === "dresses" ? "Golf Dresses" : null;
   const styleLabel = (s?: StyleFilter) =>
     s === "solids" ? "Solid" : s === "patterns" ? "Pattern Design" : s === "prints" ? "Printed" :
     s === "trousers" ? "Trousers" : s === "shorts" ? "Shorts" : s === "skorts" ? "Skorts" : null;
@@ -302,7 +314,7 @@ export default function ProductsPage() {
     return COLLECTION_IMAGES[productId % COLLECTION_IMAGES.length];
   };
 
-  const isBottomsEmpty = type === "bottoms" && styleFilter === "skorts" && products?.length === 0;
+  const isBottomsEmpty = (type === "bottoms" && styleFilter === "skorts" && products?.length === 0) || (type === "dresses" && products?.length === 0);
 
   return (
     <Layout>
@@ -466,10 +478,12 @@ export default function ProductsPage() {
                   Coming Soon
                 </div>
                 <h2 className="text-neutral-900 mb-4" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(28px, 3vw, 36px)", fontWeight: 400 }}>
-                  Skorts
+                  {type === "dresses" ? "Golf Dresses" : "Skorts"}
                 </h2>
                 <p className="max-w-md mx-auto mb-8" style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, color: "rgba(0,0,0,0.5)", lineHeight: 1.8, letterSpacing: "0.06em" }}>
-                  Tailored skorts in our signature stretch fabric — landing in the next drop.
+                  {type === "dresses"
+                    ? "Elegant golf dresses crafted in our signature stretch fabric — landing in the next drop."
+                    : "Tailored skorts in our signature stretch fabric — landing in the next drop."}
                 </p>
                 <div className="flex flex-wrap justify-center gap-3">
                   <Link href={buildHref(gender, "tshirts")} className="text-[10px] uppercase px-7 py-3.5 transition-all hover:!text-neutral-900" style={{ fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.28em", color: "rgba(0,0,0,0.6)", border: "1px solid rgba(0,0,0,0.2)" }}>
@@ -543,6 +557,9 @@ function getProductAltText(product: {
   }
   if (SKORT_CATEGORIES.some(s => cat.includes(s)) || cat.includes("skirt")) {
     return `Ka.Sha ${cleanName}${colorSuffix} — women's luxury golf skort with performance stretch fabric`;
+  }
+  if (DRESS_CATEGORIES.some(d => cat.includes(d)) || cat.includes("dress")) {
+    return `Ka.Sha ${cleanName}${colorSuffix} — women's elegant golf dress in breathable stretch fabric`;
   }
   if (SHORTS_CATEGORIES.includes(cat)) {
     return `Ka.Sha ${cleanName}${colorSuffix} — premium golf shorts with performance stretch fabric`;
