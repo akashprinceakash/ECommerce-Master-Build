@@ -241,8 +241,11 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
   const {
     shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
     shippingChargeInPaise: rawShippingCharge,
+     remarks: rawRemarks,
   } = req.body ?? {};
   const shippingChargeInPaise = Math.max(0, parseInt(String(rawShippingCharge ?? "0"), 10) || 0);
+  // Cap length defensively — this is free text from the checkout form
+  const remarks = typeof rawRemarks === "string" && rawRemarks.trim() ? rawRemarks.trim().slice(0, 1000) : null;
   if (!shippingName || !shippingAddress || !shippingCity || !shippingState || !shippingPostalCode || !shippingPhone) {
     res.status(400).json({ error: "Missing shipping fields" }); return;
   }
@@ -296,6 +299,7 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
     totalInPaise,
     shippingChargeInPaise,
     shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
+    remarks,
     razorpayOrderId: rzpOrder.id,
   }).returning();
 
@@ -392,10 +396,11 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
 
   const {
     shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
-    shippingChargeInPaise: rawShippingCharge,
+    shippingChargeInPaise: rawShippingCharge, remarks: rawRemarks,
   } = req.body ?? {};
   const shippingChargeInPaise = Math.max(0, parseInt(String(rawShippingCharge ?? "0"), 10) || 0);
 
+  const remarks = typeof rawRemarks === "string" && rawRemarks.trim() ? rawRemarks.trim().slice(0, 1000) : null;
   if (!shippingName || !shippingAddress || !shippingCity || !shippingState || !shippingPostalCode || !shippingPhone) {
     res.status(400).json({ error: "Missing shipping fields" }); return;
   }
@@ -442,6 +447,7 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
     totalInPaise,
     shippingChargeInPaise,
     shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
+    remarks,
   }).returning();
 
   await Promise.all(

@@ -112,8 +112,8 @@ export default function CheckoutPage() {
     const errs: Record<string, string> = {};
     if (!/^[a-zA-Z\s]{2,60}$/.test(formData.shippingName.trim()))
       errs.shippingName = "Name must contain only letters and spaces (2–60 chars)";
-    if (!/^\d{10}$/.test(formData.shippingPhone.trim()))
-      errs.shippingPhone = "Enter a valid 10-digit mobile number";
+    if (!/^[6-9]\d{9}$/.test(formData.shippingPhone.trim()))
+      errs.shippingPhone = "Enter a valid 10-digit mobile number (must start with 6-9)";
     if (!formData.shippingAddress.trim())
       errs.shippingAddress = "Address is required";
     if (!formData.shippingCity.trim())
@@ -462,7 +462,10 @@ export default function CheckoutPage() {
                     id="shippingPhone"
                     value={formData.shippingPhone}
                     onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      let val = e.target.value.replace(/\D/g, "");
+                      // strip a leading 0 (or +91 if pasted) so the rest of the number lines up
+                      val = val.replace(/^0+/, "");
+                      val = val.slice(0, 10);
                       handleChange("shippingPhone", val);
                       if (errors.shippingPhone) setErrors(prev => ({ ...prev, shippingPhone: "" }));
                     }}

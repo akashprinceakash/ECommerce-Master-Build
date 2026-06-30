@@ -7,7 +7,7 @@ import { getAssetUrl, getApiUrl } from "@/lib/api";
 import {
   Loader2, ChevronDown, ChevronRight, MapPin, CreditCard, Package,
   Eye, Download, X, Truck, RefreshCw, RotateCcw, CheckCircle2,
-  Circle, Lock, Send,
+  Circle, Lock, Send, MessageSquare,
 } from "lucide-react";
 import * as fabric from "fabric";
 
@@ -22,6 +22,7 @@ interface AdminOrder {
   shippingState: string;
   shippingPostalCode: string;
   shippingPhone: string;
+  remarks: string | null;
   paymentId: string | null;
   razorpayOrderId: string | null;
   razorpaySignature: string | null;
@@ -61,17 +62,17 @@ function exportOrdersCSV(orders: AdminOrder[], label: string) {
   const esc = (v: string | number | null | undefined) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const row = (...cells: (string | number | null | undefined)[]) => cells.map(esc).join(",");
   const rows: string[] = [];
-  rows.push(row("Order #","Date","Status","Customer Name","Email","Phone","Ship Address","City","State","Pincode","Product","Category","Size","Qty","Item Price (₹)","Order Total (₹)","Shipping Charge (₹)","Payment ID","Razorpay Order ID","Shiprocket Order #","AWB","Tracking URL"));
+  rows.push(row("Order #","Date","Status","Customer Name","Email","Phone","Remarks","Ship Address","City","State","Pincode","Product","Category","Size","Qty","Item Price (₹)","Order Total (₹)","Shipping Charge (₹)","Payment ID","Razorpay Order ID","Shiprocket Order #","AWB","Tracking URL"));
   for (const o of orders) {
     const date = new Date(o.createdAt).toLocaleDateString("en-IN");
     const total = (o.totalInPaise / 100).toFixed(2);
     const shipping = o.shippingChargeInPaise != null ? (o.shippingChargeInPaise / 100).toFixed(2) : "";
     if (o.items.length === 0) {
-      rows.push(row(o.id, date, o.status, o.customerName, o.customerEmail, o.shippingPhone, o.shippingAddress, o.shippingCity, o.shippingState, o.shippingPostalCode, "", "", "", "", "", total, shipping, o.paymentId ?? "", o.razorpayOrderId ?? "", o.shiprocketOrderId ?? "", o.shiprocketAwb ?? "", o.trackingUrl ?? ""));
+      rows.push(row(o.id, date, o.status, o.customerName, o.customerEmail, o.shippingPhone, o.remarks, o.shippingAddress, o.shippingCity, o.shippingState, o.shippingPostalCode, "", "", "", "", "", total, shipping, o.paymentId ?? "", o.razorpayOrderId ?? "", o.shiprocketOrderId ?? "", o.shiprocketAwb ?? "", o.trackingUrl ?? ""));
     } else {
       for (const it of o.items) {
         const itemPrice = ((it.priceInPaise * it.quantity) / 100).toFixed(2);
-        rows.push(row(o.id, date, o.status, o.customerName, o.customerEmail, o.shippingPhone, o.shippingAddress, o.shippingCity, o.shippingState, o.shippingPostalCode, it.product?.name ?? "Unknown", it.product?.category ?? "", it.size, it.quantity, itemPrice, total, shipping, o.paymentId ?? "", o.razorpayOrderId ?? "", o.shiprocketOrderId ?? "", o.shiprocketAwb ?? "", o.trackingUrl ?? ""));
+        rows.push(row(o.id, date, o.status, o.customerName, o.customerEmail, o.shippingPhone,  o.remarks,   o.shippingAddress, o.shippingCity, o.shippingState, o.shippingPostalCode, it.product?.name ?? "Unknown", it.product?.category ?? "", it.size, it.quantity, itemPrice, total, shipping, o.paymentId ?? "", o.razorpayOrderId ?? "", o.shiprocketOrderId ?? "", o.shiprocketAwb ?? "", o.trackingUrl ?? ""));
       }
     }
   }
@@ -399,6 +400,23 @@ function ProcessOrderPanel({
   );
 }
 
+// ── Remarks callout ────────────────────────────────────────────────────────────
+// Shown wherever an order has customer-entered remarks (measurements, gifting
+// notes, delivery instructions, etc). Kept visually distinct (amber) so it
+// can't be missed while processing the order.
+
+function RemarksCallout({ remarks }: { remarks: string | null | undefined }) {
+  if (!remarks) return null;
+  return (
+    <div className="mt-2 p-2.5 bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-start gap-2">
+      <MessageSquare className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-amber-600" />
+      <div>
+        <span className="font-semibold uppercase tracking-wide text-[10px] block mb-0.5">Customer Remarks</span>
+        <span className="whitespace-pre-wrap">{remarks}</span>
+      </div>
+    </div>
+  );
+}
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export function AdminOrders() {
@@ -513,7 +531,12 @@ export function AdminOrders() {
                 {expanded.has(o.id) ? <ChevronDown className="w-4 h-4 flex-shrink-0" /> : <ChevronRight className="w-4 h-4 flex-shrink-0" />}
                 <div className="font-mono text-sm font-semibold">#{o.id}</div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{o.customerName}</div>
+                  <div className="font-medium truncate flex items-center gap-1.5">
+                    {o.customerName}
+                    {o.remarks && (
+                      <MessageSquare className="w-3 h-3 text-amber-500 flex-shrink-0" titleAccess="Has remarks" />
+                    )}
+                  </div>
                   <div className="text-xs text-muted-foreground truncate">{o.customerEmail}</div>
                 </div>
                 <div className="hidden md:block text-xs text-muted-foreground">{new Date(o.createdAt).toLocaleDateString()}</div>
@@ -559,6 +582,7 @@ export function AdminOrders() {
                       <div className="text-muted-foreground">{o.shippingAddress}</div>
                       <div className="text-muted-foreground">{o.shippingCity}, {o.shippingState} - {o.shippingPostalCode}</div>
                       <div className="text-muted-foreground">{o.shippingPhone}</div>
+                      <RemarksCallout remarks={o.remarks} />
                     </div>
                     <div>
                       <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-2"><CreditCard className="w-3 h-3" /> Payment</div>

@@ -15,6 +15,7 @@ export const ordersTable = pgTable("orders", {
   shippingState: text("shipping_state").notNull(),
   shippingPostalCode: text("shipping_postal_code").notNull(),
   shippingPhone: text("shipping_phone").notNull(),
+  remarks: text("remarks"),
   paymentId: text("payment_id"),
   razorpayOrderId: text("razorpay_order_id"),
   razorpaySignature: text("razorpay_signature"),
