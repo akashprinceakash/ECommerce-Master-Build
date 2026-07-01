@@ -1,0 +1,91 @@
+Request URL
+https://api.kashaonline.in/api/lookbook-saved
+Request Method
+POST
+Status Code
+500 Internal Server Error
+Remote Address
+[64:ff9b::d818:3909]:443
+Referrer Policy
+strict-origin-when-cross-origin
+access-control-allow-credentials
+true
+access-control-allow-origin
+https://www.kashaonline.in
+alt-svc
+h3=":443"; ma=86400
+cf-cache-status
+DYNAMIC
+cf-ray
+a1473a342a6b637b-MAA
+content-encoding
+br
+content-length
+102
+content-security-policy
+default-src 'none'
+content-type
+text/html; charset=utf-8
+date
+Wed, 01 Jul 2026 17:45:57 GMT
+priority
+u=1,i
+rndr-id
+2b1d7cda-9bfe-4a91
+server
+cloudflare
+server-timing
+cfExtPri
+vary
+Origin
+vary
+Accept-Encoding
+x-content-type-options
+nosniff
+x-powered-by
+Express
+x-render-origin-server
+Render
+:authority
+api.kashaonline.in
+:method
+POST
+:path
+/api/lookbook-saved
+:scheme
+https
+accept
+*/*
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-GB,en-US;q=0.9,en;q=0.8,kn;q=0.7,hi;q=0.6
+authorization
+Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6Imluc18zRHZXeXVxbmZpZ3RlaUtmMkhzcXZRNzA4ZTQiLCJ0eXAiOiJKV1QiLCJvaWF0IjoxNzgyOTI3OTM1LCJjYXQiOiJjbF9CN2Q0UEQxMTFBQUEiLCJtIjoiZSJ9.eyJhenAiOiJodHRwczovL3d3dy5rYXNoYW9ubGluZS5pbiIsImV4cCI6MTc4MjkyODAxNCwiZnZhIjpbMzQwOSwtMV0sImlhdCI6MTc4MjkyNzk1NCwiaXNzIjoiaHR0cHM6Ly9jbGVyay5rYXNoYW9ubGluZS5pbiIsIm5iZiI6MTc4MjkyNzk0NCwic2lkIjoic2Vzc18zRm51eEJXajBCV3E3YVBGdDdjNU9OZXZDREQiLCJzdHMiOiJhY3RpdmUiLCJzdWIiOiJ1c2VyXzNEdmxHbzBtTEJwS1pZR0lEVmpqWHBMY0YyRSIsInYiOjJ9.HNKRhWik6YkbJjF2ehUB04bbTup_LeKP2fLw12FapM4H53w3cldvIVW67P5q-lO4UNrhGdKm596dw5YTR7Nb8wmzmMkdBt8xpqt4opGPXK2N7iZnz-haJlBUgVlEFWxn03WLTHjTqqEiCNEmrkfMp8nZZLjXQgHtf2kjRtr_wwMT_zhg1HGOhdqe_3drX-HbxFIdUZ1RnVu65UflAglOXuSJuH28u8H_kw4LXnGLWotAp_1XxZQ4DcjqiphGtM972Zp8L0WBBrCjsbaCDSTQdUd1bf3TAzhzym7_bEqDuVo2zq8JZPi1ZS-PI21AJKyBba1amsUo-o__TGXJA6hfvg
+cache-control
+no-cache
+content-length
+16
+content-type
+application/json
+origin
+https://www.kashaonline.in
+pragma
+no-cache
+priority
+u=1, i
+referer
+https://www.kashaonline.in/
+sec-ch-ua
+"Google Chrome";v="149", "Chromium";v="149", "Not)A;Brand";v="24"
+sec-ch-ua-mobile
+?1
+sec-ch-ua-platform
+"Android"
+sec-fetch-dest
+empty
+sec-fetch-mode
+cors
+sec-fetch-site
+same-site
+user-agent
