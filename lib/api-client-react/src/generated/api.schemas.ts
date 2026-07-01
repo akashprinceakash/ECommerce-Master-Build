@@ -271,6 +271,7 @@ export interface SaveLookbookProductBody {
 }
 
 export interface ClubMeasurements {
+  category?: string;
   height?: string;
   weight?: string;
   chest?: string;
@@ -299,10 +300,10 @@ export type CreateClubOrderBodyGarmentType =
   (typeof CreateClubOrderBodyGarmentType)[keyof typeof CreateClubOrderBodyGarmentType];
 
 export const CreateClubOrderBodyGarmentType = {
-  men_polo: "men_polo",
-  women_polo: "women_polo",
-  boys_polo: "boys_polo",
-  girls_polo: "girls_polo",
+  red_wave: "red_wave",
+  slate_wave: "slate_wave",
+  navy_wave: "navy_wave",
+  maroon_wave: "maroon_wave",
 } as const;
 
 export interface CreateClubOrderBody {

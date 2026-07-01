@@ -9,6 +9,11 @@ import { useListProducts, getListProductsQueryKey, useCreateClubOrder } from "@w
 import { getAssetUrl } from "@/lib/api";
 import { parseSku } from "@/components/3d/sku-config";
 
+import poloRed    from "/q-club/polo-red.jpeg";
+import poloSlate  from "/q-club/polo-slate.jpeg";
+import poloNavy   from "/q-club/polo-navy.jpeg";
+import poloMaroon from "/q-club/polo-maroon.jpeg";
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -21,8 +26,8 @@ const ENTRY_SKUS = {
 } as const;
 
 const FIXED_TILE_CONFIG = [
-  { key: "solid" as const,   label: "Solid",   desc: "Clean base colours, ready to personalise", accent: "#6b8fa3", icon: "◼" },
-  { key: "printed" as const, label: "Printed", desc: "All-over prints from the KA.SHA library",  accent: "#a36b6b", icon: "✦" },
+  { key: "solid"    as const, label: "Solid",   desc: "Clean base colours, ready to personalise", accent: "#6b8fa3", icon: "◼" },
+  { key: "printed"  as const, label: "Printed", desc: "All-over prints from the KA.SHA library",  accent: "#a36b6b", icon: "✦" },
 ];
 
 function buildHref(productId: number, sku: string): string {
@@ -33,15 +38,24 @@ function buildHref(productId: number, sku: string): string {
   return `/products/${productId}/customize?entry=1&style=solid${designParam}`;
 }
 
-// ── Q Club garment options ────────────────────────────────────────────────────
-const QCLUB_GARMENTS = [
-  { key: "men_polo",   label: "Men's Polo",   icon: "👔", desc: "Classic performance polo" },
-  { key: "women_polo", label: "Women's Polo", icon: "👗", desc: "Tailored women's polo" },
-  { key: "boys_polo",  label: "Boys' Polo",   icon: "🧒", desc: "Junior performance polo" },
-  { key: "girls_polo", label: "Girls' Polo",  icon: "👧", desc: "Junior girls' polo" },
+// ── Q Club: 4 polo colour variants ───────────────────────────────────────────
+const QCLUB_VARIANTS = [
+  { key: "red_wave",    label: "Red Wave",    image: poloRed,    bg: "#8b1a1a" },
+  { key: "slate_wave",  label: "Slate Wave",  image: poloSlate,  bg: "#3a4a5a" },
+  { key: "navy_wave",   label: "Navy Wave",   image: poloNavy,   bg: "#0d1b35" },
+  { key: "maroon_wave", label: "Maroon Wave", image: poloMaroon, bg: "#4a0d1a" },
 ] as const;
 
-type QClubGarmentKey = typeof QCLUB_GARMENTS[number]["key"];
+type QClubVariantKey = typeof QCLUB_VARIANTS[number]["key"];
+
+const QCLUB_CATEGORIES = [
+  { key: "men",   label: "Men",   icon: "👔" },
+  { key: "women", label: "Women", icon: "👗" },
+  { key: "boys",  label: "Boys",  icon: "🧒" },
+  { key: "girls", label: "Girls", icon: "👧" },
+] as const;
+
+type QClubCategoryKey = typeof QCLUB_CATEGORIES[number]["key"];
 
 // ── Measurement fields ────────────────────────────────────────────────────────
 const MEASUREMENT_FIELDS = [
@@ -65,35 +79,6 @@ const GOLD = "#c9a84c";
 const NAVY = "#0d1b35";
 const CREAM = "#fafaf7";
 
-// ── Auth-gate (shared) ────────────────────────────────────────────────────────
-function AuthGate({ onClose }: { onClose: () => void }) {
-  return (
-    <div style={{ textAlign: "center", padding: "24px 0 8px" }}>
-      <div style={{
-        width: 52, height: 52, borderRadius: "50%",
-        background: "linear-gradient(135deg, #fdf6e3, #f5e9c4)",
-        border: "1.5px solid rgba(201,168,76,0.3)",
-        margin: "0 auto 16px",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 22,
-      }}>✦</div>
-      <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, letterSpacing: ".2em", textTransform: "uppercase", color: GOLD, marginBottom: 8, fontWeight: 500 }}>KA.SHA Studio</div>
-      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 600, color: "#1a1a18", margin: "0 0 10px", lineHeight: 1.25 }}>Sign in to continue</h2>
-      <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#6b6b68", lineHeight: 1.7, letterSpacing: ".02em", marginBottom: 24 }}>
-        Create an account or sign in to place your order and save your preferences.
-      </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <a href="/sign-up" onClick={onClose} style={{ display: "block", padding: "12px 24px", borderRadius: 99, background: `linear-gradient(135deg, ${GOLD}, #b8925a)`, color: "#fff", fontFamily: "'Jost', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", textDecoration: "none", boxShadow: `0 4px 16px ${GOLD}44` }}>
-          Create Account
-        </a>
-        <a href="/sign-in" onClick={onClose} style={{ display: "block", padding: "11px 24px", borderRadius: 99, background: "transparent", border: "1.5px solid rgba(26,26,24,0.18)", color: "#1a1a18", fontFamily: "'Jost', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", textDecoration: "none" }}>
-          Sign In
-        </a>
-      </div>
-    </div>
-  );
-}
-
 // ── Main modal ────────────────────────────────────────────────────────────────
 export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   const [, navigate] = useLocation();
@@ -101,15 +86,16 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   const [activeTab, setActiveTab] = useState<"bespoke" | "social">("bespoke");
 
   // Q Club state
-  const [qStep, setQStep] = useState<"clubs" | "garment" | "measurements" | "success">("clubs");
-  const [selectedGarment, setSelectedGarment] = useState<QClubGarmentKey | null>(null);
-  const [measurements, setMeasurements] = useState<Measurements>({});
-  const [notes, setNotes] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
+  type QStep = "clubs" | "variant" | "category" | "measurements" | "success";
+  const [qStep, setQStep] = useState<QStep>("clubs");
+  const [selectedVariant, setSelectedVariant]   = useState<QClubVariantKey | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<QClubCategoryKey | null>(null);
+  const [measurements, setMeasurements]         = useState<Measurements>({});
+  const [notes, setNotes]                       = useState("");
+  const [submitting, setSubmitting]             = useState(false);
+  const [submitError, setSubmitError]           = useState("");
 
   const { mutateAsync: createClubOrder } = useCreateClubOrder();
-
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: allProducts, isLoading } = useListProducts(
@@ -119,10 +105,11 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
 
   if (!isOpen) return null;
 
-  // ── Reset Q Club state when switching tabs ─────────────────────────────────
+  function resetQ() { setQStep("clubs"); setSelectedVariant(null); setSelectedCategory(null); setMeasurements({}); setNotes(""); setSubmitError(""); }
+
   function switchTab(tab: "bespoke" | "social") {
     setActiveTab(tab);
-    if (tab === "social") { setQStep("clubs"); setSelectedGarment(null); setMeasurements({}); setNotes(""); setSubmitError(""); }
+    if (tab === "social") resetQ();
   }
 
   // ── Bespoke helpers ────────────────────────────────────────────────────────
@@ -141,15 +128,15 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
 
   // ── Q Club submit ──────────────────────────────────────────────────────────
   async function handleQClubSubmit() {
-    if (!selectedGarment) return;
+    if (!selectedVariant) return;
     setSubmitting(true);
     setSubmitError("");
     try {
       await createClubOrder({
         data: {
           clubName: "Q Club",
-          garmentType: selectedGarment,
-          measurements,
+          garmentType: selectedVariant,
+          measurements: { category: selectedCategory ?? "", ...measurements },
           notes: notes || undefined,
         },
       });
@@ -161,21 +148,32 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
     }
   }
 
-  // ── Back navigation within Q Club flow ────────────────────────────────────
   function qBack() {
-    if (qStep === "measurements") { setQStep("garment"); setSelectedGarment(null); }
-    else if (qStep === "garment") { setQStep("clubs"); }
+    if (qStep === "measurements") setQStep("category");
+    else if (qStep === "category") setQStep("variant");
+    else if (qStep === "variant") setQStep("clubs");
   }
+
+  // ── Breadcrumb label ───────────────────────────────────────────────────────
+  const variantLabel   = QCLUB_VARIANTS.find(v => v.key === selectedVariant)?.label ?? "";
+  const categoryLabel  = QCLUB_CATEGORIES.find(c => c.key === selectedCategory)?.label ?? "";
+  const breadcrumb: Record<QStep, string> = {
+    clubs:        "Social Clubs",
+    variant:      "Q Club",
+    category:     `Q Club · ${variantLabel}`,
+    measurements: `Q Club · ${variantLabel} · ${categoryLabel}`,
+    success:      "",
+  };
 
   return (
     <div
-      style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(26,26,24,0.62)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", animation: "cemFadeIn 0.28s cubic-bezier(0.16,1,0.3,1)" }}
+      style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(26,26,24,0.65)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", animation: "cemFadeIn 0.28s cubic-bezier(0.16,1,0.3,1)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="cem-sheet" style={{ background: CREAM, borderRadius: 20, maxWidth: 760, width: "calc(100vw - 32px)", padding: "36px 32px 38px", position: "relative", animation: "cemSlideUp 0.32s cubic-bezier(0.16,1,0.3,1)", boxShadow: "0 32px 80px rgba(26,26,24,0.24), 0 8px 24px rgba(26,26,24,0.12)", maxHeight: "92vh", overflowY: "auto" }}>
+      <div className="cem-sheet" style={{ background: CREAM, borderRadius: 20, maxWidth: 780, width: "calc(100vw - 32px)", padding: "36px 32px 38px", position: "relative", animation: "cemSlideUp 0.32s cubic-bezier(0.16,1,0.3,1)", boxShadow: "0 32px 80px rgba(26,26,24,0.26), 0 8px 24px rgba(26,26,24,0.14)", maxHeight: "92vh", overflowY: "auto" }}>
 
         {/* Close */}
-        <button onClick={onClose} style={{ position: "absolute", top: 16, right: 18, width: 32, height: 32, borderRadius: "50%", border: "1px solid rgba(26,26,24,0.12)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#8a8780", transition: "all 0.2s" }}
+        <button onClick={onClose} style={{ position: "absolute", top: 16, right: 18, width: 32, height: 32, borderRadius: "50%", border: "1px solid rgba(26,26,24,0.12)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#8a8780", transition: "all 0.2s", zIndex: 1 }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#ede9e1"; }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
         >×</button>
@@ -193,9 +191,10 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
           })}
         </div>
 
-        {/* ── Auth gate ────────────────────────────────────────────────────── */}
+        {/* ── Auth gate ──────────────────────────────────────────────────────── */}
         {isLoaded && !user ? (
           <AuthGate onClose={onClose} />
+
         ) : activeTab === "bespoke" ? (
           /* ── Bespoke Studio tab ──────────────────────────────────────────── */
           <>
@@ -205,9 +204,7 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
               <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#8a8780", letterSpacing: ".04em", fontStyle: "italic", margin: 0 }}>Select a style — the 3D studio opens ready for your customisation</p>
             </div>
             <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)`, opacity: 0.4, marginBottom: 28 }} />
-            {isLoading ? (
-              <LoadingSkeleton />
-            ) : (
+            {isLoading ? <LoadingSkeleton /> : (
               <div style={{ position: "relative" }}>
                 <button onClick={() => scroll("left")} className="cem-nav-btn cem-nav-left" aria-label="Scroll left">‹</button>
                 <button onClick={() => scroll("right")} className="cem-nav-btn cem-nav-right" aria-label="Scroll right">›</button>
@@ -239,23 +236,173 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
               The 3D model loads with the product's colour or print pre-applied · Customise freely from there
             </p>
           </>
+
         ) : (
-          /* ── Social Clubs tab ────────────────────────────────────────────── */
-          <SocialClubsTab
-            step={qStep}
-            selectedGarment={selectedGarment}
-            measurements={measurements}
-            notes={notes}
-            submitting={submitting}
-            submitError={submitError}
-            onSelectGarment={g => { setSelectedGarment(g); setQStep("measurements"); }}
-            onMeasurementChange={(k, v) => setMeasurements(prev => ({ ...prev, [k]: v }))}
-            onNotesChange={setNotes}
-            onSubmit={handleQClubSubmit}
-            onBack={qBack}
-            onDone={() => { onClose(); setQStep("clubs"); setSelectedGarment(null); setMeasurements({}); setNotes(""); }}
-            onSelectClub={() => setQStep("garment")}
-          />
+          /* ── Social Clubs tab ──────────────────────────────────────────────── */
+          <>
+            {/* Back + breadcrumb header */}
+            {qStep !== "clubs" && qStep !== "success" && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+                <button onClick={qBack} style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", border: "1.5px solid rgba(26,26,24,0.12)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, color: "#666", transition: "all 0.18s" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#ede9e1"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                >‹</button>
+                <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 9.5, letterSpacing: ".15em", textTransform: "uppercase", color: GOLD, fontWeight: 600 }}>{breadcrumb[qStep]}</span>
+              </div>
+            )}
+
+            {/* ── Step: clubs ─────────────────────────────────────────────── */}
+            {qStep === "clubs" && (
+              <>
+                <div style={{ textAlign: "center", marginBottom: 24 }}>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, letterSpacing: ".2em", textTransform: "uppercase", color: GOLD, marginBottom: 6, fontWeight: 500 }}>Social Clubs</div>
+                  <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 600, color: "#1a1a18", margin: 0 }}>Select Your Club</h2>
+                </div>
+                <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)`, opacity: 0.35, marginBottom: 24 }} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <ClubCard onClick={() => setQStep("variant")} />
+                  <div style={{ textAlign: "center", fontFamily: "'Jost', sans-serif", fontSize: 10, color: "#b8b5ae", letterSpacing: ".06em", fontStyle: "italic", marginTop: 4 }}>More clubs coming soon</div>
+                </div>
+              </>
+            )}
+
+            {/* ── Step: variant (polo colour) ─────────────────────────────── */}
+            {qStep === "variant" && (
+              <>
+                <div style={{ marginBottom: 20 }}>
+                  <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 600, color: "#1a1a18", margin: "0 0 4px" }}>Choose Your Polo</h2>
+                  <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#8a8780", margin: 0, letterSpacing: ".03em" }}>Four exclusive Q Club wave-camo designs, each with the signature gold Q logo</p>
+                </div>
+                <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)`, opacity: 0.35, marginBottom: 24 }} />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  {QCLUB_VARIANTS.map(v => (
+                    <button key={v.key}
+                      onClick={() => { setSelectedVariant(v.key); setQStep("category"); }}
+                      style={{ padding: 0, border: "2px solid rgba(26,26,24,0.08)", borderRadius: 14, background: "#fff", cursor: "pointer", overflow: "hidden", transition: "all 0.22s", boxShadow: "0 2px 10px rgba(26,26,24,0.06)", textAlign: "left" }}
+                      onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = GOLD; el.style.transform = "translateY(-3px)"; el.style.boxShadow = `0 12px 32px ${GOLD}22, 0 4px 14px rgba(26,26,24,0.1)`; }}
+                      onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = "rgba(26,26,24,0.08)"; el.style.transform = "translateY(0)"; el.style.boxShadow = "0 2px 10px rgba(26,26,24,0.06)"; }}
+                    >
+                      {/* Product image */}
+                      <div style={{ width: "100%", aspectRatio: "1/1", overflow: "hidden", background: v.bg, position: "relative" }}>
+                        <img src={v.image} alt={v.label} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }} />
+                        {/* Colour badge */}
+                        <div style={{ position: "absolute", top: 8, left: 8, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", color: "#fff", fontFamily: "'Jost', sans-serif", fontSize: 8, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", padding: "3px 8px", borderRadius: 99 }}>{v.label}</div>
+                      </div>
+                      <div style={{ padding: "12px 14px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div>
+                          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontWeight: 600, color: "#1a1a18", marginBottom: 2 }}>Q Club Polo</div>
+                          <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, color: "#8a8780", letterSpacing: ".05em" }}>{v.label} · Wave Camo</div>
+                        </div>
+                        <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, fontWeight: 700, color: GOLD, letterSpacing: ".1em", textTransform: "uppercase" }}>Select →</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* ── Step: category (Men / Women / Boys / Girls) ──────────────── */}
+            {qStep === "category" && (
+              <>
+                <div style={{ marginBottom: 20 }}>
+                  <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 600, color: "#1a1a18", margin: "0 0 4px" }}>Who Is This For?</h2>
+                  <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#8a8780", margin: 0, letterSpacing: ".03em" }}>All four options follow the same measurements flow</p>
+                </div>
+                <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)`, opacity: 0.35, marginBottom: 24 }} />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  {QCLUB_CATEGORIES.map(c => (
+                    <button key={c.key}
+                      onClick={() => { setSelectedCategory(c.key); setQStep("measurements"); }}
+                      style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: "24px 16px", border: "2px solid rgba(26,26,24,0.08)", borderRadius: 14, background: "#fff", cursor: "pointer", transition: "all 0.22s", boxShadow: "0 2px 10px rgba(26,26,24,0.05)" }}
+                      onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = GOLD; el.style.transform = "translateY(-3px)"; el.style.boxShadow = `0 12px 28px ${GOLD}22`; }}
+                      onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = "rgba(26,26,24,0.08)"; el.style.transform = "translateY(0)"; el.style.boxShadow = "0 2px 10px rgba(26,26,24,0.05)"; }}
+                    >
+                      <span style={{ fontSize: 32 }}>{c.icon}</span>
+                      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontWeight: 600, color: "#1a1a18" }}>{c.label}</div>
+                      <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 8.5, fontWeight: 600, color: GOLD, letterSpacing: ".1em", textTransform: "uppercase" }}>Select →</div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* ── Step: measurements ──────────────────────────────────────── */}
+            {qStep === "measurements" && (
+              <>
+                {/* Polo preview strip */}
+                {selectedVariant && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", background: "#f4f0e8", borderRadius: 12, marginBottom: 22, border: `1px solid ${GOLD}22` }}>
+                    <img src={QCLUB_VARIANTS.find(v => v.key === selectedVariant)?.image} alt={variantLabel} style={{ width: 52, height: 52, objectFit: "cover", objectPosition: "center top", borderRadius: 8, flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontWeight: 600, color: "#1a1a18" }}>Q Club Polo — {variantLabel}</div>
+                      <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9.5, color: "#8a8780", letterSpacing: ".05em", marginTop: 2 }}>For: {categoryLabel}</div>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ marginBottom: 18 }}>
+                  <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 600, color: "#1a1a18", margin: "0 0 4px" }}>Your Measurements</h2>
+                  <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#8a8780", margin: 0, letterSpacing: ".02em" }}>Enter in cm / kg as indicated — leave blank if unsure</p>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 16px", marginBottom: 18 }}>
+                  {MEASUREMENT_FIELDS.map(field => (
+                    <div key={field.key}>
+                      <label style={{ display: "block", fontFamily: "'Jost', sans-serif", fontSize: 9.5, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "#6b6b68", marginBottom: 5 }}>
+                        {field.label} <span style={{ color: "#b8b5ae", fontWeight: 400 }}>({field.unit})</span>
+                      </label>
+                      <input className="cem-meas-input" type="text" inputMode="decimal"
+                        placeholder={field.placeholder}
+                        value={measurements[field.key] ?? ""}
+                        onChange={e => setMeasurements(prev => ({ ...prev, [field.key]: e.target.value }))}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ display: "block", fontFamily: "'Jost', sans-serif", fontSize: 9.5, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "#6b6b68", marginBottom: 5 }}>
+                    Additional Notes <span style={{ color: "#b8b5ae", fontWeight: 400 }}>(optional)</span>
+                  </label>
+                  <textarea className="cem-meas-input" rows={3}
+                    placeholder="Any special requests or fitting notes…"
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                    style={{ resize: "vertical", minHeight: 64 }}
+                  />
+                </div>
+
+                {submitError && (
+                  <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#c0392b", marginBottom: 14, textAlign: "center" }}>{submitError}</p>
+                )}
+                <button onClick={handleQClubSubmit} disabled={submitting}
+                  style={{ width: "100%", padding: "14px", borderRadius: 99, background: submitting ? "#d4c5a0" : `linear-gradient(135deg, ${GOLD}, #b8925a)`, color: "#fff", border: "none", fontFamily: "'Jost', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", cursor: submitting ? "not-allowed" : "pointer", boxShadow: submitting ? "none" : `0 4px 16px ${GOLD}44`, transition: "all 0.2s" }}
+                >
+                  {submitting ? "Submitting…" : "Submit Q Club Order"}
+                </button>
+                <p style={{ marginTop: 12, textAlign: "center", fontFamily: "'Jost', sans-serif", fontSize: 10, color: "#b8b5ae", letterSpacing: ".06em", fontStyle: "italic" }}>
+                  Our team will review your order and be in touch to confirm
+                </p>
+              </>
+            )}
+
+            {/* ── Step: success ────────────────────────────────────────────── */}
+            {qStep === "success" && (
+              <div style={{ textAlign: "center", padding: "28px 0 12px" }}>
+                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg, #d4edda, #c3e6cb)", border: "1.5px solid #a8d5b5", margin: "0 auto 20px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>✓</div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, letterSpacing: ".2em", textTransform: "uppercase", color: GOLD, marginBottom: 8, fontWeight: 500 }}>Order Received</div>
+                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 600, color: "#1a1a18", margin: "0 0 12px" }}>Your Q Club order is placed</h2>
+                <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 12, color: "#6b6b68", lineHeight: 1.7, marginBottom: 28, maxWidth: 340, margin: "0 auto 28px" }}>
+                  We've received your measurements for the <strong>{variantLabel}</strong> polo ({categoryLabel}). Our team will be in touch to confirm.
+                </p>
+                <button onClick={() => { onClose(); resetQ(); }}
+                  style={{ padding: "12px 36px", borderRadius: 99, background: `linear-gradient(135deg, ${GOLD}, #b8925a)`, color: "#fff", border: "none", fontFamily: "'Jost', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 16px ${GOLD}44` }}
+                >
+                  Done
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -287,13 +434,13 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
         .cem-nav-left  { left: -14px; }
         .cem-nav-right { right: -14px; }
         .cem-meas-input {
-          width: 100%; padding: 7px 10px; border: 1.5px solid rgba(26,26,24,0.12);
-          border-radius: 6px; font-family: 'Jost', sans-serif; font-size: 12px;
+          width: 100%; padding: 8px 10px; border: 1.5px solid rgba(26,26,24,0.12);
+          border-radius: 7px; font-family: 'Jost', sans-serif; font-size: 12px;
           color: #1a1a18; background: #fff; outline: none; transition: border-color 0.18s;
           box-sizing: border-box;
         }
-        .cem-meas-input:focus { border-color: #c9a84c; }
-        .cem-meas-input::placeholder { color: #bbb; }
+        .cem-meas-input:focus { border-color: #c9a84c; box-shadow: 0 0 0 3px rgba(201,168,76,0.12); }
+        .cem-meas-input::placeholder { color: #c0bbb4; }
         @media (max-width: 640px) {
           .cem-sheet { padding: 20px 14px 24px !important; border-radius: 14px !important; width: calc(100vw - 16px) !important; }
           .cem-tile { flex: 0 0 72vw; }
@@ -305,193 +452,44 @@ export function CustomizeEntryModal({ isOpen, onClose }: Props) {
   );
 }
 
-// ── Social Clubs Tab ──────────────────────────────────────────────────────────
-function SocialClubsTab({
-  step, selectedGarment, measurements, notes, submitting, submitError,
-  onSelectClub, onSelectGarment, onMeasurementChange, onNotesChange,
-  onSubmit, onBack, onDone,
-}: {
-  step: "clubs" | "garment" | "measurements" | "success";
-  selectedGarment: QClubGarmentKey | null;
-  measurements: Measurements;
-  notes: string;
-  submitting: boolean;
-  submitError: string;
-  onSelectClub: () => void;
-  onSelectGarment: (g: QClubGarmentKey) => void;
-  onMeasurementChange: (k: MeasurementKey, v: string) => void;
-  onNotesChange: (v: string) => void;
-  onSubmit: () => void;
-  onBack: () => void;
-  onDone: () => void;
-}) {
-  if (step === "success") {
-    return (
-      <div style={{ textAlign: "center", padding: "32px 0 16px" }}>
-        <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg, #d4edda, #c3e6cb)", border: "1.5px solid #a8d5b5", margin: "0 auto 20px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>✓</div>
-        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, letterSpacing: ".2em", textTransform: "uppercase", color: GOLD, marginBottom: 8, fontWeight: 500 }}>Order Received</div>
-        <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 600, color: "#1a1a18", margin: "0 0 12px" }}>Your Q Club order is placed</h2>
-        <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 12, color: "#6b6b68", lineHeight: 1.7, marginBottom: 28 }}>
-          We've received your measurements and will be in touch to confirm the details. Thank you!
-        </p>
-        <button onClick={onDone} style={{ padding: "12px 36px", borderRadius: 99, background: `linear-gradient(135deg, ${GOLD}, #b8925a)`, color: "#fff", border: "none", fontFamily: "'Jost', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 16px ${GOLD}44` }}>
-          Done
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-        {step !== "clubs" && (
-          <button onClick={onBack} style={{ flexShrink: 0, width: 32, height: 32, borderRadius: "50%", border: "1.5px solid rgba(26,26,24,0.12)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, color: "#666", transition: "all 0.18s" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#ede9e1"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-          >‹</button>
-        )}
-        <div style={{ flex: 1, textAlign: step === "clubs" ? "center" : "left" }}>
-          {step === "clubs" && (
-            <>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, letterSpacing: ".2em", textTransform: "uppercase", color: GOLD, marginBottom: 6, fontWeight: 500 }}>Social Clubs</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 600, color: "#1a1a18", margin: 0 }}>Select Your Club</h2>
-            </>
-          )}
-          {step === "garment" && (
-            <>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, letterSpacing: ".2em", textTransform: "uppercase", color: GOLD, marginBottom: 4, fontWeight: 500 }}>Q Club · Social Clubs</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 600, color: "#1a1a18", margin: 0 }}>Choose Your Garment</h2>
-            </>
-          )}
-          {step === "measurements" && (
-            <>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, letterSpacing: ".2em", textTransform: "uppercase", color: GOLD, marginBottom: 4, fontWeight: 500 }}>Q Club · {QCLUB_GARMENTS.find(g => g.key === selectedGarment)?.label}</div>
-              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 600, color: "#1a1a18", margin: 0 }}>Your Measurements</h2>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)`, opacity: 0.35, marginBottom: 24 }} />
-
-      {/* ── Clubs list ──────────────────────────────────────────────────────── */}
-      {step === "clubs" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <ClubCard
-            name="Q Club"
-            description="Partner club — order your polo with custom measurements"
-            badge="Partner"
-            badgeColor={NAVY}
-            onClick={onSelectClub}
-          />
-          <div style={{ textAlign: "center", fontFamily: "'Jost', sans-serif", fontSize: 10, color: "#b8b5ae", letterSpacing: ".06em", fontStyle: "italic", marginTop: 8 }}>
-            More clubs coming soon
-          </div>
-        </div>
-      )}
-
-      {/* ── Garment selection ────────────────────────────────────────────────── */}
-      {step === "garment" && (
-        <>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            {QCLUB_GARMENTS.map(g => (
-              <button key={g.key} onClick={() => onSelectGarment(g.key)}
-                style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: "22px 16px", border: `1.5px solid ${NAVY}22`, borderRadius: 14, background: "#fff", cursor: "pointer", transition: "all 0.22s", boxShadow: "0 2px 10px rgba(26,26,24,0.05)" }}
-                onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = GOLD; el.style.transform = "translateY(-3px)"; el.style.boxShadow = `0 10px 28px ${GOLD}22, 0 4px 12px rgba(26,26,24,0.08)`; }}
-                onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = `${NAVY}22`; el.style.transform = "translateY(0)"; el.style.boxShadow = "0 2px 10px rgba(26,26,24,0.05)"; }}
-              >
-                <span style={{ fontSize: 32 }}>{g.icon}</span>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontWeight: 600, color: "#1a1a18", marginBottom: 3 }}>{g.label}</div>
-                  <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9.5, color: "#8a8780", letterSpacing: ".04em" }}>{g.desc}</div>
-                </div>
-                <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 8.5, fontWeight: 600, color: GOLD, letterSpacing: ".1em", textTransform: "uppercase" }}>Select →</div>
-              </button>
-            ))}
-          </div>
-          <p style={{ marginTop: 18, textAlign: "center", fontFamily: "'Jost', sans-serif", fontSize: 10, color: "#b8b5ae", letterSpacing: ".06em", fontStyle: "italic" }}>
-            Women's, Boys' and Girls' follow the same measurement flow
-          </p>
-        </>
-      )}
-
-      {/* ── Measurements form ────────────────────────────────────────────────── */}
-      {step === "measurements" && (
-        <>
-          <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#6b6b68", lineHeight: 1.7, marginBottom: 20, marginTop: -4 }}>
-            Enter your measurements in centimetres (cm) or kilograms (kg) as indicated. Fill in as many as you can — leave blank if unsure.
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 16px", marginBottom: 20 }}>
-            {MEASUREMENT_FIELDS.map(field => (
-              <div key={field.key}>
-                <label style={{ display: "block", fontFamily: "'Jost', sans-serif", fontSize: 9.5, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "#6b6b68", marginBottom: 5 }}>
-                  {field.label} <span style={{ color: "#b8b5ae", fontWeight: 400 }}>({field.unit})</span>
-                </label>
-                <input
-                  className="cem-meas-input"
-                  type="text"
-                  inputMode="decimal"
-                  placeholder={field.placeholder}
-                  value={measurements[field.key] ?? ""}
-                  onChange={e => onMeasurementChange(field.key, e.target.value)}
-                />
-              </div>
-            ))}
-          </div>
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: "block", fontFamily: "'Jost', sans-serif", fontSize: 9.5, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: "#6b6b68", marginBottom: 5 }}>
-              Additional Notes <span style={{ color: "#b8b5ae", fontWeight: 400 }}>(optional)</span>
-            </label>
-            <textarea
-              className="cem-meas-input"
-              rows={3}
-              placeholder="Any special requests or fitting notes…"
-              value={notes}
-              onChange={e => onNotesChange(e.target.value)}
-              style={{ resize: "vertical", minHeight: 64 }}
-            />
-          </div>
-          {submitError && (
-            <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#c0392b", marginBottom: 14, textAlign: "center" }}>{submitError}</p>
-          )}
-          <button
-            onClick={onSubmit}
-            disabled={submitting}
-            style={{ width: "100%", padding: "14px", borderRadius: 99, background: submitting ? "#d4c5a0" : `linear-gradient(135deg, ${GOLD}, #b8925a)`, color: "#fff", border: "none", fontFamily: "'Jost', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", cursor: submitting ? "not-allowed" : "pointer", boxShadow: submitting ? "none" : `0 4px 16px ${GOLD}44`, transition: "all 0.2s" }}
-          >
-            {submitting ? "Submitting…" : "Submit Q Club Order"}
-          </button>
-          <p style={{ marginTop: 12, textAlign: "center", fontFamily: "'Jost', sans-serif", fontSize: 10, color: "#b8b5ae", letterSpacing: ".06em", fontStyle: "italic" }}>
-            Our team will review and confirm your order shortly
-          </p>
-        </>
-      )}
-    </>
-  );
-}
-
-// ── Club card ─────────────────────────────────────────────────────────────────
-function ClubCard({ name, description, badge, badgeColor, onClick }: { name: string; description: string; badge: string; badgeColor: string; onClick: () => void }) {
+// ── Q Club card ───────────────────────────────────────────────────────────────
+function ClubCard({ onClick }: { onClick: () => void }) {
   return (
     <button onClick={onClick}
       style={{ display: "flex", alignItems: "center", gap: 18, padding: "18px 22px", border: `1.5px solid ${NAVY}18`, borderRadius: 14, background: "#fff", cursor: "pointer", textAlign: "left", width: "100%", transition: "all 0.22s", boxShadow: "0 2px 10px rgba(26,26,24,0.05)" }}
       onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = GOLD; el.style.transform = "translateY(-2px)"; el.style.boxShadow = `0 10px 28px ${GOLD}22`; }}
       onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = `${NAVY}18`; el.style.transform = "translateY(0)"; el.style.boxShadow = "0 2px 10px rgba(26,26,24,0.05)"; }}
     >
-      {/* Club crest placeholder */}
       <div style={{ flexShrink: 0, width: 52, height: 52, borderRadius: 12, background: `linear-gradient(135deg, ${NAVY}18, ${NAVY}0c)`, border: `1.5px solid ${NAVY}22`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 700, color: NAVY, letterSpacing: "-.02em" }}>Q</span>
+        <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 700, color: NAVY }}>Q</span>
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontWeight: 700, color: "#1a1a18" }}>{name}</span>
-          <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 8, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "#fff", background: badgeColor, padding: "2px 8px", borderRadius: 99 }}>{badge}</span>
+          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontWeight: 700, color: "#1a1a18" }}>Q Club</span>
+          <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 8, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "#fff", background: NAVY, padding: "2px 8px", borderRadius: 99 }}>Partner</span>
         </div>
-        <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 10.5, color: "#8a8780", letterSpacing: ".03em", lineHeight: 1.6, margin: 0 }}>{description}</p>
+        <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 10.5, color: "#8a8780", letterSpacing: ".03em", lineHeight: 1.6, margin: 0 }}>Order your exclusive Q Club polo with custom measurements</p>
       </div>
       <span style={{ fontSize: 20, color: "#c0bbb4", flexShrink: 0 }}>›</span>
     </button>
+  );
+}
+
+// ── Auth gate ─────────────────────────────────────────────────────────────────
+function AuthGate({ onClose }: { onClose: () => void }) {
+  return (
+    <div style={{ textAlign: "center", padding: "24px 0 8px" }}>
+      <div style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg, #fdf6e3, #f5e9c4)", border: "1.5px solid rgba(201,168,76,0.3)", margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>✦</div>
+      <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, letterSpacing: ".2em", textTransform: "uppercase", color: GOLD, marginBottom: 8, fontWeight: 500 }}>KA.SHA Studio</div>
+      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 600, color: "#1a1a18", margin: "0 0 10px", lineHeight: 1.25 }}>Sign in to continue</h2>
+      <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#6b6b68", lineHeight: 1.7, letterSpacing: ".02em", marginBottom: 24 }}>
+        Create an account or sign in to place your order and save your preferences.
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <a href="/sign-up" onClick={onClose} style={{ display: "block", padding: "12px 24px", borderRadius: 99, background: `linear-gradient(135deg, ${GOLD}, #b8925a)`, color: "#fff", fontFamily: "'Jost', sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", textDecoration: "none", boxShadow: `0 4px 16px ${GOLD}44` }}>Create Account</a>
+        <a href="/sign-in" onClick={onClose} style={{ display: "block", padding: "11px 24px", borderRadius: 99, background: "transparent", border: "1.5px solid rgba(26,26,24,0.18)", color: "#1a1a18", fontFamily: "'Jost', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", textDecoration: "none" }}>Sign In</a>
+      </div>
+    </div>
   );
 }
 

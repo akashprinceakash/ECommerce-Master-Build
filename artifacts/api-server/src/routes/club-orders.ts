@@ -10,7 +10,7 @@ const GARMENT_SET = new Set<string>(CLUB_GARMENT_TYPES);
 function isValidMeasurements(m: unknown): m is Record<string, string> {
   if (!m || typeof m !== "object" || Array.isArray(m)) return false;
   for (const v of Object.values(m as Record<string, unknown>)) {
-    if (typeof v !== "string") return false;
+    if (v !== undefined && typeof v !== "string") return false;
   }
   return true;
 }
@@ -29,9 +29,9 @@ router.post("/club-orders", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const b = req.body as Record<string, unknown>;
 
-  const clubName   = typeof b.clubName === "string" && b.clubName.trim() ? b.clubName.trim() : "Q Club";
+  const clubName    = typeof b.clubName === "string" && b.clubName.trim() ? b.clubName.trim() : "Q Club";
   const garmentType = typeof b.garmentType === "string" ? b.garmentType : "";
-  const notes      = typeof b.notes === "string" ? b.notes.slice(0, 1000) : undefined;
+  const notes       = typeof b.notes === "string" ? b.notes.slice(0, 1000) : undefined;
 
   if (!GARMENT_SET.has(garmentType)) {
     res.status(400).json({ error: `Invalid garmentType. Must be one of: ${CLUB_GARMENT_TYPES.join(", ")}` });

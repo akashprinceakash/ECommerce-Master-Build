@@ -1208,6 +1208,7 @@ components:
     ClubMeasurements:
       type: object
       properties:
+        category:     { type: string }
         height:       { type: string }
         weight:       { type: string }
         chest:        { type: string }
@@ -1241,7 +1242,7 @@ components:
         clubName:     { type: string }
         garmentType:
           type: string
-          enum: [men_polo, women_polo, boys_polo, girls_polo]
+          enum: [red_wave, slate_wave, navy_wave, maroon_wave]
         measurements:
           $ref: "#/components/schemas/ClubMeasurements"
         notes:        { type: string }

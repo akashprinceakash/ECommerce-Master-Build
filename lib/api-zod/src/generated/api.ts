@@ -668,6 +668,7 @@ export const ListClubOrdersResponseItem = zod.object({
   clubName: zod.string(),
   garmentType: zod.string(),
   measurements: zod.object({
+    category: zod.string().optional(),
     height: zod.string().optional(),
     weight: zod.string().optional(),
     chest: zod.string().optional(),
@@ -691,8 +692,9 @@ export const ListClubOrdersResponse = zod.array(ListClubOrdersResponseItem);
  */
 export const CreateClubOrderBody = zod.object({
   clubName: zod.string().optional(),
-  garmentType: zod.enum(["men_polo", "women_polo", "boys_polo", "girls_polo"]),
+  garmentType: zod.enum(["red_wave", "slate_wave", "navy_wave", "maroon_wave"]),
   measurements: zod.object({
+    category: zod.string().optional(),
     height: zod.string().optional(),
     weight: zod.string().optional(),
     chest: zod.string().optional(),

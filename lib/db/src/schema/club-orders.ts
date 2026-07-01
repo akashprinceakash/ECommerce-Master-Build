@@ -2,20 +2,24 @@ import { pgTable, serial, text, timestamp, jsonb, index } from "drizzle-orm/pg-c
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const CLUB_GARMENT_TYPES = ["men_polo", "women_polo", "boys_polo", "girls_polo"] as const;
+export const CLUB_GARMENT_TYPES = ["red_wave", "slate_wave", "navy_wave", "maroon_wave"] as const;
 export type ClubGarmentType = typeof CLUB_GARMENT_TYPES[number];
 
+export const CLUB_GARMENT_CATEGORIES = ["men", "women", "boys", "girls"] as const;
+export type ClubGarmentCategory = typeof CLUB_GARMENT_CATEGORIES[number];
+
 export const clubMeasurementsSchema = z.object({
-  height:         z.string().optional(),
-  weight:         z.string().optional(),
-  chest:          z.string().optional(),
-  waist:          z.string().optional(),
-  hip:            z.string().optional(),
-  shoulder:       z.string().optional(),
-  sleeveLength:   z.string().optional(),
-  neck:           z.string().optional(),
-  torsoLength:    z.string().optional(),
-  inseam:         z.string().optional(),
+  category:     z.string().optional(),
+  height:       z.string().optional(),
+  weight:       z.string().optional(),
+  chest:        z.string().optional(),
+  waist:        z.string().optional(),
+  hip:          z.string().optional(),
+  shoulder:     z.string().optional(),
+  sleeveLength: z.string().optional(),
+  neck:         z.string().optional(),
+  torsoLength:  z.string().optional(),
+  inseam:       z.string().optional(),
 });
 
 export type ClubMeasurements = z.infer<typeof clubMeasurementsSchema>;
