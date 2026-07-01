@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, or, ilike } from "drizzle-orm";
+import { eq, ne, and, or, ilike } from "drizzle-orm";
 import { db, productsTable } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -12,6 +12,9 @@ router.get("/products", async (req, res): Promise<void> => {
 
     if (category && typeof category === "string") {
       conditions.push(eq(productsTable.category, category));
+    } else {
+      // Exclude Q Club products from the general catalog — they are only accessible via /social-clubs
+      conditions.push(ne(productsTable.category, "q_club"));
     }
     if (gender && typeof gender === "string") {
       conditions.push(eq(productsTable.gender, gender));
