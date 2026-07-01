@@ -266,6 +266,14 @@ export interface CreateLookbookOutfitBody {
   items: LookbookOutfitItem[];
 }
 
+export interface SaveLookbookProductBody {
+  productId: number;
+}
+
 export type ListProductsParams = {
   category?: string;
+};
+
+export type SaveLookbookProduct201 = {
+  productId: number;
 };

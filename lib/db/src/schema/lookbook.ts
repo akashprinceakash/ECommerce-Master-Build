@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
 export const lookbookOutfitItemSchema = z.object({
@@ -24,3 +24,15 @@ export const lookbookOutfitsTable = pgTable("lookbook_outfits", {
 ]);
 
 export type LookbookOutfit = typeof lookbookOutfitsTable.$inferSelect;
+
+export const lookbookSavedProductsTable = pgTable("lookbook_saved_products", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  productId: integer("product_id").notNull(),
+  savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index("lookbook_saved_user_idx").on(t.userId),
+  uniqueIndex("lookbook_saved_unique_idx").on(t.userId, t.productId),
+]);
+
+export type LookbookSavedProduct = typeof lookbookSavedProductsTable.$inferSelect;

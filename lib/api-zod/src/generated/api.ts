@@ -636,3 +636,25 @@ export const CreateLookbookOutfitBody = zod.object({
 export const DeleteLookbookOutfitParams = zod.object({
   id: zod.coerce.number(),
 });
+
+/**
+ * @summary List product IDs the user has saved to their lookbook
+ */
+export const ListLookbookSavedResponseItem = zod.number();
+export const ListLookbookSavedResponse = zod.array(
+  ListLookbookSavedResponseItem,
+);
+
+/**
+ * @summary Save a product to the lookbook (heart it)
+ */
+export const SaveLookbookProductBody = zod.object({
+  productId: zod.number(),
+});
+
+/**
+ * @summary Remove a product from the lookbook (un-heart it)
+ */
+export const UnsaveLookbookProductParams = zod.object({
+  productId: zod.coerce.number(),
+});

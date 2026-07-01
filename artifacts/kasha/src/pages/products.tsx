@@ -8,8 +8,9 @@ import { ChevronRight, ChevronDown, ChevronLeft } from "lucide-react";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { type Gender, getLastGender as _getLastGender, setLastGender } from "@/lib/genderPreference";
 import { getAssetUrl } from "@/lib/api";
-import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
+import { SHOW_KIDS, SHOW_CUSTOMIZATION, SHOW_LOOKBOOK } from "@/lib/features";
 import { useUser, useClerk } from "@clerk/react";
+import { HeartButton } from "@/components/ui/HeartButton";
 import { getProductColorLabel, colorLabelToSwatchHex } from "@/lib/product-color";
 
 type ItemType = "tshirts" | "bottoms" | "dresses";
@@ -712,6 +713,15 @@ function ProductCard({ product, imgSrc, cardIndex = 0 }: ProductCardProps) {
           <div className="absolute top-2 right-2 text-white text-[8px] uppercase px-2 py-0.5 z-10" style={{ background: "#1a1a1a", fontFamily: "'Josefin Sans', sans-serif", letterSpacing: "0.2em" }}>
             Sold Out
           </div>
+        )}
+
+        {/* Heart / Save to Lookbook */}
+        {SHOW_LOOKBOOK && (
+          <HeartButton
+            productId={product.id}
+            className="absolute top-2 left-2 z-[5] w-7 h-7 flex items-center justify-center bg-white/85 backdrop-blur-sm hover:bg-white transition-colors"
+            style={{ border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 1px 4px rgba(0,0,0,0.07)" } as React.CSSProperties}
+          />
         )}
       </div>
       <h3 className="text-neutral-900 mb-0.5 group-hover:!text-[#B8925A] transition-colors" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, fontWeight: 500, lineHeight: 1.3 }}>

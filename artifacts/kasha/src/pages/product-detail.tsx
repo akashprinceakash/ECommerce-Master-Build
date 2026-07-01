@@ -10,7 +10,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { useCart } from "@/contexts/CartContext";
 import { getAssetUrl } from "@/lib/api";
-import { SHOW_CUSTOMIZATION } from "@/lib/features";
+import { SHOW_CUSTOMIZATION, SHOW_LOOKBOOK } from "@/lib/features";
+import { HeartButton } from "@/components/ui/HeartButton";
 import { PersonalizeModal } from "@/components/layout/PersonalizeModal";
 import { getProductColorLabel, colorLabelToSwatchHex } from "@/lib/product-color";
 
@@ -346,7 +347,16 @@ export default function ProductDetailPage() {
               <p className="text-[10px] font-bold tracking-[0.3em] text-gray-400 mb-2 uppercase">
                 {product.category || "Golf Collection"}
               </p>
-              <h1 className="text-3xl md:text-4xl font-black text-black mb-2 leading-tight">{product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+.*$/, "")}</h1>
+              <div className="flex items-start gap-3 mb-2">
+                <h1 className="text-3xl md:text-4xl font-black text-black leading-tight flex-1">{product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+.*$/, "")}</h1>
+                {SHOW_LOOKBOOK && (
+                  <HeartButton
+                    productId={product.id}
+                    iconSize={20}
+                    className="mt-1 w-9 h-9 flex items-center justify-center border border-gray-200 hover:border-[#B8925A] transition-colors bg-white flex-shrink-0"
+                  />
+                )}
+              </div>
               {(() => {
                 const colorLabel = getProductColorLabel(product);
                 const swatchHex = colorLabelToSwatchHex(colorLabel);

@@ -31,6 +31,8 @@ import type {
   LookbookOutfit,
   Order,
   Product,
+  SaveLookbookProduct201,
+  SaveLookbookProductBody,
   UpdateCartItemBody,
   UpdateCustomizationBody,
   UpsertUserProfileBody,
@@ -1871,4 +1873,249 @@ export const useDeleteLookbookOutfit = <
   TContext
 > => {
   return useMutation(getDeleteLookbookOutfitMutationOptions(options));
+};
+
+/**
+ * @summary List product IDs the user has saved to their lookbook
+ */
+export const getListLookbookSavedUrl = () => {
+  return `/api/lookbook-saved`;
+};
+
+export const listLookbookSaved = async (
+  options?: RequestInit,
+): Promise<number[]> => {
+  return customFetch<number[]>(getListLookbookSavedUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListLookbookSavedQueryKey = () => {
+  return [`/api/lookbook-saved`] as const;
+};
+
+export const getListLookbookSavedQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLookbookSaved>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listLookbookSaved>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListLookbookSavedQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listLookbookSaved>>
+  > = ({ signal }) => listLookbookSaved({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLookbookSaved>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListLookbookSavedQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listLookbookSaved>>
+>;
+export type ListLookbookSavedQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List product IDs the user has saved to their lookbook
+ */
+
+export function useListLookbookSaved<
+  TData = Awaited<ReturnType<typeof listLookbookSaved>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listLookbookSaved>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListLookbookSavedQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Save a product to the lookbook (heart it)
+ */
+export const getSaveLookbookProductUrl = () => {
+  return `/api/lookbook-saved`;
+};
+
+export const saveLookbookProduct = async (
+  saveLookbookProductBody: SaveLookbookProductBody,
+  options?: RequestInit,
+): Promise<SaveLookbookProduct201> => {
+  return customFetch<SaveLookbookProduct201>(getSaveLookbookProductUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(saveLookbookProductBody),
+  });
+};
+
+export const getSaveLookbookProductMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveLookbookProduct>>,
+    TError,
+    { data: BodyType<SaveLookbookProductBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveLookbookProduct>>,
+  TError,
+  { data: BodyType<SaveLookbookProductBody> },
+  TContext
+> => {
+  const mutationKey = ["saveLookbookProduct"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveLookbookProduct>>,
+    { data: BodyType<SaveLookbookProductBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return saveLookbookProduct(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveLookbookProductMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveLookbookProduct>>
+>;
+export type SaveLookbookProductMutationBody = BodyType<SaveLookbookProductBody>;
+export type SaveLookbookProductMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Save a product to the lookbook (heart it)
+ */
+export const useSaveLookbookProduct = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveLookbookProduct>>,
+    TError,
+    { data: BodyType<SaveLookbookProductBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof saveLookbookProduct>>,
+  TError,
+  { data: BodyType<SaveLookbookProductBody> },
+  TContext
+> => {
+  return useMutation(getSaveLookbookProductMutationOptions(options));
+};
+
+/**
+ * @summary Remove a product from the lookbook (un-heart it)
+ */
+export const getUnsaveLookbookProductUrl = (productId: number) => {
+  return `/api/lookbook-saved/${productId}`;
+};
+
+export const unsaveLookbookProduct = async (
+  productId: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getUnsaveLookbookProductUrl(productId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getUnsaveLookbookProductMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unsaveLookbookProduct>>,
+    TError,
+    { productId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unsaveLookbookProduct>>,
+  TError,
+  { productId: number },
+  TContext
+> => {
+  const mutationKey = ["unsaveLookbookProduct"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unsaveLookbookProduct>>,
+    { productId: number }
+  > = (props) => {
+    const { productId } = props ?? {};
+
+    return unsaveLookbookProduct(productId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnsaveLookbookProductMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unsaveLookbookProduct>>
+>;
+
+export type UnsaveLookbookProductMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Remove a product from the lookbook (un-heart it)
+ */
+export const useUnsaveLookbookProduct = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unsaveLookbookProduct>>,
+    TError,
+    { productId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof unsaveLookbookProduct>>,
+  TError,
+  { productId: number },
+  TContext
+> => {
+  return useMutation(getUnsaveLookbookProductMutationOptions(options));
 };

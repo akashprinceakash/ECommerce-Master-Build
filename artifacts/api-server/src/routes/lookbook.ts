@@ -1,6 +1,11 @@
 import { Router, type IRouter } from "express";
 import { eq, and, desc } from "drizzle-orm";
-import { db, lookbookOutfitsTable, lookbookOutfitItemSchema } from "@workspace/db";
+import {
+  db,
+  lookbookOutfitsTable,
+  lookbookOutfitItemSchema,
+  lookbookSavedProductsTable,
+} from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import type { LookbookOutfitItem } from "@workspace/db";
 
@@ -19,6 +24,8 @@ function parseBody(body: unknown): { name: string; items: LookbookOutfitItem[] }
   }
   return { name: b.name.trim(), items };
 }
+
+// ── Outfit CRUD ──────────────────────────────────────────────────────────────
 
 router.get("/lookbook-outfits", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
@@ -59,6 +66,50 @@ router.delete("/lookbook-outfits/:id", requireAuth, async (req, res): Promise<vo
     res.status(404).json({ error: "Outfit not found" });
     return;
   }
+  res.status(204).send();
+});
+
+// ── Saved products (heart icon) ───────────────────────────────────────────────
+
+router.get("/lookbook-saved", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const rows = await db
+    .select({ productId: lookbookSavedProductsTable.productId })
+    .from(lookbookSavedProductsTable)
+    .where(eq(lookbookSavedProductsTable.userId, userId));
+  res.json(rows.map(r => r.productId));
+});
+
+router.post("/lookbook-saved", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const b = req.body as Record<string, unknown>;
+  const productId = typeof b.productId === "number" ? b.productId : parseInt(String(b.productId), 10);
+  if (isNaN(productId) || productId <= 0) {
+    res.status(400).json({ error: "Invalid productId" });
+    return;
+  }
+  await db
+    .insert(lookbookSavedProductsTable)
+    .values({ userId, productId })
+    .onConflictDoNothing();
+  res.status(201).json({ productId });
+});
+
+router.delete("/lookbook-saved/:productId", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const productId = parseInt(String(req.params.productId), 10);
+  if (isNaN(productId) || productId <= 0) {
+    res.status(400).json({ error: "Invalid productId" });
+    return;
+  }
+  await db
+    .delete(lookbookSavedProductsTable)
+    .where(
+      and(
+        eq(lookbookSavedProductsTable.userId, userId),
+        eq(lookbookSavedProductsTable.productId, productId),
+      ),
+    );
   res.status(204).send();
 });
 
