@@ -104,6 +104,8 @@ export interface UpdateCustomizationBody {
   sideImageUrl?: string | null;
 }
 
+export type CartItemMeasurements = { [key: string]: string } | null;
+
 export interface CartItem {
   id: number;
   cartId: number;
@@ -112,6 +114,7 @@ export interface CartItem {
   customizationId?: number | null;
   quantity: number;
   size: string;
+  measurements?: CartItemMeasurements;
   product: Product;
   customization?: Customization | null;
   createdAt: string;
@@ -125,17 +128,22 @@ export interface Cart {
   itemCount: number;
 }
 
+export type AddCartItemBodyMeasurements = { [key: string]: string } | null;
+
 export interface AddCartItemBody {
   productId: number;
   /** @nullable */
   customizationId?: number | null;
   quantity: number;
   size: string;
+  measurements?: AddCartItemBodyMeasurements;
 }
 
 export interface UpdateCartItemBody {
   quantity: number;
 }
+
+export type OrderItemMeasurements = { [key: string]: string } | null;
 
 export interface OrderItem {
   id: number;
@@ -146,6 +154,7 @@ export interface OrderItem {
   quantity: number;
   size: string;
   priceInPaise: number;
+  measurements?: OrderItemMeasurements;
   product: Product;
   customization?: Customization | null;
 }

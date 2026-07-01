@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, index, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { productsTable } from "./products";
@@ -41,6 +41,7 @@ export const orderItemsTable = pgTable("order_items", {
   quantity: integer("quantity").notNull(),
   size: text("size").notNull(),
   priceInPaise: integer("price_in_paise").notNull(),
+  measurements: jsonb("measurements").$type<Record<string, string>>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index("order_items_order_id_idx").on(t.orderId),

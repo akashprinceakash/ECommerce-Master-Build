@@ -785,6 +785,21 @@ export function AdminOrders() {
                           </div>
                         </div>
 
+                        {/* Q Club measurements panel */}
+                        {(it as any).measurements && Object.keys((it as any).measurements).length > 0 && (
+                          <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-sm">
+                            <div className="text-[10px] uppercase tracking-wider font-semibold text-amber-700 mb-2">Q Club Measurements</div>
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                              {Object.entries((it as any).measurements as Record<string, string>).map(([key, val]) => (
+                                <div key={key} className="flex justify-between text-xs">
+                                  <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, " $1").trim()}</span>
+                                  <span className="font-semibold text-foreground">{val}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {c && (
                           <>
                             {/* Design meta */}

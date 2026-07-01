@@ -217,6 +217,7 @@ export const GetCartResponse = zod.object({
       customizationId: zod.number().nullish(),
       quantity: zod.number(),
       size: zod.string(),
+      measurements: zod.record(zod.string(), zod.string()).nullish(),
       product: zod.object({
         id: zod.number(),
         name: zod.string(),
@@ -272,6 +273,7 @@ export const AddToCartBody = zod.object({
   customizationId: zod.number().nullish(),
   quantity: zod.number(),
   size: zod.string(),
+  measurements: zod.record(zod.string(), zod.string()).nullish(),
 });
 
 /**
@@ -292,6 +294,7 @@ export const UpdateCartItemResponse = zod.object({
   customizationId: zod.number().nullish(),
   quantity: zod.number(),
   size: zod.string(),
+  measurements: zod.record(zod.string(), zod.string()).nullish(),
   product: zod.object({
     id: zod.number(),
     name: zod.string(),
@@ -380,6 +383,7 @@ export const ListOrdersResponseItem = zod.object({
       quantity: zod.number(),
       size: zod.string(),
       priceInPaise: zod.number(),
+      measurements: zod.record(zod.string(), zod.string()).nullish(),
       product: zod.object({
         id: zod.number(),
         name: zod.string(),
@@ -492,6 +496,7 @@ export const GetOrderResponse = zod.object({
       quantity: zod.number(),
       size: zod.string(),
       priceInPaise: zod.number(),
+      measurements: zod.record(zod.string(), zod.string()).nullish(),
       product: zod.object({
         id: zod.number(),
         name: zod.string(),

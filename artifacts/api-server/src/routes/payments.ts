@@ -312,6 +312,7 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
         quantity: item.quantity,
         size: item.size,
         priceInPaise: item.product?.priceInPaise ?? 0,
+        measurements: (item as any).measurements ?? null,
       }),
     ),
   );
@@ -459,6 +460,7 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
         quantity: item.quantity,
         size: item.size,
         priceInPaise: item.product?.priceInPaise ?? 0,
+        measurements: (item as any).measurements ?? null,
       }),
     ),
   );

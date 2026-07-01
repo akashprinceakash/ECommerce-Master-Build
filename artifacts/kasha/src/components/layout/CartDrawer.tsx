@@ -190,7 +190,11 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
                           {formatPrice((item.product.priceInPaise + ((item.customization as any)?.customizationChargeInPaise ?? 0)) * item.quantity)}
                         </p>
                       </div>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Size: {item.size}</p>
+                      {item.measurements && Object.keys(item.measurements).length > 0 ? (
+                        <p className="text-[11px] text-gray-500 mt-0.5">Bespoke Measurements · Q Club</p>
+                      ) : (
+                        <p className="text-[11px] text-gray-500 mt-0.5">Size: {item.size}</p>
+                      )}
                       {item.customization && (
                         <p className="text-[11px] text-gray-500">Custom: {item.customization.name}</p>
                       )}

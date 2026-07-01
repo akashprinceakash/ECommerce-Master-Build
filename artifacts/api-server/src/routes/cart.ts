@@ -56,12 +56,22 @@ router.get("/cart", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/cart/items", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
-  const { productId, customizationId, quantity, size } = req.body;
+  const { productId, customizationId, quantity, size, measurements } = req.body;
   if (!productId || !size) {
     res.status(400).json({ error: "productId and size are required" });
     return;
   }
   const cart = await getOrCreateCart(userId);
+
+  let parsedMeasurements: Record<string, string> | undefined;
+  if (measurements && typeof measurements === "object" && !Array.isArray(measurements)) {
+    parsedMeasurements = Object.fromEntries(
+      Object.entries(measurements as Record<string, unknown>)
+        .filter(([, v]) => typeof v === "string" && (v as string).length > 0)
+        .map(([k, v]) => [k, v as string])
+    );
+  }
+
   const [item] = await db
     .insert(cartItemsTable)
     .values({
@@ -70,6 +80,7 @@ router.post("/cart/items", requireAuth, async (req, res): Promise<void> => {
       customizationId: customizationId ?? null,
       quantity: quantity ?? 1,
       size,
+      measurements: parsedMeasurements ?? null,
     })
     .returning();
   res.status(201).json(item);

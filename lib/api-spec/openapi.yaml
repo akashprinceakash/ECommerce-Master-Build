@@ -897,6 +897,11 @@ components:
           type: integer
         size:
           type: string
+        measurements:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
         product:
           $ref: "#/components/schemas/Product"
         customization:
@@ -948,6 +953,11 @@ components:
           type: integer
         size:
           type: string
+        measurements:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
       required:
         - productId
         - quantity
@@ -978,6 +988,11 @@ components:
           type: string
         priceInPaise:
           type: integer
+        measurements:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
         product:
           $ref: "#/components/schemas/Product"
         customization:

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, index, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { productsTable } from "./products";
@@ -18,6 +18,7 @@ export const cartItemsTable = pgTable("cart_items", {
   customizationId: integer("customization_id").references(() => customizationsTable.id, { onDelete: "set null" }),
   quantity: integer("quantity").notNull().default(1),
   size: text("size").notNull(),
+  measurements: jsonb("measurements").$type<Record<string, string>>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [
