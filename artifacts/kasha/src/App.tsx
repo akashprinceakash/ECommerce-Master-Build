@@ -27,6 +27,7 @@ import SizeGuidePage from "@/pages/legal/size-guide";
 import ConnectPage from "@/pages/connect";
 import LookbookPage from "@/pages/lookbook";
 import FaqPage from "@/pages/faq";
+import SocialClubsPage from "@/pages/social-clubs";
 import { SHOW_LOOKBOOK } from "@/lib/features";
 
 const queryClient = new QueryClient({
@@ -122,6 +123,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/size-guide" component={SizeGuidePage} />
           <Route path="/connect" component={ConnectPage} />
           <Route path="/faq" component={FaqPage} />
+          <Route path="/social-clubs" component={SocialClubsPage} />
           {SHOW_LOOKBOOK && <Route path="/lookbook" component={LookbookPage} />}
 
           <ProtectedRoute path="/cart" component={CartPage} />

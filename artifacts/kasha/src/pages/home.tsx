@@ -761,7 +761,7 @@ export default function Home() {
             {BULK.map((b) => (
               <Link
                 key={b.title}
-                href={`/connect?type=bulk-order`}
+                href={b.title === "Social Golf Clubs" ? "/social-clubs" : `/connect?type=bulk-order`}
                 style={{
                   display:      "block",
                   background:   BG_CARD,
