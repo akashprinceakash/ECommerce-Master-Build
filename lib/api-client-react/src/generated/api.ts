@@ -20,6 +20,8 @@ import type {
   AddCartItemBody,
   Cart,
   CartItem,
+  ClubOrder,
+  CreateClubOrderBody,
   CreateCustomizationBody,
   CreateLookbookOutfitBody,
   CreateOrderBody,
@@ -2118,4 +2120,165 @@ export const useUnsaveLookbookProduct = <
   TContext
 > => {
   return useMutation(getUnsaveLookbookProductMutationOptions(options));
+};
+
+/**
+ * @summary List the current user's club orders
+ */
+export const getListClubOrdersUrl = () => {
+  return `/api/club-orders`;
+};
+
+export const listClubOrders = async (
+  options?: RequestInit,
+): Promise<ClubOrder[]> => {
+  return customFetch<ClubOrder[]>(getListClubOrdersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListClubOrdersQueryKey = () => {
+  return [`/api/club-orders`] as const;
+};
+
+export const getListClubOrdersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listClubOrders>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listClubOrders>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListClubOrdersQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listClubOrders>>> = ({
+    signal,
+  }) => listClubOrders({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listClubOrders>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListClubOrdersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listClubOrders>>
+>;
+export type ListClubOrdersQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List the current user's club orders
+ */
+
+export function useListClubOrders<
+  TData = Awaited<ReturnType<typeof listClubOrders>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listClubOrders>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListClubOrdersQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Submit a new club garment order with measurements
+ */
+export const getCreateClubOrderUrl = () => {
+  return `/api/club-orders`;
+};
+
+export const createClubOrder = async (
+  createClubOrderBody: CreateClubOrderBody,
+  options?: RequestInit,
+): Promise<ClubOrder> => {
+  return customFetch<ClubOrder>(getCreateClubOrderUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createClubOrderBody),
+  });
+};
+
+export const getCreateClubOrderMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createClubOrder>>,
+    TError,
+    { data: BodyType<CreateClubOrderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createClubOrder>>,
+  TError,
+  { data: BodyType<CreateClubOrderBody> },
+  TContext
+> => {
+  const mutationKey = ["createClubOrder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createClubOrder>>,
+    { data: BodyType<CreateClubOrderBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createClubOrder(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateClubOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createClubOrder>>
+>;
+export type CreateClubOrderMutationBody = BodyType<CreateClubOrderBody>;
+export type CreateClubOrderMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Submit a new club garment order with measurements
+ */
+export const useCreateClubOrder = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createClubOrder>>,
+    TError,
+    { data: BodyType<CreateClubOrderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createClubOrder>>,
+  TError,
+  { data: BodyType<CreateClubOrderBody> },
+  TContext
+> => {
+  return useMutation(getCreateClubOrderMutationOptions(options));
 };

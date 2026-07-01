@@ -13,6 +13,7 @@ import r2proxyRouter from "./r2proxy";
 import skuAssetsRouter from "./skuAssets";
 import contactRouter from "./contact";
 import lookbookRouter from "./lookbook";
+import clubOrdersRouter from "./club-orders";
 import shiprocketWebhookRouter from "./shiprocketWebhook";
 
 const router: IRouter = Router();
@@ -32,5 +33,6 @@ router.use(r2proxyRouter);
 router.use(skuAssetsRouter);
 router.use(contactRouter);
 router.use(lookbookRouter);
+router.use(clubOrdersRouter);
 
 export default router;

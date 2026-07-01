@@ -270,6 +270,48 @@ export interface SaveLookbookProductBody {
   productId: number;
 }
 
+export interface ClubMeasurements {
+  height?: string;
+  weight?: string;
+  chest?: string;
+  waist?: string;
+  hip?: string;
+  shoulder?: string;
+  sleeveLength?: string;
+  neck?: string;
+  torsoLength?: string;
+  inseam?: string;
+}
+
+export interface ClubOrder {
+  id: number;
+  userId: string;
+  clubName: string;
+  garmentType: string;
+  measurements: ClubMeasurements;
+  status: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateClubOrderBodyGarmentType =
+  (typeof CreateClubOrderBodyGarmentType)[keyof typeof CreateClubOrderBodyGarmentType];
+
+export const CreateClubOrderBodyGarmentType = {
+  men_polo: "men_polo",
+  women_polo: "women_polo",
+  boys_polo: "boys_polo",
+  girls_polo: "girls_polo",
+} as const;
+
+export interface CreateClubOrderBody {
+  clubName?: string;
+  garmentType: CreateClubOrderBodyGarmentType;
+  measurements: ClubMeasurements;
+  notes?: string;
+}
+
 export type ListProductsParams = {
   category?: string;
 };

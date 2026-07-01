@@ -658,3 +658,51 @@ export const SaveLookbookProductBody = zod.object({
 export const UnsaveLookbookProductParams = zod.object({
   productId: zod.coerce.number(),
 });
+
+/**
+ * @summary List the current user's club orders
+ */
+export const ListClubOrdersResponseItem = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  clubName: zod.string(),
+  garmentType: zod.string(),
+  measurements: zod.object({
+    height: zod.string().optional(),
+    weight: zod.string().optional(),
+    chest: zod.string().optional(),
+    waist: zod.string().optional(),
+    hip: zod.string().optional(),
+    shoulder: zod.string().optional(),
+    sleeveLength: zod.string().optional(),
+    neck: zod.string().optional(),
+    torsoLength: zod.string().optional(),
+    inseam: zod.string().optional(),
+  }),
+  status: zod.string(),
+  notes: zod.string().optional(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+export const ListClubOrdersResponse = zod.array(ListClubOrdersResponseItem);
+
+/**
+ * @summary Submit a new club garment order with measurements
+ */
+export const CreateClubOrderBody = zod.object({
+  clubName: zod.string().optional(),
+  garmentType: zod.enum(["men_polo", "women_polo", "boys_polo", "girls_polo"]),
+  measurements: zod.object({
+    height: zod.string().optional(),
+    weight: zod.string().optional(),
+    chest: zod.string().optional(),
+    waist: zod.string().optional(),
+    hip: zod.string().optional(),
+    shoulder: zod.string().optional(),
+    sleeveLength: zod.string().optional(),
+    neck: zod.string().optional(),
+    torsoLength: zod.string().optional(),
+    inseam: zod.string().optional(),
+  }),
+  notes: zod.string().optional(),
+});
