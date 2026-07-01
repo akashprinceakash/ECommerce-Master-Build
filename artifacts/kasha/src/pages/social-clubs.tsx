@@ -2,10 +2,18 @@ import { useState } from "react";
 import { useUser } from "@clerk/react";
 import { Link, useLocation } from "wouter";
 import { Layout } from "@/components/layout/Layout";
-import { useListProducts, getListProductsQueryKey, useAddToCart, getGetCartQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { getAssetUrl } from "@/lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAddToCart, getGetCartQueryKey } from "@workspace/api-client-react";
+import { getAssetUrl, getApiUrl } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
+
+async function fetchQClubProducts() {
+  const base = getApiUrl();
+  const url = `${base}/api/products?category=q_club`;
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch Q Club products");
+  return res.json() as Promise<QProduct[]>;
+}
 
 const GOLD  = "#B8925A";
 const NAVY  = "#0d1b35";
@@ -60,15 +68,13 @@ export default function SocialClubsPage() {
     },
   });
 
-  // Fetch Q Club products (category = q_club)
-  const { data: allProducts, isLoading: loadingProducts } = useListProducts(
-    {},
-    { query: { queryKey: getListProductsQueryKey({}), enabled: step === "products" || step === "landing" } }
-  );
-
-  const qClubProducts = (allProducts ?? []).filter(
-    p => p.available && p.category === "q_club"
-  );
+  // Fetch Q Club products directly — bypasses generated hook to guarantee ?category=q_club
+  const { data: qClubProducts = [], isLoading: loadingProducts } = useQuery({
+    queryKey: ["q-club-products"],
+    queryFn: fetchQClubProducts,
+    refetchOnMount: true,
+    staleTime: 0,
+  });
 
   function reset() {
     setStep("landing");
