@@ -39,18 +39,14 @@ function detectCategory(name: string): ItemCategory {
   return "top";
 }
 
-const ZONE_WIDTH: Record<ItemCategory, number> = {
-  head: 88,
-  top: 182,
-  bottom: 158,
-  shoes: 120,
-};
-
-const ZONE_Y_FRAC: Record<ItemCategory, number> = {
-  head: 0.04,
-  top: 0.175,
-  bottom: 0.505,
-  shoes: 0.80,
+// Canvas H = 500. Mannequin: top=10px (2%), height=440px (88%), SVG viewBox 200×460.
+// Scale = 440/460 ≈ 0.9565. Canvas Y = 10 + svgY * 0.9565.
+// Shoulder SVG≈100 → canvas 106.  Waist SVG≈238 → canvas 238.  Feet SVG≈456 → canvas 446.
+const ZONE_SIZE: Record<ItemCategory, { w: number; h: number; y: number }> = {
+  head:   { w: 80,  h: 92,  y: 14  },   // head crown → shoulder
+  top:    { w: 164, h: 130, y: 106 },   // shoulder → waist (106..236)
+  bottom: { w: 146, h: 220, y: 228 },   // waist → feet  (228..448, 8px overlap at hem)
+  shoes:  { w: 110, h: 50,  y: 418 },   // ankle → sole
 };
 
 type CanvasItem = {
@@ -61,6 +57,7 @@ type CanvasItem = {
   x: number;
   y: number;
   width: number;
+  height: number;
   category: ItemCategory;
 };
 
@@ -76,7 +73,7 @@ type Gender = "men" | "women";
 
 // ── Mannequin SVG silhouette ──────────────────────────────────────────────────
 function MannequinSilhouette({ gender }: { gender: Gender }) {
-  const stroke = "rgba(184,146,90,0.22)";
+  const stroke = "rgba(184,146,90,0.38)";
   const sw = "1.4";
 
   return (
@@ -245,10 +242,10 @@ export default function LookbookPage() {
     setStrippingIds(prev => new Set(prev).add(product.productId));
 
     const category = detectCategory(product.name);
-    const w = ZONE_WIDTH[category];
+    const zone = ZONE_SIZE[category];
     const canvasW = canvasRef.current?.clientWidth ?? 640;
-    const x = Math.round(canvasW / 2 - w / 2);
-    const y = Math.round(CANVAS_H * ZONE_Y_FRAC[category]);
+    const x = Math.round(canvasW / 2 - zone.w / 2);
+    const y = zone.y;
 
     let finalUrl = getAssetUrl(product.thumbnailUrl) ?? product.thumbnailUrl;
     try {
@@ -270,7 +267,7 @@ export default function LookbookPage() {
         productId: product.productId,
         name: product.name,
         thumbnailUrl: finalUrl,
-        x, y, width: w, category,
+        x, y, width: zone.w, height: zone.h, category,
       },
     ]);
   }, []);
@@ -303,23 +300,23 @@ export default function LookbookPage() {
         ? {
             ...item,
             x: Math.max(0, Math.min(canvas.width - item.width, dragState.startItemX + dx)),
-            y: Math.max(0, Math.min(canvas.height - 60, dragState.startItemY + dy)),
+            y: Math.max(0, Math.min(canvas.height - item.height, dragState.startItemY + dy)),
           }
         : item
     ));
   }, [dragState]);
 
-  // Snap to zone center on pointer up
+  // Snap back to zone when released near home position
   const handlePointerUp = useCallback(() => {
     if (dragState) {
       const canvasW = canvasRef.current?.clientWidth ?? 640;
       setCanvasItems(prev => prev.map(item => {
         if (item.id !== dragState.itemId) return item;
-        const zoneY = Math.round(CANVAS_H * ZONE_Y_FRAC[item.category]);
-        const itemCenterY = item.y + (item.width * 1.25) / 2;
-        const distToZone = Math.abs(itemCenterY - (zoneY + (item.width * 1.25) / 2));
-        if (distToZone < 80) {
-          return { ...item, x: Math.round(canvasW / 2 - item.width / 2), y: zoneY };
+        const zone = ZONE_SIZE[item.category];
+        const snapX = Math.round(canvasW / 2 - zone.w / 2);
+        const distToHome = Math.abs(item.y - zone.y);
+        if (distToHome < 70) {
+          return { ...item, x: snapX, y: zone.y };
         }
         return item;
       }));
@@ -344,11 +341,20 @@ export default function LookbookPage() {
   };
 
   const loadOutfit = (outfit: LookbookOutfit) => {
-    setCanvasItems((outfit.items as CanvasItem[]).map(i => ({
-      ...i,
-      category: detectCategory(i.name),
-      id: `${i.productId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    })));
+    const canvasW = canvasRef.current?.clientWidth ?? 640;
+    setCanvasItems((outfit.items as CanvasItem[]).map(i => {
+      const cat = detectCategory(i.name);
+      const zone = ZONE_SIZE[cat];
+      return {
+        ...i,
+        category: cat,
+        width: zone.w,
+        height: zone.h,
+        x: Math.round(canvasW / 2 - zone.w / 2),
+        y: zone.y,
+        id: `${i.productId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      };
+    }));
     setOutfitName(outfit.name);
     setActiveTab("builder");
   };
@@ -706,6 +712,7 @@ export default function LookbookPage() {
                               left: item.x,
                               top: item.y,
                               width: item.width,
+                              height: item.height,
                               cursor: dragState?.itemId === item.id ? "grabbing" : "grab",
                               zIndex: dragState?.itemId === item.id ? 100 : idx + 1,
                               filter: hoveredCanvasItem === item.id || dragState?.itemId === item.id
@@ -718,7 +725,7 @@ export default function LookbookPage() {
                               src={item.thumbnailUrl}
                               alt={item.name}
                               draggable={false}
-                              style={{ width: "100%", display: "block", objectFit: "contain", aspectRatio: "3/4", pointerEvents: "none" }}
+                              style={{ width: "100%", height: "100%", display: "block", objectFit: "contain", pointerEvents: "none" }}
                             />
                             <button
                               onPointerDown={e => e.stopPropagation()}
