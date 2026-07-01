@@ -15,12 +15,43 @@ import {
 } from "@workspace/api-client-react";
 import { getAssetUrl } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, Save, X, CheckCircle, Heart, Plus, RotateCcw } from "lucide-react";
+import { Trash2, Save, X, CheckCircle, Heart, Plus, RotateCcw, RefreshCw } from "lucide-react";
 
 const GOLD = "#B8925A";
 const FONT_DISPLAY = "'Cormorant Garamond', serif";
 const FONT_UI = "'Josefin Sans', sans-serif";
 const CANVAS_BG = "#EDE9E3";
+const CANVAS_H = 500;
+
+const NAME_SUGGESTIONS = [
+  "Weekend Golf", "Club Classic", "Summer Polo Look", "Course Ready",
+  "Tournament Day", "Fairway Style", "Golf Morning", "Club Uniform",
+  "Green Side", "Back Nine", "19th Hole", "The Par Look",
+];
+
+type ItemCategory = "head" | "top" | "bottom" | "shoes";
+
+function detectCategory(name: string): ItemCategory {
+  const n = name.toLowerCase();
+  if (/cap|hat|visor|beanie|headwear/.test(n)) return "head";
+  if (/shoe|sneaker|boot|loafer|sandal/.test(n)) return "shoes";
+  if (/trouser|pant|short|skirt|chino|bottom/.test(n)) return "bottom";
+  return "top";
+}
+
+const ZONE_WIDTH: Record<ItemCategory, number> = {
+  head: 88,
+  top: 182,
+  bottom: 158,
+  shoes: 120,
+};
+
+const ZONE_Y_FRAC: Record<ItemCategory, number> = {
+  head: 0.04,
+  top: 0.175,
+  bottom: 0.505,
+  shoes: 0.80,
+};
 
 type CanvasItem = {
   id: string;
@@ -30,6 +61,7 @@ type CanvasItem = {
   x: number;
   y: number;
   width: number;
+  category: ItemCategory;
 };
 
 type DragState = {
@@ -40,7 +72,82 @@ type DragState = {
   startItemY: number;
 } | null;
 
-// ── Improved background removal ───────────────────────────────────────────────
+type Gender = "men" | "women";
+
+// ── Mannequin SVG silhouette ──────────────────────────────────────────────────
+function MannequinSilhouette({ gender }: { gender: Gender }) {
+  const stroke = "rgba(184,146,90,0.22)";
+  const sw = "1.4";
+
+  return (
+    <svg
+      viewBox="0 0 200 460"
+      style={{
+        position: "absolute",
+        top: "2%",
+        left: "50%",
+        transform: "translateX(-50%)",
+        height: "88%",
+        width: "auto",
+        maxWidth: 220,
+        pointerEvents: "none",
+      }}
+    >
+      <g fill="none" stroke={stroke} strokeWidth={sw} strokeLinejoin="round" strokeLinecap="round">
+        {/* Head */}
+        <ellipse cx="100" cy="34" rx={gender === "women" ? 27 : 29} ry="32" />
+        {/* Neck */}
+        <path d="M87 65 L87 82 L113 82 L113 65" />
+        {/* Shoulders */}
+        <path d={gender === "women"
+          ? "M24 98 Q100 84 176 98"
+          : "M16 100 Q100 84 184 100"
+        } />
+        {/* Left arm */}
+        <path d={gender === "women"
+          ? "M24 98 L14 228 L38 228 L46 122"
+          : "M16 100 L6 232 L34 232 L44 124"
+        } />
+        {/* Right arm */}
+        <path d={gender === "women"
+          ? "M176 98 L186 228 L162 228 L154 122"
+          : "M184 100 L194 232 L166 232 L156 124"
+        } />
+        {/* Torso */}
+        {gender === "women" ? (
+          <path d="M46 122 Q44 190 50 238 Q100 248 150 238 Q156 190 154 122" />
+        ) : (
+          <path d="M44 124 L40 238 L160 238 L156 124" />
+        )}
+        {/* Hips */}
+        {gender === "women" ? (
+          <path d="M50 238 Q28 256 26 278 L174 278 Q172 256 150 238" />
+        ) : (
+          <path d="M40 238 L32 270 L168 270 L160 238" />
+        )}
+        {/* Left leg */}
+        {gender === "women" ? (
+          <path d="M26 278 L20 456 L76 456 L80 278" />
+        ) : (
+          <path d="M32 270 L26 456 L80 456 L84 270" />
+        )}
+        {/* Right leg */}
+        {gender === "women" ? (
+          <path d="M120 278 L124 456 L180 456 L174 278" />
+        ) : (
+          <path d="M116 270 L120 456 L174 456 L168 270" />
+        )}
+      </g>
+      {/* Zone guide lines (very subtle) */}
+      <g stroke="rgba(184,146,90,0.08)" strokeWidth="1" strokeDasharray="4 6">
+        <line x1="0" y1="90" x2="200" y2="90" />
+        <line x1="0" y1="244" x2="200" y2="244" />
+      </g>
+    </svg>
+  );
+}
+
+// ── Background stripping ───────────────────────────────────────────────────────
 async function stripBackground(src: string): Promise<string> {
   const img = new Image();
   img.crossOrigin = "anonymous";
@@ -61,7 +168,6 @@ async function stripBackground(src: string): Promise<string> {
   const w = c.width;
   const h = c.height;
 
-  // Sample border pixels to find background colour
   const sampleIndices: number[] = [];
   for (let x = 0; x < w; x++) {
     sampleIndices.push((0 * w + x) * 4);
@@ -74,38 +180,23 @@ async function stripBackground(src: string): Promise<string> {
 
   let totalR = 0, totalG = 0, totalB = 0;
   for (const idx of sampleIndices) {
-    totalR += p[idx];
-    totalG += p[idx + 1];
-    totalB += p[idx + 2];
+    totalR += p[idx]; totalG += p[idx + 1]; totalB += p[idx + 2];
   }
   const n = sampleIndices.length;
-  const bgR = totalR / n;
-  const bgG = totalG / n;
-  const bgB = totalB / n;
+  const bgR = totalR / n, bgG = totalG / n, bgB = totalB / n;
 
-  // Increased tolerance for better white/near-white BG removal
-  const HARD_TOLERANCE = 55;
-  const SOFT_TOLERANCE = 80;
-
+  const HARD = 55, SOFT = 80;
   for (let i = 0; i < p.length; i += 4) {
-    const dr = Math.abs(p[i] - bgR);
-    const dg = Math.abs(p[i + 1] - bgG);
-    const db = Math.abs(p[i + 2] - bgB);
-    const dist = Math.max(dr, dg, db);
-
-    if (dist < HARD_TOLERANCE) {
-      p[i + 3] = 0;
-    } else if (dist < SOFT_TOLERANCE) {
-      // Soft edge falloff
-      const alpha = ((dist - HARD_TOLERANCE) / (SOFT_TOLERANCE - HARD_TOLERANCE)) * 255;
-      p[i + 3] = Math.round(alpha);
-    }
+    const dist = Math.max(Math.abs(p[i] - bgR), Math.abs(p[i + 1] - bgG), Math.abs(p[i + 2] - bgB));
+    if (dist < HARD) { p[i + 3] = 0; }
+    else if (dist < SOFT) { p[i + 3] = Math.round(((dist - HARD) / (SOFT - HARD)) * 255); }
   }
 
   ctx.putImageData(d, 0, 0);
   return c.toDataURL("image/png");
 }
 
+// ── Page ───────────────────────────────────────────────────────────────────────
 export default function LookbookPage() {
   useEffect(() => { document.title = "Lookbook — Ka.Sha"; }, []);
   const { user } = useUser();
@@ -114,13 +205,14 @@ export default function LookbookPage() {
   const [canvasItems, setCanvasItems] = useState<CanvasItem[]>([]);
   const [dragState, setDragState] = useState<DragState>(null);
   const [outfitName, setOutfitName] = useState("My Outfit");
+  const [nameIdx, setNameIdx] = useState(0);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<"builder" | "saved">("builder");
   const [hoveredCanvasItem, setHoveredCanvasItem] = useState<string | null>(null);
   const [strippingIds, setStrippingIds] = useState<Set<number>>(new Set());
+  const [gender, setGender] = useState<Gender>("men");
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // ── Data ──────────────────────────────────────────────────────────────────
   const { data: savedIds = [], isLoading: savedLoading } = useListLookbookSaved({
     query: { enabled: !!user, queryKey: getListLookbookSavedQueryKey(), staleTime: 60_000 },
   });
@@ -133,7 +225,6 @@ export default function LookbookPage() {
   const createOutfit = useCreateLookbookOutfit();
   const deleteOutfit = useDeleteLookbookOutfit();
 
-  // Saved products = products that are in the user's saved list
   const savedProducts = useMemo(() => {
     const idSet = new Set(savedIds);
     return allProducts.filter(p => idSet.has(p.id)).map(p => ({
@@ -143,11 +234,23 @@ export default function LookbookPage() {
     }));
   }, [savedIds, allProducts]);
 
-  // ── Canvas logic ──────────────────────────────────────────────────────────
+  const cycleName = () => {
+    const next = (nameIdx + 1) % NAME_SUGGESTIONS.length;
+    setNameIdx(next);
+    setOutfitName(NAME_SUGGESTIONS[next]);
+  };
+
+  // ── Zone-based placement ──────────────────────────────────────────────────
   const addToCanvas = useCallback(async (product: { productId: number; name: string; thumbnailUrl: string }) => {
     setStrippingIds(prev => new Set(prev).add(product.productId));
 
-    let finalUrl: string = getAssetUrl(product.thumbnailUrl) ?? product.thumbnailUrl;
+    const category = detectCategory(product.name);
+    const w = ZONE_WIDTH[category];
+    const canvasW = canvasRef.current?.clientWidth ?? 640;
+    const x = Math.round(canvasW / 2 - w / 2);
+    const y = Math.round(CANVAS_H * ZONE_Y_FRAC[category]);
+
+    let finalUrl = getAssetUrl(product.thumbnailUrl) ?? product.thumbnailUrl;
     try {
       finalUrl = await stripBackground(finalUrl);
     } catch {
@@ -160,18 +263,16 @@ export default function LookbookPage() {
       });
     }
 
-    setCanvasItems(prev => {
-      const offset = prev.length * 24;
-      return [...prev, {
+    setCanvasItems(prev => [
+      ...prev.filter(i => i.category !== category),
+      {
         id: `${product.productId}-${Date.now()}`,
         productId: product.productId,
         name: product.name,
         thumbnailUrl: finalUrl,
-        x: Math.min(60 + offset, 280),
-        y: Math.min(24 + offset, 160),
-        width: 190,
-      }];
-    });
+        x, y, width: w, category,
+      },
+    ]);
   }, []);
 
   const removeFromCanvas = useCallback((id: string) => {
@@ -185,7 +286,6 @@ export default function LookbookPage() {
     if (!item) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDragState({ itemId, startMouseX: e.clientX, startMouseY: e.clientY, startItemX: item.x, startItemY: item.y });
-    // Bring to front
     setCanvasItems(prev => {
       const idx = prev.findIndex(i => i.id === itemId);
       if (idx < 0) return prev;
@@ -209,7 +309,23 @@ export default function LookbookPage() {
     ));
   }, [dragState]);
 
-  const handlePointerUp = useCallback(() => setDragState(null), []);
+  // Snap to zone center on pointer up
+  const handlePointerUp = useCallback(() => {
+    if (dragState) {
+      const canvasW = canvasRef.current?.clientWidth ?? 640;
+      setCanvasItems(prev => prev.map(item => {
+        if (item.id !== dragState.itemId) return item;
+        const zoneY = Math.round(CANVAS_H * ZONE_Y_FRAC[item.category]);
+        const itemCenterY = item.y + (item.width * 1.25) / 2;
+        const distToZone = Math.abs(itemCenterY - (zoneY + (item.width * 1.25) / 2));
+        if (distToZone < 80) {
+          return { ...item, x: Math.round(canvasW / 2 - item.width / 2), y: zoneY };
+        }
+        return item;
+      }));
+    }
+    setDragState(null);
+  }, [dragState]);
 
   const handleSave = async () => {
     if (canvasItems.length === 0 || createOutfit.isPending) return;
@@ -229,7 +345,9 @@ export default function LookbookPage() {
 
   const loadOutfit = (outfit: LookbookOutfit) => {
     setCanvasItems((outfit.items as CanvasItem[]).map(i => ({
-      ...i, id: `${i.productId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      ...i,
+      category: detectCategory(i.name),
+      id: `${i.productId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     })));
     setOutfitName(outfit.name);
     setActiveTab("builder");
@@ -239,6 +357,8 @@ export default function LookbookPage() {
     await deleteOutfit.mutateAsync({ id });
     queryClient.invalidateQueries({ queryKey: getListLookbookOutfitsQueryKey() });
   };
+
+  const shortName = (name: string) => name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "").replace(/\s*·\s*/g, " · ");
 
   return (
     <Layout>
@@ -255,16 +375,15 @@ export default function LookbookPage() {
           Curate &nbsp;·&nbsp; Style &nbsp;·&nbsp; Inspire
         </p>
         <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(255,255,255,0.35)", letterSpacing: "0.15em", maxWidth: 500, margin: "0 auto" }}>
-          Tap the ♡ on any product to save it here, then drag pieces onto the canvas to build your perfect outfit.
+          Tap the ♡ on any product to save it here, then click pieces to build your perfect outfit.
         </p>
       </section>
 
-      {/* ── Outfit Planner (signed-in only) ───────────────────────────────────── */}
+      {/* ── Outfit Planner ────────────────────────────────────────────────────── */}
       <Show when="signed-in">
         <section style={{ background: "#F5F2EC", borderBottom: "1px solid rgba(184,146,90,0.2)" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto", padding: "56px 24px" }}>
 
-            {/* Section header */}
             <div style={{ textAlign: "center", marginBottom: 40 }}>
               <p style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.45em", color: GOLD, textTransform: "uppercase", marginBottom: 12 }}>
                 My Wardrobe
@@ -273,7 +392,7 @@ export default function LookbookPage() {
                 Outfit Planner
               </h2>
               <p style={{ fontFamily: FONT_UI, fontSize: 12, color: "rgba(0,0,0,0.42)", letterSpacing: "0.1em" }}>
-                Save your favourite pieces with ♡, then drag them onto the canvas to build looks
+                Save your favourite pieces with ♡, then click them to dress the silhouette
               </p>
             </div>
 
@@ -299,7 +418,6 @@ export default function LookbookPage() {
             {/* ── Builder tab ── */}
             {activeTab === "builder" && (
               <>
-                {/* Empty state: no saved products */}
                 {!savedLoading && savedProducts.length === 0 && (
                   <div style={{
                     textAlign: "center", padding: "72px 24px",
@@ -318,7 +436,7 @@ export default function LookbookPage() {
                     </p>
                     <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.42)", letterSpacing: "0.12em", marginBottom: 28, maxWidth: 400, margin: "0 auto 28px", lineHeight: 1.8 }}>
                       Tap the ♡ icon on any product to save it here.<br />
-                      Then drag your pieces onto the canvas to style your look.
+                      Then dress the silhouette by clicking your pieces.
                     </p>
                     <Link href="/products">
                       <button style={{
@@ -331,7 +449,6 @@ export default function LookbookPage() {
                   </div>
                 )}
 
-                {/* Loading skeleton */}
                 {savedLoading && (
                   <div style={{ height: 320, background: "#fff", border: "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg width="28" height="28" viewBox="0 0 28 28" style={{ animation: "ka-spin 0.9s linear infinite" }}>
@@ -341,106 +458,179 @@ export default function LookbookPage() {
                   </div>
                 )}
 
-                {/* Builder layout */}
                 {!savedLoading && savedProducts.length > 0 && (
                   <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
 
-                    {/* ── Saved Pieces Sidebar ── */}
-                    <div style={{
-                      width: 220, flexShrink: 0, background: "#fff",
-                      border: "1px solid rgba(184,146,90,0.2)",
-                    }}>
-                      {/* Sidebar header */}
-                      <div style={{
-                        padding: "14px 14px 10px",
-                        borderBottom: "1px solid rgba(0,0,0,0.06)",
-                        display: "flex", alignItems: "center", gap: 6,
-                      }}>
-                        <Heart size={12} fill={GOLD} color={GOLD} />
-                        <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.35em", color: GOLD, textTransform: "uppercase" }}>
-                          My Saved Pieces
-                        </p>
-                      </div>
+                    {/* ── Left panel ── */}
+                    <div style={{ width: 220, flexShrink: 0, display: "flex", flexDirection: "column", gap: 12 }}>
 
-                      {/* Items list */}
-                      <div style={{ padding: "10px 10px", display: "flex", flexDirection: "column", gap: 8, maxHeight: 440, overflowY: "auto" }}>
-                        {savedProducts.map(p => {
-                          const isStripping = strippingIds.has(p.productId);
-                          return (
+                      {/* Gender toggle */}
+                      <div style={{
+                        background: "#fff", border: "1px solid rgba(184,146,90,0.2)",
+                        padding: "12px 14px",
+                      }}>
+                        <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.35em", color: "rgba(0,0,0,0.45)", textTransform: "uppercase", marginBottom: 10 }}>
+                          Silhouette
+                        </p>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {(["men", "women"] as Gender[]).map(g => (
                             <button
-                              key={p.productId}
-                              onClick={() => !isStripping && addToCanvas(p)}
-                              disabled={isStripping}
-                              title={isStripping ? "Removing background…" : "Add to canvas"}
+                              key={g}
+                              onClick={() => setGender(g)}
                               style={{
-                                display: "flex", alignItems: "center", gap: 10, padding: "8px",
-                                background: "transparent", border: "1px solid rgba(0,0,0,0.07)",
-                                cursor: isStripping ? "not-allowed" : "pointer",
-                                textAlign: "left", transition: "border-color 0.2s, background 0.2s",
-                                width: "100%", opacity: isStripping ? 0.65 : 1,
-                              }}
-                              onMouseEnter={e => {
-                                if (!isStripping) {
-                                  (e.currentTarget as HTMLElement).style.borderColor = GOLD;
-                                  (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.04)";
-                                }
-                              }}
-                              onMouseLeave={e => {
-                                (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.07)";
-                                (e.currentTarget as HTMLElement).style.background = "transparent";
+                                flex: 1, fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.22em",
+                                textTransform: "uppercase", padding: "7px 0", border: "none",
+                                cursor: "pointer",
+                                background: gender === g ? "#0A0A0A" : "rgba(0,0,0,0.05)",
+                                color: gender === g ? "#fff" : "rgba(0,0,0,0.5)",
+                                transition: "all 0.2s",
                               }}
                             >
-                              {/* Thumbnail */}
-                              <div style={{ position: "relative", width: 48, height: 60, flexShrink: 0 }}>
-                                <img
-                                  src={getAssetUrl(p.thumbnailUrl)}
-                                  alt={p.name}
-                                  style={{
-                                    width: 48, height: 60, objectFit: "contain",
-                                    background: "#F5F2EC", display: "block",
-                                    filter: isStripping ? "grayscale(0.4)" : "none",
-                                    transition: "filter 0.2s",
-                                  }}
-                                />
-                                {isStripping && (
-                                  <div style={{
-                                    position: "absolute", inset: 0,
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                    background: "rgba(245,242,236,0.75)",
-                                  }}>
-                                    <svg width="16" height="16" viewBox="0 0 16 16" style={{ animation: "ka-spin 0.9s linear infinite" }}>
-                                      <circle cx="8" cy="8" r="6" fill="none" stroke={GOLD} strokeWidth="2" strokeDasharray="28" strokeDashoffset="10" strokeLinecap="round" />
-                                    </svg>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div style={{ minWidth: 0, flex: 1 }}>
-                                <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.08em", color: "#0A0A0A", marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.4 }}>
-                                  {p.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}
-                                </p>
-                                {isStripping ? (
-                                  <span style={{ fontFamily: FONT_UI, fontSize: 8, color: GOLD, letterSpacing: "0.08em" }}>Removing BG…</span>
-                                ) : (
-                                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                                    <Plus size={9} color={GOLD} />
-                                    <span style={{ fontFamily: FONT_UI, fontSize: 8, color: GOLD, letterSpacing: "0.15em" }}>ADD TO BOARD</span>
-                                  </div>
-                                )}
-                              </div>
+                              {g === "men" ? "Men" : "Women"}
                             </button>
-                          );
-                        })}
+                          ))}
+                        </div>
                       </div>
 
-                      {/* Browse more link */}
-                      <div style={{ padding: "10px 14px 14px", borderTop: "1px solid rgba(0,0,0,0.05)" }}>
-                        <Link href="/products" style={{ display: "flex", alignItems: "center", gap: 5, textDecoration: "none" }}>
-                          <Heart size={9} color={GOLD} />
-                          <span style={{ fontFamily: FONT_UI, fontSize: 8, letterSpacing: "0.18em", color: GOLD, textTransform: "uppercase" }}>
-                            Save More Pieces
-                          </span>
-                        </Link>
+                      {/* Saved pieces */}
+                      <div style={{
+                        background: "#fff", border: "1px solid rgba(184,146,90,0.2)",
+                        flex: 1,
+                      }}>
+                        <div style={{
+                          padding: "14px 14px 10px",
+                          borderBottom: "1px solid rgba(0,0,0,0.06)",
+                          display: "flex", alignItems: "center", gap: 6,
+                        }}>
+                          <Heart size={12} fill={GOLD} color={GOLD} />
+                          <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.35em", color: GOLD, textTransform: "uppercase" }}>
+                            My Saved Pieces
+                          </p>
+                        </div>
+
+                        <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: 6, maxHeight: 380, overflowY: "auto" }}>
+                          {savedProducts.map(p => {
+                            const isStripping = strippingIds.has(p.productId);
+                            const cat = detectCategory(p.name);
+                            const catLabel: Record<ItemCategory, string> = { head: "Cap", top: "Top", bottom: "Bottom", shoes: "Shoes" };
+                            const isOnCanvas = canvasItems.some(i => i.productId === p.productId);
+
+                            return (
+                              <button
+                                key={p.productId}
+                                onClick={() => !isStripping && addToCanvas(p)}
+                                disabled={isStripping}
+                                title={isStripping ? "Removing background…" : isOnCanvas ? "Replace on canvas" : "Add to canvas"}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: 10, padding: "8px",
+                                  background: isOnCanvas ? "rgba(184,146,90,0.06)" : "transparent",
+                                  border: isOnCanvas ? `1px solid ${GOLD}` : "1px solid rgba(0,0,0,0.07)",
+                                  cursor: isStripping ? "not-allowed" : "pointer",
+                                  textAlign: "left", transition: "border-color 0.2s, background 0.2s",
+                                  width: "100%", opacity: isStripping ? 0.65 : 1,
+                                  position: "relative",
+                                }}
+                                onMouseEnter={e => {
+                                  if (!isStripping && !isOnCanvas) {
+                                    (e.currentTarget as HTMLElement).style.borderColor = GOLD;
+                                    (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.04)";
+                                  }
+                                }}
+                                onMouseLeave={e => {
+                                  if (!isOnCanvas) {
+                                    (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.07)";
+                                    (e.currentTarget as HTMLElement).style.background = "transparent";
+                                  }
+                                }}
+                              >
+                                <div style={{ position: "relative", width: 44, height: 56, flexShrink: 0 }}>
+                                  <img
+                                    src={getAssetUrl(p.thumbnailUrl)}
+                                    alt={p.name}
+                                    style={{
+                                      width: 44, height: 56, objectFit: "contain",
+                                      background: "#F5F2EC", display: "block",
+                                      filter: isStripping ? "grayscale(0.4)" : "none",
+                                    }}
+                                  />
+                                  {isStripping && (
+                                    <div style={{
+                                      position: "absolute", inset: 0, display: "flex",
+                                      alignItems: "center", justifyContent: "center",
+                                      background: "rgba(245,242,236,0.75)",
+                                    }}>
+                                      <svg width="14" height="14" viewBox="0 0 14 14" style={{ animation: "ka-spin 0.9s linear infinite" }}>
+                                        <circle cx="7" cy="7" r="5" fill="none" stroke={GOLD} strokeWidth="2" strokeDasharray="22" strokeDashoffset="8" strokeLinecap="round" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{
+                                    display: "inline-block", fontFamily: FONT_UI, fontSize: 7,
+                                    letterSpacing: "0.18em", textTransform: "uppercase",
+                                    color: GOLD, background: "rgba(184,146,90,0.1)",
+                                    padding: "1px 5px", marginBottom: 4,
+                                  }}>
+                                    {catLabel[cat]}
+                                  </div>
+                                  <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.06em", color: "#0A0A0A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.4 }}>
+                                    {shortName(p.name)}
+                                  </p>
+                                  {isStripping ? (
+                                    <span style={{ fontFamily: FONT_UI, fontSize: 7, color: GOLD, letterSpacing: "0.08em" }}>Removing BG…</span>
+                                  ) : isOnCanvas ? (
+                                    <span style={{ fontFamily: FONT_UI, fontSize: 7, color: GOLD, letterSpacing: "0.12em" }}>✓ ON CANVAS</span>
+                                  ) : (
+                                    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                                      <Plus size={8} color={GOLD} />
+                                      <span style={{ fontFamily: FONT_UI, fontSize: 7, color: GOLD, letterSpacing: "0.15em" }}>ADD TO BOARD</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <div style={{ padding: "10px 14px 14px", borderTop: "1px solid rgba(0,0,0,0.05)" }}>
+                          <Link href="/products" style={{ display: "flex", alignItems: "center", gap: 5, textDecoration: "none" }}>
+                            <Heart size={9} color={GOLD} />
+                            <span style={{ fontFamily: FONT_UI, fontSize: 8, letterSpacing: "0.18em", color: GOLD, textTransform: "uppercase" }}>
+                              Save More Pieces
+                            </span>
+                          </Link>
+                        </div>
+                      </div>
+
+                      {/* Zone guide */}
+                      <div style={{
+                        background: "#fff", border: "1px solid rgba(184,146,90,0.15)",
+                        padding: "12px 14px",
+                      }}>
+                        <p style={{ fontFamily: FONT_UI, fontSize: 8, letterSpacing: "0.25em", color: "rgba(0,0,0,0.38)", textTransform: "uppercase", marginBottom: 8 }}>
+                          Body Zones
+                        </p>
+                        {(["head", "top", "bottom", "shoes"] as ItemCategory[]).map(zone => {
+                          const labels: Record<ItemCategory, string> = { head: "Cap / Hat", top: "Polo / Shirt", bottom: "Trousers", shoes: "Shoes" };
+                          const hasItem = canvasItems.some(i => i.category === zone);
+                          return (
+                            <div key={zone} style={{
+                              display: "flex", alignItems: "center", gap: 6, padding: "4px 0",
+                              borderBottom: "1px solid rgba(0,0,0,0.04)",
+                            }}>
+                              <div style={{
+                                width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                                background: hasItem ? GOLD : "rgba(0,0,0,0.12)",
+                                transition: "background 0.3s",
+                              }} />
+                              <span style={{ fontFamily: FONT_UI, fontSize: 8, letterSpacing: "0.1em", color: hasItem ? "#0A0A0A" : "rgba(0,0,0,0.35)" }}>
+                                {labels[zone]}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -453,38 +643,43 @@ export default function LookbookPage() {
                         onPointerLeave={handlePointerUp}
                         style={{
                           position: "relative",
-                          height: 480,
+                          height: CANVAS_H,
                           background: CANVAS_BG,
                           border: "1px solid rgba(184,146,90,0.22)",
                           overflow: "hidden",
                           userSelect: "none",
                         }}
                       >
-                        {/* Empty canvas state */}
+                        {/* Subtle grid lines */}
+                        <svg
+                          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+                          preserveAspectRatio="none"
+                        >
+                          <defs>
+                            <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+                              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(184,146,90,0.06)" strokeWidth="0.5" />
+                            </pattern>
+                          </defs>
+                          <rect width="100%" height="100%" fill="url(#grid)" />
+                        </svg>
+
+                        {/* Mannequin silhouette */}
+                        <MannequinSilhouette gender={gender} />
+
+                        {/* Empty canvas hint */}
                         {canvasItems.length === 0 && strippingIds.size === 0 && (
                           <div style={{
-                            position: "absolute", inset: 0, display: "flex",
-                            flexDirection: "column", alignItems: "center", justifyContent: "center",
-                            pointerEvents: "none",
+                            position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)",
+                            pointerEvents: "none", textAlign: "center",
                           }}>
-                            <div style={{
-                              width: 80, height: 80, borderRadius: "50%",
-                              background: "rgba(184,146,90,0.1)",
-                              display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18,
-                            }}>
-                              <Plus size={28} color="rgba(184,146,90,0.45)" />
-                            </div>
-                            <p style={{ fontFamily: FONT_DISPLAY, fontSize: 20, color: "rgba(0,0,0,0.22)", marginBottom: 6 }}>
-                              Your outfit canvas
-                            </p>
-                            <p style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.15em", color: "rgba(0,0,0,0.22)", textAlign: "center" }}>
-                              Click any piece on the left to add it here
+                            <p style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.18em", color: "rgba(0,0,0,0.28)", textTransform: "uppercase" }}>
+                              Click a piece to dress the silhouette
                             </p>
                           </div>
                         )}
 
-                        {/* Loading indicator when stripping */}
-                        {canvasItems.length === 0 && strippingIds.size > 0 && (
+                        {/* Loading indicator */}
+                        {strippingIds.size > 0 && canvasItems.length === 0 && (
                           <div style={{
                             position: "absolute", inset: 0, display: "flex",
                             flexDirection: "column", alignItems: "center", justifyContent: "center",
@@ -514,8 +709,8 @@ export default function LookbookPage() {
                               cursor: dragState?.itemId === item.id ? "grabbing" : "grab",
                               zIndex: dragState?.itemId === item.id ? 100 : idx + 1,
                               filter: hoveredCanvasItem === item.id || dragState?.itemId === item.id
-                                ? "drop-shadow(0 12px 28px rgba(0,0,0,0.22))"
-                                : "drop-shadow(0 4px 12px rgba(0,0,0,0.10))",
+                                ? "drop-shadow(0 14px 28px rgba(0,0,0,0.25))"
+                                : "drop-shadow(0 4px 14px rgba(0,0,0,0.12))",
                               transition: dragState?.itemId === item.id ? "none" : "filter 0.2s",
                             }}
                           >
@@ -523,13 +718,8 @@ export default function LookbookPage() {
                               src={item.thumbnailUrl}
                               alt={item.name}
                               draggable={false}
-                              style={{
-                                width: "100%", display: "block",
-                                objectFit: "contain", aspectRatio: "3/4",
-                                pointerEvents: "none",
-                              }}
+                              style={{ width: "100%", display: "block", objectFit: "contain", aspectRatio: "3/4", pointerEvents: "none" }}
                             />
-                            {/* Hover: remove button */}
                             <button
                               onPointerDown={e => e.stopPropagation()}
                               onClick={() => removeFromCanvas(item.id)}
@@ -544,17 +734,15 @@ export default function LookbookPage() {
                             >
                               <X size={11} color="#fff" />
                             </button>
-                            {/* Item name label on hover */}
                             <div style={{
                               position: "absolute", bottom: 0, left: 0, right: 0,
                               background: "rgba(255,255,255,0.92)", backdropFilter: "blur(4px)",
                               padding: "4px 7px",
                               opacity: hoveredCanvasItem === item.id || dragState?.itemId === item.id ? 1 : 0,
-                              transition: "opacity 0.15s",
-                              pointerEvents: "none",
+                              transition: "opacity 0.15s", pointerEvents: "none",
                             }}>
                               <span style={{ fontFamily: FONT_UI, fontSize: 8, letterSpacing: "0.08em", color: "#0A0A0A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
-                                {item.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}
+                                {shortName(item.name)}
                               </span>
                             </div>
                           </div>
@@ -563,31 +751,46 @@ export default function LookbookPage() {
 
                       {/* Save controls */}
                       <div style={{
-                        display: "flex", gap: 12, alignItems: "center",
-                        background: "#fff", border: "1px solid rgba(184,146,90,0.2)", padding: "14px 16px",
+                        display: "flex", gap: 10, alignItems: "center",
+                        background: "#fff", border: "1px solid rgba(184,146,90,0.2)", padding: "12px 14px",
                       }}>
-                        <input
-                          value={outfitName}
-                          onChange={e => setOutfitName(e.target.value)}
-                          placeholder="Name your look…"
-                          style={{
-                            flex: 1, fontFamily: FONT_UI, fontSize: 12, letterSpacing: "0.1em",
-                            border: "1px solid rgba(0,0,0,0.1)", padding: "9px 12px",
-                            outline: "none", background: "#FAFAF7", color: "#0A0A0A",
-                          }}
-                        />
+                        <div style={{ flex: 1, position: "relative" }}>
+                          <input
+                            value={outfitName}
+                            onChange={e => setOutfitName(e.target.value)}
+                            placeholder="Name your look…"
+                            style={{
+                              width: "100%", fontFamily: FONT_UI, fontSize: 12, letterSpacing: "0.1em",
+                              border: "1px solid rgba(0,0,0,0.1)", padding: "9px 38px 9px 12px",
+                              outline: "none", background: "#FAFAF7", color: "#0A0A0A",
+                              boxSizing: "border-box",
+                            }}
+                          />
+                          <button
+                            onClick={cycleName}
+                            title="Suggest a name"
+                            style={{
+                              position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
+                              background: "transparent", border: "none", cursor: "pointer", padding: 4,
+                              display: "flex", alignItems: "center",
+                            }}
+                          >
+                            <RefreshCw size={13} color={GOLD} />
+                          </button>
+                        </div>
                         <button
                           onClick={() => setCanvasItems([])}
                           disabled={canvasItems.length === 0}
                           style={{
-                            display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_UI, fontSize: 10,
-                            letterSpacing: "0.2em", textTransform: "uppercase", padding: "10px 16px",
+                            display: "flex", alignItems: "center", gap: 5, fontFamily: FONT_UI, fontSize: 10,
+                            letterSpacing: "0.2em", textTransform: "uppercase", padding: "10px 14px",
                             border: "1px solid rgba(0,0,0,0.12)", background: "transparent",
                             cursor: canvasItems.length === 0 ? "not-allowed" : "pointer",
                             color: canvasItems.length === 0 ? "rgba(0,0,0,0.25)" : "rgba(0,0,0,0.6)",
+                            flexShrink: 0,
                           }}
                         >
-                          <RotateCcw size={13} /> Clear
+                          <RotateCcw size={12} /> Clear
                         </button>
                         <button
                           onClick={handleSave}
@@ -598,12 +801,10 @@ export default function LookbookPage() {
                             background: canvasItems.length === 0 ? "rgba(0,0,0,0.15)" : saveSuccess ? "#2D7D46" : "#0A0A0A",
                             color: "#fff", border: "none",
                             cursor: canvasItems.length === 0 ? "not-allowed" : "pointer",
-                            transition: "background 0.3s",
+                            transition: "background 0.3s", flexShrink: 0,
                           }}
                         >
-                          {saveSuccess
-                            ? <><CheckCircle size={13} /> Saved!</>
-                            : <><Save size={13} /> Save Look</>}
+                          {saveSuccess ? <><CheckCircle size={13} /> Saved!</> : <><Save size={13} /> Save Look</>}
                         </button>
                       </div>
                     </div>
@@ -623,9 +824,7 @@ export default function LookbookPage() {
                   </div>
                 ) : savedOutfits.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "60px 24px", background: "#fff", border: "1px dashed rgba(184,146,90,0.35)" }}>
-                    <p style={{ fontFamily: FONT_DISPLAY, fontSize: 22, color: "rgba(0,0,0,0.4)", marginBottom: 8 }}>
-                      No saved looks yet
-                    </p>
+                    <p style={{ fontFamily: FONT_DISPLAY, fontSize: 22, color: "rgba(0,0,0,0.4)", marginBottom: 8 }}>No saved looks yet</p>
                     <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.35)", letterSpacing: "0.12em", marginBottom: 20 }}>
                       Build an outfit on the canvas and save it to see it here
                     </p>
@@ -639,35 +838,51 @@ export default function LookbookPage() {
                 ) : (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 20 }}>
                     {savedOutfits.map(outfit => (
-                      <div
-                        key={outfit.id}
-                        style={{ background: "#fff", border: "1px solid rgba(184,146,90,0.18)", overflow: "hidden" }}
-                      >
-                        {/* Outfit thumbnail preview */}
-                        <div style={{ position: "relative", height: 180, background: CANVAS_BG, overflow: "hidden" }}>
-                          {(outfit.items as CanvasItem[]).slice(0, 4).map((item, i) => (
-                            <img
-                              key={i}
-                              src={getAssetUrl(item.thumbnailUrl)}
-                              alt={item.name}
-                              style={{
-                                position: "absolute",
-                                left: `${10 + i * 20}%`,
-                                top: "8%",
-                                width: "42%",
-                                objectFit: "contain",
-                                zIndex: i + 1,
-                                filter: "drop-shadow(0 6px 12px rgba(0,0,0,0.14))",
-                              }}
-                            />
-                          ))}
+                      <div key={outfit.id} style={{ background: "#fff", border: "1px solid rgba(184,146,90,0.18)", overflow: "hidden" }}>
+                        <div style={{ position: "relative", height: 200, background: CANVAS_BG, overflow: "hidden" }}>
+                          {/* Mini mannequin in saved look card */}
+                          <svg viewBox="0 0 200 460" style={{ position: "absolute", top: "2%", left: "50%", transform: "translateX(-50%)", height: "88%", width: "auto", opacity: 0.7 }}>
+                            <g fill="none" stroke="rgba(184,146,90,0.25)" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round">
+                              <ellipse cx="100" cy="34" rx="29" ry="32" />
+                              <path d="M87 65 L87 82 L113 82 L113 65" />
+                              <path d="M16 100 Q100 84 184 100" />
+                              <path d="M16 100 L6 232 L34 232 L44 124" />
+                              <path d="M184 100 L194 232 L166 232 L156 124" />
+                              <path d="M44 124 L40 238 L160 238 L156 124" />
+                              <path d="M40 238 L32 270 L168 270 L160 238" />
+                              <path d="M32 270 L26 456 L80 456 L84 270" />
+                              <path d="M116 270 L120 456 L174 456 L168 270" />
+                            </g>
+                          </svg>
+                          {(outfit.items as CanvasItem[]).slice(0, 4).map((item, i) => {
+                            const cat = detectCategory(item.name);
+                            const scaleW: Record<ItemCategory, string> = { head: "22%", top: "40%", bottom: "36%", shoes: "28%" };
+                            const posY: Record<ItemCategory, string> = { head: "2%", top: "16%", bottom: "50%", shoes: "80%" };
+                            return (
+                              <img
+                                key={i}
+                                src={getAssetUrl(item.thumbnailUrl)}
+                                alt={item.name}
+                                style={{
+                                  position: "absolute",
+                                  width: scaleW[cat],
+                                  top: posY[cat],
+                                  left: "50%",
+                                  transform: "translateX(-50%)",
+                                  objectFit: "contain",
+                                  zIndex: i + 1,
+                                  filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.14))",
+                                }}
+                              />
+                            );
+                          })}
                           <button
                             style={{
                               position: "absolute", top: 8, right: 8,
                               background: "rgba(255,255,255,0.9)", borderRadius: "50%",
                               width: 28, height: 28, border: "none",
                               display: "flex", alignItems: "center", justifyContent: "center",
-                              cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.10)",
+                              cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.10)", zIndex: 10,
                             }}
                             onClick={() => handleDeleteOutfit(outfit.id)}
                             title="Delete outfit"
@@ -681,15 +896,15 @@ export default function LookbookPage() {
                             {outfit.name}
                           </p>
                           <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.12em", color: "rgba(0,0,0,0.38)", marginBottom: 12 }}>
-                            {(outfit.items as CanvasItem[]).length} piece{(outfit.items as CanvasItem[]).length !== 1 ? "s" : ""}&nbsp;·&nbsp;{new Date(outfit.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                            {(outfit.items as CanvasItem[]).length} piece{(outfit.items as CanvasItem[]).length !== 1 ? "s" : ""}&nbsp;·&nbsp;
+                            {new Date(outfit.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                           </p>
                           <button
                             onClick={() => loadOutfit(outfit)}
                             style={{
                               fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase",
                               background: "transparent", border: `1px solid ${GOLD}`, color: GOLD,
-                              padding: "7px 16px", cursor: "pointer", width: "100%",
-                              transition: "background 0.2s, color 0.2s",
+                              padding: "7px 16px", cursor: "pointer", width: "100%", transition: "background 0.2s, color 0.2s",
                             }}
                             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = GOLD; (e.currentTarget as HTMLElement).style.color = "#fff"; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = GOLD; }}
@@ -708,7 +923,7 @@ export default function LookbookPage() {
         </section>
       </Show>
 
-      {/* ── Sign-in prompt for guests ──────────────────────────────────────────── */}
+      {/* ── Sign-in prompt ─────────────────────────────────────────────────────── */}
       <Show when="signed-out">
         <section style={{ background: "#F5F2EC", padding: "64px 24px", textAlign: "center", borderBottom: "1px solid rgba(184,146,90,0.2)" }}>
           <p style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.35em", color: GOLD, textTransform: "uppercase", marginBottom: 14 }}>
