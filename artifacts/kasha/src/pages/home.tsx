@@ -630,112 +630,126 @@ export default function Home() {
       <div style={{ height: 1, background: "linear-gradient(to right, transparent, rgba(184,146,90,0.22), transparent)", margin: `0 ${PAD}` }} />
 
       {/* ══════════════════════════════════════════════════════════════════════
-          CUSTOM STUDIO — hidden when SHOW_CUSTOMIZATION is false
+          LOOKBOOK FEATURE BANNER
       ══════════════════════════════════════════════════════════════════════ */}
-      {SHOW_CUSTOMIZATION && <section style={{ background: BG_PAGE, padding: `20px ${PAD}` }}>
+      <section style={{ background: BG_PAGE, padding: `20px ${PAD}` }}>
         <div style={{
-          maxWidth:      "100%",
-          margin:        "0 auto",
-          background:    BG_DARK,
-          borderLeft:    `3px solid ${GOLD}`,
-          borderRadius:  10,
-          padding:       "20px 26px",
-          display:       "flex",
-          alignItems:    "center",
-          justifyContent:"space-between",
-          gap:           20,
-          flexWrap:      "wrap",
+          borderRadius: 10,
+          overflow: "hidden",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          minHeight: 220,
         }}>
-          {/* Left block */}
-          <div style={{ flex: 1, minWidth: 240 }}>
-            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.28em", color: GOLD, textTransform: "uppercase", marginBottom: 8 }}>
-              Custom Studio
+          {/* Left — warm cream copy panel */}
+          <div style={{
+            background: "linear-gradient(135deg, #EDE8DF 0%, #E4DDD3 100%)",
+            padding: "clamp(24px,4vw,44px) clamp(24px,4vw,48px)",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          }}>
+            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.34em", color: GOLD, textTransform: "uppercase", marginBottom: 10 }}>
+              Your Style Journal
             </div>
-            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(15px,1.6vw,19px)", fontWeight: 500, color: "#fff", lineHeight: 1.35, marginBottom: 4 }}>
-              Choose your colour, print, pattern, size<br />or upload your logo.
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(22px,2.4vw,34px)", fontWeight: 500, color: "#1a1f2e", lineHeight: 1.18, marginBottom: 12 }}>
+              Build Your<br />Perfect Outfit
             </div>
-            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 13, letterSpacing: "0.1em", color: "rgba(255,255,255,0.38)", textTransform: "uppercase", marginBottom: 14 }}>
-              Your game, your t-shirt.
+            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, color: "rgba(20,28,60,0.58)", letterSpacing: "0.04em", lineHeight: 1.75, marginBottom: 24, maxWidth: 340 }}>
+              Mix, match and save pieces from our collection. Curate a complete look — tops, bottoms and accessories — then revisit or share it any time.
             </div>
-            {/* Interactive toggle chips */}
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {CHIPS.map((chip) => {
-                const on = chips.includes(chip);
-                return (
-                  <button
-                    key={chip}
-                    onClick={() => toggleChip(chip)}
-                    style={{
-                      fontFamily:    "'Josefin Sans', sans-serif",
-                      fontSize:      11,
-                      letterSpacing: "0.1em",
-                      padding:       "5px 12px",
-                      borderRadius:  3,
-                      border:        `0.5px solid ${on ? GOLD : "rgba(184,146,90,0.35)"}`,
-                      background:    on ? GOLD : "transparent",
-                      color:         on ? "#fff" : "rgba(255,255,255,0.55)",
-                      textTransform: "uppercase",
-                      cursor:        "pointer",
-                      transition:    "all 0.2s ease",
-                    }}
-                  >
-                    {chip}
-                  </button>
-                );
-              })}
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+              <Link
+                href="/lookbook"
+                style={{
+                  fontFamily: "'Josefin Sans', sans-serif",
+                  fontSize: 11, letterSpacing: "0.2em",
+                  textTransform: "uppercase",
+                  background: GOLD,
+                  color: "#fff",
+                  padding: "12px 26px",
+                  borderRadius: 3,
+                  textDecoration: "none",
+                  fontWeight: 600,
+                  transition: "background 0.2s",
+                }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = GOLD_LIGHT)}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = GOLD)}
+              >
+                Open Lookbook →
+              </Link>
+              <Link
+                href="/products"
+                style={{
+                  fontFamily: "'Josefin Sans', sans-serif",
+                  fontSize: 11, letterSpacing: "0.16em",
+                  textTransform: "uppercase",
+                  color: "rgba(20,28,60,0.5)",
+                  textDecoration: "none",
+                  borderBottom: "0.5px solid rgba(20,28,60,0.25)",
+                  paddingBottom: 1,
+                }}
+              >
+                Browse collection →
+              </Link>
             </div>
           </div>
 
-          {/* Right CTAs */}
-          <div className="cs-cta" style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start", flexShrink: 0 }}>
-            <button
-              onClick={() => setCustomizeModalOpen(true)}
-              className="cs-start-btn"
-              style={{
-                background:    GOLD,
-                color:         "#fff",
-                fontFamily:    "'Josefin Sans', sans-serif",
-                fontSize:      12,
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                padding:       "13px 24px",
-                whiteSpace:    "nowrap",
-                border:        "none",
-                cursor:        "pointer",
-                transition:    "background 0.2s",
-              }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = GOLD_LIGHT)}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = GOLD)}
-            >
-              Start designing →
-            </button>
-            <Link
-              href="/connect"
-              style={{
-                fontFamily:    "'Josefin Sans', sans-serif",
-                fontSize:      12,
-                letterSpacing: "0.14em",
-                color:         "rgba(255,255,255,0.3)",
-                textTransform: "uppercase",
-                borderBottom:  "0.5px solid rgba(255,255,255,0.14)",
-                paddingBottom: 1,
-                whiteSpace:    "nowrap",
-                transition:    "color 0.2s",
-              }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.65)")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.3)")}
-            >
-              Bulk & corporate pricing →
-            </Link>
+          {/* Right — dark navy decorative panel */}
+          <div style={{
+            background: BG_DARK,
+            padding: "clamp(24px,4vw,44px) clamp(24px,4vw,48px)",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            gap: 0,
+            position: "relative",
+            overflow: "hidden",
+          }}>
+            {/* Watermark */}
+            <div style={{
+              position: "absolute", bottom: -32, right: -8,
+              fontFamily: "'Cormorant Garamond', serif", fontSize: 220,
+              fontWeight: 300, color: GOLD, opacity: 0.05, lineHeight: 1,
+              userSelect: "none", pointerEvents: "none",
+            }}>L</div>
+
+            {/* Section label */}
+            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 9, letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", marginBottom: 20, position: "relative", zIndex: 1 }}>
+              Saved Outfits
+            </div>
+
+            {/* Simulated saved-item rows */}
+            {[
+              { icon: "♥", label: "Performance Polo" },
+              { icon: "♥", label: "Fairway Trouser" },
+              { icon: "♥", label: "Mid-Layer Vest" },
+            ].map((item, i) => (
+              <div key={item.label} style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "10px 0",
+                borderBottom: "0.5px solid rgba(255,255,255,0.06)",
+                opacity: 1 - i * 0.22,
+                position: "relative", zIndex: 1,
+              }}>
+                <span style={{ color: GOLD, fontSize: 13, lineHeight: 1 }}>{item.icon}</span>
+                <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.65)", textTransform: "uppercase" }}>{item.label}</span>
+              </div>
+            ))}
+
+            {/* Bottom prompt */}
+            <div style={{ marginTop: 22, position: "relative", zIndex: 1 }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: "rgba(255,255,255,0.4)", fontStyle: "italic", lineHeight: 1.5 }}>
+                "Heart any product to start<br />building your look."
+              </div>
+            </div>
           </div>
         </div>
-      </section>}
-      <style>{`
-        @media (max-width: 600px) {
-          .cs-cta { width: 100% !important; flex-shrink: 1 !important; }
-          .cs-start-btn { width: 100% !important; text-align: center !important; }
-        }
-      `}</style>
+        <style>{`
+          @media (max-width: 640px) {
+            .lb-split { grid-template-columns: 1fr !important; }
+          }
+        `}</style>
+      </section>
 
       {/* Gold rule divider */}
       <div style={{ height: 1, background: "linear-gradient(to right, transparent, rgba(184,146,90,0.18), transparent)", margin: `0 ${PAD}` }} />
