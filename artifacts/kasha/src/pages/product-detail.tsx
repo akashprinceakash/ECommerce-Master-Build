@@ -557,8 +557,9 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Personalise — enabled for Men's T-Shirts/Polos only; disabled for women and all bottoms until their 3D studio is ready */}
+            {/* Personalise — enabled for Men's T-Shirts/Polos only; disabled for women, all bottoms, and Q Club products */}
             {SHOW_CUSTOMIZATION &&
+             product?.category !== "q_club" &&
              (product?.gender || "").toLowerCase() !== "women" &&
              !["trouser","pant","skort","skirt","short"].some(k=>(product?.category||"").toLowerCase().includes(k)) && (
               <button
