@@ -9,3 +9,4 @@ export * from "./sku-assets";
 export * from "./lookbook";
 export * from "./contact";
 export * from "./club-orders";
+export * from "./coupons";

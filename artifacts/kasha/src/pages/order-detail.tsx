@@ -127,6 +127,8 @@ export default function OrderDetailPage() {
   const isCompleted = order.status !== "pending" && order.status !== "cancelled";
   const itemsTotal = order.items.reduce((s, it) => s + it.priceInPaise * it.quantity, 0);
   const shippingCharge = (order as any).shippingChargeInPaise ?? 0;
+  const discountInPaise = (order as any).discountInPaise ?? 0;
+  const couponCode = (order as any).couponCode as string | null;
   const totalGst = order.items.reduce((s, it) => s + calcGst(it.priceInPaise, it.quantity), 0);
   const subtotalExclGst = itemsTotal - totalGst;
   const events = order.events ?? [];
@@ -274,6 +276,15 @@ export default function OrderDetailPage() {
                   <span>GST (5% / 18% incl.)</span>
                   <span>{formatPrice(totalGst)}</span>
                 </div>
+                {discountInPaise > 0 && (
+                  <div className="flex justify-between text-emerald-600">
+                    <span className="flex items-center gap-1">
+                      {couponCode && <span className="font-mono text-xs font-semibold">{couponCode}</span>}
+                      {!couponCode && "Discount"}
+                    </span>
+                    <span>−{formatPrice(discountInPaise)}</span>
+                  </div>
+                )}
                 {shippingCharge > 0 && (
                   <div className="flex justify-between text-muted-foreground">
                     <span>Shipping</span>

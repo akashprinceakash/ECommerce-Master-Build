@@ -5,11 +5,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Plus, Pencil, Trash2, Upload, X, Check,
-  ShieldCheck, Package, Users, Eye, ArrowLeft, BarChart3, ShoppingBag, UserCog, Download, ImageIcon, Mail,
+  ShieldCheck, Package, Users, Eye, ArrowLeft, BarChart3, ShoppingBag, UserCog, Download, ImageIcon, Mail, Tag,
 } from "lucide-react";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { AdminOrders } from "@/components/admin/AdminOrders";
 import { AdminUsers } from "@/components/admin/AdminUsers";
+import { AdminCoupons } from "@/components/admin/AdminCoupons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/format";
@@ -524,7 +525,7 @@ export default function AdminPage() {
   const modelFileRef = useRef<HTMLInputElement>(null);
   const thumbFileRef = useRef<HTMLInputElement>(null);
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "orders" | "users" | "designs" | "site" | "skuassets" | "enquiries">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "orders" | "users" | "designs" | "site" | "skuassets" | "enquiries" | "coupons">("dashboard");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
@@ -853,6 +854,7 @@ export default function AdminPage() {
             { id: "site", label: "Site", icon: ImageIcon, count: 0 },
             { id: "skuassets", label: "SKU Assets", icon: Upload, count: skuAssets.length },
             { id: "enquiries", label: "Enquiries", icon: Mail, count: enquiries.length },
+            { id: "coupons", label: "Coupons", icon: Tag, count: 0 },
           ].map(tab => (
             <button
               key={tab.id}
@@ -878,6 +880,7 @@ export default function AdminPage() {
         {activeTab === "dashboard" && <AdminDashboard />}
         {activeTab === "orders" && <AdminOrders />}
         {activeTab === "users" && <AdminUsers />}
+        {activeTab === "coupons" && <AdminCoupons />}
 
         {activeTab === "products" && (
           <div>

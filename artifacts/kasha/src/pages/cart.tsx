@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import {
   useGetCart,
@@ -7,13 +8,57 @@ import {
 } from "@workspace/api-client-react";
 import { formatPrice } from "@/lib/format";
 import { Link } from "wouter";
-import { Minus, Plus, Trash2, ArrowRight, ChevronRight, Lock, ShoppingBag } from "lucide-react";
-import { getAssetUrl } from "@/lib/api";
+import { Minus, Plus, Trash2, ArrowRight, Lock, ShoppingBag, Tag, X, Loader2, ChevronRight } from "lucide-react";
+import { getAssetUrl, getApiUrl } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@clerk/react";
+
+const COUPON_KEY = "kasha_applied_coupon";
 
 export default function CartPage() {
   const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountInPaise: number } | null>(() => {
+    try { return JSON.parse(sessionStorage.getItem(COUPON_KEY) ?? "null"); } catch { return null; }
+  });
+
+  async function applyPromo() {
+    if (!promoInput.trim()) return;
+    setPromoLoading(true);
+    setPromoError("");
+    try {
+      const token = await getToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`${getApiUrl()}/api/coupons/validate`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ code: promoInput, cartTotal: cart?.totalInPaise ?? 0, productIds: cart?.items.map(i => i.productId) ?? [] }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        const coupon = { code: data.couponCode as string, discountInPaise: data.discountInPaise as number };
+        sessionStorage.setItem(COUPON_KEY, JSON.stringify(coupon));
+        setAppliedCoupon(coupon);
+        setPromoOpen(false);
+        setPromoInput("");
+      } else {
+        setPromoError(data.message || "Invalid coupon code");
+      }
+    } catch { setPromoError("Failed to apply coupon. Please try again."); }
+    finally { setPromoLoading(false); }
+  }
+
+  function removePromo() {
+    sessionStorage.removeItem(COUPON_KEY);
+    setAppliedCoupon(null);
+  }
 
   const { data: cart, isLoading } = useGetCart({
     query: {
@@ -155,9 +200,47 @@ export default function CartPage() {
 
               {/* Promo Code */}
               <div className="pt-2">
-                <button className="text-[12px] font-semibold text-gray-500 hover:text-black underline underline-offset-2 transition-colors">
-                  + Enter a promo code
-                </button>
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <Tag className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-[12px] font-semibold text-emerald-700 font-mono tracking-wider">{appliedCoupon.code}</span>
+                      <span className="text-[11px] text-emerald-600">−{formatPrice(appliedCoupon.discountInPaise)}</span>
+                    </div>
+                    <button onClick={removePromo} className="text-gray-400 hover:text-red-500 transition-colors">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : promoOpen ? (
+                  <div className="space-y-1.5">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={promoInput}
+                        onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoError(""); }}
+                        onKeyDown={e => e.key === "Enter" && applyPromo()}
+                        placeholder="Enter promo code"
+                        className="flex-1 px-3 py-2 border border-gray-300 text-[12px] font-mono uppercase focus:outline-none focus:border-black"
+                        autoFocus
+                      />
+                      <button
+                        onClick={applyPromo}
+                        disabled={promoLoading || !promoInput.trim()}
+                        className="px-4 py-2 bg-black text-white text-[11px] font-bold tracking-widest disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {promoLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "APPLY"}
+                      </button>
+                      <button onClick={() => { setPromoOpen(false); setPromoError(""); setPromoInput(""); }} className="text-gray-400 hover:text-gray-600">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {promoError && <p className="text-[11px] text-red-500">{promoError}</p>}
+                  </div>
+                ) : (
+                  <button onClick={() => setPromoOpen(true)} className="flex items-center gap-1.5 text-[12px] font-semibold text-gray-500 hover:text-black underline underline-offset-2 transition-colors">
+                    <Tag className="w-3.5 h-3.5" /> + Enter a promo code
+                  </button>
+                )}
               </div>
             </div>
 
@@ -171,6 +254,12 @@ export default function CartPage() {
                     <span className="text-gray-500">Subtotal ({cart?.itemCount} items)</span>
                     <span className="font-semibold">{formatPrice(cart?.totalInPaise || 0)}</span>
                   </div>
+                  {appliedCoupon && (
+                    <div className="flex justify-between text-emerald-600">
+                      <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> {appliedCoupon.code}</span>
+                      <span className="font-semibold">−{formatPrice(appliedCoupon.discountInPaise)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-500">Shipping</span>
                     <span className="text-gray-500">Calculated at checkout</span>
@@ -183,7 +272,7 @@ export default function CartPage() {
 
                 <div className="flex justify-between items-center mb-6">
                   <span className="font-black text-black">ESTIMATED TOTAL</span>
-                  <span className="font-black text-xl text-black">{formatPrice(cart?.totalInPaise || 0)}</span>
+                  <span className="font-black text-xl text-black">{formatPrice((cart?.totalInPaise || 0) - (appliedCoupon?.discountInPaise ?? 0))}</span>
                 </div>
 
                 <Link href="/checkout">

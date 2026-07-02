@@ -14,10 +14,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
-import { Loader2, ArrowLeft, Truck, X, MapPin } from "lucide-react";
+import { Loader2, ArrowLeft, Truck, X, MapPin, Tag } from "lucide-react";
 import { getApiUrl, getAssetUrl } from "@/lib/api";
 import { useAuth } from "@clerk/react";
+
 import { useCart } from "@/contexts/CartContext";
+
+const COUPON_KEY = "kasha_applied_coupon";
 
 declare global { interface Window { Razorpay?: any } }
 
@@ -95,6 +98,14 @@ export default function CheckoutPage() {
 
   // Must be declared before the rate-fetch effect so it can be a dependency
   const [paymentMethod, setPaymentMethod] = useState<"online" | "cod">("online");
+
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountInPaise: number } | null>(() => {
+    try { return JSON.parse(sessionStorage.getItem(COUPON_KEY) ?? "null"); } catch { return null; }
+  });
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState("");
 
   // ── Shipping rate fetch ───────────────────────────────────────────────
   const [shippingRate, setShippingRate] = useState<ShippingRate | null>(null);
@@ -277,6 +288,38 @@ export default function CheckoutPage() {
     return () => clearTimeout(t);
   }, [paymentResult, setLocation]);
 
+  async function applyPromo() {
+    if (!promoInput.trim()) return;
+    setPromoLoading(true);
+    setPromoError("");
+    try {
+      const token = await getToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`${getApiUrl()}/api/coupons/validate`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ code: promoInput, cartTotal: cart?.totalInPaise ?? 0, productIds: cart?.items.map(i => i.productId) ?? [] }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        const coupon = { code: data.couponCode as string, discountInPaise: data.discountInPaise as number };
+        sessionStorage.setItem(COUPON_KEY, JSON.stringify(coupon));
+        setAppliedCoupon(coupon);
+        setPromoOpen(false);
+        setPromoInput("");
+      } else {
+        setPromoError(data.message || "Invalid coupon code");
+      }
+    } catch { setPromoError("Failed to apply coupon. Please try again."); }
+    finally { setPromoLoading(false); }
+  }
+
+  function removePromo() {
+    sessionStorage.removeItem(COUPON_KEY);
+    setAppliedCoupon(null);
+  }
+
   async function authFetch(path: string, opts?: RequestInit) {
     const token = await getToken();
     const headers: Record<string, string> = { "Content-Type": "application/json", ...(opts?.headers as any) };
@@ -309,9 +352,10 @@ export default function CheckoutPage() {
       try {
         const order = await authFetch("/api/payment/cod-order", {
           method: "POST",
-          body: JSON.stringify({ ...formData, shippingChargeInPaise: shippingRate.chargeInPaise }),
+          body: JSON.stringify({ ...formData, shippingChargeInPaise: shippingRate.chargeInPaise, couponCode: appliedCoupon?.code }),
         });
         queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+        try { sessionStorage.removeItem(COUPON_KEY); } catch {}
         setPaymentResult({ type: "success", orderId: order.id });
       } catch (e: any) {
         toast({ title: "Order Failed", description: e?.message ?? "There was an error placing your order.", variant: "destructive" });
@@ -332,7 +376,7 @@ export default function CheckoutPage() {
     try {
       const { orderId, amount, currency, keyId } = await authFetch("/api/payment/order", {
         method: "POST",
-        body: JSON.stringify({ ...formData, shippingChargeInPaise: shippingRate.chargeInPaise }),
+        body: JSON.stringify({ ...formData, shippingChargeInPaise: shippingRate.chargeInPaise, couponCode: appliedCoupon?.code }),
       });
       await new Promise<void>((resolve, reject) => {
         const rzp = new window.Razorpay({
@@ -361,6 +405,7 @@ export default function CheckoutPage() {
               });
               queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
               modalShown = true;
+              try { sessionStorage.removeItem(COUPON_KEY); } catch {}
               setPaymentResult({ type: "success", orderId: order.id });
               resolve();
             } catch (err: any) {
@@ -419,7 +464,7 @@ export default function CheckoutPage() {
   // ── GST breakdown ────────────────────────────────────────────────────
   const totalGst = cart.items.reduce((s, item) => s + calcGst((item.product.priceInPaise) + ((item.customization as any)?.customizationChargeInPaise ?? 0), item.quantity), 0);
   const subtotalExclGst = cart.totalInPaise - totalGst;
-  const grandTotal = cart.totalInPaise + (shippingRate?.chargeInPaise ?? 0);
+  const grandTotal = Math.max(0, cart.totalInPaise + (shippingRate?.chargeInPaise ?? 0) - (appliedCoupon?.discountInPaise ?? 0));
 
   // ── Bespoke / customised items cannot be COD ─────────────────────────
   const hasBespokeItems = cart.items.some(i => i.customization != null);
@@ -732,6 +777,47 @@ export default function CheckoutPage() {
               ))}
             </div>
 
+            {/* Promo code */}
+            <div className="mb-5">
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-[12px] font-semibold text-emerald-700 font-mono tracking-wider">{appliedCoupon.code}</span>
+                    <span className="text-[11px] text-emerald-600">−{formatPrice(appliedCoupon.discountInPaise)}</span>
+                  </div>
+                  <button onClick={removePromo} className="text-gray-400 hover:text-red-500 transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : promoOpen ? (
+                <div className="space-y-1.5">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={promoInput}
+                      onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoError(""); }}
+                      onKeyDown={e => e.key === "Enter" && applyPromo()}
+                      placeholder="Enter promo code"
+                      className="flex-1 px-3 py-2 border border-border text-[12px] font-mono uppercase focus:outline-none focus:border-primary bg-background"
+                      autoFocus
+                    />
+                    <Button type="button" onClick={applyPromo} disabled={promoLoading || !promoInput.trim()} size="sm" className="rounded-none px-4">
+                      {promoLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "APPLY"}
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" className="rounded-none" onClick={() => { setPromoOpen(false); setPromoError(""); setPromoInput(""); }}>
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                  {promoError && <p className="text-[11px] text-destructive">{promoError}</p>}
+                </div>
+              ) : (
+                <button type="button" onClick={() => setPromoOpen(true)} className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors">
+                  <Tag className="w-3.5 h-3.5" /> + Add a promo code
+                </button>
+              )}
+            </div>
+
             {/* Price breakdown */}
             <div className="space-y-2.5 text-sm border-t border-b border-border/50 py-5 mb-5">
               <div className="flex justify-between text-muted-foreground">
@@ -742,6 +828,12 @@ export default function CheckoutPage() {
                 <span>GST (5% / 18% incl.)</span>
                 <span>{formatPrice(totalGst)}</span>
               </div>
+              {appliedCoupon && (
+                <div className="flex justify-between text-emerald-600">
+                  <span className="flex items-center gap-1"><Tag className="w-3.5 h-3.5" /> {appliedCoupon.code}</span>
+                  <span className="font-semibold">−{formatPrice(appliedCoupon.discountInPaise)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <Truck className="w-3.5 h-3.5" /> Shipping

@@ -1,11 +1,12 @@
-import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, Lock, LogIn } from "lucide-react";
+import { useState } from "react";
+import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, Lock, LogIn, Tag, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { formatPrice } from "@/lib/format";
 import { useRemoveCartItem, useUpdateCartItem, getGetCartQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Cart } from "@workspace/api-client-react";
-import { getAssetUrl } from "@/lib/api";
-import { useUser, useClerk } from "@clerk/react";
+import { getAssetUrl, getApiUrl } from "@/lib/api";
+import { useUser, useClerk, useAuth } from "@clerk/react";
 import { useCart } from "@/contexts/CartContext";
 
 const REDIRECT_KEY = "kasha_redirect_after_login";
@@ -16,13 +17,56 @@ interface CartDrawerProps {
   cart?: Cart;
 }
 
+const COUPON_KEY = "kasha_applied_coupon";
+
 export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
   const queryClient = useQueryClient();
   const removeCartItem = useRemoveCartItem();
   const updateCartItem = useUpdateCartItem();
   const { user } = useUser();
   const { openSignIn } = useClerk();
+  const { getToken } = useAuth();
   const { guestCart, removeFromGuestCart, updateGuestCartQty, guestCartTotal, guestCartCount } = useCart();
+
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountInPaise: number } | null>(() => {
+    try { return JSON.parse(sessionStorage.getItem(COUPON_KEY) ?? "null"); } catch { return null; }
+  });
+
+  async function applyPromo() {
+    if (!promoInput.trim()) return;
+    setPromoLoading(true);
+    setPromoError("");
+    try {
+      const token = await getToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`${getApiUrl()}/api/coupons/validate`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ code: promoInput, cartTotal: cart?.totalInPaise ?? 0, productIds: cart?.items.map(i => i.productId) ?? [] }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        const coupon = { code: data.couponCode as string, discountInPaise: data.discountInPaise as number };
+        sessionStorage.setItem(COUPON_KEY, JSON.stringify(coupon));
+        setAppliedCoupon(coupon);
+        setPromoOpen(false);
+        setPromoInput("");
+      } else {
+        setPromoError(data.message || "Invalid coupon code");
+      }
+    } catch { setPromoError("Failed to apply coupon. Please try again."); }
+    finally { setPromoLoading(false); }
+  }
+
+  function removePromo() {
+    sessionStorage.removeItem(COUPON_KEY);
+    setAppliedCoupon(null);
+  }
 
   function handleGuestCheckout() {
     try { localStorage.setItem(REDIRECT_KEY, "/checkout"); } catch {}
@@ -234,9 +278,48 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
                   </div>
                 </div>
               ))}
-              <button className="text-[11px] font-semibold tracking-[0.06em] text-gray-500 hover:text-black transition-colors underline underline-offset-2">
-                + Enter a promo code
-              </button>
+              {/* Promo code */}
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-3 py-2 mt-1">
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-3 h-3 text-emerald-600" />
+                    <span className="text-[11px] font-semibold text-emerald-700 font-mono tracking-wider">{appliedCoupon.code}</span>
+                    <span className="text-[10px] text-emerald-600">−{formatPrice(appliedCoupon.discountInPaise)}</span>
+                  </div>
+                  <button onClick={removePromo} className="text-gray-400 hover:text-red-500 transition-colors">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : promoOpen ? (
+                <div className="space-y-1 mt-1">
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={promoInput}
+                      onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoError(""); }}
+                      onKeyDown={e => e.key === "Enter" && applyPromo()}
+                      placeholder="Promo code"
+                      className="flex-1 px-2 py-1.5 border border-gray-300 text-[11px] font-mono uppercase focus:outline-none focus:border-black"
+                      autoFocus
+                    />
+                    <button
+                      onClick={applyPromo}
+                      disabled={promoLoading || !promoInput.trim()}
+                      className="px-3 py-1.5 bg-black text-white text-[10px] font-bold tracking-widest disabled:opacity-50 flex items-center gap-1"
+                    >
+                      {promoLoading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : "APPLY"}
+                    </button>
+                    <button onClick={() => { setPromoOpen(false); setPromoError(""); setPromoInput(""); }} className="text-gray-400">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  {promoError && <p className="text-[10px] text-red-500">{promoError}</p>}
+                </div>
+              ) : (
+                <button onClick={() => setPromoOpen(true)} className="flex items-center gap-1 text-[11px] font-semibold tracking-[0.06em] text-gray-500 hover:text-black transition-colors underline underline-offset-2 mt-1">
+                  <Tag className="w-3 h-3" /> + Enter a promo code
+                </button>
+              )}
             </div>
           )}
         </div>

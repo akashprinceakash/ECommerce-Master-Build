@@ -5,8 +5,9 @@ import { eq, and, inArray, isNull, or, sql, desc } from "drizzle-orm";
 import { clerkClient } from "@clerk/express";
 import {
   db, cartsTable, cartItemsTable, productsTable,
-  ordersTable, orderItemsTable, customizationsTable, orderEventsTable, refundsTable, type OrderItem,
+  ordersTable, orderItemsTable, customizationsTable, orderEventsTable, refundsTable, couponsTable, couponUsagesTable, type OrderItem,
 } from "@workspace/db";
+import { validateCoupon } from "./coupons";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import { createShiprocketOrder, getShippingRates } from "../lib/shiprocket";
 import { sendOrderConfirmation } from "../lib/email";
@@ -242,11 +243,13 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
   const {
     shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
     shippingChargeInPaise: rawShippingCharge,
-     remarks: rawRemarks,
+    remarks: rawRemarks,
+    couponCode: rawCouponCode,
   } = req.body ?? {};
   const shippingChargeInPaise = Math.max(0, parseInt(String(rawShippingCharge ?? "0"), 10) || 0);
   // Cap length defensively — this is free text from the checkout form
   const remarks = typeof rawRemarks === "string" && rawRemarks.trim() ? rawRemarks.trim().slice(0, 1000) : null;
+  const appliedCouponCode = typeof rawCouponCode === "string" && rawCouponCode.trim() ? rawCouponCode.trim().toUpperCase() : null;
   if (!shippingName || !shippingAddress || !shippingCity || !shippingState || !shippingPostalCode || !shippingPhone) {
     res.status(400).json({ error: "Missing shipping fields" }); return;
   }
@@ -266,7 +269,17 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
   if ("error" in cartResult) { res.status(400).json({ error: cartResult.error }); return; }
   const { cartItemsWithProducts, itemsTotalInPaise } = cartResult;
 
-  const totalInPaise = itemsTotalInPaise + shippingChargeInPaise;
+  let discountInPaise = 0;
+  let validatedCouponCode: string | null = null;
+  if (appliedCouponCode) {
+    const cartProductIds = cartItemsWithProducts.map(i => i.productId);
+    const couponResult = await validateCoupon(appliedCouponCode, userId, itemsTotalInPaise, cartProductIds);
+    if ("error" in couponResult) { res.status(400).json({ error: couponResult.error }); return; }
+    discountInPaise = couponResult.discountInPaise;
+    validatedCouponCode = appliedCouponCode;
+  }
+
+  const totalInPaise = Math.max(0, itemsTotalInPaise + shippingChargeInPaise - discountInPaise);
 
   // ── Idempotency: reuse an existing pending/payment_failed order if the cart total matches ──
   // Query most-recent first for deterministic ordering; prevents cancelling a still-usable order.
@@ -357,6 +370,8 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
       shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
       remarks,
       razorpayOrderId: rzpOrder.id,
+      couponCode: validatedCouponCode,
+      discountInPaise: discountInPaise || 0,
     }).returning();
     order = inserted;
   } catch (insertErr: any) {
@@ -661,11 +676,12 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
 
   const {
     shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
-    shippingChargeInPaise: rawShippingCharge, remarks: rawRemarks,
+    shippingChargeInPaise: rawShippingCharge, remarks: rawRemarks, couponCode: rawCodCouponCode,
   } = req.body ?? {};
   const shippingChargeInPaise = Math.max(0, parseInt(String(rawShippingCharge ?? "0"), 10) || 0);
 
   const remarks = typeof rawRemarks === "string" && rawRemarks.trim() ? rawRemarks.trim().slice(0, 1000) : null;
+  const appliedCodCouponCode = typeof rawCodCouponCode === "string" && rawCodCouponCode.trim() ? rawCodCouponCode.trim().toUpperCase() : null;
   if (!shippingName || !shippingAddress || !shippingCity || !shippingState || !shippingPostalCode || !shippingPhone) {
     res.status(400).json({ error: "Missing shipping fields" }); return;
   }
@@ -691,7 +707,17 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
     return;
   }
 
-  const totalInPaise = itemsTotalInPaise + shippingChargeInPaise;
+  let codDiscountInPaise = 0;
+  let codValidatedCouponCode: string | null = null;
+  if (appliedCodCouponCode) {
+    const cartProductIds = cartItemsWithProducts.map(i => i.productId);
+    const couponResult = await validateCoupon(appliedCodCouponCode, userId, itemsTotalInPaise, cartProductIds);
+    if ("error" in couponResult) { res.status(400).json({ error: couponResult.error }); return; }
+    codDiscountInPaise = couponResult.discountInPaise;
+    codValidatedCouponCode = appliedCodCouponCode;
+  }
+
+  const totalInPaise = Math.max(0, itemsTotalInPaise + shippingChargeInPaise - codDiscountInPaise);
 
   // Cancel any stale pending (online) orders for this user
   const stale = await db
@@ -713,6 +739,8 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
     shippingChargeInPaise,
     shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
     remarks,
+    couponCode: codValidatedCouponCode,
+    discountInPaise: codDiscountInPaise || 0,
   }).returning();
 
   await Promise.all(
@@ -734,6 +762,21 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
     await db.insert(orderEventsTable).values({ orderId: order.id, eventType: "order_placed", title: "Order Placed", description: "Cash on Delivery" });
     await db.insert(orderEventsTable).values({ orderId: order.id, eventType: "payment_confirmed", title: "Order Confirmed", description: "COD order confirmed" });
   })();
+
+  // Track coupon usage for COD orders (fire-and-forget)
+  if (order.couponCode && order.discountInPaise > 0) {
+    void (async () => {
+      try {
+        const [coupon] = await db.select({ id: couponsTable.id }).from(couponsTable)
+          .where(eq(couponsTable.code, order.couponCode!));
+        if (coupon) {
+          await db.insert(couponUsagesTable).values({ couponId: coupon.id, userId, orderId: order.id });
+        }
+      } catch (e) {
+        logger.error({ orderId: order.id, couponCode: order.couponCode, err: e }, "COD: coupon usage tracking failed");
+      }
+    })();
+  }
 
   // Run fulfillment in background (cart clear, stock deduction, Shiprocket, email)
   void runFulfillment(order, userId);
@@ -908,6 +951,30 @@ async function confirmOrder(
   }).catch((e: unknown) =>
     logger.error({ orderId, err: e }, "confirmOrder: event insert failed (non-critical — order IS confirmed)"),
   );
+
+  // Track coupon usage (fire-and-forget — order is already confirmed)
+  const confirmedOrder = updated;
+  if (confirmedOrder?.couponCode && confirmedOrder.discountInPaise > 0) {
+    void (async () => {
+      try {
+        const [coupon] = await db.select({ id: couponsTable.id }).from(couponsTable)
+          .where(eq(couponsTable.code, confirmedOrder.couponCode!));
+        if (coupon) {
+          const [alreadyUsed] = await db.select({ id: couponUsagesTable.id }).from(couponUsagesTable)
+            .where(and(eq(couponUsagesTable.couponId, coupon.id), eq(couponUsagesTable.orderId, orderId)));
+          if (!alreadyUsed) {
+            await db.insert(couponUsagesTable).values({
+              couponId: coupon.id,
+              userId: confirmedOrder.userId,
+              orderId: confirmedOrder.id,
+            });
+          }
+        }
+      } catch (e) {
+        logger.error({ orderId, couponCode: confirmedOrder.couponCode, err: e }, "confirmOrder: coupon usage tracking failed");
+      }
+    })();
+  }
 
   // Fire-and-forget fulfillment — must NEVER throw back to the caller.
   // At this point the order IS confirmed in the DB; fulfillment errors (Shiprocket,
