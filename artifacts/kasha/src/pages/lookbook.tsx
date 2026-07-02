@@ -41,7 +41,7 @@ type DragState = {
   startItemY: number;
 } | null;
 
-// ── Improved background removal ───────────────────────────────────────────────
+// ── Background removal — corner sampling + near-white detection ──────────────
 async function stripBackground(src: string): Promise<string> {
   const img = new Image();
   img.crossOrigin = "anonymous";
@@ -62,44 +62,51 @@ async function stripBackground(src: string): Promise<string> {
   const w = c.width;
   const h = c.height;
 
-  // Sample border pixels to find background colour
-  const sampleIndices: number[] = [];
-  for (let x = 0; x < w; x++) {
-    sampleIndices.push((0 * w + x) * 4);
-    sampleIndices.push(((h - 1) * w + x) * 4);
+  // Sample 8×8 corner squares + every 3rd border pixel for reliable BG color
+  const samples: [number, number, number][] = [];
+  const CS = Math.max(4, Math.min(8, Math.floor(Math.min(w, h) / 12)));
+  const corners: [number, number][] = [[0, 0], [w - CS, 0], [0, h - CS], [w - CS, h - CS]];
+  for (const [bx, by] of corners) {
+    for (let cy = 0; cy < CS; cy++) {
+      for (let cx = 0; cx < CS; cx++) {
+        const idx = ((by + cy) * w + (bx + cx)) * 4;
+        if (idx >= 0 && idx + 3 < p.length && p[idx + 3] > 0)
+          samples.push([p[idx], p[idx + 1], p[idx + 2]]);
+      }
+    }
   }
-  for (let y = 0; y < h; y++) {
-    sampleIndices.push((y * w + 0) * 4);
-    sampleIndices.push((y * w + (w - 1)) * 4);
+  for (let x = 0; x < w; x += 3) {
+    samples.push([p[(0*w+x)*4], p[(0*w+x)*4+1], p[(0*w+x)*4+2]]);
+    samples.push([p[((h-1)*w+x)*4], p[((h-1)*w+x)*4+1], p[((h-1)*w+x)*4+2]]);
+  }
+  for (let y = 0; y < h; y += 3) {
+    samples.push([p[(y*w)*4], p[(y*w)*4+1], p[(y*w)*4+2]]);
+    samples.push([p[(y*w+w-1)*4], p[(y*w+w-1)*4+1], p[(y*w+w-1)*4+2]]);
   }
 
-  let totalR = 0, totalG = 0, totalB = 0;
-  for (const idx of sampleIndices) {
-    totalR += p[idx];
-    totalG += p[idx + 1];
-    totalB += p[idx + 2];
-  }
-  const n = sampleIndices.length;
-  const bgR = totalR / n;
-  const bgG = totalG / n;
-  const bgB = totalB / n;
+  const n = samples.length || 1;
+  const bgR = samples.reduce((s, v) => s + v[0], 0) / n;
+  const bgG = samples.reduce((s, v) => s + v[1], 0) / n;
+  const bgB = samples.reduce((s, v) => s + v[2], 0) / n;
 
-  // Increased tolerance for better white/near-white BG removal
-  const HARD_TOLERANCE = 55;
-  const SOFT_TOLERANCE = 80;
+  // Calibrate tolerance based on how light the background is
+  const isWhiteBg = bgR > 230 && bgG > 230 && bgB > 230;
+  const isLightBg = bgR > 185 && bgG > 185 && bgB > 185;
+  const HARD_TOL = isWhiteBg ? 88 : isLightBg ? 68 : 55;
+  const SOFT_TOL = isWhiteBg ? 125 : isLightBg ? 98 : 82;
 
   for (let i = 0; i < p.length; i += 4) {
-    const dr = Math.abs(p[i] - bgR);
-    const dg = Math.abs(p[i + 1] - bgG);
-    const db = Math.abs(p[i + 2] - bgB);
-    const dist = Math.max(dr, dg, db);
+    if (p[i + 3] === 0) continue;
+    const r = p[i], g = p[i + 1], b = p[i + 2];
 
-    if (dist < HARD_TOLERANCE) {
+    // Always remove near-pure-white for light-background images
+    if (isLightBg && r > 242 && g > 242 && b > 242) { p[i + 3] = 0; continue; }
+
+    const dist = Math.max(Math.abs(r - bgR), Math.abs(g - bgG), Math.abs(b - bgB));
+    if (dist < HARD_TOL) {
       p[i + 3] = 0;
-    } else if (dist < SOFT_TOLERANCE) {
-      // Soft edge falloff
-      const alpha = ((dist - HARD_TOLERANCE) / (SOFT_TOLERANCE - HARD_TOLERANCE)) * 255;
-      p[i + 3] = Math.round(alpha);
+    } else if (dist < SOFT_TOL) {
+      p[i + 3] = Math.round(((dist - HARD_TOL) / (SOFT_TOL - HARD_TOL)) * 255);
     }
   }
 
@@ -120,7 +127,14 @@ export default function LookbookPage() {
   const [hoveredCanvasItem, setHoveredCanvasItem] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [strippingIds, setStrippingIds] = useState<Set<number>>(new Set());
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   // ── Data ──────────────────────────────────────────────────────────────────
   const { data: savedIds = [], isLoading: savedLoading } = useListLookbookSaved({
@@ -365,109 +379,129 @@ export default function LookbookPage() {
 
                 {/* Builder layout */}
                 {!savedLoading && savedProducts.length > 0 && (
-                  <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+                  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 20, alignItems: "flex-start" }}>
 
-                    {/* ── Saved Pieces Sidebar ── */}
-                    <div style={{
-                      width: 220, flexShrink: 0, background: "#fff",
-                      border: "1px solid rgba(184,146,90,0.2)",
-                    }}>
-                      {/* Sidebar header */}
-                      <div style={{
-                        padding: "14px 14px 10px",
-                        borderBottom: "1px solid rgba(0,0,0,0.06)",
-                        display: "flex", alignItems: "center", gap: 6,
-                      }}>
-                        <Heart size={12} fill={GOLD} color={GOLD} />
-                        <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.35em", color: GOLD, textTransform: "uppercase" }}>
-                          My Saved Pieces
-                        </p>
+                    {/* ── Saved Pieces Sidebar / Mobile Strip ── */}
+                    {isMobile ? (
+                      /* Mobile: horizontal scrollable strip */
+                      <div style={{ width: "100%", background: "#fff", border: "1px solid rgba(184,146,90,0.2)" }}>
+                        <div style={{
+                          padding: "10px 12px 8px",
+                          borderBottom: "1px solid rgba(0,0,0,0.06)",
+                          display: "flex", alignItems: "center", justifyContent: "space-between",
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <Heart size={11} fill={GOLD} color={GOLD} />
+                            <span style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.3em", color: GOLD, textTransform: "uppercase" }}>My Saved Pieces</span>
+                          </div>
+                          <Link href="/products" style={{ display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
+                            <Plus size={9} color={GOLD} />
+                            <span style={{ fontFamily: FONT_UI, fontSize: 8, letterSpacing: "0.15em", color: GOLD }}>ADD MORE</span>
+                          </Link>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, padding: "10px 12px", overflowX: "auto", WebkitOverflowScrolling: "touch" as "touch" }}>
+                          {savedProducts.map(p => {
+                            const isStripping = strippingIds.has(p.productId);
+                            return (
+                              <button
+                                key={p.productId}
+                                onClick={() => !isStripping && addToCanvas(p)}
+                                disabled={isStripping}
+                                style={{
+                                  flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center",
+                                  gap: 4, padding: "8px 6px", width: 76,
+                                  background: "transparent", border: "1px solid rgba(0,0,0,0.07)",
+                                  cursor: isStripping ? "not-allowed" : "pointer",
+                                  opacity: isStripping ? 0.65 : 1,
+                                }}
+                              >
+                                <div style={{ position: "relative", width: 44, height: 56 }}>
+                                  <img src={getAssetUrl(p.thumbnailUrl)} alt={p.name}
+                                    style={{ width: 44, height: 56, objectFit: "contain", background: "#F5F2EC" }} />
+                                  {isStripping && (
+                                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(245,242,236,0.8)" }}>
+                                      <svg width="14" height="14" viewBox="0 0 14 14" style={{ animation: "ka-spin 0.9s linear infinite" }}>
+                                        <circle cx="7" cy="7" r="5" fill="none" stroke={GOLD} strokeWidth="2" strokeDasharray="24" strokeDashoffset="8" strokeLinecap="round" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                </div>
+                                <span style={{ fontFamily: FONT_UI, fontSize: 7, letterSpacing: "0.06em", color: "#0A0A0A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", textAlign: "center" }}>
+                                  {p.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "").slice(0, 12)}
+                                </span>
+                                <span style={{ fontFamily: FONT_UI, fontSize: 7, color: GOLD, letterSpacing: "0.12em" }}>
+                                  {isStripping ? "Loading…" : "+ ADD"}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-
-                      {/* Items list */}
-                      <div style={{ padding: "10px 10px", display: "flex", flexDirection: "column", gap: 8, maxHeight: 440, overflowY: "auto" }}>
-                        {savedProducts.map(p => {
-                          const isStripping = strippingIds.has(p.productId);
-                          return (
-                            <button
-                              key={p.productId}
-                              onClick={() => !isStripping && addToCanvas(p)}
-                              disabled={isStripping}
-                              title={isStripping ? "Removing background…" : "Add to canvas"}
-                              style={{
-                                display: "flex", alignItems: "center", gap: 10, padding: "8px",
-                                background: "transparent", border: "1px solid rgba(0,0,0,0.07)",
-                                cursor: isStripping ? "not-allowed" : "pointer",
-                                textAlign: "left", transition: "border-color 0.2s, background 0.2s",
-                                width: "100%", opacity: isStripping ? 0.65 : 1,
-                              }}
-                              onMouseEnter={e => {
-                                if (!isStripping) {
-                                  (e.currentTarget as HTMLElement).style.borderColor = GOLD;
-                                  (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.04)";
-                                }
-                              }}
-                              onMouseLeave={e => {
-                                (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.07)";
-                                (e.currentTarget as HTMLElement).style.background = "transparent";
-                              }}
-                            >
-                              {/* Thumbnail */}
-                              <div style={{ position: "relative", width: 48, height: 60, flexShrink: 0 }}>
-                                <img
-                                  src={getAssetUrl(p.thumbnailUrl)}
-                                  alt={p.name}
-                                  style={{
-                                    width: 48, height: 60, objectFit: "contain",
-                                    background: "#F5F2EC", display: "block",
-                                    filter: isStripping ? "grayscale(0.4)" : "none",
-                                    transition: "filter 0.2s",
-                                  }}
-                                />
-                                {isStripping && (
-                                  <div style={{
-                                    position: "absolute", inset: 0,
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                    background: "rgba(245,242,236,0.75)",
-                                  }}>
-                                    <svg width="16" height="16" viewBox="0 0 16 16" style={{ animation: "ka-spin 0.9s linear infinite" }}>
-                                      <circle cx="8" cy="8" r="6" fill="none" stroke={GOLD} strokeWidth="2" strokeDasharray="28" strokeDashoffset="10" strokeLinecap="round" />
-                                    </svg>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div style={{ minWidth: 0, flex: 1 }}>
-                                <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.08em", color: "#0A0A0A", marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.4 }}>
-                                  {p.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}
-                                </p>
-                                {isStripping ? (
-                                  <span style={{ fontFamily: FONT_UI, fontSize: 8, color: GOLD, letterSpacing: "0.08em" }}>Removing BG…</span>
-                                ) : (
-                                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                                    <Plus size={9} color={GOLD} />
-                                    <span style={{ fontFamily: FONT_UI, fontSize: 8, color: GOLD, letterSpacing: "0.15em" }}>ADD TO BOARD</span>
-                                  </div>
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })}
+                    ) : (
+                      /* Desktop: vertical sidebar */
+                      <div style={{ width: 220, flexShrink: 0, background: "#fff", border: "1px solid rgba(184,146,90,0.2)" }}>
+                        <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 6 }}>
+                          <Heart size={12} fill={GOLD} color={GOLD} />
+                          <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.35em", color: GOLD, textTransform: "uppercase" }}>My Saved Pieces</p>
+                        </div>
+                        <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: 8, maxHeight: 520, overflowY: "auto" }}>
+                          {savedProducts.map(p => {
+                            const isStripping = strippingIds.has(p.productId);
+                            return (
+                              <button
+                                key={p.productId}
+                                onClick={() => !isStripping && addToCanvas(p)}
+                                disabled={isStripping}
+                                title={isStripping ? "Removing background…" : "Add to canvas"}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: 10, padding: "8px",
+                                  background: "transparent", border: "1px solid rgba(0,0,0,0.07)",
+                                  cursor: isStripping ? "not-allowed" : "pointer",
+                                  textAlign: "left", transition: "border-color 0.2s, background 0.2s",
+                                  width: "100%", opacity: isStripping ? 0.65 : 1,
+                                }}
+                                onMouseEnter={e => { if (!isStripping) { (e.currentTarget as HTMLElement).style.borderColor = GOLD; (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.04)"; } }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.07)"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                              >
+                                <div style={{ position: "relative", width: 48, height: 60, flexShrink: 0 }}>
+                                  <img src={getAssetUrl(p.thumbnailUrl)} alt={p.name}
+                                    style={{ width: 48, height: 60, objectFit: "contain", background: "#F5F2EC", display: "block", filter: isStripping ? "grayscale(0.4)" : "none", transition: "filter 0.2s" }} />
+                                  {isStripping && (
+                                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(245,242,236,0.75)" }}>
+                                      <svg width="16" height="16" viewBox="0 0 16 16" style={{ animation: "ka-spin 0.9s linear infinite" }}>
+                                        <circle cx="8" cy="8" r="6" fill="none" stroke={GOLD} strokeWidth="2" strokeDasharray="28" strokeDashoffset="10" strokeLinecap="round" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                </div>
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.08em", color: "#0A0A0A", marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.4 }}>
+                                    {p.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}
+                                  </p>
+                                  {isStripping ? (
+                                    <span style={{ fontFamily: FONT_UI, fontSize: 8, color: GOLD, letterSpacing: "0.08em" }}>Removing BG…</span>
+                                  ) : (
+                                    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                                      <Plus size={9} color={GOLD} />
+                                      <span style={{ fontFamily: FONT_UI, fontSize: 8, color: GOLD, letterSpacing: "0.15em" }}>ADD TO BOARD</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div style={{ padding: "10px 14px 14px", borderTop: "1px solid rgba(0,0,0,0.05)" }}>
+                          <Link href="/products" style={{ display: "flex", alignItems: "center", gap: 5, textDecoration: "none" }}>
+                            <Heart size={9} color={GOLD} />
+                            <span style={{ fontFamily: FONT_UI, fontSize: 8, letterSpacing: "0.18em", color: GOLD, textTransform: "uppercase" }}>Save More Pieces</span>
+                          </Link>
+                        </div>
                       </div>
-
-                      {/* Browse more link */}
-                      <div style={{ padding: "10px 14px 14px", borderTop: "1px solid rgba(0,0,0,0.05)" }}>
-                        <Link href="/products" style={{ display: "flex", alignItems: "center", gap: 5, textDecoration: "none" }}>
-                          <Heart size={9} color={GOLD} />
-                          <span style={{ fontFamily: FONT_UI, fontSize: 8, letterSpacing: "0.18em", color: GOLD, textTransform: "uppercase" }}>
-                            Save More Pieces
-                          </span>
-                        </Link>
-                      </div>
-                    </div>
+                    )}
 
                     {/* ── Canvas area ── */}
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div style={{ flex: 1, width: isMobile ? "100%" : undefined, display: "flex", flexDirection: "column", gap: 12 }}>
                       <div
                         ref={canvasRef}
                         onPointerMove={handlePointerMove}
@@ -476,11 +510,12 @@ export default function LookbookPage() {
                         onClick={() => setSelectedItemId(null)}
                         style={{
                           position: "relative",
-                          height: 480,
+                          height: isMobile ? Math.max(360, Math.min(window.innerWidth - 48, 480)) : 680,
                           background: CANVAS_BG,
                           border: "1px solid rgba(184,146,90,0.22)",
                           overflow: "hidden",
                           userSelect: "none",
+                          touchAction: "none",
                         }}
                       >
                         {/* Empty canvas state */}
@@ -650,21 +685,21 @@ export default function LookbookPage() {
 
                       {/* Save controls */}
                       <div style={{
-                        display: "flex", gap: 12, alignItems: "center",
-                        background: "#fff", border: "1px solid rgba(184,146,90,0.2)", padding: "14px 16px",
+                        display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center",
+                        background: "#fff", border: "1px solid rgba(184,146,90,0.2)", padding: "12px 14px",
                       }}>
                         <input
                           value={outfitName}
                           onChange={e => setOutfitName(e.target.value)}
                           placeholder="Name your look…"
                           style={{
-                            flex: 1, fontFamily: FONT_UI, fontSize: 12, letterSpacing: "0.1em",
+                            flex: 1, minWidth: 120, fontFamily: FONT_UI, fontSize: 12, letterSpacing: "0.1em",
                             border: "1px solid rgba(0,0,0,0.1)", padding: "9px 12px",
                             outline: "none", background: "#FAFAF7", color: "#0A0A0A",
                           }}
                         />
                         <button
-                          onClick={() => setCanvasItems([])}
+                          onClick={() => { setCanvasItems([]); setSelectedItemId(null); }}
                           disabled={canvasItems.length === 0}
                           style={{
                             display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_UI, fontSize: 10,
@@ -672,6 +707,7 @@ export default function LookbookPage() {
                             border: "1px solid rgba(0,0,0,0.12)", background: "transparent",
                             cursor: canvasItems.length === 0 ? "not-allowed" : "pointer",
                             color: canvasItems.length === 0 ? "rgba(0,0,0,0.25)" : "rgba(0,0,0,0.6)",
+                            whiteSpace: "nowrap",
                           }}
                         >
                           <RotateCcw size={13} /> Clear
@@ -685,14 +721,16 @@ export default function LookbookPage() {
                             background: canvasItems.length === 0 ? "rgba(0,0,0,0.15)" : saveSuccess ? "#2D7D46" : "#0A0A0A",
                             color: "#fff", border: "none",
                             cursor: canvasItems.length === 0 ? "not-allowed" : "pointer",
-                            transition: "background 0.3s",
+                            transition: "background 0.3s", whiteSpace: "nowrap",
                           }}
                         >
-                          {saveSuccess
-                            ? <><CheckCircle size={13} /> Saved!</>
-                            : <><Save size={13} /> Save Look</>}
+                          {saveSuccess ? <><CheckCircle size={13} /> Saved!</> : <><Save size={13} /> Save Look</>}
                         </button>
                       </div>
+                      {/* Hint */}
+                      <p style={{ fontFamily: FONT_UI, fontSize: 10, color: "rgba(0,0,0,0.38)", letterSpacing: "0.1em", textAlign: "center", margin: 0 }}>
+                        Tap a piece to select it · use <strong style={{ color: "rgba(0,0,0,0.5)" }}>+ / −</strong> to resize · drag to reposition
+                      </p>
                     </div>
                   </div>
                 )}
