@@ -15,7 +15,7 @@ import {
 } from "@workspace/api-client-react";
 import { getAssetUrl } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, Save, X, CheckCircle, Heart, Plus, RotateCcw } from "lucide-react";
+import { Trash2, Save, X, CheckCircle, Heart, Plus, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 
 const GOLD = "#B8925A";
 const FONT_DISPLAY = "'Cormorant Garamond', serif";
@@ -30,6 +30,7 @@ type CanvasItem = {
   x: number;
   y: number;
   width: number;
+  defaultWidth: number;
 };
 
 type DragState = {
@@ -117,6 +118,7 @@ export default function LookbookPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<"builder" | "saved">("builder");
   const [hoveredCanvasItem, setHoveredCanvasItem] = useState<string | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [strippingIds, setStrippingIds] = useState<Set<number>>(new Set());
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -170,12 +172,28 @@ export default function LookbookPage() {
         x: Math.min(60 + offset, 280),
         y: Math.min(24 + offset, 160),
         width: 190,
+        defaultWidth: 190,
       }];
     });
   }, []);
 
   const removeFromCanvas = useCallback((id: string) => {
     setCanvasItems(prev => prev.filter(item => item.id !== id));
+    setSelectedItemId(prev => prev === id ? null : prev);
+  }, []);
+
+  const resizeItem = useCallback((id: string, delta: number) => {
+    setCanvasItems(prev => prev.map(item =>
+      item.id === id
+        ? { ...item, width: Math.max(60, Math.min(460, item.width + delta)) }
+        : item
+    ));
+  }, []);
+
+  const resetItem = useCallback((id: string) => {
+    setCanvasItems(prev => prev.map(item =>
+      item.id === id ? { ...item, width: item.defaultWidth } : item
+    ));
   }, []);
 
   const handlePointerDown = useCallback((e: React.PointerEvent, itemId: string) => {
@@ -185,6 +203,7 @@ export default function LookbookPage() {
     if (!item) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDragState({ itemId, startMouseX: e.clientX, startMouseY: e.clientY, startItemX: item.x, startItemY: item.y });
+    setSelectedItemId(itemId);
     // Bring to front
     setCanvasItems(prev => {
       const idx = prev.findIndex(i => i.id === itemId);
@@ -229,9 +248,12 @@ export default function LookbookPage() {
 
   const loadOutfit = (outfit: LookbookOutfit) => {
     setCanvasItems((outfit.items as CanvasItem[]).map(i => ({
-      ...i, id: `${i.productId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      ...i,
+      id: `${i.productId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      defaultWidth: i.defaultWidth ?? i.width,
     })));
     setOutfitName(outfit.name);
+    setSelectedItemId(null);
     setActiveTab("builder");
   };
 
@@ -451,6 +473,7 @@ export default function LookbookPage() {
                         onPointerMove={handlePointerMove}
                         onPointerUp={handlePointerUp}
                         onPointerLeave={handlePointerUp}
+                        onClick={() => setSelectedItemId(null)}
                         style={{
                           position: "relative",
                           height: 480,
@@ -500,65 +523,129 @@ export default function LookbookPage() {
                         )}
 
                         {/* Canvas items */}
-                        {canvasItems.map((item, idx) => (
-                          <div
-                            key={item.id}
-                            onPointerDown={e => handlePointerDown(e, item.id)}
-                            onMouseEnter={() => setHoveredCanvasItem(item.id)}
-                            onMouseLeave={() => setHoveredCanvasItem(null)}
-                            style={{
-                              position: "absolute",
-                              left: item.x,
-                              top: item.y,
-                              width: item.width,
-                              cursor: dragState?.itemId === item.id ? "grabbing" : "grab",
-                              zIndex: dragState?.itemId === item.id ? 100 : idx + 1,
-                              filter: hoveredCanvasItem === item.id || dragState?.itemId === item.id
-                                ? "drop-shadow(0 12px 28px rgba(0,0,0,0.22))"
-                                : "drop-shadow(0 4px 12px rgba(0,0,0,0.10))",
-                              transition: dragState?.itemId === item.id ? "none" : "filter 0.2s",
-                            }}
-                          >
-                            <img
-                              src={item.thumbnailUrl}
-                              alt={item.name}
-                              draggable={false}
+                        {canvasItems.map((item, idx) => {
+                          const isActive = hoveredCanvasItem === item.id || selectedItemId === item.id || dragState?.itemId === item.id;
+                          const scalePct = Math.round((item.width / (item.defaultWidth || 190)) * 100);
+                          return (
+                            <div
+                              key={item.id}
+                              onPointerDown={e => handlePointerDown(e, item.id)}
+                              onMouseEnter={() => setHoveredCanvasItem(item.id)}
+                              onMouseLeave={() => setHoveredCanvasItem(null)}
                               style={{
-                                width: "100%", display: "block",
-                                objectFit: "contain", aspectRatio: "3/4",
-                                pointerEvents: "none",
-                              }}
-                            />
-                            {/* Hover: remove button */}
-                            <button
-                              onPointerDown={e => e.stopPropagation()}
-                              onClick={() => removeFromCanvas(item.id)}
-                              style={{
-                                position: "absolute", top: 4, right: 4,
-                                width: 22, height: 22, borderRadius: "50%",
-                                background: "rgba(0,0,0,0.65)", border: "none", cursor: "pointer",
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                                opacity: hoveredCanvasItem === item.id || dragState?.itemId === item.id ? 1 : 0,
-                                transition: "opacity 0.15s",
+                                position: "absolute",
+                                left: item.x,
+                                top: item.y,
+                                width: item.width,
+                                cursor: dragState?.itemId === item.id ? "grabbing" : "grab",
+                                zIndex: dragState?.itemId === item.id ? 100 : selectedItemId === item.id ? 50 : idx + 1,
+                                filter: isActive
+                                  ? "drop-shadow(0 12px 28px rgba(0,0,0,0.22))"
+                                  : "drop-shadow(0 4px 12px rgba(0,0,0,0.10))",
+                                transition: dragState?.itemId === item.id ? "none" : "filter 0.2s",
+                                outline: selectedItemId === item.id ? `2px solid ${GOLD}` : "2px solid transparent",
+                                outlineOffset: 2,
                               }}
                             >
-                              <X size={11} color="#fff" />
-                            </button>
-                            {/* Item name label on hover */}
-                            <div style={{
-                              position: "absolute", bottom: 0, left: 0, right: 0,
-                              background: "rgba(255,255,255,0.92)", backdropFilter: "blur(4px)",
-                              padding: "4px 7px",
-                              opacity: hoveredCanvasItem === item.id || dragState?.itemId === item.id ? 1 : 0,
-                              transition: "opacity 0.15s",
-                              pointerEvents: "none",
-                            }}>
-                              <span style={{ fontFamily: FONT_UI, fontSize: 8, letterSpacing: "0.08em", color: "#0A0A0A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
-                                {item.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}
-                              </span>
+                              <img
+                                src={item.thumbnailUrl}
+                                alt={item.name}
+                                draggable={false}
+                                style={{
+                                  width: "100%", display: "block",
+                                  objectFit: "contain", aspectRatio: "3/4",
+                                  pointerEvents: "none",
+                                }}
+                              />
+
+                              {/* Remove button — top right */}
+                              <button
+                                onPointerDown={e => e.stopPropagation()}
+                                onClick={() => removeFromCanvas(item.id)}
+                                style={{
+                                  position: "absolute", top: 4, right: 4,
+                                  width: 22, height: 22, borderRadius: "50%",
+                                  background: "rgba(0,0,0,0.65)", border: "none", cursor: "pointer",
+                                  display: "flex", alignItems: "center", justifyContent: "center",
+                                  opacity: isActive ? 1 : 0,
+                                  transition: "opacity 0.15s",
+                                }}
+                              >
+                                <X size={11} color="#fff" />
+                              </button>
+
+                              {/* Resize toolbar — bottom center */}
+                              <div
+                                onPointerDown={e => e.stopPropagation()}
+                                style={{
+                                  position: "absolute", bottom: 0, left: 0, right: 0,
+                                  display: "flex", alignItems: "center", justifyContent: "center",
+                                  gap: 0,
+                                  opacity: isActive ? 1 : 0,
+                                  transition: "opacity 0.15s",
+                                }}
+                              >
+                                <div style={{
+                                  display: "inline-flex", alignItems: "center",
+                                  background: "rgba(10,10,10,0.80)",
+                                  backdropFilter: "blur(6px)",
+                                  borderRadius: "12px 12px 0 0",
+                                  overflow: "hidden",
+                                }}>
+                                  {/* Shrink */}
+                                  <button
+                                    onClick={() => resizeItem(item.id, -20)}
+                                    title="Shrink"
+                                    style={{
+                                      width: 28, height: 26, display: "flex", alignItems: "center", justifyContent: "center",
+                                      background: "transparent", border: "none", cursor: "pointer",
+                                      color: "#fff", borderRight: "1px solid rgba(255,255,255,0.12)",
+                                    }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
+                                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                                  >
+                                    <ZoomOut size={11} color="#fff" />
+                                  </button>
+                                  {/* Scale % display */}
+                                  <span style={{
+                                    fontFamily: FONT_UI, fontSize: 9, color: "rgba(255,255,255,0.75)",
+                                    padding: "0 8px", letterSpacing: "0.06em", minWidth: 34, textAlign: "center",
+                                    userSelect: "none",
+                                  }}>
+                                    {scalePct}%
+                                  </span>
+                                  {/* Grow */}
+                                  <button
+                                    onClick={() => resizeItem(item.id, 20)}
+                                    title="Grow"
+                                    style={{
+                                      width: 28, height: 26, display: "flex", alignItems: "center", justifyContent: "center",
+                                      background: "transparent", border: "none", cursor: "pointer",
+                                      borderLeft: "1px solid rgba(255,255,255,0.12)", borderRight: "1px solid rgba(255,255,255,0.12)",
+                                    }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
+                                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                                  >
+                                    <ZoomIn size={11} color="#fff" />
+                                  </button>
+                                  {/* Reset */}
+                                  <button
+                                    onClick={() => resetItem(item.id)}
+                                    title="Reset size"
+                                    style={{
+                                      width: 28, height: 26, display: "flex", alignItems: "center", justifyContent: "center",
+                                      background: "transparent", border: "none", cursor: "pointer",
+                                    }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
+                                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                                  >
+                                    <RotateCcw size={10} color={scalePct === 100 ? "rgba(255,255,255,0.3)" : GOLD} />
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
 
                       {/* Save controls */}
