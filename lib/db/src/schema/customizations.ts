@@ -28,3 +28,25 @@ export const customizationsTable = pgTable("customizations", {
 export const insertCustomizationSchema = createInsertSchema(customizationsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCustomization = z.infer<typeof insertCustomizationSchema>;
 export type Customization = typeof customizationsTable.$inferSelect;
+
+export interface DesignSpec {
+  baseColor: string | null;
+  zoneColors: Record<string, string>;
+  kashaDesignId: string | null;
+  kashaDesignLabel: string | null;
+  printId: string | null;
+  printLabel: string | null;
+  patColorA: string | null;
+  patColorB: string | null;
+  hasLogo: boolean;
+  logoUrl: string | null;
+  logoPosition: string | null;
+  logoSize: number | null;
+  textContent: string | null;
+  fontFamily: string | null;
+  fontSize: number | null;
+  textColor: string | null;
+  textBold: boolean | null;
+  textItalic: boolean | null;
+  sleeveLength: string | null;
+}
