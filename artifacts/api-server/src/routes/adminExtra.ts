@@ -431,6 +431,15 @@ router.post("/admin/orders/:id/refund", requireAuth, async (req, res): Promise<v
   res.json({ refundId: rzData.id, amount: rzData.amount, status: rzData.status });
 });
 
+router.get("/admin/orders/:id/refunds", requireAuth, async (req, res): Promise<void> => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid order ID" }); return; }
+  const refunds = await db.select().from(refundsTable).where(eq(refundsTable.orderId, id));
+  res.json(refunds);
+});
+
 router.patch("/admin/users/:id/admin", requireAuth, async (req, res): Promise<void> => {
   const adminId = await requireAdmin(req, res);
   if (!adminId) return;

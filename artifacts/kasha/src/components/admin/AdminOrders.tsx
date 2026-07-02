@@ -2,12 +2,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/adminApi";
 import { formatPrice } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { getAssetUrl, getApiUrl } from "@/lib/api";
 import {
   Loader2, ChevronDown, ChevronRight, MapPin, CreditCard, Package,
   Eye, Download, X, Truck, RefreshCw, RotateCcw, CheckCircle2,
-  Circle, Lock, Send, MessageSquare,
+  Lock, Send, MessageSquare, AlertTriangle,
 } from "lucide-react";
 import * as fabric from "fabric";
 
@@ -402,6 +402,205 @@ function ProcessOrderPanel({
   );
 }
 
+// ── Refund Modal ───────────────────────────────────────────────────────────────
+
+interface Refund {
+  id: number;
+  razorpayRefundId: string;
+  razorpayPaymentId: string;
+  amountInPaise: number;
+  status: string;
+  reason: string | null;
+  createdAt: string;
+}
+
+const REFUNDABLE_STATUSES = ["confirmed", "processing", "ready_to_ship", "shipped", "delivered"];
+
+interface RefundModalProps {
+  order: AdminOrder;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function RefundModal({ order, onClose, onSuccess }: RefundModalProps) {
+  const { toast } = useToast();
+  const [submitting, setSubmitting] = useState(false);
+  const [amountRupees, setAmountRupees] = useState((order.totalInPaise / 100).toFixed(2));
+  const [reason, setReason] = useState("");
+  const backdropRef = useRef<HTMLDivElement>(null);
+
+  const canRefund = REFUNDABLE_STATUSES.includes(order.status) && !!order.paymentId;
+
+  const { data: existingRefunds = [], isLoading: loadingRefunds } = useQuery<Refund[]>({
+    queryKey: ["admin-refunds", order.id],
+    queryFn: () => apiFetch(`/api/admin/orders/${order.id}/refunds`),
+  });
+
+  const hasRefund = existingRefunds.length > 0;
+
+  const handleSubmit = async () => {
+    const paise = Math.round(parseFloat(amountRupees) * 100);
+    if (isNaN(paise) || paise <= 0 || paise > order.totalInPaise) {
+      toast({ title: "Invalid amount", description: `Enter an amount between ₹0.01 and ${formatPrice(order.totalInPaise)}`, variant: "destructive" }); return;
+    }
+    if (!confirm(`Issue refund of ₹${(paise / 100).toFixed(2)} to ${order.customerName}?${reason ? `\nReason: ${reason}` : ""}\n\nThis cannot be undone.`)) return;
+    setSubmitting(true);
+    try {
+      const result = await apiFetch(`/api/admin/orders/${order.id}/refund`, {
+        method: "POST",
+        body: JSON.stringify({ amount: paise, ...(reason.trim() ? { reason: reason.trim() } : {}) }),
+      });
+      toast({ title: "Refund initiated", description: `Refund ID: ${result.refundId} · ${formatPrice(result.amount)} · ${result.status}` });
+      onSuccess();
+      onClose();
+    } catch (e: any) {
+      toast({ title: "Refund failed", description: e.message, variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  return (
+    <div
+      ref={backdropRef}
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      onClick={(e) => { if (e.target === backdropRef.current) onClose(); }}
+    >
+      <div className="bg-white w-full max-w-md border border-border shadow-xl">
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-border">
+          <div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Issue Refund</div>
+            <div className="font-mono font-bold text-lg">Order #{order.id}</div>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-muted rounded transition"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Eligibility banner */}
+          {!canRefund && (
+            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-300 text-amber-800 text-sm">
+              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <div>
+                <div className="font-semibold text-[11px] uppercase tracking-wide mb-0.5">Not Eligible for Refund</div>
+                {!order.paymentId
+                  ? "This order has no recorded payment (COD or payment not yet completed)."
+                  : `Orders in "${STATUS_LABEL[order.status] ?? order.status}" status cannot be refunded. Eligible statuses: Confirmed, Processing, Ready to Ship, Shipped, Delivered.`}
+              </div>
+            </div>
+          )}
+
+          {/* Existing refund history */}
+          {loadingRefunds ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading refund history…</div>
+          ) : hasRefund ? (
+            <div className="p-3 bg-rose-50 border border-rose-200">
+              <div className="text-[11px] uppercase tracking-wider font-semibold text-rose-700 mb-2">Existing Refunds</div>
+              {existingRefunds.map(r => (
+                <div key={r.id} className="text-xs space-y-0.5 pb-2 mb-2 border-b border-rose-100 last:border-0 last:mb-0 last:pb-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-rose-800">{r.razorpayRefundId}</span>
+                    <span className="font-semibold">{formatPrice(r.amountInPaise)}</span>
+                  </div>
+                  <div className="text-muted-foreground">Status: {r.status} · {new Date(r.createdAt).toLocaleDateString()}</div>
+                  {r.reason && <div className="text-muted-foreground italic">Reason: {r.reason}</div>}
+                </div>
+              ))}
+              <div className="mt-2 text-xs text-rose-700 font-medium">A refund has already been issued. Issuing another may be rejected by Razorpay.</div>
+            </div>
+          ) : null}
+
+          {/* Refund form */}
+          {canRefund && !hasRefund && (
+            <>
+              <div>
+                <label className="text-[11px] uppercase tracking-wider text-muted-foreground block mb-1.5">
+                  Refund Amount (Max: {formatPrice(order.totalInPaise)})
+                </label>
+                <div className="flex items-center border border-border focus-within:border-primary">
+                  <span className="px-3 py-2 text-sm text-muted-foreground border-r border-border bg-muted/30">₹</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={(order.totalInPaise / 100).toFixed(2)}
+                    value={amountRupees}
+                    onChange={e => setAmountRupees(e.target.value)}
+                    className="flex-1 px-3 py-2 text-sm outline-none bg-transparent"
+                  />
+                </div>
+                <div className="flex gap-2 mt-1.5">
+                  <button
+                    onClick={() => setAmountRupees((order.totalInPaise / 100).toFixed(2))}
+                    className="text-[10px] uppercase tracking-wider px-2 py-1 border border-border hover:border-primary transition"
+                  >
+                    Full refund
+                  </button>
+                  <button
+                    onClick={() => setAmountRupees(((order.totalInPaise / 100) / 2).toFixed(2))}
+                    className="text-[10px] uppercase tracking-wider px-2 py-1 border border-border hover:border-primary transition"
+                  >
+                    50%
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] uppercase tracking-wider text-muted-foreground block mb-1.5">
+                  Reason <span className="normal-case text-muted-foreground/70">(optional — sent to customer)</span>
+                </label>
+                <textarea
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="e.g. Item out of stock, quality issue, customer request…"
+                  className="w-full px-3 py-2 text-sm border border-border focus:border-primary outline-none resize-none bg-transparent"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  onClick={onClose}
+                  className="flex-1 py-2 text-sm border border-border hover:bg-muted transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={submitting}
+                  onClick={handleSubmit}
+                  className="flex-1 py-2 text-sm bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
+                >
+                  {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                  Issue Refund
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* View-only if refund already exists */}
+          {(canRefund && hasRefund) && (
+            <button
+              onClick={onClose}
+              className="w-full py-2 text-sm border border-border hover:bg-muted transition"
+            >
+              Close
+            </button>
+          )}
+
+          {/* Not eligible — close only */}
+          {!canRefund && (
+            <button
+              onClick={onClose}
+              className="w-full py-2 text-sm border border-border hover:bg-muted transition"
+            >
+              Close
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Remarks callout ────────────────────────────────────────────────────────────
 // Shown wherever an order has customer-entered remarks (measurements, gifting
 // notes, delivery instructions, etc). Kept visually distinct (amber) so it
@@ -428,7 +627,7 @@ export function AdminOrders() {
   const [filter, setFilter] = useState<string>("all");
   const [viewOrder, setViewOrder] = useState<AdminOrder | null>(null);
   const [exporting, setExporting] = useState<number | null>(null);
-  const [refunding, setRefunding] = useState<number | null>(null);
+  const [refundOrder, setRefundOrder] = useState<AdminOrder | null>(null);
   const [syncing, setSyncing] = useState<number | null>(null);
   const [pickingUp, setPickingUp] = useState<number | null>(null);
 
@@ -452,16 +651,9 @@ export function AdminOrders() {
     onError: (e: any) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
   });
 
-  const issueRefund = async (order: AdminOrder) => {
-    if (!confirm(`Issue a full refund of ${formatPrice(order.totalInPaise)} to ${order.customerName}? This cannot be undone.`)) return;
-    setRefunding(order.id);
-    try {
-      const result = await apiFetch(`/api/admin/orders/${order.id}/refund`, { method: "POST" });
-      toast({ title: "Refund issued", description: `Refund ID: ${result.refundId} · Amount: ${formatPrice(result.amount)} · Status: ${result.status}` });
-      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-    } catch (e: any) {
-      toast({ title: "Refund failed", description: e.message, variant: "destructive" });
-    } finally { setRefunding(null); }
+  const handleRefundSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] });
   };
 
   const syncShiprocket = async (orderId: number) => {
@@ -645,11 +837,10 @@ export function AdminOrders() {
                     </details>
                     {o.paymentId && o.status !== "cancelled" && (
                       <button
-                        disabled={refunding === o.id}
-                        onClick={() => issueRefund(o)}
-                        className="ml-auto flex items-center gap-1 text-[10px] uppercase tracking-wider px-3 py-1.5 border border-rose-400 text-rose-600 hover:bg-rose-50 disabled:opacity-50 transition"
+                        onClick={() => setRefundOrder(o)}
+                        className="ml-auto flex items-center gap-1 text-[10px] uppercase tracking-wider px-3 py-1.5 border border-rose-400 text-rose-600 hover:bg-rose-50 transition"
                       >
-                        {refunding === o.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                        <RotateCcw className="w-3 h-3" />
                         Issue Refund
                       </button>
                     )}
@@ -905,17 +1096,25 @@ export function AdminOrders() {
             {viewOrder.paymentId && viewOrder.status !== "cancelled" && (
               <div className="border-t border-border pt-5 flex justify-end">
                 <button
-                  disabled={refunding === viewOrder.id}
-                  onClick={() => issueRefund(viewOrder)}
-                  className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-4 py-2 border border-rose-400 text-rose-600 hover:bg-rose-50 disabled:opacity-50 transition"
+                  onClick={() => setRefundOrder(viewOrder)}
+                  className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-4 py-2 border border-rose-400 text-rose-600 hover:bg-rose-50 transition"
                 >
-                  {refunding === viewOrder.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
-                  Issue Full Refund
+                  <RotateCcw className="w-3 h-3" />
+                  Issue Refund
                 </button>
               </div>
             )}
           </div>
         </FullOrderModal>
+      )}
+
+      {/* Refund modal */}
+      {refundOrder && (
+        <RefundModal
+          order={refundOrder}
+          onClose={() => setRefundOrder(null)}
+          onSuccess={handleRefundSuccess}
+        />
       )}
     </div>
   );
@@ -923,10 +1122,10 @@ export function AdminOrders() {
 
 // ── Modal wrapper ─────────────────────────────────────────────────────────────
 
-import { useRef as _useRef, useEffect as _useEffect } from "react";
+import { useEffect as _useEffect } from "react";
 function FullOrderModal({ viewOrder, onClose, children }: { viewOrder: AdminOrder; onClose: () => void; children: React.ReactNode }) {
-  const dialogRef = _useRef<HTMLDivElement>(null);
-  const lastFocused = _useRef<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const lastFocused = useRef<HTMLElement | null>(null);
 
   _useEffect(() => {
     lastFocused.current = document.activeElement as HTMLElement | null;

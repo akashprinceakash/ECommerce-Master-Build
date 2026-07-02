@@ -471,19 +471,11 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
     }
   }
 
-  // Confirm the order — signature verified (and optionally fetch confirmed captured status)
-  // Even if fulfillment throws, the order is persisted as confirmed in confirmOrder first.
-  try {
-    const confirmed = await confirmOrder(dbOrder.id, razorpay_payment_id, razorpay_signature, userId);
-    const full = await buildFullOrder(confirmed.id);
-    res.status(201).json(full);
-  } catch (e: any) {
-    // confirmOrder updates the DB atomically before running fulfillment.
-    // If we reach here the order IS confirmed — log the error but return success.
-    logger.error({ orderId: dbOrder.id, paymentId: razorpay_payment_id, err: e?.message }, "verify: fulfillment error after confirm — order is confirmed, returning success");
-    const full = await buildFullOrder(dbOrder.id);
-    res.status(201).json(full);
-  }
+  // Confirm the order — signature verified (and optionally fetch confirmed captured status).
+  // confirmOrder fires fulfillment in the background; it only throws if the DB update fails.
+  const confirmed = await confirmOrder(dbOrder.id, razorpay_payment_id, razorpay_signature, userId);
+  const full = await buildFullOrder(confirmed.id);
+  res.status(201).json(full);
 });
 
 /* ──────────────────────────────────────────────────────
@@ -619,6 +611,15 @@ router.post("/payment/webhook", async (req, res): Promise<void> => {
         logger.warn({ rzpOrderId }, "Webhook: no DB order found for Razorpay order");
         return;
       }
+
+      // Log webhook received event for audit trail
+      void db.insert(orderEventsTable).values({
+        orderId: dbOrder.id,
+        eventType: "webhook_received",
+        title: "Webhook: Payment Captured",
+        description: `Event: payment.captured · Payment ID: ${paymentId}`,
+      });
+
       if (dbOrder.status === "confirmed" || dbOrder.status === "processing" ||
           dbOrder.status === "shipped"   || dbOrder.status === "delivered") {
         logger.info({ orderId: dbOrder.id, status: dbOrder.status }, "Webhook: order already confirmed — skipping");
@@ -653,6 +654,15 @@ router.post("/payment/webhook", async (req, res): Promise<void> => {
         logger.warn({ rzpOrderId }, "Webhook payment.failed: no DB order found");
         return;
       }
+
+      // Log webhook received for audit trail
+      void db.insert(orderEventsTable).values({
+        orderId: dbOrder.id,
+        eventType: "webhook_received",
+        title: "Webhook: Payment Failed",
+        description: `Event: payment.failed · Payment ID: ${paymentId}`,
+      });
+
       if (dbOrder.status !== "pending") {
         logger.info({ orderId: dbOrder.id, status: dbOrder.status }, "Webhook payment.failed: order not in pending state — skipping");
         return;
@@ -706,7 +716,13 @@ async function confirmOrder(
     description: `Payment ID: ${paymentId}`,
   });
 
-  await runFulfillment(updated, userId);
+  // Fire-and-forget fulfillment — must NEVER throw back to the caller.
+  // At this point the order IS confirmed in the DB; fulfillment errors (Shiprocket,
+  // email, PDF) must not surface as a 4xx/5xx to the client or webhook handler.
+  void runFulfillment(updated, userId).catch((e: unknown) =>
+    logger.error({ orderId, paymentId, err: e }, "confirmOrder: fulfillment failed after payment confirmed — order remains confirmed"),
+  );
+
   return updated;
 }
 
