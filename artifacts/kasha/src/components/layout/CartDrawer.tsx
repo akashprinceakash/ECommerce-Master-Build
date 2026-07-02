@@ -330,7 +330,7 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
             <div className="flex justify-between items-center">
               <span className="text-[12px] font-bold tracking-[0.08em] text-gray-700">ESTIMATED TOTAL</span>
               <div className="text-right">
-                <span className="text-[16px] font-bold text-black">{formatPrice(totalInPaise)}</span>
+                <span className="text-[16px] font-bold text-black">{formatPrice(Math.max(0, totalInPaise - (appliedCoupon?.discountInPaise ?? 0)))}</span>
                 <p className="text-[10px] text-gray-400 tracking-wide">incl. GST</p>
               </div>
             </div>
