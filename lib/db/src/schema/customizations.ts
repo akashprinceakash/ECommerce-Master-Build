@@ -17,6 +17,7 @@ export const customizationsTable = pgTable("customizations", {
   backImageUrl: text("back_image_url"),
   sideImageUrl: text("side_image_url"),
   customizationChargeInPaise: integer("customization_charge_in_paise").notNull().default(0),
+  designSpec: jsonb("design_spec"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [

@@ -1423,6 +1423,27 @@ export default function CustomizePage() {
     const views = await snapshotViews();
     const effectiveQty = Object.values(sizeQty).reduce((a,b)=>a+b,0) || qty;
     const effectiveSize = Object.entries(sizeQty).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])[0]?.[0] || size;
+    const activePrint = activePrintId ? PATTERNS.find((p: any) => p.id === activePrintId) : null;
+    const designSpec = {
+      baseColor: primaryColor,
+      zoneColors: Object.fromEntries(Object.entries(zoneColors).filter(([,v]) => !!v)),
+      kashaDesignId: activeKashaDesign?.id ?? null,
+      kashaDesignLabel: activeKashaDesign?.label ?? null,
+      printId: activePrintId ?? null,
+      printLabel: activePrint?.label ?? null,
+      printCustomerLabel: (activePrint as any)?.customerLabel ?? null,
+      patColorA: activeKashaDesign ? patColorA : null,
+      patColorB: activeKashaDesign ? patColorB : null,
+      logoPosition: logoPlaced ? logoPosition : null,
+      logoSize: logoPlaced ? logoSize : null,
+      textContent: textPlaced ? textInput : null,
+      fontFamily: textPlaced ? textFont : null,
+      fontSize: textPlaced ? textFontSize : null,
+      textColor: textPlaced ? textColor : null,
+      textBold: textPlaced ? textBold : null,
+      textItalic: textPlaced ? textItalic : null,
+      sleeveLength,
+    };
     return {
       productId:id, name:designName||`${product?.name} Custom`,
       color:primaryColor, size:effectiveSize,
@@ -1432,6 +1453,7 @@ export default function CustomizePage() {
       frontImageUrl:   views.front,
       backImageUrl:    views.back,
       sideImageUrl:    views.side,
+      designSpec,
     };
   };
   const saveMut=useMutation({

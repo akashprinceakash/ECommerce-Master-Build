@@ -7,7 +7,7 @@ import { getAssetUrl, getApiUrl } from "@/lib/api";
 import {
   Loader2, ChevronDown, ChevronRight, MapPin, CreditCard, Package,
   Eye, Download, X, Truck, RefreshCw, RotateCcw, CheckCircle2,
-  Lock, Send, MessageSquare, AlertTriangle,
+  Lock, Send, MessageSquare, AlertTriangle, Printer,
 } from "lucide-react";
 import * as fabric from "fabric";
 
@@ -47,6 +47,7 @@ interface AdminOrder {
       color?: string | null;
       size?: string | null;
       partsEnabled?: any;
+      designSpec?: any;
       canvasData?: string | null;
       previewImageUrl?: string | null;
       frontImageUrl?: string | null;
@@ -601,6 +602,209 @@ function RefundModal({ order, onClose, onSuccess }: RefundModalProps) {
   );
 }
 
+// ── Design Spec helpers ────────────────────────────────────────────────────────
+
+function swatch(hex: string | null | undefined) {
+  if (!hex) return null;
+  return (
+    <span className="inline-block w-3 h-3 border border-border align-middle ml-1" style={{ background: hex }} />
+  );
+}
+
+interface DesignSpec {
+  baseColor?: string | null;
+  zoneColors?: Record<string, string> | null;
+  kashaDesignId?: string | null;
+  kashaDesignLabel?: string | null;
+  printId?: string | null;
+  printLabel?: string | null;
+  printCustomerLabel?: string | null;
+  patColorA?: string | null;
+  patColorB?: string | null;
+  logoPosition?: string | null;
+  logoSize?: number | null;
+  textContent?: string | null;
+  fontFamily?: string | null;
+  fontSize?: number | null;
+  textColor?: string | null;
+  textBold?: boolean | null;
+  textItalic?: boolean | null;
+  sleeveLength?: string | null;
+}
+
+const ZONE_DISPLAY: Record<string, string> = {
+  collar: "Collar",
+  front: "Front Body",
+  back: "Back Body",
+  leftSleeve: "Left Sleeve",
+  rightSleeve: "Right Sleeve",
+};
+
+function DesignSpecCard({ spec }: { spec: DesignSpec }) {
+  const zones = spec.zoneColors ? Object.entries(spec.zoneColors).filter(([, v]) => !!v) : [];
+  return (
+    <div className="mb-3 p-3 bg-slate-50 border border-slate-200">
+      <div className="text-[10px] uppercase tracking-wider font-semibold text-slate-600 mb-2">Manufacturing Spec</div>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+        {spec.sleeveLength && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Sleeve</span>
+            <span className="font-semibold capitalize">{spec.sleeveLength}</span>
+          </div>
+        )}
+        {spec.baseColor && (
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Base colour</span>
+            <span className="font-mono font-semibold flex items-center">{spec.baseColor}{swatch(spec.baseColor)}</span>
+          </div>
+        )}
+        {zones.map(([zone, color]) => (
+          <div key={zone} className="flex justify-between items-center">
+            <span className="text-muted-foreground">{ZONE_DISPLAY[zone] ?? zone}</span>
+            <span className="font-mono font-semibold flex items-center">{color}{swatch(color)}</span>
+          </div>
+        ))}
+        {spec.kashaDesignLabel && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">KA.SHA Design</span>
+            <span className="font-semibold">{spec.kashaDesignLabel}</span>
+          </div>
+        )}
+        {(spec.patColorA || spec.patColorB) && (
+          <>
+            {spec.patColorA && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Pattern colour A</span>
+                <span className="font-mono font-semibold flex items-center">{spec.patColorA}{swatch(spec.patColorA)}</span>
+              </div>
+            )}
+            {spec.patColorB && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Pattern colour B</span>
+                <span className="font-mono font-semibold flex items-center">{spec.patColorB}{swatch(spec.patColorB)}</span>
+              </div>
+            )}
+          </>
+        )}
+        {spec.printLabel && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Print</span>
+            <span className="font-semibold">{spec.printCustomerLabel ?? spec.printLabel}</span>
+          </div>
+        )}
+        {spec.logoPosition && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Logo position</span>
+            <span className="font-semibold capitalize">{spec.logoPosition.replace(/-/g, " ")}</span>
+          </div>
+        )}
+        {spec.logoSize != null && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Logo size</span>
+            <span className="font-semibold">{spec.logoSize}%</span>
+          </div>
+        )}
+        {spec.textContent && (
+          <div className="flex justify-between col-span-2">
+            <span className="text-muted-foreground">Text</span>
+            <span className="font-semibold italic">
+              &ldquo;{spec.textContent}&rdquo;
+              {spec.fontFamily && <span className="font-normal not-italic text-muted-foreground ml-1">({spec.fontFamily}{spec.textBold ? ", Bold" : ""}{spec.textItalic ? ", Italic" : ""})</span>}
+            </span>
+          </div>
+        )}
+        {spec.textColor && spec.textContent && (
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Text colour</span>
+            <span className="font-mono font-semibold flex items-center">{spec.textColor}{swatch(spec.textColor)}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function printSpecSheet(order: AdminOrder) {
+  const w = window.open("", "_blank", "width=800,height=900");
+  if (!w) return;
+  const rows: string[] = [];
+  for (const it of order.items) {
+    const c = it.customization;
+    const spec: DesignSpec | null = c?.designSpec ?? null;
+    const views: Array<{ label: string; url: string }> = [];
+    if (c?.frontImageUrl) views.push({ label: "Front", url: c.frontImageUrl });
+    if (c?.backImageUrl)  views.push({ label: "Back",  url: c.backImageUrl  });
+    if (c?.sideImageUrl)  views.push({ label: "Side",  url: c.sideImageUrl  });
+    if (c?.previewImageUrl && !views.find(v => v.url === c.previewImageUrl)) views.push({ label: "3D Preview", url: c.previewImageUrl });
+
+    const zoneRows = spec?.zoneColors ? Object.entries(spec.zoneColors).filter(([, v]) => !!v).map(([z, color]) =>
+      `<tr><td>${ZONE_DISPLAY[z] ?? z}</td><td style="font-family:monospace">${color} <span style="display:inline-block;width:10px;height:10px;background:${color};border:1px solid #ccc;vertical-align:middle"></span></td></tr>`
+    ).join("") : "";
+
+    rows.push(`
+      <div class="item">
+        <div class="item-header">
+          <strong>${it.product?.name ?? "Unknown product"}</strong>
+          <span>Size: ${it.size} · Qty: ${it.quantity}</span>
+        </div>
+        ${c ? `<div class="design-name">Bespoke Design: ${c.name}</div>` : ""}
+        ${views.length > 0 ? `<div class="views">${views.map(v => `<div class="view-cell"><img src="${v.url}" /><div>${v.label}</div></div>`).join("")}</div>` : ""}
+        ${spec ? `<table class="spec-table">
+          <thead><tr><th colspan="2">Manufacturing Specification</th></tr></thead>
+          <tbody>
+            ${spec.sleeveLength ? `<tr><td>Sleeve</td><td style="text-transform:capitalize">${spec.sleeveLength}</td></tr>` : ""}
+            ${spec.baseColor ? `<tr><td>Base colour</td><td style="font-family:monospace">${spec.baseColor} <span style="display:inline-block;width:10px;height:10px;background:${spec.baseColor};border:1px solid #ccc;vertical-align:middle"></span></td></tr>` : ""}
+            ${zoneRows}
+            ${spec.kashaDesignLabel ? `<tr><td>KA.SHA Design</td><td>${spec.kashaDesignLabel}</td></tr>` : ""}
+            ${spec.patColorA ? `<tr><td>Pattern colour A</td><td style="font-family:monospace">${spec.patColorA} <span style="display:inline-block;width:10px;height:10px;background:${spec.patColorA};border:1px solid #ccc;vertical-align:middle"></span></td></tr>` : ""}
+            ${spec.patColorB ? `<tr><td>Pattern colour B</td><td style="font-family:monospace">${spec.patColorB} <span style="display:inline-block;width:10px;height:10px;background:${spec.patColorB};border:1px solid #ccc;vertical-align:middle"></span></td></tr>` : ""}
+            ${spec.printCustomerLabel ?? spec.printLabel ? `<tr><td>Print</td><td>${spec.printCustomerLabel ?? spec.printLabel}</td></tr>` : ""}
+            ${spec.logoPosition ? `<tr><td>Logo position</td><td style="text-transform:capitalize">${spec.logoPosition.replace(/-/g, " ")}</td></tr>` : ""}
+            ${spec.logoSize != null ? `<tr><td>Logo size</td><td>${spec.logoSize}%</td></tr>` : ""}
+            ${spec.textContent ? `<tr><td>Text</td><td>&ldquo;${spec.textContent}&rdquo;${spec.fontFamily ? ` · ${spec.fontFamily}${spec.textBold ? ", Bold" : ""}${spec.textItalic ? ", Italic" : ""}` : ""}</td></tr>` : ""}
+            ${spec.textColor && spec.textContent ? `<tr><td>Text colour</td><td style="font-family:monospace">${spec.textColor} <span style="display:inline-block;width:10px;height:10px;background:${spec.textColor};border:1px solid #ccc;vertical-align:middle"></span></td></tr>` : ""}
+          </tbody>
+        </table>` : ""}
+      </div>
+    `);
+  }
+
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>KA.SHA Print Spec — Order #${order.id}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 12px; color: #1a1a18; padding: 32px; }
+    h1 { font-size: 18px; font-weight: 700; letter-spacing: .05em; margin-bottom: 4px; }
+    .meta { font-size: 11px; color: #666; margin-bottom: 24px; }
+    .customer { margin-bottom: 20px; padding: 12px; border: 1px solid #ddd; }
+    .customer strong { display: block; margin-bottom: 4px; }
+    .item { margin-bottom: 28px; padding-top: 16px; border-top: 1px solid #ccc; }
+    .item-header { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    .design-name { font-size: 11px; color: #555; margin-bottom: 10px; font-style: italic; }
+    .views { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .view-cell { text-align: center; }
+    .view-cell img { width: 120px; height: 120px; object-fit: contain; border: 1px solid #ddd; display: block; }
+    .view-cell div { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; margin-top: 4px; color: #888; }
+    .spec-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .spec-table th { background: #f5f5f5; text-align: left; padding: 6px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; border: 1px solid #ddd; }
+    .spec-table td { padding: 5px 8px; border: 1px solid #eee; }
+    .spec-table td:first-child { color: #666; width: 40%; }
+    .footer { margin-top: 32px; font-size: 10px; color: #aaa; text-align: center; }
+    @media print { body { padding: 16px; } }
+  </style></head><body>
+  <h1>KA.SHA — Print Specification</h1>
+  <div class="meta">Order #${order.id} · ${new Date(order.createdAt).toLocaleDateString("en-IN")} · Printed ${new Date().toLocaleString("en-IN")}</div>
+  <div class="customer">
+    <strong>${order.customerName} &lt;${order.customerEmail}&gt;</strong>
+    ${order.shippingAddress}, ${order.shippingCity}, ${order.shippingState} — ${order.shippingPostalCode} · ${order.shippingPhone}
+    ${order.remarks ? `<br><em>Remarks: ${order.remarks}</em>` : ""}
+  </div>
+  ${rows.join("")}
+  <div class="footer">KA.SHA — Internal Use Only</div>
+  <script>window.onload=function(){window.print();}</script>
+  </body></html>`);
+  w.document.close();
+}
+
 // ── Remarks callout ────────────────────────────────────────────────────────────
 // Shown wherever an order has customer-entered remarks (measurements, gifting
 // notes, delivery instructions, etc). Kept visually distinct (amber) so it
@@ -873,6 +1077,15 @@ export function AdminOrders() {
                   Print Invoice
                 </button>
               )}
+              {viewOrder.items.some(it => it.customization) && (
+                <button
+                  onClick={() => printSpecSheet(viewOrder)}
+                  className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-3 py-1.5 border border-primary/40 text-primary hover:bg-primary/5 transition"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  Print Spec Sheet
+                </button>
+              )}
               {viewOrder.shiprocketShipmentId && (
                 <button
                   onClick={() => printShippingLabel(viewOrder.id)}
@@ -1038,6 +1251,9 @@ export function AdminOrders() {
                                 </div>
                               );
                             })()}
+
+                            {/* Design Spec card */}
+                            {c.designSpec && <DesignSpecCard spec={c.designSpec as DesignSpec} />}
                           </>
                         )}
 

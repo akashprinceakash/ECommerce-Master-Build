@@ -391,6 +391,51 @@ router.get("/admin/check", requireAuth, async (req, res): Promise<void> => {
   res.json({ isAdmin: true });
 });
 
+router.post("/admin/customizations/backfill-spec", requireAuth, async (req, res): Promise<void> => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+
+  const rows = await db
+    .select({ id: customizationsTable.id, canvasData: customizationsTable.canvasData, designSpec: customizationsTable.designSpec })
+    .from(customizationsTable);
+
+  let updated = 0;
+  let skipped = 0;
+
+  for (const row of rows) {
+    if (row.designSpec !== null && row.designSpec !== undefined) { skipped++; continue; }
+    if (!row.canvasData) { skipped++; continue; }
+    try {
+      const cd = JSON.parse(row.canvasData as string);
+      const spec: Record<string, unknown> = {
+        baseColor: cd.primaryColor ?? null,
+        zoneColors: cd.zoneColors ?? {},
+        kashaDesignId: cd.kdDesignId || null,
+        kashaDesignLabel: null,
+        printId: cd.activePrintId ?? null,
+        printLabel: null,
+        patColorA: cd.patColorA ?? null,
+        patColorB: cd.patColorB ?? null,
+        sleeveLength: cd.sleeveLength ?? null,
+        logoPosition: null,
+        logoSize: null,
+        textContent: null,
+        fontFamily: null,
+        fontSize: null,
+        textColor: null,
+        textBold: null,
+        textItalic: null,
+      };
+      await db.update(customizationsTable).set({ designSpec: spec }).where(eq(customizationsTable.id, row.id));
+      updated++;
+    } catch {
+      skipped++;
+    }
+  }
+
+  res.json({ updated, skipped, total: rows.length });
+});
+
 // ── Contact Enquiries ─────────────────────────────────────────────────────────
 router.get("/admin/enquiries", requireAuth, async (req, res): Promise<void> => {
   const adminId = await requireAdmin(req, res);
