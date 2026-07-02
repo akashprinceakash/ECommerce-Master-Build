@@ -40,13 +40,27 @@ router.get("/users/profile", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/users/profile/upsert", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
-  const { displayName, email, phone, defaultShippingAddress } = req.body;
+  const { displayName, email, phone, defaultShippingAddress } = req.body ?? {};
+
+  // Explicit type guards — all fields are optional but must be strings when present
+  if (displayName !== undefined && typeof displayName !== "string") {
+    res.status(400).json({ error: "displayName must be a string" }); return;
+  }
+  if (email !== undefined && (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+    res.status(400).json({ error: "email must be a valid email address" }); return;
+  }
+  if (phone !== undefined && typeof phone !== "string") {
+    res.status(400).json({ error: "phone must be a string" }); return;
+  }
+  if (defaultShippingAddress !== undefined && typeof defaultShippingAddress !== "string") {
+    res.status(400).json({ error: "defaultShippingAddress must be a string" }); return;
+  }
 
   const updateData: Record<string, unknown> = {};
-  if (displayName !== undefined) updateData.displayName = displayName;
-  if (email !== undefined) updateData.email = email;
-  if (phone !== undefined) updateData.phone = phone;
-  if (defaultShippingAddress !== undefined) updateData.defaultShippingAddress = defaultShippingAddress;
+  if (displayName !== undefined) updateData.displayName = displayName.trim().slice(0, 100);
+  if (email !== undefined) updateData.email = email.trim().toLowerCase();
+  if (phone !== undefined) updateData.phone = phone.trim().slice(0, 20);
+  if (defaultShippingAddress !== undefined) updateData.defaultShippingAddress = defaultShippingAddress.trim().slice(0, 500);
 
   const [existing] = await db.select().from(userProfilesTable).where(eq(userProfilesTable.userId, userId));
 

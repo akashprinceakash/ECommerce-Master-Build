@@ -89,8 +89,20 @@ app.use(
 );
 
 // ── Body parsing (size limits) ────────────────────────────────────────────────
-// Global limit: 5 MB for JSON. File-upload routes use multer (own limits).
-// The customization save endpoint declares its own 50 MB override via route-level middleware.
+// Customization write routes: 50 MB override MUST be registered BEFORE the global
+// 5 MB parser — Express runs middleware in registration order, so if the global
+// parser runs first it will reject large bodies before any route-level parser sees them.
+app.use("/api/customizations", (req, res, next) => {
+  if (["POST", "PUT", "PATCH"].includes(req.method)) {
+    return express.json({
+      limit: "50mb",
+      verify: (r, _res, buf) => { (r as any).rawBody = buf; },
+    })(req, res, next);
+  }
+  next();
+});
+
+// Global limit: 5 MB for all other JSON bodies. File-upload routes use multer (own limits).
 app.use(express.json({
   limit: "5mb",
   verify: (req, _res, buf) => { (req as any).rawBody = buf; },
@@ -136,9 +148,10 @@ const standardLimiter = rateLimit({
   handler: rateLimitHandler,
 });
 
-// Apply strict limiter to payment and coupon validation routes
+// Apply strict limiter to payment, coupon validation, and auth routes
 app.use("/api/payment", strictLimiter);
 app.use("/api/coupons/validate", strictLimiter);
+app.use("/api/auth", strictLimiter);
 
 // Apply admin mutation limiter to admin write endpoints
 app.use(["/api/admin"], (req: Request, res: Response, next: NextFunction) => {

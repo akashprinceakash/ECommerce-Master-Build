@@ -1,13 +1,11 @@
 import { Router, type IRouter } from "express";
-import express from "express";
 import { eq, and, desc } from "drizzle-orm";
 import { db, customizationsTable } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import type { Request } from "express";
 
-// Canvas data can be large (embedded image URLs, fabric objects).
-// Override the global 5 MB limit to 50 MB for save/update endpoints only.
-const largeBodyParser = express.json({ limit: "50mb" });
+// Note: the 50 MB body-size override for write routes is applied in app.ts
+// via path-prefixed middleware BEFORE the global 5 MB parser. No route-level override needed.
 
 const router: IRouter = Router();
 
@@ -21,7 +19,7 @@ router.get("/customizations", requireAuth, async (req, res): Promise<void> => {
   res.json(customizations);
 });
 
-router.post("/customizations", largeBodyParser, requireAuth, async (req, res): Promise<void> => {
+router.post("/customizations", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const { productId, name, color, size, partsEnabled, canvasData, previewImageUrl, frontImageUrl, backImageUrl, sideImageUrl, customizationCharge } = req.body;
   if (!productId || !color || !size) {
@@ -84,7 +82,7 @@ router.get("/customizations/:id", requireAuth, async (req, res): Promise<void> =
   res.json(customization);
 });
 
-router.put("/customizations/:id", largeBodyParser, requireAuth, async (req, res): Promise<void> => {
+router.put("/customizations/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(rawId, 10);

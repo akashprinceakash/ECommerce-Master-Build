@@ -16,17 +16,25 @@ type OrderStatus = typeof VALID_STATUSES[number];
 
 async function requireAdmin(req: Request, res: Response): Promise<string | null> {
   const userId = (req as AuthenticatedRequest).userId;
-  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return null; }
+  if (!userId) {
+    (req as any).log?.warn({ method: req.method, path: req.path }, "Admin: no userId — 401");
+    res.status(401).json({ error: "Unauthorized" }); return null;
+  }
   try {
     const user = await clerkClient.users.getUser(userId);
     const role = (user.publicMetadata as any)?.role;
     const adminEmails = process.env["ADMIN_EMAILS"]?.split(",").map(e => e.trim()) ?? [];
     const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
     if (role !== "admin" && !adminEmails.includes(primaryEmail ?? "")) {
+      (req as any).log?.warn({ userId, method: req.method, path: req.path }, "Admin: insufficient role — 403");
       res.status(403).json({ error: "Forbidden" }); return null;
     }
+    (req as any).log?.info({ adminId: userId, method: req.method, path: req.path }, "Admin action");
     return userId;
-  } catch { res.status(401).json({ error: "Unauthorized" }); return null; }
+  } catch {
+    (req as any).log?.warn({ userId, method: req.method, path: req.path }, "Admin: Clerk lookup failed — 401");
+    res.status(401).json({ error: "Unauthorized" }); return null;
+  }
 }
 
 async function fetchUserMap(userIds: string[]) {

@@ -56,10 +56,17 @@ router.get("/cart", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/cart/items", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
-  const { productId, customizationId, quantity, size, measurements } = req.body;
-  if (!productId || !size) {
-    res.status(400).json({ error: "productId and size are required" });
-    return;
+  const { productId, customizationId, quantity, size, measurements } = req.body ?? {};
+  const parsedProductId = Number(productId);
+  const parsedQuantity  = Number(quantity ?? 1);
+  if (!productId || isNaN(parsedProductId) || parsedProductId <= 0) {
+    res.status(400).json({ error: "productId must be a positive integer" }); return;
+  }
+  if (!size || typeof size !== "string" || size.trim().length === 0) {
+    res.status(400).json({ error: "size is required" }); return;
+  }
+  if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1 || parsedQuantity > 100) {
+    res.status(400).json({ error: "quantity must be a whole number between 1 and 100" }); return;
   }
   const cart = await getOrCreateCart(userId);
 
@@ -90,10 +97,13 @@ router.patch("/cart/items/:id", requireAuth, async (req, res): Promise<void> => 
   const userId = (req as AuthenticatedRequest).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(rawId, 10);
-  const { quantity } = req.body;
-  if (isNaN(id) || !quantity) {
-    res.status(400).json({ error: "Invalid request" });
-    return;
+  const { quantity } = req.body ?? {};
+  const parsedQty = Number(quantity);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid cart item ID" }); return;
+  }
+  if (!quantity || !Number.isInteger(parsedQty) || parsedQty < 1 || parsedQty > 100) {
+    res.status(400).json({ error: "quantity must be a whole number between 1 and 100" }); return;
   }
   const cart = await getOrCreateCart(userId);
   const [updated] = await db
