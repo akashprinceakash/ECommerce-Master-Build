@@ -31,9 +31,25 @@ app.use(helmet({
 }));
 
 // ── HTTP request logging ───────────────────────────────────────────────────────
+// customLogLevel: 4xx → warn, 5xx → error, otherwise info.
+// customProps: safely logs the shape of the request body (keys only, never values)
+// so failed requests are diagnosable without leaking sensitive data.
 app.use(
   pinoHttp({
     logger,
+    customLogLevel(_req, res, err) {
+      if (err || res.statusCode >= 500) return "error";
+      if (res.statusCode >= 400) return "warn";
+      return "info";
+    },
+    customProps(req) {
+      const body = (req as any).body;
+      const bodyKeys =
+        body && typeof body === "object" && !Array.isArray(body)
+          ? Object.keys(body)
+          : undefined;
+      return bodyKeys ? { bodyKeys } : {};
+    },
     serializers: {
       req(req) {
         return {
@@ -69,6 +85,7 @@ const ALLOWED_ORIGINS = [
   /\.vercel\.app$/,
   /\.replit\.dev$/,
   /\.replit\.app$/,
+  /\.onrender\.com$/,
   /localhost/,
 ];
 

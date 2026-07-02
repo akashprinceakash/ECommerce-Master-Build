@@ -116,13 +116,26 @@ router.post("/admin/products", requireAuth, async (req, res): Promise<void> => {
   const adminId = await requireAdmin(req, res);
   if (!adminId) return;
 
-  const { name, description, category, gender, productType, subType, sku, stock, priceInPaise, modelUrl, thumbnailUrl, additionalImages, available, sizes, defaultColor, colorLabel } = req.body;
-  if (!name || !description || !category || !priceInPaise || !modelUrl) {
-    res.status(400).json({ error: "Missing required fields" }); return;
+  const { name, description, category, gender, productType, subType, sku, stock, priceInPaise, modelUrl, thumbnailUrl, additionalImages, available, sizes, defaultColor, colorLabel } = req.body ?? {};
+  if (!name || typeof name !== "string" || name.trim().length === 0) {
+    res.status(400).json({ error: "name is required and must be a non-empty string" }); return;
+  }
+  if (!description || typeof description !== "string") {
+    res.status(400).json({ error: "description is required and must be a string" }); return;
+  }
+  if (!category || typeof category !== "string") {
+    res.status(400).json({ error: "category is required and must be a string" }); return;
+  }
+  if (!modelUrl || typeof modelUrl !== "string") {
+    res.status(400).json({ error: "modelUrl is required and must be a string" }); return;
+  }
+  const parsedPrice = Number(priceInPaise);
+  if (!priceInPaise || !Number.isInteger(parsedPrice) || parsedPrice <= 0) {
+    res.status(400).json({ error: "priceInPaise must be a positive integer" }); return;
   }
 
   const [product] = await db.insert(productsTable).values({
-    name,
+    name: name.trim(),
     description,
     category,
     gender: gender ?? null,
@@ -130,7 +143,7 @@ router.post("/admin/products", requireAuth, async (req, res): Promise<void> => {
     subType: subType ?? null,
     sku: sku ?? null,
     stock: stock !== undefined ? Number(stock) : 100,
-    priceInPaise: Number(priceInPaise),
+    priceInPaise: parsedPrice,
     modelUrl,
     thumbnailUrl: thumbnailUrl ?? null,
     additionalImages: additionalImages ?? null,

@@ -236,6 +236,7 @@ async function runFulfillment(
 ────────────────────────────────────────────────────── */
 router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
+  (req as any).log?.info({ userId }, "payment/order: initiated");
   if (!rzp) { res.status(500).json({ error: "Razorpay not configured" }); return; }
 
   const {
@@ -528,6 +529,7 @@ router.post("/payment/retry/:orderId", requireAuth, async (req, res): Promise<vo
 ────────────────────────────────────────────────────── */
 router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
+  (req as any).log?.info({ userId }, "payment/verify: initiated");
   if (!rzp || !keySecret) { res.status(500).json({ error: "Razorpay not configured" }); return; }
 
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body ?? {};
@@ -565,7 +567,7 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
     .update(`${razorpay_order_id}|${razorpay_payment_id}`)
     .digest("hex");
   if (expected !== razorpay_signature) {
-    logger.warn({ razorpay_order_id, razorpay_payment_id }, "verify: invalid signature — possible tampering");
+    (req as any).log?.warn({ razorpay_order_id, razorpay_payment_id }, "verify: invalid signature — possible tampering");
     void db.insert(orderEventsTable).values({
       orderId: dbOrder.id,
       eventType: "signature_invalid",
@@ -744,12 +746,13 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
 router.post("/payment/webhook", async (req, res): Promise<void> => {
   res.status(200).json({ ok: true });
 
+  const reqLog = (req as any).log ?? logger;
   const signature = req.headers["x-razorpay-signature"] as string | undefined;
   const rawBody   = (req as any).rawBody as Buffer | undefined;
 
   if (webhookSecret) {
     if (!signature || !rawBody) {
-      logger.warn("Webhook received without signature or raw body — skipped");
+      reqLog.warn("Webhook received without signature or raw body — skipped");
       return;
     }
     const expected = crypto
@@ -757,10 +760,11 @@ router.post("/payment/webhook", async (req, res): Promise<void> => {
       .update(rawBody)
       .digest("hex");
     if (expected !== signature) {
-      logger.warn("Webhook signature mismatch — skipped");
+      reqLog.warn("Webhook signature mismatch — skipped");
       return;
     }
   }
+  reqLog.info({ event: req.body?.event }, "Webhook: received");
 
   const event = req.body?.event as string | undefined;
   const paymentEntity = req.body?.payload?.payment?.entity;
