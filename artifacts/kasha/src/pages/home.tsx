@@ -632,14 +632,6 @@ export default function Home() {
       <section style={{ background: BG_DARK, borderTop: `0.5px solid rgba(184,146,90,0.18)`, borderBottom: `0.5px solid rgba(184,146,90,0.18)` }}>
         <div style={{ padding: `52px ${PAD} 56px`, position: "relative", overflow: "hidden" }}>
 
-          {/* Watermark */}
-          <div style={{
-            position: "absolute", bottom: -60, right: -20, zIndex: 0,
-            fontFamily: "'Cormorant Garamond', serif", fontSize: 340,
-            fontWeight: 200, color: GOLD, opacity: 0.04, lineHeight: 1,
-            userSelect: "none", pointerEvents: "none", letterSpacing: "-0.04em",
-          }}>LB</div>
-
           {/* Header row */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 44, flexWrap: "wrap", gap: 20, position: "relative", zIndex: 1 }}>
             <div>

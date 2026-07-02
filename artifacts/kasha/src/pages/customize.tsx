@@ -464,6 +464,8 @@ export default function CustomizePage() {
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [colorTarget, setColorTarget] = useState<"all"|"front"|"back"|"leftSleeve"|"rightSleeve">("all");
+  const [samplerActive, setSamplerActive] = useState(false);
+  const [samplerPreview, setSamplerPreview] = useState<string|null>(null);
   // ── Pattern colour channels ───────────────────────────────────────────────
   const [patColorA, setPatColorA] = useState(PAT_COLOR_A_DEFAULT);   // Channel A — dark tones
   const [patColorB, setPatColorB] = useState(PAT_COLOR_B_DEFAULT);   // Channel B — light tones
@@ -964,12 +966,13 @@ export default function CustomizePage() {
       const r=parseInt(hex.slice(1,3)||"ff",16)/255;
       const g=parseInt(hex.slice(3,5)||"ff",16)/255;
       const b=parseInt(hex.slice(5,7)||"ff",16)/255;
-      const lin=(c:number)=>Math.pow(Math.max(0,Math.min(1,c)),2.2);
-      const lR=lin(r),lG=lin(g),lB=lin(b);
 
       // ── Step A: instant visual hint via baseColorFactor ────────────────────
+      // Use sRGB values directly (not gamma-converted linear) so the hint colour
+      // matches the picker exactly. Step B/C replaces this with the actual sRGB
+      // texture, at which point baseColorFactor is reset to [1,1,1,1].
       for (const entry of capturedMats) {
-        try { entry.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([lR,lG,lB,1]); } catch {}
+        try { entry.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([r,g,b,1]); } catch {}
       }
       try { mv.requestUpdate?.(); } catch {}
 
@@ -3063,28 +3066,106 @@ export default function CustomizePage() {
                         ? MAIN_PALETTE.map(hex=>swatch(hex,primaryColor===hex,()=>applyPrimary(hex)))
                         : MAIN_PALETTE.map(hex=>swatch(hex,zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]===hex,()=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,hex)))}
                     </div>
-                    <div style={{fontSize:9,color:V.mu,letterSpacing:".06em",fontFamily:"'Jost',sans-serif",marginBottom:6,textTransform:"uppercase",fontWeight:600}}>Click the icon below to select a specific colour</div>
-                    <label title="Pick a custom colour" aria-label="Pick a custom colour" style={{
-                      display:"inline-flex",alignItems:"center",gap:8,cursor:"pointer",
-                      padding:"8px 14px",borderRadius:10,
-                      border:`1.5px solid ${V.ac}`,background:V.aclt,
-                      position:"relative",overflow:"hidden",
-                      fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:600,
-                      color:V.tx,letterSpacing:".05em",
-                    }}>
-                      <span style={{
-                        width:28,height:28,borderRadius:6,
-                        background:(activeKashaDesign||colorTarget==="all")
-                          ?primaryColor
-                          :zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]||primaryColor,
-                        border:`1.5px solid rgba(26,26,24,0.18)`,
-                        display:"inline-block",flexShrink:0,
-                      }}/>
-                      <span>🎨 Custom Colour Picker</span>
-                      {(activeKashaDesign||colorTarget==="all")
-                        ?<input type="color" value={primaryColor} onChange={e=>applyPrimary(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
-                        :<input type="color" value={zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]||primaryColor} onChange={e=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>}
-                    </label>
+                    {/* Hex text input — exact value entry */}
+                    {(()=>{
+                      const currentHex=(activeKashaDesign||colorTarget==="all")
+                        ?primaryColor
+                        :zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]||primaryColor;
+                      return (
+                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+                          <span style={{width:22,height:22,borderRadius:4,background:currentHex,border:"1.5px solid rgba(26,26,24,0.18)",flexShrink:0,display:"inline-block"}}/>
+                          <input
+                            type="text"
+                            value={currentHex.toUpperCase()}
+                            maxLength={7}
+                            spellCheck={false}
+                            onChange={e=>{
+                              const v=e.target.value.trim();
+                              const hex=/^#[0-9a-fA-F]{6}$/.test(v)?v:/^[0-9a-fA-F]{6}$/.test(v)?`#${v}`:null;
+                              if(!hex) return;
+                              if(activeKashaDesign||colorTarget==="all") applyPrimary(hex);
+                              else applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,hex);
+                            }}
+                            style={{
+                              fontFamily:"'Jost',monospace",fontSize:12,fontWeight:600,letterSpacing:".08em",
+                              border:`1px solid ${V.bd}`,borderRadius:6,padding:"4px 8px",
+                              width:"90px",background:V.sf2,color:V.tx,outline:"none",
+                              textTransform:"uppercase",
+                            }}
+                          />
+                          <button
+                            title="Copy hex"
+                            onClick={()=>navigator.clipboard?.writeText(currentHex.toUpperCase())}
+                            style={{background:"none",border:"none",cursor:"pointer",padding:2,color:V.mu,fontSize:13,lineHeight:1}}
+                          >⎘</button>
+                        </div>
+                      );
+                    })()}
+                    <div style={{display:"flex",gap:6,marginBottom:6,flexWrap:"wrap"}}>
+                      {/* Browser colour picker */}
+                      <label title="Pick a custom colour" aria-label="Pick a custom colour" style={{
+                        display:"inline-flex",alignItems:"center",gap:6,cursor:"pointer",
+                        padding:"7px 12px",borderRadius:8,
+                        border:`1.5px solid ${V.ac}`,background:V.aclt,
+                        position:"relative",overflow:"hidden",
+                        fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:600,
+                        color:V.tx,letterSpacing:".05em",flex:"1 1 auto",justifyContent:"center",
+                      }}>
+                        <span>🎨 Colour Picker</span>
+                        {(activeKashaDesign||colorTarget==="all")
+                          ?<input type="color" value={(activeKashaDesign||colorTarget==="all")?primaryColor:zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]||primaryColor} onChange={e=>applyPrimary(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
+                          :<input type="color" value={zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]||primaryColor} onChange={e=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>}
+                      </label>
+                      {/* Canvas eyedropper — reads exact pixel from the flat design canvas (no lighting shift) */}
+                      <button
+                        title="Sample a colour directly from your uploaded design (no lighting effects)"
+                        onClick={()=>{
+                          const fc=fcRef.current; if(!fc) return;
+                          fc.renderAll();
+                          const rawEl: HTMLCanvasElement|null = typeof (fc as any).getElement==="function"?(fc as any).getElement():null;
+                          if(!rawEl) return;
+                          setSamplerPreview(rawEl.toDataURL("image/png"));
+                          setSamplerActive(true);
+                        }}
+                        style={{
+                          display:"inline-flex",alignItems:"center",gap:6,cursor:"pointer",
+                          padding:"7px 12px",borderRadius:8,
+                          border:`1.5px solid ${V.bd}`,background:V.sf2,
+                          fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:600,
+                          color:V.tx,letterSpacing:".05em",flex:"1 1 auto",justifyContent:"center",
+                        }}
+                      >🔬 Sample from Design</button>
+                    </div>
+                    {/* Canvas sampler overlay */}
+                    {samplerActive&&samplerPreview&&(
+                      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.65)",zIndex:9999,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12}} onClick={()=>setSamplerActive(false)}>
+                        <div style={{fontFamily:"'Jost',sans-serif",fontSize:12,color:"#fff",letterSpacing:".06em",textTransform:"uppercase",fontWeight:600}}>
+                          Click anywhere on the design to sample that colour
+                        </div>
+                        <div style={{position:"relative",cursor:"crosshair"}} onClick={e=>{
+                          e.stopPropagation();
+                          const rect=(e.currentTarget as HTMLElement).getBoundingClientRect();
+                          const xRatio=(e.clientX-rect.left)/rect.width;
+                          const yRatio=(e.clientY-rect.top)/rect.height;
+                          const fc=fcRef.current as any;
+                          if(!fc) return;
+                          const rawEl: HTMLCanvasElement|null = typeof fc.getElement==="function"?fc.getElement():null;
+                          if(!rawEl) return;
+                          const ctx=rawEl.getContext("2d"); if(!ctx) return;
+                          const px=Math.round(xRatio*rawEl.width);
+                          const py=Math.round(yRatio*rawEl.height);
+                          const d=ctx.getImageData(px,py,1,1).data;
+                          const toHex=(n:number)=>n.toString(16).padStart(2,"0");
+                          const sampledHex=`#${toHex(d[0])}${toHex(d[1])}${toHex(d[2])}`;
+                          if(activeKashaDesign||colorTarget==="all") applyPrimary(sampledHex);
+                          else applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,sampledHex);
+                          setSamplerActive(false);
+                        }}>
+                          <img src={samplerPreview} alt="Design canvas" style={{display:"block",maxWidth:"min(80vw,400px)",maxHeight:"min(80vh,400px)",imageRendering:"pixelated",border:"2px solid rgba(255,255,255,0.3)",borderRadius:4}}/>
+                        </div>
+                        <div style={{fontFamily:"'Jost',sans-serif",fontSize:10,color:"rgba(255,255,255,0.5)",letterSpacing:".04em"}}>Click outside to cancel</div>
+                      </div>
+                    )}
                     {!activeKashaDesign&&colorTarget!=="all"&&zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]&&(
                       <button onClick={()=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,"")} style={{fontSize:10,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",letterSpacing:".04em"}}>✕ Reset this zone</button>
                     )}

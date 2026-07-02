@@ -157,16 +157,7 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
               {cart?.items.map((item) => (
                 <div key={item.id} className="flex gap-3 border-b border-gray-100 pb-5">
                   <div className="w-20 h-24 bg-gray-100 flex-shrink-0 overflow-hidden relative">
-                    {item.customization?.previewImageUrl ? (
-                      <>
-                        <img
-                          src={item.customization.previewImageUrl}
-                          alt={item.product.name}
-                          className="w-full h-full object-cover object-center"
-                        />
-                        <span className="absolute bottom-0 right-0 bg-black/70 text-white text-[9px] px-1 py-0.5 leading-tight">CUSTOM</span>
-                      </>
-                    ) : item.product.thumbnailUrl ? (
+                    {item.product.thumbnailUrl ? (
                       <img
                         src={getAssetUrl(item.product.thumbnailUrl)}
                         alt={item.product.name}
@@ -176,6 +167,9 @@ export function CartDrawer({ open, onClose, cart }: CartDrawerProps) {
                       <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">
                         KA.SHA
                       </div>
+                    )}
+                    {item.customization?.previewImageUrl && (
+                      <span className="absolute bottom-0 right-0 bg-black/70 text-white text-[9px] px-1 py-0.5 leading-tight">CUSTOM</span>
                     )}
                   </div>
                   <div className="flex-1 flex flex-col justify-between">

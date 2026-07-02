@@ -1,0 +1,28 @@
+You can give Replit AI a production-focused requirement like this:
+
+> **Implement a production-ready coupon management system and ensure the entire checkout and payment flow is robust and reliable.**
+>
+> This application will be used by a large number of customers, so the implementation must follow production best practices with proper validation, security, scalability, and error handling.
+>
+> Specifically:
+>
+> * Build a complete admin panel for creating, editing, enabling/disabling, and deleting coupon codes.
+> * Support percentage discounts, fixed-amount discounts, expiry dates, usage limits, per-user limits, minimum order values, and product/category-specific eligibility.
+> * Validate coupon codes securely on the server and prevent misuse or duplicate redemption.
+> * Apply discounts correctly before payment and reflect them accurately in the order summary.
+> * Ensure the coupon logic integrates seamlessly with the existing checkout and payment flow without affecting order creation or payment processing.
+>
+> **Most importantly, review and harden the entire payment workflow.** Recently, we received a customer complaint where the website displayed **"Payment Failed"**, but the payment was actually debited from the customer's account. This indicates that payment verification, webhook handling, order status updates, or failure recovery may not be fully reliable.
+>
+> Before making any changes, thoroughly audit the existing checkout and payment implementation and ensure:
+>
+> * Payment webhooks are handled correctly and idempotently.
+> * Orders are never duplicated.
+> * Successful payments are never marked as failed.
+> * Failed or abandoned payments are handled gracefully.
+> * Network interruptions, retries, refreshes, and duplicate callback events do not create inconsistent order states.
+> * Order creation, payment verification, inventory updates, and confirmation emails are executed reliably.
+> * Every payment transaction is logged with sufficient details for debugging and reconciliation.
+> * Appropriate monitoring, logging, and error handling are in place for production.
+>
+> The final implementation should be **production-ready, thoroughly tested, scalable, and resilient**, ensuring customers never lose money or experience inconsistent order/payment statuses, even under heavy traffic or unexpected failures.
