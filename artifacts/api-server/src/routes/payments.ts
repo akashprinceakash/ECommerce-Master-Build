@@ -730,53 +730,50 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
       .where(inArray(ordersTable.id, stale.map((s) => s.id)));
   }
 
-  // Create order directly as confirmed — no Razorpay involved
-  const [order] = await db.insert(ordersTable).values({
-    userId,
-    status: "confirmed",
-    paymentMethod: "cod",
-    totalInPaise,
-    shippingChargeInPaise,
-    shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
-    remarks,
-    couponCode: codValidatedCouponCode,
-    discountInPaise: codDiscountInPaise || 0,
-  }).returning();
+  // Create order, items, and coupon usage atomically in one transaction
+  const order = await db.transaction(async (tx) => {
+    const [inserted] = await tx.insert(ordersTable).values({
+      userId,
+      status: "confirmed",
+      paymentMethod: "cod",
+      totalInPaise,
+      shippingChargeInPaise,
+      shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
+      remarks,
+      couponCode: codValidatedCouponCode,
+      discountInPaise: codDiscountInPaise || 0,
+    }).returning();
 
-  await Promise.all(
-    cartItemsWithProducts.map((item) =>
-      db.insert(orderItemsTable).values({
-        orderId: order.id,
-        productId: item.productId,
-        customizationId: item.customizationId ?? null,
-        quantity: item.quantity,
-        size: item.size,
-        priceInPaise: item.product?.priceInPaise ?? 0,
-        measurements: (item as any).measurements ?? null,
-      }),
-    ),
-  );
+    await Promise.all(
+      cartItemsWithProducts.map((item) =>
+        tx.insert(orderItemsTable).values({
+          orderId: inserted.id,
+          productId: item.productId,
+          customizationId: item.customizationId ?? null,
+          quantity: item.quantity,
+          size: item.size,
+          priceInPaise: item.product?.priceInPaise ?? 0,
+          measurements: (item as any).measurements ?? null,
+        }),
+      ),
+    );
 
-  // Record events for COD order (placed + confirmed in one step)
+    if (codValidatedCouponCode && codDiscountInPaise > 0) {
+      const [coupon] = await tx.select({ id: couponsTable.id }).from(couponsTable)
+        .where(eq(couponsTable.code, codValidatedCouponCode));
+      if (coupon) {
+        await tx.insert(couponUsagesTable).values({ couponId: coupon.id, userId, orderId: inserted.id });
+      }
+    }
+
+    return inserted;
+  });
+
+  // Record events (fire-and-forget — non-critical)
   void (async () => {
     await db.insert(orderEventsTable).values({ orderId: order.id, eventType: "order_placed", title: "Order Placed", description: "Cash on Delivery" });
     await db.insert(orderEventsTable).values({ orderId: order.id, eventType: "payment_confirmed", title: "Order Confirmed", description: "COD order confirmed" });
   })();
-
-  // Track coupon usage for COD orders (fire-and-forget)
-  if (order.couponCode && order.discountInPaise > 0) {
-    void (async () => {
-      try {
-        const [coupon] = await db.select({ id: couponsTable.id }).from(couponsTable)
-          .where(eq(couponsTable.code, order.couponCode!));
-        if (coupon) {
-          await db.insert(couponUsagesTable).values({ couponId: coupon.id, userId, orderId: order.id });
-        }
-      } catch (e) {
-        logger.error({ orderId: order.id, couponCode: order.couponCode, err: e }, "COD: coupon usage tracking failed");
-      }
-    })();
-  }
 
   // Run fulfillment in background (cart clear, stock deduction, Shiprocket, email)
   void runFulfillment(order, userId);
@@ -952,28 +949,26 @@ async function confirmOrder(
     logger.error({ orderId, err: e }, "confirmOrder: event insert failed (non-critical — order IS confirmed)"),
   );
 
-  // Track coupon usage (fire-and-forget — order is already confirmed)
-  const confirmedOrder = updated;
-  if (confirmedOrder?.couponCode && confirmedOrder.discountInPaise > 0) {
-    void (async () => {
-      try {
-        const [coupon] = await db.select({ id: couponsTable.id }).from(couponsTable)
-          .where(eq(couponsTable.code, confirmedOrder.couponCode!));
-        if (coupon) {
-          const [alreadyUsed] = await db.select({ id: couponUsagesTable.id }).from(couponUsagesTable)
-            .where(and(eq(couponUsagesTable.couponId, coupon.id), eq(couponUsagesTable.orderId, orderId)));
-          if (!alreadyUsed) {
-            await db.insert(couponUsagesTable).values({
-              couponId: coupon.id,
-              userId: confirmedOrder.userId,
-              orderId: confirmedOrder.id,
-            });
-          }
+  // Track coupon usage synchronously — must be recorded reliably alongside order confirmation.
+  // Not wrapped in the status-update transaction because rolling back a captured payment is dangerous.
+  if (updated.couponCode && updated.discountInPaise > 0) {
+    try {
+      const [coupon] = await db.select({ id: couponsTable.id }).from(couponsTable)
+        .where(eq(couponsTable.code, updated.couponCode));
+      if (coupon) {
+        const [alreadyUsed] = await db.select({ id: couponUsagesTable.id }).from(couponUsagesTable)
+          .where(and(eq(couponUsagesTable.couponId, coupon.id), eq(couponUsagesTable.orderId, orderId)));
+        if (!alreadyUsed) {
+          await db.insert(couponUsagesTable).values({
+            couponId: coupon.id,
+            userId: updated.userId,
+            orderId: updated.id,
+          });
         }
-      } catch (e) {
-        logger.error({ orderId, couponCode: confirmedOrder.couponCode, err: e }, "confirmOrder: coupon usage tracking failed");
       }
-    })();
+    } catch (e) {
+      logger.error({ orderId, couponCode: updated.couponCode, err: e }, "confirmOrder: coupon usage tracking failed");
+    }
   }
 
   // Fire-and-forget fulfillment — must NEVER throw back to the caller.

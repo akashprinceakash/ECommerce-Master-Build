@@ -54,6 +54,7 @@ const EMPTY_FORM = {
   maxUsagesPerUser: "1",
   expiresAt: "",
   categoryRestriction: "",
+  productIds: "",
   isActive: true,
 };
 
@@ -103,6 +104,9 @@ export function AdminCoupons() {
         maxUsagesPerUser: parseInt(data.maxUsagesPerUser, 10) || 1,
         expiresAt: data.expiresAt || null,
         categoryRestriction: data.categoryRestriction.trim() || null,
+        productIds: data.productIds.trim()
+          ? data.productIds.split(",").map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n > 0)
+          : null,
         isActive: data.isActive,
       };
       if (editingId) {
@@ -151,6 +155,7 @@ export function AdminCoupons() {
       maxUsagesPerUser: String(c.maxUsagesPerUser),
       expiresAt: c.expiresAt ? c.expiresAt.slice(0, 10) : "",
       categoryRestriction: c.categoryRestriction ?? "",
+      productIds: c.productIds ? c.productIds.join(", ") : "",
       isActive: c.isActive,
     });
     setEditingId(c.id);
@@ -277,6 +282,16 @@ export function AdminCoupons() {
                 onChange={e => setForm(p => ({ ...p, categoryRestriction: e.target.value }))}
                 placeholder="polo, trouser (optional)"
                 className="rounded-none"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>Product IDs (comma-separated)</Label>
+              <Input
+                value={form.productIds}
+                onChange={e => setForm(p => ({ ...p, productIds: e.target.value }))}
+                placeholder="12, 34, 56 (optional)"
+                className="rounded-none font-mono"
               />
             </div>
 

@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { eq, and, sql, desc } from "drizzle-orm";
-import { db, couponsTable, couponUsagesTable } from "@workspace/db";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
+import { db, couponsTable, couponUsagesTable, productsTable } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import { clerkClient } from "@clerk/express";
 
@@ -62,8 +62,17 @@ export async function validateCoupon(
     return { error: "You have already used this coupon the maximum number of times" };
   }
 
-  if (coupon.categoryRestriction && cartCategories.length > 0) {
-    if (!cartCategories.includes(coupon.categoryRestriction)) {
+  if (coupon.categoryRestriction) {
+    // Resolve categories server-side: accept caller-provided list or derive from product IDs in DB
+    let effectiveCategories = cartCategories;
+    if (effectiveCategories.length === 0 && cartProductIds.length > 0) {
+      const products = await db
+        .select({ category: productsTable.category })
+        .from(productsTable)
+        .where(inArray(productsTable.id, cartProductIds));
+      effectiveCategories = products.map(p => p.category).filter(Boolean) as string[];
+    }
+    if (effectiveCategories.length > 0 && !effectiveCategories.includes(coupon.categoryRestriction)) {
       return { error: `This coupon is only valid for ${coupon.categoryRestriction} products` };
     }
   }

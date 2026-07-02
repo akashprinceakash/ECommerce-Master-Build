@@ -31,6 +31,8 @@ interface AdminOrder {
   shiprocketAwb: string | null;
   trackingUrl: string | null;
   shippingChargeInPaise: number | null;
+  couponCode: string | null;
+  discountInPaise: number;
   createdAt: string;
   updatedAt: string;
   customerEmail: string;
@@ -1219,6 +1221,12 @@ export function AdminOrders() {
               <div>
                 <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Total</div>
                 <div className="text-base font-semibold">{formatPrice(viewOrder.totalInPaise)}</div>
+                {viewOrder.discountInPaise > 0 && (
+                  <div className="text-xs text-emerald-600 mt-0.5">
+                    {viewOrder.couponCode && <span className="font-mono font-semibold">{viewOrder.couponCode} — </span>}
+                    −{formatPrice(viewOrder.discountInPaise)} discount
+                  </div>
+                )}
               </div>
             </div>
 
