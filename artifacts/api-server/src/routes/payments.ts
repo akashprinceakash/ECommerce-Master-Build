@@ -759,10 +759,27 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
     );
 
     if (codValidatedCouponCode && codDiscountInPaise > 0) {
-      const [coupon] = await tx.select({ id: couponsTable.id }).from(couponsTable)
-        .where(eq(couponsTable.code, codValidatedCouponCode));
+      // Lock coupon row to serialise concurrent COD orders on the same coupon
+      const [coupon] = await tx.select().from(couponsTable)
+        .where(eq(couponsTable.code, codValidatedCouponCode))
+        .for("update");
       if (coupon) {
-        await tx.insert(couponUsagesTable).values({ couponId: coupon.id, userId, orderId: inserted.id });
+        // Recheck both global and per-user limits under lock
+        let canInsert = true;
+        if (coupon.maxUsages !== null) {
+          const [{ cnt }] = await tx.select({ cnt: sql<number>`count(*)::int` })
+            .from(couponUsagesTable).where(eq(couponUsagesTable.couponId, coupon.id));
+          if ((cnt ?? 0) >= coupon.maxUsages) canInsert = false;
+        }
+        if (canInsert) {
+          const [{ userCnt }] = await tx.select({ userCnt: sql<number>`count(*)::int` })
+            .from(couponUsagesTable)
+            .where(and(eq(couponUsagesTable.couponId, coupon.id), eq(couponUsagesTable.userId, userId)));
+          if ((userCnt ?? 0) >= coupon.maxUsagesPerUser) canInsert = false;
+        }
+        if (canInsert) {
+          await tx.insert(couponUsagesTable).values({ couponId: coupon.id, userId, orderId: inserted.id });
+        }
       }
     }
 
@@ -957,7 +974,7 @@ async function confirmOrder(
           .where(and(eq(couponUsagesTable.couponId, coupon.id), eq(couponUsagesTable.orderId, orderId)));
 
         if (!alreadyUsed) {
-          // Recheck maxUsages under lock to prevent over-redemption
+          // Recheck BOTH global and per-user limits under lock to prevent over-redemption
           let canInsert = true;
           if (coupon.maxUsages !== null) {
             const [{ cnt }] = await tx
@@ -968,6 +985,19 @@ async function confirmOrder(
               logger.warn(
                 { orderId, couponCode: result.couponCode },
                 "confirmOrder: coupon maxUsages exceeded at confirmation time; usage not recorded (payment already captured)",
+              );
+              canInsert = false;
+            }
+          }
+          if (canInsert) {
+            const [{ userCnt }] = await tx
+              .select({ userCnt: sql<number>`count(*)::int` })
+              .from(couponUsagesTable)
+              .where(and(eq(couponUsagesTable.couponId, coupon.id), eq(couponUsagesTable.userId, result.userId)));
+            if ((userCnt ?? 0) >= coupon.maxUsagesPerUser) {
+              logger.warn(
+                { orderId, couponCode: result.couponCode, userId: result.userId },
+                "confirmOrder: coupon maxUsagesPerUser exceeded at confirmation time; usage not recorded (payment already captured)",
               );
               canInsert = false;
             }

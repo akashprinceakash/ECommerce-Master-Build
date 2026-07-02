@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, boolean, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { ordersTable } from "./orders";
@@ -29,6 +29,7 @@ export const couponUsagesTable = pgTable("coupon_usages", {
   index("coupon_usages_coupon_id_idx").on(t.couponId),
   index("coupon_usages_user_id_idx").on(t.userId),
   index("coupon_usages_order_id_idx").on(t.orderId),
+  uniqueIndex("coupon_usages_coupon_order_uniq").on(t.couponId, t.orderId),
 ]);
 
 export const insertCouponSchema = createInsertSchema(couponsTable).omit({ id: true, createdAt: true, updatedAt: true });
