@@ -267,15 +267,44 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
 
   const totalInPaise = itemsTotalInPaise + shippingChargeInPaise;
 
-  // Cancel stale pending orders
+  // ── Idempotency: reuse an existing pending/payment_failed order if the cart total matches ──
+  // This prevents creating duplicate Razorpay orders when the checkout page is refreshed
+  // or the user clicks "Place Order" multiple times.
+  const [existingOrder] = await db
+    .select()
+    .from(ordersTable)
+    .where(and(
+      eq(ordersTable.userId, userId),
+      inArray(ordersTable.status, ["pending", "payment_failed"]),
+    ))
+    .limit(1);
+
+  if (existingOrder?.razorpayOrderId && existingOrder.totalInPaise === totalInPaise) {
+    // Verify the Razorpay order is still open (not expired or already paid)
+    try {
+      const rzpExisting = await rzp.orders.fetch(existingOrder.razorpayOrderId);
+      if (rzpExisting.status === "created") {
+        // Razorpay order still open — reuse it
+        logger.info({ orderId: existingOrder.id, rzpOrderId: existingOrder.razorpayOrderId }, "Reusing existing pending Razorpay order (idempotent)");
+        void db.insert(orderEventsTable).values({ orderId: existingOrder.id, eventType: "checkout_resumed", title: "Checkout Resumed", description: "Reusing existing Razorpay order" });
+        res.json({ orderId: rzpExisting.id, dbOrderId: existingOrder.id, amount: rzpExisting.amount, currency: rzpExisting.currency, keyId });
+        return;
+      }
+    } catch (_) {
+      // Razorpay fetch failed or order expired — fall through to create a new one
+    }
+  }
+
+  // Cancel any stale pending/payment_failed orders (different total or expired Razorpay order)
   const stale = await db
     .select({ id: ordersTable.id })
     .from(ordersTable)
-    .where(and(eq(ordersTable.userId, userId), eq(ordersTable.status, "pending")));
+    .where(and(eq(ordersTable.userId, userId), inArray(ordersTable.status, ["pending", "payment_failed"])));
   if (stale.length > 0) {
     await db.update(ordersTable)
       .set({ status: "cancelled" })
       .where(inArray(ordersTable.id, stale.map((s) => s.id)));
+    logger.info({ count: stale.length }, "Cancelled stale pending/payment_failed orders before new checkout");
   }
 
   let rzpOrder: any;
@@ -318,7 +347,7 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
   );
 
   // Record order placed event
-  void db.insert(orderEventsTable).values({ orderId: order.id, eventType: "order_placed", title: "Order Placed", description: "Awaiting payment" });
+  void db.insert(orderEventsTable).values({ orderId: order.id, eventType: "order_placed", title: "Order Placed", description: `Razorpay Order: ${rzpOrder.id} · Awaiting payment` });
 
   res.json({ orderId: rzpOrder.id, dbOrderId: order.id, amount: rzpOrder.amount, currency: rzpOrder.currency, keyId });
 });
@@ -340,6 +369,14 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
   );
   if (!dbOrder) { res.status(404).json({ error: "Order not found for this user" }); return; }
 
+  // Event: verify called
+  void db.insert(orderEventsTable).values({
+    orderId: dbOrder.id,
+    eventType: "verify_called",
+    title: "Payment Verification Started",
+    description: `Payment ID: ${razorpay_payment_id}`,
+  });
+
   // Idempotent: already confirmed with this exact payment
   if (dbOrder.status === "confirmed" && dbOrder.paymentId === razorpay_payment_id) {
     const full = await buildFullOrder(dbOrder.id);
@@ -358,8 +395,22 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
     .digest("hex");
   if (expected !== razorpay_signature) {
     logger.warn({ razorpay_order_id, razorpay_payment_id }, "verify: invalid signature — possible tampering");
+    void db.insert(orderEventsTable).values({
+      orderId: dbOrder.id,
+      eventType: "signature_invalid",
+      title: "Invalid Payment Signature",
+      description: `Possible tampering detected for Payment ID: ${razorpay_payment_id}`,
+    });
     res.status(400).json({ error: "Invalid payment signature" }); return;
   }
+
+  // Event: signature verified
+  void db.insert(orderEventsTable).values({
+    orderId: dbOrder.id,
+    eventType: "signature_verified",
+    title: "Signature Verified",
+    description: `HMAC signature valid for Payment ID: ${razorpay_payment_id}`,
+  });
 
   // Step 2: Fetch payment details from Razorpay to confirm status.
   // CRITICAL: if fetch fails AFTER signature is verified, we still confirm —
@@ -368,9 +419,16 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
   let paymentFetchFailed = false;
   try {
     payment = await rzp.payments.fetch(razorpay_payment_id);
+    logger.info({ paymentId: razorpay_payment_id, status: payment.status }, "verify: fetched payment status from Razorpay");
   } catch (e: any) {
     paymentFetchFailed = true;
     logger.error({ paymentId: razorpay_payment_id, err: e?.message }, "verify: payments.fetch failed after valid signature — trusting HMAC and confirming order");
+    void db.insert(orderEventsTable).values({
+      orderId: dbOrder.id,
+      eventType: "payment_fetch_failed",
+      title: "Payment Fetch Failed (Signature Trusted)",
+      description: `Razorpay API unreachable after valid HMAC — confirming on signature trust. Error: ${e?.message ?? "unknown"}`,
+    });
   }
 
   if (!paymentFetchFailed) {
@@ -380,6 +438,12 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
     }
     if (Number(payment.amount) !== Number(dbOrder.totalInPaise)) {
       logger.error({ paymentId: razorpay_payment_id, got: payment.amount, expected: dbOrder.totalInPaise }, "verify: amount mismatch");
+      void db.insert(orderEventsTable).values({
+        orderId: dbOrder.id,
+        eventType: "amount_mismatch",
+        title: "Payment Amount Mismatch",
+        description: `Got ₹${payment.amount / 100}, expected ₹${dbOrder.totalInPaise / 100}`,
+      });
       res.status(400).json({ error: "Payment amount mismatch — please contact support" }); return;
     }
 
@@ -389,6 +453,12 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
         await rzp.payments.capture(razorpay_payment_id, dbOrder.totalInPaise, "INR");
         payment = await rzp.payments.fetch(razorpay_payment_id);
         logger.info({ paymentId: razorpay_payment_id }, "verify: auto-captured authorized payment");
+        void db.insert(orderEventsTable).values({
+          orderId: dbOrder.id,
+          eventType: "payment_captured",
+          title: "Payment Auto-Captured",
+          description: `Payment ID: ${razorpay_payment_id} captured from authorized state`,
+        });
       } catch (e: any) {
         logger.error({ paymentId: razorpay_payment_id, err: e?.message }, "verify: capture failed after authorization");
         res.status(400).json({ error: "Payment authorized but capture failed — please contact support" }); return;
@@ -402,9 +472,18 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
   }
 
   // Confirm the order — signature verified (and optionally fetch confirmed captured status)
-  const confirmed = await confirmOrder(dbOrder.id, razorpay_payment_id, razorpay_signature, userId);
-  const full = await buildFullOrder(confirmed.id);
-  res.status(201).json(full);
+  // Even if fulfillment throws, the order is persisted as confirmed in confirmOrder first.
+  try {
+    const confirmed = await confirmOrder(dbOrder.id, razorpay_payment_id, razorpay_signature, userId);
+    const full = await buildFullOrder(confirmed.id);
+    res.status(201).json(full);
+  } catch (e: any) {
+    // confirmOrder updates the DB atomically before running fulfillment.
+    // If we reach here the order IS confirmed — log the error but return success.
+    logger.error({ orderId: dbOrder.id, paymentId: razorpay_payment_id, err: e?.message }, "verify: fulfillment error after confirm — order is confirmed, returning success");
+    const full = await buildFullOrder(dbOrder.id);
+    res.status(201).json(full);
+  }
 });
 
 /* ──────────────────────────────────────────────────────

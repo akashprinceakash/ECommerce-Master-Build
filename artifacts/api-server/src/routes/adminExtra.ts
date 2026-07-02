@@ -5,13 +5,13 @@ import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAu
 import { clerkClient } from "@clerk/express";
 import type { Request, Response } from "express";
 import { createShiprocketOrder, getShiprocketLabel, requestShiprocketPickup } from "../lib/shiprocket";
-import { sendOrderConfirmation } from "../lib/email";
+import { sendOrderConfirmation, sendRefundNotification } from "../lib/email";
 import { logger } from "../lib/logger";
 import { generateInvoicePdf } from "../lib/invoice";
 
 const router: IRouter = Router();
 
-const VALID_STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"] as const;
+const VALID_STATUSES = ["pending", "payment_failed", "confirmed", "processing", "ready_to_ship", "shipped", "delivered", "cancelled"] as const;
 type OrderStatus = typeof VALID_STATUSES[number];
 
 async function requireAdmin(req: Request, res: Response): Promise<string | null> {
@@ -360,11 +360,24 @@ router.post("/admin/orders/:id/refund", requireAuth, async (req, res): Promise<v
 
   logger.info({ orderId: id, paymentId: order.paymentId, initiatedBy: adminId }, "Admin: initiating refund");
 
+  // Optional partial refund amount and reason from admin request body
+  const rawAmount = req.body?.amount;
+  const reason = typeof req.body?.reason === "string" && req.body.reason.trim()
+    ? req.body.reason.trim().slice(0, 500)
+    : null;
+
+  const refundAmountInPaise = rawAmount && Number.isInteger(rawAmount) && rawAmount > 0 && rawAmount <= order.totalInPaise
+    ? rawAmount
+    : order.totalInPaise;
+
   const basicAuth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+  const rzBody: Record<string, any> = { amount: refundAmountInPaise, speed: "normal" };
+  if (reason) rzBody["notes"] = { reason };
+
   const rzRes = await fetch(`https://api.razorpay.com/v1/payments/${order.paymentId}/refund`, {
     method: "POST",
     headers: { "Authorization": `Basic ${basicAuth}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ speed: "normal" }),
+    body: JSON.stringify(rzBody),
   });
   const rzData: any = await rzRes.json();
 
@@ -382,6 +395,7 @@ router.post("/admin/orders/:id/refund", requireAuth, async (req, res): Promise<v
       razorpayPaymentId: order.paymentId,
       amountInPaise: rzData.amount,
       status: rzData.status,
+      reason,
       initiatedBy: adminId,
     }),
     db.update(ordersTable).set({ status: "cancelled" }).where(eq(ordersTable.id, id)),
@@ -389,11 +403,31 @@ router.post("/admin/orders/:id/refund", requireAuth, async (req, res): Promise<v
       orderId: id,
       eventType: "refund_initiated",
       title: "Refund Initiated",
-      description: `Refund ID: ${rzData.id} · Amount: ₹${(rzData.amount / 100).toFixed(2)} · Status: ${rzData.status}`,
+      description: `Refund ID: ${rzData.id} · Amount: ₹${(rzData.amount / 100).toFixed(2)} · Status: ${rzData.status}${reason ? ` · Reason: ${reason}` : ""}`,
     }),
   ]);
 
-  logger.info({ orderId: id, refundId: rzData.id, status: rzData.status }, "Admin: refund issued successfully");
+  // Send customer notification in background
+  void (async () => {
+    try {
+      const clerkUser = await clerkClient.users.getUser(order.userId);
+      const customerEmail = clerkUser.emailAddresses.find(e => e.id === clerkUser.primaryEmailAddressId)?.emailAddress;
+      if (customerEmail) {
+        await sendRefundNotification({
+          orderNumber: order.id,
+          customerName: order.shippingName,
+          customerEmail,
+          amountInPaise: rzData.amount,
+          reason,
+          razorpayRefundId: rzData.id,
+        });
+      }
+    } catch (e) {
+      logger.error({ orderId: id, err: e }, "Admin: failed to send refund notification email");
+    }
+  })();
+
+  logger.info({ orderId: id, refundId: rzData.id, amount: rzData.amount, status: rzData.status }, "Admin: refund issued successfully");
   res.json({ refundId: rzData.id, amount: rzData.amount, status: rzData.status });
 });
 

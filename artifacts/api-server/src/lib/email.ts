@@ -139,6 +139,73 @@ function buildHtml(d: OrderConfirmationData): string {
 </html>`;
 }
 
+export interface RefundNotificationData {
+  orderNumber: number;
+  customerName: string;
+  customerEmail: string;
+  amountInPaise: number;
+  reason?: string | null;
+  razorpayRefundId: string;
+}
+
+export async function sendRefundNotification(data: RefundNotificationData): Promise<void> {
+  if (!resend) {
+    logger.warn("Resend not configured — skipping refund notification email");
+    return;
+  }
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"/></head>
+<body style="margin:0;padding:0;background:#FAFAF7;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FAFAF7;">
+    <tr><td align="center" style="padding:40px 20px;">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #EDE9E4;">
+        <tr>
+          <td style="background:#111;padding:32px 40px;text-align:center;">
+            <p style="margin:0;font-family:Garamond,serif;font-size:26px;font-weight:500;letter-spacing:0.2em;color:#fff;">KA.SHA</p>
+            <p style="margin:6px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;letter-spacing:0.25em;color:#B8925A;text-transform:uppercase;">Golf &amp; Sportswear</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:40px 40px 0;text-align:center;">
+            <p style="margin:0 0 8px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.2em;color:#B8925A;text-transform:uppercase;">Refund Processed</p>
+            <h1 style="margin:0;font-family:Garamond,serif;font-size:32px;font-weight:400;color:#111;">Refund Initiated</h1>
+            <p style="margin:12px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#666;line-height:1.6;">
+              Dear ${data.customerName.split(" ")[0]}, a refund of <strong>${formatPrice(data.amountInPaise)}</strong> has been initiated for Order #${data.orderNumber}.${data.reason ? `<br/>Reason: ${data.reason}` : ""}
+            </p>
+            <p style="margin:12px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#888;">
+              Refund ID: ${data.razorpayRefundId}<br/>
+              Refunds typically take 5–7 business days to reflect in your account.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="border-top:1px solid #F0EDE8;padding:24px 40px;text-align:center;margin-top:32px;">
+            <p style="margin:0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:#999;line-height:1.8;">
+              Questions? Email us at <a href="mailto:support@kashaonline.in" style="color:#B8925A;text-decoration:none;">support@kashaonline.in</a><br/>
+              KA.SHA Golf &amp; Sportswear · Shahpur Jat, New Delhi 110049
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+  try {
+    await resend.emails.send({
+      to: data.customerEmail,
+      cc: ADMIN_CC_EMAIL,
+      from: `${FROM_NAME} <${FROM_EMAIL}>`,
+      subject: `KA.SHA — Refund Initiated for Order #${data.orderNumber}`,
+      text: `KA.SHA — Refund Initiated\n\nDear ${data.customerName},\n\nA refund of ${formatPrice(data.amountInPaise)} has been initiated for Order #${data.orderNumber}.\n\nRefund ID: ${data.razorpayRefundId}\n\nRefunds typically take 5–7 business days to reflect in your account.\n\nQuestions? Contact support@kashaonline.in`,
+      html,
+    });
+    logger.info({ to: data.customerEmail, orderNumber: data.orderNumber, refundId: data.razorpayRefundId }, "Refund notification email sent");
+  } catch (err) {
+    logger.error({ err, to: data.customerEmail, refundId: data.razorpayRefundId }, "Failed to send refund notification email");
+  }
+}
+
 export async function sendOrderConfirmation(data: OrderConfirmationData): Promise<void> {
   if (!resend) {
     logger.warn("Resend not configured (RESEND_API_KEY missing) — skipping order confirmation email");

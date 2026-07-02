@@ -8,6 +8,7 @@ export const refundsTable = pgTable("refunds", {
   razorpayPaymentId: text("razorpay_payment_id").notNull(),
   amountInPaise: integer("amount_in_paise").notNull(),
   status: text("status").notNull(),
+  reason: text("reason"),
   initiatedBy: text("initiated_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
