@@ -1,6 +1,19 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 
+// ── Global crash guards ───────────────────────────────────────────────────────
+// These prevent the process from silently dying on unhandled async errors.
+// Log first so we have a record, then exit so the process manager can restart.
+process.on("unhandledRejection", (reason) => {
+  logger.error({ err: reason }, "Unhandled promise rejection — shutting down");
+  process.exit(1);
+});
+
+process.on("uncaughtException", (err) => {
+  logger.error({ err }, "Uncaught exception — shutting down");
+  process.exit(1);
+});
+
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {
