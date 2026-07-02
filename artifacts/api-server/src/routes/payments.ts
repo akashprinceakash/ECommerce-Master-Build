@@ -404,6 +404,7 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
 ────────────────────────────────────────────────────── */
 router.post("/payment/retry/:orderId", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
+  (req as any).log?.info({ userId, orderId: req.params["orderId"] }, "payment/retry: initiated");
   if (!rzp || !keyId || !keySecret) { res.status(500).json({ error: "Razorpay not configured" }); return; }
 
   const orderId = parseInt(String(req.params["orderId"] ?? "0"), 10);
@@ -656,6 +657,7 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
 ────────────────────────────────────────────────────── */
 router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
+  (req as any).log?.info({ userId }, "payment/cod-order: initiated");
 
   const {
     shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,

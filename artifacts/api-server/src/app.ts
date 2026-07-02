@@ -42,14 +42,6 @@ app.use(
       if (res.statusCode >= 400) return "warn";
       return "info";
     },
-    customProps(req) {
-      const body = (req as any).body;
-      const bodyKeys =
-        body && typeof body === "object" && !Array.isArray(body)
-          ? Object.keys(body)
-          : undefined;
-      return bodyKeys ? { bodyKeys } : {};
-    },
     serializers: {
       req(req) {
         return {
@@ -78,15 +70,27 @@ app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 //        -H "Access-Control-Request-Method: GET" \
 //        -X OPTIONS https://kashaonline.in/api/healthz
 // Expected: Access-Control-Allow-Origin: https://kashaonline.in
-const ALLOWED_ORIGINS = [
+// ── CORS allowlist ────────────────────────────────────────────────────────────
+// Production: only exact known domains.
+// Development: additionally allow Replit preview + localhost.
+// Broad wildcard patterns (*.vercel.app, *.onrender.com) are intentionally
+// avoided with credentials:true because any app hosted on those domains could
+// read authenticated KA.SHA API responses from a logged-in user's browser.
+// To allow a new origin in production, add it to the CORS_ORIGINS env var
+// (comma-separated). In Render: Settings → Environment → CORS_ORIGINS.
+const EXTRA_ORIGINS: string[] = (process.env["CORS_ORIGINS"] ?? "")
+  .split(",")
+  .map(s => s.trim())
+  .filter(Boolean);
+
+const ALLOWED_ORIGINS: (string | RegExp)[] = [
   "https://www.kashaonline.in",
   "https://kashaonline.in",
-  "https://e-commerce-master-build-api-server.vercel.app",
-  /\.vercel\.app$/,
-  /\.replit\.dev$/,
-  /\.replit\.app$/,
-  /\.onrender\.com$/,
-  /localhost/,
+  ...EXTRA_ORIGINS,
+  // Development only — replit.dev preview + localhost
+  ...(process.env["NODE_ENV"] !== "production"
+    ? [/\.replit\.dev$/, /\.replit\.app$/, /localhost/] as RegExp[]
+    : []),
 ];
 
 app.use(
@@ -125,6 +129,20 @@ app.use(express.json({
   verify: (req, _res, buf) => { (req as any).rawBody = buf; },
 }));
 app.use(express.urlencoded({ extended: true, limit: "5mb" }));
+
+// ── Post-body-parse request shape logging ─────────────────────────────────────
+// Logs the KEYS (never values) of parsed JSON bodies at TRACE level so that
+// failed 4xx/5xx responses include diagnosable body shape in their log entry.
+// Must run AFTER the body parsers above so req.body is already populated.
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  if (["POST", "PUT", "PATCH"].includes(req.method)) {
+    const body = req.body;
+    if (body && typeof body === "object" && !Array.isArray(body)) {
+      (req as any).log?.trace({ bodyKeys: Object.keys(body) }, "request body keys");
+    }
+  }
+  next();
+});
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
 app.use(clerkMiddleware());
