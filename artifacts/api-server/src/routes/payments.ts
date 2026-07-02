@@ -5,7 +5,7 @@ import { eq, and, inArray, sql, desc } from "drizzle-orm";
 import { clerkClient } from "@clerk/express";
 import {
   db, cartsTable, cartItemsTable, productsTable,
-  ordersTable, orderItemsTable, customizationsTable, orderEventsTable, refundsTable,
+  ordersTable, orderItemsTable, customizationsTable, orderEventsTable, refundsTable, type OrderItem,
 } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import { createShiprocketOrder, getShippingRates } from "../lib/shiprocket";
@@ -293,9 +293,29 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
           res.json({ orderId: rzpExisting.id, dbOrderId: existingOrder.id, amount: rzpExisting.amount, currency: rzpExisting.currency, keyId });
           return;
         }
-        // Razorpay says order is not "created" (paid or expired) — cancel only THIS order and create fresh
+        if (rzpStatus === "paid") {
+          // Payment already captured on the Razorpay side — DO NOT cancel this order.
+          // Kick off auto-confirm in the background; /payment/verify or webhook will also catch this.
+          logger.warn({ orderId: existingOrder.id, rzpOrderId: existingOrder.razorpayOrderId }, "Existing order rzpStatus=paid — triggering background auto-confirm");
+          void (async () => {
+            try {
+              const rzpPayments = await (rzp as any).orders.fetchPayments(existingOrder.razorpayOrderId);
+              const captured = (rzpPayments?.items ?? []).find((p: any) => p.status === "captured");
+              if (captured) {
+                await confirmOrder(existingOrder.id, captured.id, "", existingOrder.userId);
+                logger.info({ orderId: existingOrder.id, paymentId: captured.id }, "Auto-confirmed previously paid order via /payment/order probe");
+              }
+            } catch (e) {
+              logger.error({ orderId: existingOrder.id, err: (e as any)?.message }, "Auto-confirm failed — webhook will retry");
+            }
+          })();
+          res.status(409).json({ error: "Your previous payment is being processed. Please check your order history shortly." });
+          return;
+        }
+        // Razorpay status is expired or otherwise terminal (not "created" and not "paid") —
+        // safe to cancel this DB order and create a fresh one.
         await db.update(ordersTable).set({ status: "cancelled" }).where(eq(ordersTable.id, existingOrder.id));
-        logger.info({ orderId: existingOrder.id, rzpStatus }, "Cancelled expired/paid Razorpay order before creating new one");
+        logger.info({ orderId: existingOrder.id, rzpStatus }, "Cancelled expired Razorpay order before creating new one");
       } catch (fetchErr) {
         // Razorpay API unavailable — return the existing order optimistically.
         // HMAC signature verification in /payment/verify will catch any invalid payment later.
@@ -416,7 +436,10 @@ router.post("/payment/retry/:orderId", requireAuth, async (req, res): Promise<vo
     return;
   }
 
-  // Existing Razorpay order is expired/paid — create a fresh one tied to the same DB row
+  // Existing Razorpay order is expired/paid — create a fresh Razorpay order and
+  // a NEW DB order (clone of the old one) rather than overwriting razorpayOrderId.
+  // This preserves the old razorpayOrderId → old DB order mapping so late
+  // payment.captured webhooks for the original attempt can still recover it.
   let rzpOrder: any;
   try {
     rzpOrder = await rzp.orders.create({
@@ -431,15 +454,54 @@ router.post("/payment/retry/:orderId", requireAuth, async (req, res): Promise<vo
     return;
   }
 
-  // Update the DB order with the new Razorpay order ID
+  // Fetch items from the old order to copy into the new one
+  const originalItems: OrderItem[] = await db.select().from(orderItemsTable)
+    .where(eq(orderItemsTable.orderId, orderId));
+
+  // Insert new DB order — preserves the old row intact with its original razorpayOrderId
+  const [newDbOrder] = await db.insert(ordersTable).values({
+    userId,
+    status: "pending",
+    paymentMethod: "online",
+    totalInPaise: dbOrder.totalInPaise,
+    shippingChargeInPaise: dbOrder.shippingChargeInPaise,
+    shippingName: dbOrder.shippingName,
+    shippingAddress: dbOrder.shippingAddress,
+    shippingCity: dbOrder.shippingCity,
+    shippingState: dbOrder.shippingState,
+    shippingPostalCode: dbOrder.shippingPostalCode,
+    shippingPhone: dbOrder.shippingPhone,
+    remarks: dbOrder.remarks,
+    razorpayOrderId: rzpOrder.id,
+    couponCode: dbOrder.couponCode,
+    discountInPaise: dbOrder.discountInPaise,
+  }).returning();
+
+  // Clone order items into the new order
+  if (originalItems.length > 0) {
+    await Promise.all(originalItems.map(item =>
+      db.insert(orderItemsTable).values({
+        orderId: newDbOrder.id,
+        productId: item.productId,
+        customizationId: item.customizationId,
+        quantity: item.quantity,
+        size: item.size,
+        priceInPaise: item.priceInPaise,
+        measurements: item.measurements,
+      }),
+    ));
+  }
+
+  // Cancel the old DB order — it retains its razorpayOrderId so any late webhook can recover it.
+  // The webhook allows confirming cancelled orders with no paymentId (race-recovery path).
   await db.update(ordersTable)
-    .set({ razorpayOrderId: rzpOrder.id, status: "payment_failed" })
+    .set({ status: "cancelled" })
     .where(and(eq(ordersTable.id, orderId), eq(ordersTable.userId, userId)));
 
-  void db.insert(orderEventsTable).values({ orderId, eventType: "payment_retry", title: "Payment Retry", description: `New Razorpay Order: ${rzpOrder.id} (previous expired)` });
-  logger.info({ orderId, newRzpOrderId: rzpOrder.id }, "Retry: created new Razorpay order for expired original");
+  void db.insert(orderEventsTable).values({ orderId: newDbOrder.id, eventType: "payment_retry", title: "Payment Retry", description: `New Razorpay Order: ${rzpOrder.id} (original #${orderId} expired — now cancelled)` });
+  logger.info({ oldOrderId: orderId, newOrderId: newDbOrder.id, newRzpOrderId: rzpOrder.id }, "Retry: cloned to new DB order for expired original — old row preserved for webhook recovery");
 
-  res.json({ orderId: rzpOrder.id, dbOrderId: dbOrder.id, amount: rzpOrder.amount, currency: rzpOrder.currency, keyId });
+  res.json({ orderId: rzpOrder.id, dbOrderId: newDbOrder.id, amount: rzpOrder.amount, currency: rzpOrder.currency, keyId });
 });
 
 /* ──────────────────────────────────────────────────────
@@ -715,7 +777,13 @@ router.post("/payment/webhook", async (req, res): Promise<void> => {
         logger.info({ orderId: dbOrder.id, status: dbOrder.status }, "Webhook: order already confirmed — skipping");
         return;
       }
-      if (!["pending", "payment_failed"].includes(dbOrder.status)) {
+      // Recover orders that were race-cancelled (status=cancelled, no paymentId) —
+      // if Razorpay says payment.captured we must confirm them rather than drop the event.
+      // Orders cancelled by admin/user after payment would already have a paymentId set.
+      if (dbOrder.status === "cancelled" && !dbOrder.paymentId) {
+        logger.warn({ orderId: dbOrder.id }, "Webhook: race-cancelled order with no paymentId — recovering via captured event");
+        // fall through to amount check + confirmOrder
+      } else if (!["pending", "payment_failed"].includes(dbOrder.status)) {
         logger.warn({ orderId: dbOrder.id, status: dbOrder.status }, "Webhook: order cannot be confirmed from current state");
         return;
       }
