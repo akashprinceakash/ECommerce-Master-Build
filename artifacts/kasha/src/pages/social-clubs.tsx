@@ -79,26 +79,59 @@ export default function SocialClubsPage() {
 
               {/* Q Club card */}
               <div
-                role="button" tabIndex={0}
-                onClick={() => setStep("products")}
-                onKeyDown={e => e.key === "Enter" && setStep("products")}
-                style={{ display: "flex", gap: 0, borderRadius: 14, overflow: "hidden", border: `1.5px solid rgba(201,168,76,0.22)`, background: "#fff", cursor: "pointer", transition: "all 0.24s", boxShadow: "0 4px 18px rgba(26,26,24,0.07)", maxWidth: 680, margin: "0 auto 16px" }}
+                style={{ display: "flex", gap: 0, borderRadius: 14, overflow: "hidden", border: `1.5px solid rgba(201,168,76,0.22)`, background: "#fff", transition: "all 0.24s", boxShadow: "0 4px 18px rgba(26,26,24,0.07)", maxWidth: 680, margin: "0 auto 16px" }}
                 onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.boxShadow = `0 14px 40px ${GOLD}28`; el.style.borderColor = `${GOLD}55`; el.style.transform = "translateY(-3px)"; }}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.boxShadow = "0 4px 18px rgba(26,26,24,0.07)"; el.style.borderColor = "rgba(201,168,76,0.22)"; el.style.transform = "translateY(0)"; }}
               >
+                {/* Left accent */}
                 <div style={{ flexShrink: 0, width: 120, background: NAVY, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "24px 16px" }}>
                   <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 48, fontWeight: 700, color: GOLD, lineHeight: 1 }}>Q</span>
                   <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 8, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "rgba(201,168,76,0.7)" }}>Club</span>
                 </div>
-                <div style={{ flex: 1, padding: "22px 24px" }}>
+
+                {/* Right content */}
+                <div style={{ flex: 1, padding: "22px 24px", display: "flex", flexDirection: "column" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                     <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 700, color: "#1a1a18" }}>Q Club</span>
                     <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 8, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "#fff", background: NAVY, padding: "3px 10px", borderRadius: 99 }}>Partner</span>
                   </div>
-                  <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 12, color: "#6b6b68", letterSpacing: ".03em", lineHeight: 1.7, margin: "0 0 14px" }}>
-                    Exclusive wave-camo polo collection for Q Club members. Select your product, choose your size, and complete your order through our standard checkout.
+                  <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 12, color: "#6b6b68", letterSpacing: ".03em", lineHeight: 1.7, margin: "0 0 18px", flex: 1 }}>
+                    Exclusive wave-camo polo collection for Q Club members. Select your product, choose your size, and complete your order.
                   </p>
-                  <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: GOLD }}>Browse Products →</span>
+
+                  {/* Action buttons */}
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button
+                      onClick={() => setStep("products")}
+                      style={{
+                        fontFamily: "'Jost', sans-serif", fontSize: 10, fontWeight: 700,
+                        letterSpacing: ".12em", textTransform: "uppercase",
+                        background: `linear-gradient(135deg, ${GOLD}, #b8925a)`,
+                        color: "#fff", border: "none", borderRadius: 99,
+                        padding: "9px 22px", cursor: "pointer",
+                        transition: "opacity 0.15s",
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
+                      onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+                    >
+                      Q Club →
+                    </button>
+                    <Link
+                      href="/connect?type=bulk-order"
+                      style={{
+                        fontFamily: "'Jost', sans-serif", fontSize: 10, fontWeight: 600,
+                        letterSpacing: ".12em", textTransform: "uppercase",
+                        border: `1.5px solid rgba(201,168,76,0.45)`, color: GOLD,
+                        borderRadius: 99, padding: "8px 22px",
+                        textDecoration: "none", display: "inline-flex", alignItems: "center",
+                        transition: "background 0.15s, border-color 0.15s",
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${GOLD}12`; (e.currentTarget as HTMLElement).style.borderColor = GOLD; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(201,168,76,0.45)"; }}
+                    >
+                      Enquiry
+                    </Link>
+                  </div>
                 </div>
               </div>
 
