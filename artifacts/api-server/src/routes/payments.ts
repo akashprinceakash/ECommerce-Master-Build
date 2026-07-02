@@ -919,18 +919,72 @@ async function confirmOrder(
   signature: string,
   userId: string,
 ) {
-  // Accept from pending/payment_failed (normal flow) AND from cancelled-with-no-paymentId
-  // (race-recovery: order was race-cancelled before confirmation arrived via verify or webhook).
-  const [updated] = await db.update(ordersTable)
-    .set({ status: "confirmed", paymentId, razorpaySignature: signature || null })
-    .where(and(
-      eq(ordersTable.id, orderId),
-      or(
-        inArray(ordersTable.status, ["pending", "payment_failed"]),
-        and(eq(ordersTable.status, "cancelled"), isNull(ordersTable.paymentId)),
-      ),
-    ))
-    .returning();
+  // Atomic: order status update + coupon usage insert in one transaction.
+  // FOR UPDATE on the coupon row serialises concurrent confirmations and prevents
+  // over-redemption even when multiple webhooks/verify calls race each other.
+  const updated = await db.transaction(async (tx) => {
+    // Accept from pending/payment_failed (normal flow) AND from cancelled-with-no-paymentId
+    // (race-recovery: order was race-cancelled before confirmation arrived).
+    const [result] = await tx
+      .update(ordersTable)
+      .set({ status: "confirmed", paymentId, razorpaySignature: signature || null })
+      .where(
+        and(
+          eq(ordersTable.id, orderId),
+          or(
+            inArray(ordersTable.status, ["pending", "payment_failed"]),
+            and(eq(ordersTable.status, "cancelled"), isNull(ordersTable.paymentId)),
+          ),
+        ),
+      )
+      .returning();
+
+    if (!result) return null; // Already confirmed or terminal — handled below
+
+    if (result.couponCode && result.discountInPaise > 0) {
+      // Lock coupon row to serialise concurrent confirmations
+      const [coupon] = await tx
+        .select()
+        .from(couponsTable)
+        .where(eq(couponsTable.code, result.couponCode))
+        .for("update");
+
+      if (coupon) {
+        // Idempotency: skip if already recorded (e.g. duplicate webhook)
+        const [alreadyUsed] = await tx
+          .select({ id: couponUsagesTable.id })
+          .from(couponUsagesTable)
+          .where(and(eq(couponUsagesTable.couponId, coupon.id), eq(couponUsagesTable.orderId, orderId)));
+
+        if (!alreadyUsed) {
+          // Recheck maxUsages under lock to prevent over-redemption
+          let canInsert = true;
+          if (coupon.maxUsages !== null) {
+            const [{ cnt }] = await tx
+              .select({ cnt: sql<number>`count(*)::int` })
+              .from(couponUsagesTable)
+              .where(eq(couponUsagesTable.couponId, coupon.id));
+            if ((cnt ?? 0) >= coupon.maxUsages) {
+              logger.warn(
+                { orderId, couponCode: result.couponCode },
+                "confirmOrder: coupon maxUsages exceeded at confirmation time; usage not recorded (payment already captured)",
+              );
+              canInsert = false;
+            }
+          }
+          if (canInsert) {
+            await tx.insert(couponUsagesTable).values({
+              couponId: coupon.id,
+              userId: result.userId,
+              orderId: result.id,
+            });
+          }
+        }
+      }
+    }
+
+    return result;
+  });
 
   if (!updated) {
     // Already confirmed or in a terminal state — return existing
@@ -938,8 +992,7 @@ async function confirmOrder(
     return existing;
   }
 
-  // Fire-and-forget event insert — must NEVER block or throw back to the caller.
-  // The status update above is the critical DB write; event logging is non-critical.
+  // Fire-and-forget event insert — non-critical; order IS confirmed.
   void db.insert(orderEventsTable).values({
     orderId,
     eventType: "payment_verified",
@@ -949,31 +1002,7 @@ async function confirmOrder(
     logger.error({ orderId, err: e }, "confirmOrder: event insert failed (non-critical — order IS confirmed)"),
   );
 
-  // Track coupon usage synchronously — must be recorded reliably alongside order confirmation.
-  // Not wrapped in the status-update transaction because rolling back a captured payment is dangerous.
-  if (updated.couponCode && updated.discountInPaise > 0) {
-    try {
-      const [coupon] = await db.select({ id: couponsTable.id }).from(couponsTable)
-        .where(eq(couponsTable.code, updated.couponCode));
-      if (coupon) {
-        const [alreadyUsed] = await db.select({ id: couponUsagesTable.id }).from(couponUsagesTable)
-          .where(and(eq(couponUsagesTable.couponId, coupon.id), eq(couponUsagesTable.orderId, orderId)));
-        if (!alreadyUsed) {
-          await db.insert(couponUsagesTable).values({
-            couponId: coupon.id,
-            userId: updated.userId,
-            orderId: updated.id,
-          });
-        }
-      }
-    } catch (e) {
-      logger.error({ orderId, couponCode: updated.couponCode, err: e }, "confirmOrder: coupon usage tracking failed");
-    }
-  }
-
   // Fire-and-forget fulfillment — must NEVER throw back to the caller.
-  // At this point the order IS confirmed in the DB; fulfillment errors (Shiprocket,
-  // email, PDF) must not surface as a 4xx/5xx to the client or webhook handler.
   void runFulfillment(updated, userId).catch((e: unknown) =>
     logger.error({ orderId, paymentId, err: e }, "confirmOrder: fulfillment failed after payment confirmed — order remains confirmed"),
   );
