@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, desc, sql, inArray } from "drizzle-orm";
-import { db, ordersTable, orderItemsTable, productsTable, customizationsTable, userProfilesTable } from "@workspace/db";
+import { db, ordersTable, orderItemsTable, orderEventsTable, productsTable, customizationsTable, userProfilesTable, refundsTable } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import { clerkClient } from "@clerk/express";
 import type { Request, Response } from "express";
@@ -330,30 +330,70 @@ router.get("/admin/users", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.post("/admin/orders/:id/refund", requireAuth, async (req, res): Promise<void> => {
-  if (!(await requireAdmin(req, res))) return;
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid order ID" }); return; }
 
   const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
   if (!order) { res.status(404).json({ error: "Order not found" }); return; }
-  if (!order.paymentId) { res.status(400).json({ error: "No Razorpay payment ID on record for this order" }); return; }
+
+  if (!order.paymentId) {
+    res.status(400).json({ error: "No Razorpay payment ID on record — only online payments can be refunded" }); return;
+  }
+
+  // Block refund if already cancelled
+  if (order.status === "cancelled") {
+    res.status(409).json({ error: "Order is already cancelled" }); return;
+  }
+
+  // Check for existing refund to prevent duplicates
+  const existingRefund = await db.select().from(refundsTable).where(eq(refundsTable.orderId, id)).limit(1);
+  if (existingRefund.length > 0) {
+    res.status(409).json({ error: "A refund has already been issued for this order", refundId: existingRefund[0]!.razorpayRefundId }); return;
+  }
 
   const keyId = process.env["RAZORPAY_KEY_ID"];
   const keySecret = process.env["RAZORPAY_KEY_SECRET"];
   if (!keyId || !keySecret) { res.status(500).json({ error: "Razorpay credentials not configured" }); return; }
 
+  logger.info({ orderId: id, paymentId: order.paymentId, initiatedBy: adminId }, "Admin: initiating refund");
+
   const basicAuth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
   const rzRes = await fetch(`https://api.razorpay.com/v1/payments/${order.paymentId}/refund`, {
     method: "POST",
     headers: { "Authorization": `Basic ${basicAuth}`, "Content-Type": "application/json" },
-    body: JSON.stringify({}),
+    body: JSON.stringify({ speed: "normal" }),
   });
   const rzData: any = await rzRes.json();
+
   if (!rzRes.ok) {
+    logger.error({ orderId: id, paymentId: order.paymentId, rzError: rzData?.error?.description }, "Admin: refund API call failed");
     res.status(rzRes.status).json({ error: rzData?.error?.description ?? "Refund failed" });
     return;
   }
-  await db.update(ordersTable).set({ status: "cancelled" }).where(eq(ordersTable.id, id));
+
+  // Record refund in DB and mark order cancelled
+  await Promise.all([
+    db.insert(refundsTable).values({
+      orderId: id,
+      razorpayRefundId: rzData.id,
+      razorpayPaymentId: order.paymentId,
+      amountInPaise: rzData.amount,
+      status: rzData.status,
+      initiatedBy: adminId,
+    }),
+    db.update(ordersTable).set({ status: "cancelled" }).where(eq(ordersTable.id, id)),
+    db.insert(orderEventsTable).values({
+      orderId: id,
+      eventType: "refund_initiated",
+      title: "Refund Initiated",
+      description: `Refund ID: ${rzData.id} · Amount: ₹${(rzData.amount / 100).toFixed(2)} · Status: ${rzData.status}`,
+    }),
+  ]);
+
+  logger.info({ orderId: id, refundId: rzData.id, status: rzData.status }, "Admin: refund issued successfully");
   res.json({ refundId: rzData.id, amount: rzData.amount, status: rzData.status });
 });
 

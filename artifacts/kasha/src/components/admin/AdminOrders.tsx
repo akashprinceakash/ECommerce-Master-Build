@@ -178,24 +178,26 @@ async function exportDesignAllSides(customization: NonNullable<AdminOrder["items
 
 // ── Status config ─────────────────────────────────────────────────────────────
 
-const STATUSES = ["pending", "confirmed", "processing", "ready_to_ship", "shipped", "delivered", "cancelled"] as const;
+const STATUSES = ["pending", "payment_failed", "confirmed", "processing", "ready_to_ship", "shipped", "delivered", "cancelled"] as const;
 const STATUS_COLORS: Record<string, string> = {
-  pending:       "bg-amber-100 text-amber-800 border-amber-300",
-  confirmed:     "bg-blue-100 text-blue-800 border-blue-300",
-  processing:    "bg-sky-100 text-sky-800 border-sky-300",
-  ready_to_ship: "bg-indigo-100 text-indigo-800 border-indigo-300",
-  shipped:       "bg-violet-100 text-violet-800 border-violet-300",
-  delivered:     "bg-emerald-100 text-emerald-800 border-emerald-300",
-  cancelled:     "bg-rose-100 text-rose-800 border-rose-300",
+  pending:         "bg-amber-100 text-amber-800 border-amber-300",
+  payment_failed:  "bg-red-100 text-red-800 border-red-400",
+  confirmed:       "bg-blue-100 text-blue-800 border-blue-300",
+  processing:      "bg-sky-100 text-sky-800 border-sky-300",
+  ready_to_ship:   "bg-indigo-100 text-indigo-800 border-indigo-300",
+  shipped:         "bg-violet-100 text-violet-800 border-violet-300",
+  delivered:       "bg-emerald-100 text-emerald-800 border-emerald-300",
+  cancelled:       "bg-rose-100 text-rose-800 border-rose-300",
 };
 const STATUS_LABEL: Record<string, string> = {
-  pending:       "Pending",
-  confirmed:     "Confirmed",
-  processing:    "Processing",
-  ready_to_ship: "Ready to Ship",
-  shipped:       "Shipped",
-  delivered:     "Delivered",
-  cancelled:     "Cancelled",
+  pending:         "Pending",
+  payment_failed:  "Payment Failed",
+  confirmed:       "Confirmed",
+  processing:      "Processing",
+  ready_to_ship:   "Ready to Ship",
+  shipped:         "Shipped",
+  delivered:       "Delivered",
+  cancelled:       "Cancelled",
 };
 
 // ── Process Order panel ───────────────────────────────────────────────────────
@@ -534,7 +536,7 @@ export function AdminOrders() {
                   <div className="font-medium truncate flex items-center gap-1.5">
                     {o.customerName}
                     {o.remarks && (
-                      <MessageSquare className="w-3 h-3 text-amber-500 flex-shrink-0" titleAccess="Has remarks" />
+                      <MessageSquare className="w-3 h-3 text-amber-500 flex-shrink-0" aria-label="Has remarks" />
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground truncate">{o.customerEmail}</div>

@@ -3161,7 +3161,7 @@ export default function CustomizePage() {
                           else applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,sampledHex);
                           setSamplerActive(false);
                         }}>
-                          <img src={samplerPreview} alt="Design canvas" style={{display:"block",maxWidth:"min(80vw,400px)",maxHeight:"min(80vh,400px)",imageRendering:"pixelated",border:"2px solid rgba(255,255,255,0.3)",borderRadius:4}}/>
+                          <img src={samplerPreview ?? undefined} alt="Design canvas" style={{display:"block",maxWidth:"min(80vw,400px)",maxHeight:"min(80vh,400px)",imageRendering:"pixelated",border:"2px solid rgba(255,255,255,0.3)",borderRadius:4}}/>
                         </div>
                         <div style={{fontFamily:"'Jost',sans-serif",fontSize:10,color:"rgba(255,255,255,0.5)",letterSpacing:".04em"}}>Click outside to cancel</div>
                       </div>

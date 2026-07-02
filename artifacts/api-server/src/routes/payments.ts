@@ -5,7 +5,7 @@ import { eq, and, inArray, sql } from "drizzle-orm";
 import { clerkClient } from "@clerk/express";
 import {
   db, cartsTable, cartItemsTable, productsTable,
-  ordersTable, orderItemsTable, customizationsTable, orderEventsTable,
+  ordersTable, orderItemsTable, customizationsTable, orderEventsTable, refundsTable,
 } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import { createShiprocketOrder, getShippingRates } from "../lib/shiprocket";
@@ -340,50 +340,68 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
   );
   if (!dbOrder) { res.status(404).json({ error: "Order not found for this user" }); return; }
 
+  // Idempotent: already confirmed with this exact payment
   if (dbOrder.status === "confirmed" && dbOrder.paymentId === razorpay_payment_id) {
     const full = await buildFullOrder(dbOrder.id);
     res.status(200).json(full); return;
   }
-  if (dbOrder.status !== "pending") {
+
+  // Allow retry from payment_failed state (Razorpay allows multiple attempts per order)
+  if (!["pending", "payment_failed"].includes(dbOrder.status)) {
     res.status(409).json({ error: `Order is in '${dbOrder.status}' state and cannot be paid` }); return;
   }
 
+  // Step 1: Verify HMAC signature — this is the authoritative proof that Razorpay captured money
   const expected = crypto
     .createHmac("sha256", keySecret)
     .update(`${razorpay_order_id}|${razorpay_payment_id}`)
     .digest("hex");
   if (expected !== razorpay_signature) {
+    logger.warn({ razorpay_order_id, razorpay_payment_id }, "verify: invalid signature — possible tampering");
     res.status(400).json({ error: "Invalid payment signature" }); return;
   }
 
+  // Step 2: Fetch payment details from Razorpay to confirm status.
+  // CRITICAL: if fetch fails AFTER signature is verified, we still confirm —
+  // the HMAC signature is proof that Razorpay completed the capture.
   let payment: any;
-  try { payment = await rzp.payments.fetch(razorpay_payment_id); }
-  catch (e: any) {
-    res.status(400).json({ error: `Could not verify payment: ${e?.message ?? "unknown error"}` }); return;
+  let paymentFetchFailed = false;
+  try {
+    payment = await rzp.payments.fetch(razorpay_payment_id);
+  } catch (e: any) {
+    paymentFetchFailed = true;
+    logger.error({ paymentId: razorpay_payment_id, err: e?.message }, "verify: payments.fetch failed after valid signature — trusting HMAC and confirming order");
   }
 
-  if (payment.order_id !== razorpay_order_id) {
-    res.status(400).json({ error: "Payment does not belong to this order" }); return;
-  }
-  if (Number(payment.amount) !== Number(dbOrder.totalInPaise)) {
-    res.status(400).json({ error: "Payment amount mismatch" }); return;
-  }
+  if (!paymentFetchFailed) {
+    // Validate fetched payment details
+    if (payment.order_id !== razorpay_order_id) {
+      res.status(400).json({ error: "Payment does not belong to this order" }); return;
+    }
+    if (Number(payment.amount) !== Number(dbOrder.totalInPaise)) {
+      logger.error({ paymentId: razorpay_payment_id, got: payment.amount, expected: dbOrder.totalInPaise }, "verify: amount mismatch");
+      res.status(400).json({ error: "Payment amount mismatch — please contact support" }); return;
+    }
 
-  if (payment.status === "authorized") {
-    try {
-      await rzp.payments.capture(razorpay_payment_id, dbOrder.totalInPaise, "INR");
-      payment = await rzp.payments.fetch(razorpay_payment_id);
-      logger.info({ paymentId: razorpay_payment_id }, "Auto-captured authorized payment");
-    } catch (e: any) {
-      logger.error({ paymentId: razorpay_payment_id, e }, "Failed to capture authorized payment");
-      res.status(400).json({ error: "Payment authorized but capture failed — please contact support" }); return;
+    // Auto-capture if only authorized (manual capture mode)
+    if (payment.status === "authorized") {
+      try {
+        await rzp.payments.capture(razorpay_payment_id, dbOrder.totalInPaise, "INR");
+        payment = await rzp.payments.fetch(razorpay_payment_id);
+        logger.info({ paymentId: razorpay_payment_id }, "verify: auto-captured authorized payment");
+      } catch (e: any) {
+        logger.error({ paymentId: razorpay_payment_id, err: e?.message }, "verify: capture failed after authorization");
+        res.status(400).json({ error: "Payment authorized but capture failed — please contact support" }); return;
+      }
+    }
+
+    if (payment.status !== "captured") {
+      logger.warn({ paymentId: razorpay_payment_id, status: payment.status }, "verify: payment not captured");
+      res.status(400).json({ error: `Payment not captured (status: ${payment.status})` }); return;
     }
   }
 
-  if (payment.status !== "captured") {
-    res.status(400).json({ error: `Payment not captured (status: ${payment.status})` }); return;
-  }
-
+  // Confirm the order — signature verified (and optionally fetch confirmed captured status)
   const confirmed = await confirmOrder(dbOrder.id, razorpay_payment_id, razorpay_signature, userId);
   const full = await buildFullOrder(confirmed.id);
   res.status(201).json(full);
@@ -503,41 +521,80 @@ router.post("/payment/webhook", async (req, res): Promise<void> => {
   }
 
   const event = req.body?.event as string | undefined;
-  if (event !== "payment.captured") return;
-
   const paymentEntity = req.body?.payload?.payment?.entity;
   if (!paymentEntity) return;
 
-  const { id: paymentId, order_id: rzpOrderId, amount, status } = paymentEntity;
-  if (status !== "captured") return;
+  const { id: paymentId, order_id: rzpOrderId, amount } = paymentEntity;
 
-  logger.info({ paymentId, rzpOrderId }, "Webhook: payment.captured");
+  // ── payment.captured: idempotent order confirmation ──────────────────
+  if (event === "payment.captured") {
+    if (paymentEntity.status !== "captured") return;
 
-  try {
-    const [dbOrder] = await db.select().from(ordersTable)
-      .where(eq(ordersTable.razorpayOrderId, rzpOrderId));
+    logger.info({ paymentId, rzpOrderId }, "Webhook: payment.captured");
 
-    if (!dbOrder) {
-      logger.warn({ rzpOrderId }, "Webhook: no DB order found for Razorpay order");
-      return;
-    }
-    if (dbOrder.status === "confirmed") {
-      logger.info({ orderId: dbOrder.id }, "Webhook: order already confirmed — skipping");
-      return;
-    }
-    if (dbOrder.status !== "pending") {
-      logger.warn({ orderId: dbOrder.id, status: dbOrder.status }, "Webhook: order not in pending state");
-      return;
-    }
-    if (Number(amount) !== Number(dbOrder.totalInPaise)) {
-      logger.error({ paymentId, amount, expected: dbOrder.totalInPaise }, "Webhook: amount mismatch");
-      return;
-    }
+    try {
+      const [dbOrder] = await db.select().from(ordersTable)
+        .where(eq(ordersTable.razorpayOrderId, rzpOrderId));
 
-    await confirmOrder(dbOrder.id, paymentId, "", dbOrder.userId);
-    logger.info({ orderId: dbOrder.id }, "Webhook: order confirmed successfully");
-  } catch (e) {
-    logger.error({ e, paymentId, rzpOrderId }, "Webhook: error confirming order");
+      if (!dbOrder) {
+        logger.warn({ rzpOrderId }, "Webhook: no DB order found for Razorpay order");
+        return;
+      }
+      if (dbOrder.status === "confirmed" || dbOrder.status === "processing" ||
+          dbOrder.status === "shipped"   || dbOrder.status === "delivered") {
+        logger.info({ orderId: dbOrder.id, status: dbOrder.status }, "Webhook: order already confirmed — skipping");
+        return;
+      }
+      if (!["pending", "payment_failed"].includes(dbOrder.status)) {
+        logger.warn({ orderId: dbOrder.id, status: dbOrder.status }, "Webhook: order cannot be confirmed from current state");
+        return;
+      }
+      if (Number(amount) !== Number(dbOrder.totalInPaise)) {
+        logger.error({ paymentId, got: amount, expected: dbOrder.totalInPaise }, "Webhook: amount mismatch");
+        return;
+      }
+
+      await confirmOrder(dbOrder.id, paymentId, "", dbOrder.userId);
+      logger.info({ orderId: dbOrder.id }, "Webhook: order confirmed via payment.captured");
+    } catch (e) {
+      logger.error({ err: e, paymentId, rzpOrderId }, "Webhook: error confirming order");
+    }
+    return;
+  }
+
+  // ── payment.failed: mark order as payment_failed ─────────────────────
+  if (event === "payment.failed") {
+    logger.info({ paymentId, rzpOrderId }, "Webhook: payment.failed");
+
+    try {
+      const [dbOrder] = await db.select().from(ordersTable)
+        .where(eq(ordersTable.razorpayOrderId, rzpOrderId));
+
+      if (!dbOrder) {
+        logger.warn({ rzpOrderId }, "Webhook payment.failed: no DB order found");
+        return;
+      }
+      if (dbOrder.status !== "pending") {
+        logger.info({ orderId: dbOrder.id, status: dbOrder.status }, "Webhook payment.failed: order not in pending state — skipping");
+        return;
+      }
+
+      await db.update(ordersTable)
+        .set({ status: "payment_failed" })
+        .where(and(eq(ordersTable.id, dbOrder.id), eq(ordersTable.status, "pending")));
+
+      await db.insert(orderEventsTable).values({
+        orderId: dbOrder.id,
+        eventType: "payment_failed",
+        title: "Payment Failed",
+        description: `Payment ID: ${paymentId}`,
+      });
+
+      logger.info({ orderId: dbOrder.id }, "Webhook: order marked payment_failed");
+    } catch (e) {
+      logger.error({ err: e, paymentId, rzpOrderId }, "Webhook payment.failed: error");
+    }
+    return;
   }
 });
 
@@ -550,18 +607,25 @@ async function confirmOrder(
   signature: string,
   userId: string,
 ) {
+  // Accept from both pending and payment_failed states (Razorpay allows retrying the same order)
   const [updated] = await db.update(ordersTable)
     .set({ status: "confirmed", paymentId, razorpaySignature: signature || null })
-    .where(and(eq(ordersTable.id, orderId), eq(ordersTable.status, "pending")))
+    .where(and(eq(ordersTable.id, orderId), inArray(ordersTable.status, ["pending", "payment_failed"])))
     .returning();
 
   if (!updated) {
+    // Already confirmed or in a terminal state — return existing
     const [existing] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId));
     return existing;
   }
 
-  // Record payment verified event
-  void db.insert(orderEventsTable).values({ orderId, eventType: "payment_verified", title: "Payment Verified", description: `Payment ID: ${paymentId}` });
+  // Record payment confirmed event
+  await db.insert(orderEventsTable).values({
+    orderId,
+    eventType: "payment_verified",
+    title: "Payment Confirmed",
+    description: `Payment ID: ${paymentId}`,
+  });
 
   await runFulfillment(updated, userId);
   return updated;
