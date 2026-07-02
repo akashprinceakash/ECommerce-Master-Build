@@ -27,8 +27,9 @@ export default function ProductDetailPage() {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
   const [customMeasurements, setCustomMeasurements] = useState<Record<string,string>>({
-    chest:"", waist:"", hip:"", shoulder:"", length:"", sleeve:""
+    height:"", weight:"", chest:"", waist:"", hip:"", shoulder:"", sleeve:"", bodyLength:"", neck:"", inseam:""
   });
+  const [customNotes, setCustomNotes] = useState("");
   const [imgLoaded, setImgLoaded] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [personalizeOpen, setPersonalizeOpen] = useState(false);
@@ -55,6 +56,13 @@ export default function ProductDetailPage() {
     }
   });
 
+  function buildMeasurementsPayload(): Record<string,string> | undefined {
+    if (selectedSize !== "CUSTOM") return undefined;
+    const entries = Object.entries(customMeasurements).filter(([, v]) => v && v.trim());
+    if (customNotes.trim()) entries.push(["notes", customNotes.trim()]);
+    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+  }
+
   function handleAddToCart() {
     if (!selectedSize) {
       toast({ title: "Select a size", description: "Please choose a size before adding to cart.", variant: "destructive" });
@@ -73,7 +81,7 @@ export default function ProductDetailPage() {
       openCart();
       return;
     }
-    addToCartMutation.mutate({ data: { productId: id, quantity, size: selectedSize } });
+    addToCartMutation.mutate({ data: { productId: id, quantity, size: selectedSize, measurements: buildMeasurementsPayload() } });
   }
 
   function handleBuyNow() {
@@ -86,7 +94,7 @@ export default function ProductDetailPage() {
       return;
     }
     addToCartMutation.mutate(
-      { data: { productId: id, quantity, size: selectedSize } },
+      { data: { productId: id, quantity, size: selectedSize, measurements: buildMeasurementsPayload() } },
       { onSuccess: () => navigate("/cart") }
     );
   }
@@ -245,7 +253,15 @@ export default function ProductDetailPage() {
         <div className="max-w-[1400px] mx-auto flex items-center gap-2 text-[11px] text-gray-400 font-medium tracking-wider">
           <Link href="/" className="hover:text-black transition-colors">HOME</Link>
           <ChevronRight className="w-3 h-3" />
-          <Link href="/products" className="hover:text-black transition-colors">PRODUCTS</Link>
+          {product.category === "q_club" ? (
+            <>
+              <Link href="/social-clubs?step=products" className="hover:text-black transition-colors">SOCIAL CLUBS</Link>
+              <ChevronRight className="w-3 h-3" />
+              <Link href="/social-clubs?step=products" className="hover:text-black transition-colors">Q CLUB</Link>
+            </>
+          ) : (
+            <Link href="/products" className="hover:text-black transition-colors">PRODUCTS</Link>
+          )}
           <ChevronRight className="w-3 h-3" />
           <span className="text-black">{product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "").toUpperCase()}</span>
         </div>
@@ -383,8 +399,8 @@ export default function ProductDetailPage() {
                   </span>
                 )}
               </div>
-              {/* Multi-piece order pricing */}
-              <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(0,0,0,0.07)" }}>
+              {/* Multi-piece order pricing — hidden for Q Club */}
+              {product.category !== "q_club" && <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(0,0,0,0.07)" }}>
                 <p className="text-[10px] font-bold tracking-[0.22em] text-gray-400 mb-2 uppercase">Multi-piece pricing</p>
                 <div className="flex flex-wrap gap-2">
                   {[
@@ -417,7 +433,7 @@ export default function ProductDetailPage() {
                     <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, fontWeight: 700, color: "#fff", letterSpacing: "0.06em" }}>Bulk Order →</div>
                   </Link>
                 </div>
-              </div>
+              </div>}
             </div>
 
             <p className="text-[11px] text-gray-400 tracking-wide">All prices inclusive of GST</p>
@@ -439,12 +455,14 @@ export default function ProductDetailPage() {
                   <button
                     key={size}
                     onClick={() => {
+                      const blank = {height:"",weight:"",chest:"",waist:"",hip:"",shoulder:"",sleeve:"",bodyLength:"",neck:"",inseam:""};
                       if (size === "CUSTOM" && selectedSize === "CUSTOM") {
                         setSelectedSize(null);
-                        setCustomMeasurements({chest:"",waist:"",hip:"",shoulder:"",length:"",sleeve:""});
+                        setCustomMeasurements(blank);
+                        setCustomNotes("");
                       } else {
                         setSelectedSize(size);
-                        if (size !== "CUSTOM") setCustomMeasurements({chest:"",waist:"",hip:"",shoulder:"",length:"",sleeve:""});
+                        if (size !== "CUSTOM") { setCustomMeasurements(blank); setCustomNotes(""); }
                       }
                     }}
                     className={`h-11 text-[12px] font-bold border transition-all ${size === "CUSTOM" ? "px-4 min-w-[72px]" : "w-11"} ${
@@ -461,74 +479,99 @@ export default function ProductDetailPage() {
                 <p className="text-[11px] text-gray-400 mt-2">Please select a size</p>
               )}
 
-              {/* Custom Measurements form — mirrors the Bespoke Studio sizing step */}
+              {/* Custom Measurements form — body measurements, category-aware */}
               {selectedSize === "CUSTOM" && (() => {
-                const SIZE_CLASH: Record<string,{s:string;lo:number;hi:number}[]> = {
-                  chest:    [{s:"S",lo:36,hi:37},{s:"M",lo:38,hi:39},{s:"L",lo:40,hi:41},{s:"XL",lo:42,hi:43},{s:"XXL",lo:44,hi:46}],
-                  shoulder: [{s:"S",lo:16,hi:17},{s:"M",lo:17,hi:18},{s:"L",lo:18,hi:19},{s:"XL",lo:19,hi:20},{s:"XXL",lo:20,hi:21}],
-                  length:   [{s:"S",lo:27,hi:28},{s:"M",lo:28,hi:29},{s:"L",lo:29,hi:30},{s:"XL",lo:30,hi:31},{s:"XXL",lo:31,hi:32}],
-                  sleeve:   [{s:"S",lo:8, hi:9}, {s:"M",lo:9, hi:10},{s:"L",lo:10,hi:11},{s:"XL",lo:11,hi:12},{s:"XXL",lo:12,hi:13}],
-                  waist:    [{s:"S",lo:30,hi:31},{s:"M",lo:32,hi:33},{s:"L",lo:34,hi:35},{s:"XL",lo:36,hi:37},{s:"XXL",lo:38,hi:40}],
-                  hip:      [{s:"S",lo:34,hi:35},{s:"M",lo:36,hi:37},{s:"L",lo:38,hi:39},{s:"XL",lo:40,hi:41},{s:"XXL",lo:42,hi:44}],
-                };
-                const fields: {key:string; label:string}[] = [
-                  {key:"chest",    label:"Chest"},
-                  {key:"waist",    label:"Waist"},
-                  {key:"hip",      label:"Hip"},
-                  {key:"shoulder", label:"Shoulder Width"},
-                  {key:"length",   label:"Garment Length"},
-                  {key:"sleeve",   label:"Sleeve Length"},
-                ];
+                const cat = (product.category || "").toLowerCase();
+                const isTrouser  = cat.includes("trouser") || cat.includes("pant");
+                const isBottom   = isTrouser || cat.includes("short") || cat.includes("skort") || cat.includes("skirt");
+                const isDress    = cat.includes("dress");
+
+                type MF = { key: string; label: string; optional?: boolean };
+                let fields: MF[];
+                if (isTrouser) {
+                  fields = [
+                    { key: "height",  label: "Height",  optional: true },
+                    { key: "weight",  label: "Weight",  optional: true },
+                    { key: "waist",   label: "Waist" },
+                    { key: "hip",     label: "Hip" },
+                    { key: "inseam",  label: "Inseam" },
+                  ];
+                } else if (isBottom) {
+                  fields = [
+                    { key: "height",  label: "Height",  optional: true },
+                    { key: "weight",  label: "Weight",  optional: true },
+                    { key: "waist",   label: "Waist" },
+                    { key: "hip",     label: "Hip" },
+                    { key: "inseam",  label: "Inseam / Desired Length" },
+                  ];
+                } else if (isDress) {
+                  fields = [
+                    { key: "height",      label: "Height",         optional: true },
+                    { key: "chest",       label: "Bust" },
+                    { key: "waist",       label: "Waist" },
+                    { key: "hip",         label: "Hip" },
+                    { key: "shoulder",    label: "Shoulder Width" },
+                    { key: "bodyLength",  label: "Dress Length" },
+                  ];
+                } else {
+                  // T-shirt / Polo / top (default)
+                  fields = [
+                    { key: "height",      label: "Height",         optional: true },
+                    { key: "weight",      label: "Weight",         optional: true },
+                    { key: "chest",       label: "Chest / Bust" },
+                    { key: "shoulder",    label: "Shoulder Width" },
+                    { key: "sleeve",      label: "Sleeve Length" },
+                    { key: "bodyLength",  label: "Body Length",    optional: true },
+                    { key: "neck",        label: "Neck",           optional: true },
+                  ];
+                }
+
                 return (
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-4 space-y-3 border border-gray-200 rounded-lg p-4 bg-gray-50">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <p className="text-[11px] font-bold tracking-[0.12em] text-black">
-                        CUSTOM MEASUREMENTS <span className="font-normal text-gray-400">(optional, in inches)</span>
+                        BODY MEASUREMENTS <span className="font-normal text-gray-400">(optional · in inches)</span>
                       </p>
-                      <Link href="/size-guide" className="text-[10px] text-primary underline underline-offset-2 hover:opacity-70 tracking-wider">
-                        View Size Guide →
+                      <Link href="/size-guide" className="text-[10px] text-[#B8925A] underline underline-offset-2 hover:opacity-70 tracking-wider">
+                        Size Guide →
                       </Link>
                     </div>
-                    <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                      <p className="text-[10px] font-bold text-amber-800 tracking-wide leading-relaxed uppercase">
-                        All measurements below are body measurements, not garment measurements. Please specify if your inputs are garment measurements.
-                      </p>
-                    </div>
-                    <p className="text-[10px] text-gray-400 leading-relaxed">
-                      Leave blank to use standard sizing. Fill in for a tailored fit. Refer to the <Link href="/size-guide" className="underline hover:text-primary transition-colors">size guide</Link> for how to measure yourself.
+                    <p className="text-[10px] text-gray-500 leading-relaxed">
+                      Enter your <strong>body measurements</strong> as shown in the Size Guide above. Leave all fields blank to use your selected standard size. Fill in only what you know — our tailoring team will contact you before production if anything needs clarification.
                     </p>
                     <div className="grid grid-cols-2 gap-3">
-                      {fields.map(({key, label}) => {
-                        const val = customMeasurements[key] ?? "";
-                        const ranges = SIZE_CLASH[key];
-                        const numVal = parseFloat(val);
-                        const clash = !isNaN(numVal) && ranges
-                          ? ranges.find(sz => numVal >= sz.lo && numVal <= sz.hi)
-                          : null;
-                        return (
-                          <div key={key}>
-                            <p className="text-[10px] tracking-widest uppercase text-gray-400 mb-1">{label}</p>
-                            <input
-                              type="number"
-                              min={0}
-                              step={0.5}
-                              placeholder="—"
-                              value={val}
-                              onChange={e => setCustomMeasurements(p => ({...p, [key]: e.target.value}))}
-                              className="w-full border border-gray-300 focus:border-black px-3 py-2 text-[13px] outline-none transition-colors rounded"
-                              style={{ fontFamily: "'Josefin Sans', sans-serif" }}
-                            />
-                            {clash && (
-                              <p className="mt-1 text-[9px] text-amber-700 bg-amber-50 rounded px-2 py-1 leading-snug">
-                                {val}" matches our standard {clash.s} size ({clash.lo}–{clash.hi}"). Consider selecting {clash.s} above instead.
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
+                      {fields.map(({ key, label, optional }) => (
+                        <div key={key}>
+                          <p className="text-[10px] tracking-widest uppercase text-gray-400 mb-1">
+                            {label}{optional && <span className="text-gray-300 font-normal normal-case tracking-normal ml-1">(opt.)</span>}
+                          </p>
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.5}
+                            placeholder="—"
+                            value={customMeasurements[key] ?? ""}
+                            onChange={e => setCustomMeasurements(p => ({ ...p, [key]: e.target.value }))}
+                            className="w-full border border-gray-300 bg-white focus:border-black px-3 py-2 text-[13px] outline-none transition-colors rounded"
+                            style={{ fontFamily: "'Josefin Sans', sans-serif" }}
+                          />
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-[10px] text-gray-400 italic">
-                      Our team will contact you to confirm measurements before production.
+                    <div>
+                      <p className="text-[10px] tracking-widest uppercase text-gray-400 mb-1">Additional Notes <span className="text-gray-300 font-normal normal-case tracking-normal">(optional)</span></p>
+                      <textarea
+                        rows={2}
+                        placeholder="Preferred fit (Slim / Regular / Relaxed), sleeve adjustments, length preferences…"
+                        value={customNotes}
+                        onChange={e => setCustomNotes(e.target.value)}
+                        className="w-full border border-gray-300 bg-white focus:border-black px-3 py-2 text-[12px] outline-none transition-colors rounded resize-none"
+                        style={{ fontFamily: "'Josefin Sans', sans-serif" }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-gray-400 italic flex items-start gap-1.5">
+                      <span className="text-green-600 font-bold not-italic">✔</span>
+                      Our tailoring team will review your measurements and contact you if any clarification is needed before production.
                     </p>
                   </div>
                 );

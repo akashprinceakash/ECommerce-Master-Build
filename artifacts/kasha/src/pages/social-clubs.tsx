@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useUser } from "@clerk/react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { useQuery } from "@tanstack/react-query";
 import { getAssetUrl, getApiUrl } from "@/lib/api";
@@ -24,6 +24,7 @@ type QProduct = {
   description: string;
   priceInPaise: number;
   thumbnailUrl: string | null;
+  additionalImages: string | null;
   sku: string | null;
   sizes: string[];
   available: boolean;
@@ -33,7 +34,9 @@ type Step = "landing" | "products";
 
 export default function SocialClubsPage() {
   const { user, isLoaded } = useUser();
-  const [step, setStep] = useState<Step>("landing");
+  const search = useSearch();
+  const params = new URLSearchParams(search);
+  const [step, setStep] = useState<Step>(params.get("step") === "products" ? "products" : "landing");
 
   const { data: qClubProducts = [], isLoading: loadingProducts } = useQuery({
     queryKey: ["q-club-products"],
@@ -161,36 +164,87 @@ export default function SocialClubsPage() {
 
 // ── Product card — links to the standard product detail page ──────────────────
 function ProductCard({ product }: { product: QProduct }) {
+  const [imgIdx, setImgIdx] = useState(0);
+
+  const mainImg = product.thumbnailUrl ? getAssetUrl(product.thumbnailUrl) ?? "" : null;
+  let extraImgs: string[] = [];
+  if (product.additionalImages) {
+    try {
+      const parsed = JSON.parse(product.additionalImages);
+      if (Array.isArray(parsed)) extraImgs = parsed.map(u => getAssetUrl(u) || u).filter(Boolean);
+      else if (typeof parsed === "string" && parsed.startsWith("http")) extraImgs = [parsed];
+    } catch {
+      if (product.additionalImages.startsWith("http")) extraImgs = [product.additionalImages];
+    }
+  }
+  const gallery = [mainImg, ...extraImgs].filter(Boolean) as string[];
+
   return (
     <Link
       href={`/products/${product.id}`}
-      style={{ display: "flex", flexDirection: "column", textDecoration: "none", border: "2px solid rgba(26,26,24,0.08)", borderRadius: 14, background: "#fff", overflow: "hidden", transition: "all 0.22s", boxShadow: "0 2px 10px rgba(26,26,24,0.06)" }}
+      style={{ display: "flex", flexDirection: "column", textDecoration: "none", border: "2px solid rgba(26,26,24,0.08)", borderRadius: 14, background: "#fff", overflow: "hidden", transition: "border-color 0.22s, transform 0.22s, box-shadow 0.22s", boxShadow: "0 2px 10px rgba(26,26,24,0.06)" }}
       onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = GOLD; el.style.transform = "translateY(-4px)"; el.style.boxShadow = `0 14px 34px ${GOLD}24`; }}
       onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(26,26,24,0.08)"; el.style.transform = "translateY(0)"; el.style.boxShadow = "0 2px 10px rgba(26,26,24,0.06)"; }}
     >
-      {/* Image */}
+      {/* Image area */}
       <div style={{ width: "100%", aspectRatio: "1 / 1", overflow: "hidden", background: "#1a1a18", position: "relative" }}>
-        {product.thumbnailUrl ? (
-          <img
-            src={getAssetUrl(product.thumbnailUrl) ?? ""}
-            alt={product.name}
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block", transition: "transform 0.4s ease" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLImageElement).style.transform = "scale(1.04)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLImageElement).style.transform = "scale(1)"; }}
-          />
+        {gallery.length > 0 ? (
+          gallery.map((src, idx) => (
+            <img
+              key={idx}
+              src={src}
+              alt={`${product.name} — view ${idx + 1}`}
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block", opacity: idx === imgIdx ? 1 : 0, transition: "opacity 0.4s ease", zIndex: idx === imgIdx ? 1 : 0 }}
+            />
+          ))
         ) : (
           <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 40, fontWeight: 700, color: GOLD }}>Q</span>
           </div>
         )}
+
         {/* Q Club badge */}
-        <div style={{ position: "absolute", top: 10, left: 10, background: NAVY, color: GOLD, fontFamily: "'Jost', sans-serif", fontSize: 8, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", padding: "3px 10px", borderRadius: 99 }}>
+        <div style={{ position: "absolute", top: 10, left: 10, background: NAVY, color: GOLD, fontFamily: "'Jost', sans-serif", fontSize: 8, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", padding: "3px 10px", borderRadius: 99, zIndex: 10 }}>
           Q Club
         </div>
+
+        {/* Image count badge + dot nav */}
+        {gallery.length > 1 && (
+          <div style={{ position: "absolute", bottom: 8, right: 0, left: 0, display: "flex", justifyContent: "center", gap: 4, zIndex: 10 }}
+            onClick={e => e.preventDefault()}
+          >
+            {gallery.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={e => { e.preventDefault(); setImgIdx(idx); }}
+                style={{ width: idx === imgIdx ? 18 : 5, height: 5, borderRadius: 3, background: idx === imgIdx ? GOLD : "rgba(255,255,255,0.6)", border: "none", padding: 0, cursor: "pointer", transition: "width 0.28s, background 0.28s" }}
+                aria-label={`Image ${idx + 1}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
+      {/* Thumbnail strip (additional images as small squares) */}
+      {gallery.length > 1 && (
+        <div style={{ display: "flex", gap: 4, padding: "8px 10px 0", overflowX: "auto" }}
+          onClick={e => e.preventDefault()}
+        >
+          {gallery.map((src, idx) => (
+            <button
+              key={idx}
+              onClick={e => { e.preventDefault(); setImgIdx(idx); }}
+              style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 5, overflow: "hidden", border: `1.5px solid ${idx === imgIdx ? GOLD : "rgba(26,26,24,0.1)"}`, background: "#f0ede8", cursor: "pointer", padding: 0, transition: "border-color 0.18s" }}
+              aria-label={`View image ${idx + 1}`}
+            >
+              <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Info */}
-      <div style={{ padding: "16px 18px 20px" }}>
+      <div style={{ padding: gallery.length > 1 ? "10px 18px 18px" : "16px 18px 20px" }}>
         <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 700, color: "#1a1a18", marginBottom: 6, lineHeight: 1.25 }}>
           {product.name}
         </div>
