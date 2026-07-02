@@ -1,0 +1,399 @@
+
+
+
+
+This application is intended for production and will be used by a large number of customers. Every aspect of the checkout, payment, order processing, and coupon system must follow production best practices with proper validation, security, scalability, observability, and fault tolerance.
+
+
+
+### 1. Coupon Management System
+
+
+
+Build a complete coupon management system with an admin interface that allows administrators to:
+
+
+
+* Create, edit, enable/disable, and delete coupon codes.
+
+* Support:
+
+
+
+  * Percentage discounts
+
+  * Fixed amount discounts
+
+  * Expiry dates
+
+  * Usage limits
+
+  * Per-user usage limits
+
+  * Minimum order values
+
+  * Product-specific eligibility
+
+  * Category-specific eligibility
+
+  * One-time promotional campaigns (e.g., QCLUB30 for 30% off)
+
+* Validate coupons securely on the server.
+
+* Prevent duplicate redemption and coupon abuse.
+
+* Apply discounts correctly before payment.
+
+* Display the updated order summary before checkout.
+
+* Ensure coupon functionality integrates seamlessly with the existing checkout flow.
+
+
+
+---
+
+
+
+## 2. Audit and Harden the Entire Payment Flow
+
+
+
+Before implementing any new functionality, thoroughly audit the existing payment implementation.
+
+
+
+Recently, a customer reported the following issue:
+
+
+
+> The website displayed **"Payment Failed"**, but the payment was successfully debited from the customer's bank account.
+
+
+
+This indicates potential issues with:
+
+
+
+* Payment verification
+
+* Webhook handling
+
+* Order state management
+
+* Callback handling
+
+* Error recovery
+
+
+
+Review and ensure that:
+
+
+
+* Payment webhooks are handled correctly and are fully idempotent.
+
+* Duplicate webhook events never create duplicate orders.
+
+* Successful payments are never marked as failed.
+
+* Failed payments are never marked as successful.
+
+* Payment status is always synchronized with the payment gateway.
+
+* Order creation only occurs after successful payment verification.
+
+* Refreshing the page or retrying requests cannot create duplicate orders.
+
+* Inventory updates happen exactly once.
+
+* Confirmation emails are sent only after successful payment confirmation.
+
+* Every payment transaction is fully logged for debugging and reconciliation.
+
+
+
+---
+
+
+
+## 3. Investigate Existing Production Errors
+
+
+
+During production, Render logs have reported several errors, including **CORS-related errors** and other runtime exceptions.
+
+
+
+Please:
+
+
+
+* Audit all CORS configurations.
+
+* Ensure all frontend domains are correctly whitelisted.
+
+* Verify API requests, authentication headers, cookies, and credentials handling.
+
+* Fix any production errors shown in the Render logs.
+
+* Review all server logs and eliminate recurring warnings or exceptions.
+
+* Ensure there are no hidden issues that could affect production stability.
+
+
+
+---
+
+
+
+## 4. Refund & Payment Cancellation
+
+
+
+Implement a reliable refund workflow according to the company's refund policy.
+
+
+
+If:
+
+
+
+* a payment is cancelled,
+
+* a payment is reversed,
+
+* or a refund is approved,
+
+
+
+the system should:
+
+
+
+* update the payment status correctly,
+
+* update the order status,
+
+* initiate refunds (where applicable),
+
+* notify both the customer and the admin,
+
+* maintain complete refund history and audit logs.
+
+
+
+Refund processing should never leave the system in an inconsistent state.
+
+
+
+---
+
+
+
+## 5. Preserve Complete Customization Data
+
+
+
+When a customer orders a customized product (for example, a polo shirt), **every customization detail must be saved and visible to the admin**.
+
+
+
+This includes, but is not limited to:
+
+
+
+* Selected garment colors
+
+* Collar color
+
+* Sleeve color
+
+* Placket color
+
+* Panel colors
+
+* Logos
+
+* Logo positions
+
+* Uploaded logo files
+
+* Text
+
+* Fonts
+
+* Font sizes
+
+* Text colors
+
+* Text positions
+
+* Embroidery/printing selections
+
+* Selected pattern/design
+
+* Product images
+
+* Size
+
+* Custom measurements
+
+* Quantity
+
+* Any additional notes
+
+
+
+The admin should be able to view the complete customization exactly as the customer designed it, so the production team can manufacture the product accurately.
+
+
+
+If possible, provide a visual preview of the customized product in the admin order details.
+
+
+
+---
+
+
+
+## 6. Logging & Monitoring
+
+
+
+Implement comprehensive production-grade logging.
+
+
+
+Log:
+
+
+
+* Payment requests
+
+* Payment callbacks
+
+* Webhooks
+
+* Coupon usage
+
+* Order creation
+
+* Inventory changes
+
+* Refunds
+
+* Failed requests
+
+* API errors
+
+* Authentication failures
+
+
+
+Logs should contain enough information to debug issues without exposing sensitive customer or payment data.
+
+
+
+---
+
+
+
+## 7. Security & Reliability
+
+
+
+Ensure the implementation follows production best practices:
+
+
+
+* Proper input validation
+
+* Server-side validation for all critical operations
+
+* Protection against duplicate requests
+
+* Secure handling of payment callbacks
+
+* Proper authorization checks
+
+* Rate limiting where appropriate
+
+* Atomic database transactions for payment and order creation
+
+* Graceful error handling
+
+* Recovery from temporary failures
+
+* No data corruption under concurrent requests
+
+
+
+---
+
+
+
+## 8. Testing
+
+
+
+Before deployment, thoroughly test:
+
+
+
+* Coupon creation and redemption
+
+* Payment success
+
+* Payment failure
+
+* Payment cancellation
+
+* Duplicate callbacks
+
+* Network interruptions
+
+* Page refresh during checkout
+
+* Inventory updates
+
+* Refund processing
+
+* Order creation
+
+* Customized product ordering
+
+* Admin viewing customized orders
+
+* Email notifications
+
+* CORS behavior in production
+
+* High-concurrency scenarios
+
+
+
+---
+
+
+
+### Final Goal
+
+
+
+The final implementation should be **production-ready, secure, scalable, fault-tolerant, and thoroughly tested**. It should ensure that:
+
+
+
+* Customers never lose money due to payment inconsistencies.
+
+* Orders and payments always remain synchronized.
+
+* Coupons work reliably under heavy traffic.
+
+* Refunds follow the defined policy.
+
+* Every customized order contains complete design information for manufacturing.
+
+* All production issues (including existing Render log errors such as CORS) are resolved.
+
+* The system is robust enough to handle real-world production traffic without compromising reliability or user experience.
