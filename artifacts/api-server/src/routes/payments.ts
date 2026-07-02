@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import crypto from "crypto";
 import Razorpay from "razorpay";
-import { eq, and, inArray, sql, desc } from "drizzle-orm";
+import { eq, and, inArray, isNull, or, sql, desc } from "drizzle-orm";
 import { clerkClient } from "@clerk/express";
 import {
   db, cartsTable, cartItemsTable, productsTable,
@@ -428,6 +428,25 @@ router.post("/payment/retry/:orderId", requireAuth, async (req, res): Promise<vo
       res.json({ orderId: rzpExisting.id, dbOrderId: dbOrder.id, amount: rzpExisting.amount, currency: rzpExisting.currency, keyId });
       return;
     }
+    if (rzpExisting.status === "paid") {
+      // Payment already captured on Razorpay — confirm the existing DB order and refuse to clone/cancel.
+      logger.warn({ orderId, rzpOrderId: dbOrder.razorpayOrderId }, "Retry: Razorpay order already paid — auto-confirming in background");
+      void (async () => {
+        try {
+          const rzpPayments = await (rzp as any).orders.fetchPayments(dbOrder.razorpayOrderId);
+          const captured = (rzpPayments?.items ?? []).find((p: any) => p.status === "captured");
+          if (captured) {
+            await confirmOrder(dbOrder.id, captured.id, "", userId);
+            logger.info({ orderId, paymentId: captured.id }, "Retry: auto-confirmed existing paid order");
+          }
+        } catch (e) {
+          logger.error({ orderId, err: (e as any)?.message }, "Retry: auto-confirm of paid order failed — webhook will retry");
+        }
+      })();
+      res.status(409).json({ error: "Your previous payment is being processed. Please check your order history shortly." });
+      return;
+    }
+    // Any other status (e.g. "expired") — fall through to clone and create fresh Razorpay order
   } catch (_) {
     // Transient Razorpay fetch failure — optimistically reuse the existing order ID
     logger.warn({ orderId, rzpOrderId: dbOrder.razorpayOrderId }, "Retry: Razorpay fetch failed transiently — reusing existing order optimistically");
@@ -854,10 +873,17 @@ async function confirmOrder(
   signature: string,
   userId: string,
 ) {
-  // Accept from both pending and payment_failed states (Razorpay allows retrying the same order)
+  // Accept from pending/payment_failed (normal flow) AND from cancelled-with-no-paymentId
+  // (race-recovery: order was race-cancelled before confirmation arrived via verify or webhook).
   const [updated] = await db.update(ordersTable)
     .set({ status: "confirmed", paymentId, razorpaySignature: signature || null })
-    .where(and(eq(ordersTable.id, orderId), inArray(ordersTable.status, ["pending", "payment_failed"])))
+    .where(and(
+      eq(ordersTable.id, orderId),
+      or(
+        inArray(ordersTable.status, ["pending", "payment_failed"]),
+        and(eq(ordersTable.status, "cancelled"), isNull(ordersTable.paymentId)),
+      ),
+    ))
     .returning();
 
   if (!updated) {
