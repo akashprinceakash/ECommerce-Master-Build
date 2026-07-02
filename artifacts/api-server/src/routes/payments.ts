@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import crypto from "crypto";
 import Razorpay from "razorpay";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql, desc } from "drizzle-orm";
 import { clerkClient } from "@clerk/express";
 import {
   db, cartsTable, cartItemsTable, productsTable,
@@ -268,8 +268,7 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
   const totalInPaise = itemsTotalInPaise + shippingChargeInPaise;
 
   // ── Idempotency: reuse an existing pending/payment_failed order if the cart total matches ──
-  // This prevents creating duplicate Razorpay orders when the checkout page is refreshed
-  // or the user clicks "Place Order" multiple times.
+  // Query most-recent first for deterministic ordering; prevents cancelling a still-usable order.
   const [existingOrder] = await db
     .select()
     .from(ordersTable)
@@ -277,34 +276,39 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
       eq(ordersTable.userId, userId),
       inArray(ordersTable.status, ["pending", "payment_failed"]),
     ))
+    .orderBy(desc(ordersTable.createdAt))
     .limit(1);
 
-  if (existingOrder?.razorpayOrderId && existingOrder.totalInPaise === totalInPaise) {
-    // Verify the Razorpay order is still open (not expired or already paid)
-    try {
-      const rzpExisting = await rzp.orders.fetch(existingOrder.razorpayOrderId);
-      if (rzpExisting.status === "created") {
-        // Razorpay order still open — reuse it
-        logger.info({ orderId: existingOrder.id, rzpOrderId: existingOrder.razorpayOrderId }, "Reusing existing pending Razorpay order (idempotent)");
-        void db.insert(orderEventsTable).values({ orderId: existingOrder.id, eventType: "checkout_resumed", title: "Checkout Resumed", description: "Reusing existing Razorpay order" });
-        res.json({ orderId: rzpExisting.id, dbOrderId: existingOrder.id, amount: rzpExisting.amount, currency: rzpExisting.currency, keyId });
+  if (existingOrder?.razorpayOrderId) {
+    if (existingOrder.totalInPaise === totalInPaise) {
+      // Same total — try to verify the Razorpay order is still open
+      let rzpStatus: string | null = null;
+      try {
+        const rzpExisting = await rzp.orders.fetch(existingOrder.razorpayOrderId);
+        rzpStatus = rzpExisting.status;
+        if (rzpStatus === "created") {
+          // Razorpay order still open — reuse it (idempotent, no new order)
+          logger.info({ orderId: existingOrder.id, rzpOrderId: existingOrder.razorpayOrderId }, "Reusing existing pending Razorpay order (idempotent)");
+          void db.insert(orderEventsTable).values({ orderId: existingOrder.id, eventType: "checkout_resumed", title: "Checkout Resumed", description: "Reusing existing Razorpay order" });
+          res.json({ orderId: rzpExisting.id, dbOrderId: existingOrder.id, amount: rzpExisting.amount, currency: rzpExisting.currency, keyId });
+          return;
+        }
+        // Razorpay says order is not "created" (paid or expired) — cancel only THIS order and create fresh
+        await db.update(ordersTable).set({ status: "cancelled" }).where(eq(ordersTable.id, existingOrder.id));
+        logger.info({ orderId: existingOrder.id, rzpStatus }, "Cancelled expired/paid Razorpay order before creating new one");
+      } catch (fetchErr) {
+        // Razorpay API unavailable — return the existing order optimistically.
+        // HMAC signature verification in /payment/verify will catch any invalid payment later.
+        logger.warn({ orderId: existingOrder.id, err: (fetchErr as any)?.message }, "Razorpay fetch failed transiently — reusing existing order optimistically");
+        void db.insert(orderEventsTable).values({ orderId: existingOrder.id, eventType: "checkout_resumed", title: "Checkout Resumed (Optimistic)", description: "Razorpay fetch failed — reusing existing order" });
+        res.json({ orderId: existingOrder.razorpayOrderId, dbOrderId: existingOrder.id, amount: existingOrder.totalInPaise, currency: "INR", keyId });
         return;
       }
-    } catch (_) {
-      // Razorpay fetch failed or order expired — fall through to create a new one
+    } else {
+      // Cart total changed — cancel only this old order, then create fresh
+      await db.update(ordersTable).set({ status: "cancelled" }).where(eq(ordersTable.id, existingOrder.id));
+      logger.info({ orderId: existingOrder.id, oldTotal: existingOrder.totalInPaise, newTotal: totalInPaise }, "Cancelled stale order (cart total changed)");
     }
-  }
-
-  // Cancel any stale pending/payment_failed orders (different total or expired Razorpay order)
-  const stale = await db
-    .select({ id: ordersTable.id })
-    .from(ordersTable)
-    .where(and(eq(ordersTable.userId, userId), inArray(ordersTable.status, ["pending", "payment_failed"])));
-  if (stale.length > 0) {
-    await db.update(ordersTable)
-      .set({ status: "cancelled" })
-      .where(inArray(ordersTable.id, stale.map((s) => s.id)));
-    logger.info({ count: stale.length }, "Cancelled stale pending/payment_failed orders before new checkout");
   }
 
   let rzpOrder: any;
@@ -321,16 +325,36 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const [order] = await db.insert(ordersTable).values({
-    userId,
-    status: "pending",
-    paymentMethod: "online",
-    totalInPaise,
-    shippingChargeInPaise,
-    shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
-    remarks,
-    razorpayOrderId: rzpOrder.id,
-  }).returning();
+  let order: typeof ordersTable.$inferSelect;
+  try {
+    const [inserted] = await db.insert(ordersTable).values({
+      userId,
+      status: "pending",
+      paymentMethod: "online",
+      totalInPaise,
+      shippingChargeInPaise,
+      shippingName, shippingAddress, shippingCity, shippingState, shippingPostalCode, shippingPhone,
+      remarks,
+      razorpayOrderId: rzpOrder.id,
+    }).returning();
+    order = inserted;
+  } catch (insertErr: any) {
+    // Graceful unique constraint conflict: another concurrent request already inserted this Razorpay order.
+    // Fetch it and return it rather than surfacing a 500.
+    if (insertErr?.code === "23505") {
+      logger.warn({ rzpOrderId: rzpOrder.id, err: insertErr?.detail }, "Unique constraint on razorpay_order_id — concurrent request, fetching existing row");
+      const [conflict] = await db.select().from(ordersTable)
+        .where(and(eq(ordersTable.userId, userId), inArray(ordersTable.status, ["pending", "payment_failed"])))
+        .orderBy(desc(ordersTable.createdAt)).limit(1);
+      if (conflict) {
+        res.json({ orderId: conflict.razorpayOrderId ?? rzpOrder.id, dbOrderId: conflict.id, amount: rzpOrder.amount, currency: rzpOrder.currency, keyId });
+        return;
+      }
+    }
+    logger.error({ err: insertErr?.message }, "Failed to insert order row");
+    res.status(500).json({ error: "Failed to create order — please try again" });
+    return;
+  }
 
   await Promise.all(
     cartItemsWithProducts.map((item) =>
@@ -346,10 +370,76 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
     ),
   );
 
-  // Record order placed event
+  // Record order placed event (fire-and-forget — non-critical)
   void db.insert(orderEventsTable).values({ orderId: order.id, eventType: "order_placed", title: "Order Placed", description: `Razorpay Order: ${rzpOrder.id} · Awaiting payment` });
 
   res.json({ orderId: rzpOrder.id, dbOrderId: order.id, amount: rzpOrder.amount, currency: rzpOrder.currency, keyId });
+});
+
+/* ──────────────────────────────────────────────────────
+   Retry: reopen payment for a payment_failed DB order
+   Returns existing Razorpay order ID if still open,
+   otherwise creates a new one tied to the same DB order.
+────────────────────────────────────────────────────── */
+router.post("/payment/retry/:orderId", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).userId;
+  if (!rzp || !keyId || !keySecret) { res.status(500).json({ error: "Razorpay not configured" }); return; }
+
+  const orderId = parseInt(String(req.params["orderId"] ?? "0"), 10);
+  if (!orderId) { res.status(400).json({ error: "Invalid order ID" }); return; }
+
+  const [dbOrder] = await db.select().from(ordersTable)
+    .where(and(eq(ordersTable.id, orderId), eq(ordersTable.userId, userId)));
+
+  if (!dbOrder) { res.status(404).json({ error: "Order not found" }); return; }
+  if (!["pending", "payment_failed"].includes(dbOrder.status)) {
+    res.status(409).json({ error: `Order cannot be retried (status: ${dbOrder.status})` }); return;
+  }
+  if (!dbOrder.razorpayOrderId) {
+    res.status(400).json({ error: "No Razorpay order ID on record for this order" }); return;
+  }
+
+  // Try to reuse the existing Razorpay order if it's still open
+  try {
+    const rzpExisting = await rzp.orders.fetch(dbOrder.razorpayOrderId);
+    if (rzpExisting.status === "created") {
+      logger.info({ orderId, rzpOrderId: dbOrder.razorpayOrderId }, "Retry: reusing existing open Razorpay order");
+      void db.insert(orderEventsTable).values({ orderId, eventType: "payment_retry", title: "Payment Retry", description: `Reusing Razorpay Order: ${dbOrder.razorpayOrderId}` });
+      res.json({ orderId: rzpExisting.id, dbOrderId: dbOrder.id, amount: rzpExisting.amount, currency: rzpExisting.currency, keyId });
+      return;
+    }
+  } catch (_) {
+    // Transient Razorpay fetch failure — optimistically reuse the existing order ID
+    logger.warn({ orderId, rzpOrderId: dbOrder.razorpayOrderId }, "Retry: Razorpay fetch failed transiently — reusing existing order optimistically");
+    void db.insert(orderEventsTable).values({ orderId, eventType: "payment_retry", title: "Payment Retry (Optimistic)", description: "Razorpay fetch failed transiently" });
+    res.json({ orderId: dbOrder.razorpayOrderId, dbOrderId: dbOrder.id, amount: dbOrder.totalInPaise, currency: "INR", keyId });
+    return;
+  }
+
+  // Existing Razorpay order is expired/paid — create a fresh one tied to the same DB row
+  let rzpOrder: any;
+  try {
+    rzpOrder = await rzp.orders.create({
+      amount: dbOrder.totalInPaise,
+      currency: "INR",
+      receipt: `retry_${orderId}_${Date.now()}`,
+      payment_capture: 1,
+      notes: { userId, retryForOrderId: String(orderId) },
+    } as any);
+  } catch (e: any) {
+    res.status(500).json({ error: e?.error?.description || e?.message || "Failed to create retry payment order" });
+    return;
+  }
+
+  // Update the DB order with the new Razorpay order ID
+  await db.update(ordersTable)
+    .set({ razorpayOrderId: rzpOrder.id, status: "payment_failed" })
+    .where(and(eq(ordersTable.id, orderId), eq(ordersTable.userId, userId)));
+
+  void db.insert(orderEventsTable).values({ orderId, eventType: "payment_retry", title: "Payment Retry", description: `New Razorpay Order: ${rzpOrder.id} (previous expired)` });
+  logger.info({ orderId, newRzpOrderId: rzpOrder.id }, "Retry: created new Razorpay order for expired original");
+
+  res.json({ orderId: rzpOrder.id, dbOrderId: dbOrder.id, amount: rzpOrder.amount, currency: rzpOrder.currency, keyId });
 });
 
 /* ──────────────────────────────────────────────────────
@@ -708,13 +798,16 @@ async function confirmOrder(
     return existing;
   }
 
-  // Record payment confirmed event
-  await db.insert(orderEventsTable).values({
+  // Fire-and-forget event insert — must NEVER block or throw back to the caller.
+  // The status update above is the critical DB write; event logging is non-critical.
+  void db.insert(orderEventsTable).values({
     orderId,
     eventType: "payment_verified",
     title: "Payment Confirmed",
     description: `Payment ID: ${paymentId}`,
-  });
+  }).catch((e: unknown) =>
+    logger.error({ orderId, err: e }, "confirmOrder: event insert failed (non-critical — order IS confirmed)"),
+  );
 
   // Fire-and-forget fulfillment — must NEVER throw back to the caller.
   // At this point the order IS confirmed in the DB; fulfillment errors (Shiprocket,

@@ -3,9 +3,15 @@ import { useListOrders, getListOrdersQueryKey } from "@workspace/api-client-reac
 import { Link } from "wouter";
 import { formatPrice, formatDate } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, Package, AlertCircle, RefreshCw } from "lucide-react";
+import { ArrowRight, Package, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAssetUrl } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useAuth } from "@clerk/react";
+
+declare global { interface Window { Razorpay?: any } }
 
 const STATUS_LABEL: Record<string, string> = {
   pending:        "Pending",
@@ -33,6 +39,89 @@ export default function OrdersPage() {
   const { data: orders, isLoading } = useListOrders({
     query: { queryKey: getListOrdersQueryKey() }
   });
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+  const [retrying, setRetrying] = useState<number | null>(null);
+
+  const retryPayment = async (orderId: number) => {
+    if (!window.Razorpay) {
+      toast({ title: "Payment unavailable", description: "Razorpay failed to load. Please refresh and try again.", variant: "destructive" });
+      return;
+    }
+    setRetrying(orderId);
+    try {
+      const token = await getToken();
+      const authHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+
+      const retryRes = await fetch(`/api/payment/retry/${orderId}`, {
+        method: "POST",
+        headers: authHeaders,
+      });
+      if (!retryRes.ok) {
+        const err = await retryRes.json().catch(() => ({}));
+        throw new Error(err?.error ?? `Server error ${retryRes.status}`);
+      }
+      const { orderId: rzpOrderId, amount, currency, keyId } = await retryRes.json();
+
+      await new Promise<void>((resolve, reject) => {
+        const rzp = new window.Razorpay({
+          key: keyId,
+          amount,
+          currency,
+          order_id: rzpOrderId,
+          name: "KA.SHA",
+          description: "Retry payment for your order",
+          theme: { color: "#000000" },
+          handler: async (resp: any) => {
+            try {
+              const verifyRes = await fetch("/api/payment/verify", {
+                method: "POST",
+                headers: authHeaders,
+                body: JSON.stringify({
+                  razorpay_order_id: resp.razorpay_order_id,
+                  razorpay_payment_id: resp.razorpay_payment_id,
+                  razorpay_signature: resp.razorpay_signature,
+                }),
+              });
+              if (!verifyRes.ok) {
+                const err = await verifyRes.json().catch(() => ({}));
+                throw new Error(err?.error ?? "Payment verification failed");
+              }
+              queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+              toast({ title: "Payment successful!", description: `Order #${orderId} confirmed.` });
+              resolve();
+            } catch (err: any) {
+              toast({ title: "Payment verification failed", description: err.message ?? "Please contact support.", variant: "destructive" });
+              reject(err);
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              toast({ title: "Payment cancelled", description: "You closed the payment window.", variant: "destructive" });
+              reject(new Error("dismissed"));
+            },
+          },
+        });
+        rzp.on("payment.failed", (resp: any) => {
+          const errMsg = resp?.error?.description ?? "Your payment could not be processed. Please try again.";
+          toast({ title: "Payment failed", description: errMsg, variant: "destructive" });
+          queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+          reject(new Error(errMsg));
+        });
+        rzp.open();
+      });
+    } catch (e: any) {
+      if (e?.message !== "dismissed") {
+        toast({ title: "Retry failed", description: e?.message ?? "There was an error. Please try again.", variant: "destructive" });
+      }
+    } finally {
+      setRetrying(null);
+    }
+  };
 
   return (
     <Layout>
@@ -68,10 +157,7 @@ export default function OrdersPage() {
                   <div className="px-6 md:px-8 pt-4 pb-0 flex items-start gap-2 text-sm text-red-700">
                     <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                     <span>
-                      Your payment was declined for this order. Your cart items are still reserved.{" "}
-                      <Link href="/checkout" className="underline font-medium">
-                        Retry payment →
-                      </Link>
+                      Your payment was declined for this order. Click "Retry Payment" to complete it now.
                     </span>
                   </div>
                 )}
@@ -100,11 +186,16 @@ export default function OrdersPage() {
 
                   <div className="flex-shrink-0 flex flex-col gap-2">
                     {(order.status as string) === "payment_failed" ? (
-                      <Link href="/checkout">
-                        <Button className="w-full md:w-auto rounded-none text-xs tracking-wider h-10 px-5 bg-red-600 hover:bg-red-700 text-white gap-2">
-                          <RefreshCw className="w-3.5 h-3.5" /> Retry Payment
-                        </Button>
-                      </Link>
+                      <Button
+                        disabled={retrying === order.id}
+                        onClick={() => retryPayment(order.id)}
+                        className="w-full md:w-auto rounded-none text-xs tracking-wider h-10 px-5 bg-red-600 hover:bg-red-700 text-white gap-2"
+                      >
+                        {retrying === order.id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <RefreshCw className="w-3.5 h-3.5" />}
+                        Retry Payment
+                      </Button>
                     ) : (
                       <Link href={`/orders/${order.id}`}>
                         <Button variant="outline" className="w-full md:w-auto rounded-none border-border/50 group-hover:border-primary/50 transition-colors">
