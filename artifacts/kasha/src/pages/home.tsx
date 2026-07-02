@@ -626,38 +626,31 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Gold rule divider */}
-      <div style={{ height: 1, background: "linear-gradient(to right, transparent, rgba(184,146,90,0.22), transparent)", margin: `0 ${PAD}` }} />
-
       {/* ══════════════════════════════════════════════════════════════════════
-          LOOKBOOK FEATURE BANNER
+          LOOKBOOK FEATURE SECTION
       ══════════════════════════════════════════════════════════════════════ */}
-      <section style={{ background: BG_PAGE, padding: `20px ${PAD}` }}>
-        <div style={{
-          borderRadius: 10,
-          overflow: "hidden",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          minHeight: 220,
-        }}>
-          {/* Left — warm cream copy panel */}
+      <section style={{ background: BG_DARK, borderTop: `0.5px solid rgba(184,146,90,0.18)`, borderBottom: `0.5px solid rgba(184,146,90,0.18)` }}>
+        <div style={{ padding: `52px ${PAD} 56px`, position: "relative", overflow: "hidden" }}>
+
+          {/* Watermark */}
           <div style={{
-            background: "linear-gradient(135deg, #EDE8DF 0%, #E4DDD3 100%)",
-            padding: "clamp(24px,4vw,44px) clamp(24px,4vw,48px)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-          }}>
-            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.34em", color: GOLD, textTransform: "uppercase", marginBottom: 10 }}>
-              Your Style Journal
+            position: "absolute", bottom: -60, right: -20, zIndex: 0,
+            fontFamily: "'Cormorant Garamond', serif", fontSize: 340,
+            fontWeight: 200, color: GOLD, opacity: 0.04, lineHeight: 1,
+            userSelect: "none", pointerEvents: "none", letterSpacing: "-0.04em",
+          }}>LB</div>
+
+          {/* Header row */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 44, flexWrap: "wrap", gap: 20, position: "relative", zIndex: 1 }}>
+            <div>
+              <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.36em", color: GOLD, textTransform: "uppercase", marginBottom: 10 }}>
+                Lookbook
+              </div>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(28px,3.2vw,46px)", fontWeight: 400, color: "#fff", lineHeight: 1.1, margin: 0 }}>
+                Style Your Outfit,<br />Your Way
+              </h2>
             </div>
-            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(22px,2.4vw,34px)", fontWeight: 500, color: "#1a1f2e", lineHeight: 1.18, marginBottom: 12 }}>
-              Build Your<br />Perfect Outfit
-            </div>
-            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, color: "rgba(20,28,60,0.58)", letterSpacing: "0.04em", lineHeight: 1.75, marginBottom: 24, maxWidth: 340 }}>
-              Mix, match and save pieces from our collection. Curate a complete look — tops, bottoms and accessories — then revisit or share it any time.
-            </div>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
               <Link
                 href="/lookbook"
                 style={{
@@ -666,11 +659,12 @@ export default function Home() {
                   textTransform: "uppercase",
                   background: GOLD,
                   color: "#fff",
-                  padding: "12px 26px",
+                  padding: "12px 28px",
                   borderRadius: 3,
                   textDecoration: "none",
                   fontWeight: 600,
                   transition: "background 0.2s",
+                  whiteSpace: "nowrap",
                 }}
                 onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = GOLD_LIGHT)}
                 onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = GOLD)}
@@ -683,73 +677,104 @@ export default function Home() {
                   fontFamily: "'Josefin Sans', sans-serif",
                   fontSize: 11, letterSpacing: "0.16em",
                   textTransform: "uppercase",
-                  color: "rgba(20,28,60,0.5)",
+                  color: "rgba(255,255,255,0.38)",
                   textDecoration: "none",
-                  borderBottom: "0.5px solid rgba(20,28,60,0.25)",
+                  borderBottom: "0.5px solid rgba(255,255,255,0.2)",
                   paddingBottom: 1,
+                  whiteSpace: "nowrap",
+                  transition: "color 0.2s",
                 }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.7)")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.38)")}
               >
                 Browse collection →
               </Link>
             </div>
           </div>
 
-          {/* Right — dark navy decorative panel */}
-          <div style={{
-            background: BG_DARK,
-            padding: "clamp(24px,4vw,44px) clamp(24px,4vw,48px)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            gap: 0,
-            position: "relative",
-            overflow: "hidden",
-          }}>
-            {/* Watermark */}
-            <div style={{
-              position: "absolute", bottom: -32, right: -8,
-              fontFamily: "'Cormorant Garamond', serif", fontSize: 220,
-              fontWeight: 300, color: GOLD, opacity: 0.05, lineHeight: 1,
-              userSelect: "none", pointerEvents: "none",
-            }}>L</div>
-
-            {/* Section label */}
-            <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 9, letterSpacing: "0.3em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", marginBottom: 20, position: "relative", zIndex: 1 }}>
-              Saved Outfits
-            </div>
-
-            {/* Simulated saved-item rows */}
+          {/* Step cards */}
+          <div className="lb-steps" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, position: "relative", zIndex: 1 }}>
             {[
-              { icon: "♥", label: "Performance Polo" },
-              { icon: "♥", label: "Fairway Trouser" },
-              { icon: "♥", label: "Mid-Layer Vest" },
-            ].map((item, i) => (
-              <div key={item.label} style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "10px 0",
-                borderBottom: "0.5px solid rgba(255,255,255,0.06)",
-                opacity: 1 - i * 0.22,
-                position: "relative", zIndex: 1,
-              }}>
-                <span style={{ color: GOLD, fontSize: 13, lineHeight: 1 }}>{item.icon}</span>
-                <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.1em", color: "rgba(255,255,255,0.65)", textTransform: "uppercase" }}>{item.label}</span>
-              </div>
+              {
+                num: "01",
+                glyph: "♥",
+                title: "Heart pieces you love",
+                desc: "Browse the collection and tap ♥ on any product to save it instantly to your personal Lookbook.",
+                cta: "Browse →", href: "/products",
+              },
+              {
+                num: "02",
+                glyph: "⊞",
+                title: "Arrange on canvas",
+                desc: "Drag, resize and layer saved pieces freely on your style canvas to build the complete outfit.",
+                cta: "Try now →", href: "/lookbook",
+              },
+              {
+                num: "03",
+                glyph: "✦",
+                title: "Save & share",
+                desc: "Lock in your finished look, revisit it any time, or share it directly from your wardrobe.",
+                cta: "Open Lookbook →", href: "/lookbook",
+              },
+            ].map((step) => (
+              <Link
+                key={step.num}
+                href={step.href}
+                style={{
+                  display: "block",
+                  border: `0.5px solid rgba(184,146,90,0.2)`,
+                  borderRadius: 10,
+                  padding: "28px 26px 26px",
+                  textDecoration: "none",
+                  transition: "transform 0.25s, box-shadow 0.25s, border-color 0.25s, background 0.25s",
+                  background: "rgba(255,255,255,0.025)",
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.transform    = "translateY(-4px)";
+                  el.style.boxShadow    = `0 16px 36px rgba(184,146,90,0.14)`;
+                  el.style.borderColor  = `rgba(184,146,90,0.55)`;
+                  el.style.background   = "rgba(255,255,255,0.05)";
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.transform    = "translateY(0)";
+                  el.style.boxShadow    = "none";
+                  el.style.borderColor  = "rgba(184,146,90,0.2)";
+                  el.style.background   = "rgba(255,255,255,0.025)";
+                }}
+              >
+                {/* Step number + glyph row */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                  <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.22em", color: GOLD, textTransform: "uppercase" }}>{step.num}</span>
+                  <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: GOLD, opacity: 0.65, lineHeight: 1 }}>{step.glyph}</span>
+                </div>
+                {/* Title */}
+                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 500, color: "#fff", lineHeight: 1.25, marginBottom: 10 }}>
+                  {step.title}
+                </div>
+                {/* Description */}
+                <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, color: "rgba(255,255,255,0.45)", letterSpacing: "0.04em", lineHeight: 1.75, marginBottom: 18 }}>
+                  {step.desc}
+                </div>
+                {/* Inline CTA */}
+                <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: GOLD, borderBottom: `0.5px solid rgba(184,146,90,0.45)`, paddingBottom: 1 }}>
+                  {step.cta}
+                </span>
+              </Link>
             ))}
-
-            {/* Bottom prompt */}
-            <div style={{ marginTop: 22, position: "relative", zIndex: 1 }}>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: "rgba(255,255,255,0.4)", fontStyle: "italic", lineHeight: 1.5 }}>
-                "Heart any product to start<br />building your look."
-              </div>
-            </div>
           </div>
+
         </div>
-        <style>{`
-          @media (max-width: 640px) {
-            .lb-split { grid-template-columns: 1fr !important; }
-          }
-        `}</style>
       </section>
+      <style>{`
+        @media (max-width: 680px) {
+          .lb-steps { grid-template-columns: 1fr !important; }
+        }
+        @media (min-width: 681px) and (max-width: 960px) {
+          .lb-steps { grid-template-columns: 1fr 1fr !important; }
+        }
+      `}</style>
 
       {/* Gold rule divider */}
       <div style={{ height: 1, background: "linear-gradient(to right, transparent, rgba(184,146,90,0.18), transparent)", margin: `0 ${PAD}` }} />
