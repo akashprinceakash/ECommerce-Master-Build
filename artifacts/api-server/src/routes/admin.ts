@@ -412,11 +412,13 @@ router.post("/admin/customizations/backfill-spec", requireAuth, async (req, res)
         zoneColors: cd.zoneColors ?? {},
         kashaDesignId: cd.kdDesignId || null,
         kashaDesignLabel: null,
-        printId: cd.activePrintId ?? null,
+        printId: cd.activePrintId ?? cd.allOverPrintId ?? null,
         printLabel: null,
         patColorA: cd.patColorA ?? null,
         patColorB: cd.patColorB ?? null,
         sleeveLength: cd.sleeveLength ?? null,
+        hasLogo: false,
+        logoUrl: null,
         logoPosition: null,
         logoSize: null,
         textContent: null,
@@ -426,6 +428,26 @@ router.post("/admin/customizations/backfill-spec", requireAuth, async (req, res)
         textBold: null,
         textItalic: null,
       };
+      if (cd.canvasJSON) {
+        try {
+          const parsed = JSON.parse(cd.canvasJSON);
+          const objects: Array<Record<string, unknown>> = Array.isArray(parsed?.objects) ? parsed.objects : [];
+          for (const obj of objects) {
+            if (obj["type"] === "i-text" || obj["type"] === "text") {
+              spec["textContent"] = typeof obj["text"] === "string" ? obj["text"] : null;
+              spec["fontFamily"]  = typeof obj["fontFamily"] === "string" ? obj["fontFamily"] : null;
+              spec["fontSize"]    = typeof obj["fontSize"] === "number" ? obj["fontSize"] : null;
+              spec["textColor"]   = typeof obj["fill"] === "string" ? obj["fill"] : null;
+              spec["textBold"]    = obj["fontWeight"] === "700" || obj["fontWeight"] === "bold";
+              spec["textItalic"]  = obj["fontStyle"] === "italic";
+              break;
+            }
+            if (obj["type"] === "image" && obj["data"] && typeof (obj["data"] as any)["role"] === "string" && (obj["data"] as any)["role"] === "logo") {
+              spec["hasLogo"] = true;
+            }
+          }
+        } catch { /* canvasJSON parse failure — leave text/logo as null */ }
+      }
       await db.update(customizationsTable).set({ designSpec: spec }).where(eq(customizationsTable.id, row.id));
       updated++;
     } catch {

@@ -1434,6 +1434,8 @@ export default function CustomizePage() {
       printCustomerLabel: (activePrint as any)?.customerLabel ?? null,
       patColorA: activeKashaDesign ? patColorA : null,
       patColorB: activeKashaDesign ? patColorB : null,
+      hasLogo: logoPlaced,
+      logoUrl: logoPlaced && logoPreview && !logoPreview.startsWith("data:") ? logoPreview : null,
       logoPosition: logoPlaced ? logoPosition : null,
       logoSize: logoPlaced ? logoSize : null,
       textContent: textPlaced ? textInput : null,

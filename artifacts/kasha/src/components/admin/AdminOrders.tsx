@@ -621,6 +621,8 @@ interface DesignSpec {
   printCustomerLabel?: string | null;
   patColorA?: string | null;
   patColorB?: string | null;
+  hasLogo?: boolean | null;
+  logoUrl?: string | null;
   logoPosition?: string | null;
   logoSize?: number | null;
   textContent?: string | null;
@@ -640,11 +642,49 @@ const ZONE_DISPLAY: Record<string, string> = {
   rightSleeve: "Right Sleeve",
 };
 
-function DesignSpecCard({ spec }: { spec: DesignSpec }) {
+function deriveSpecFromCanvasData(canvasData: string | null | undefined): DesignSpec | null {
+  if (!canvasData) return null;
+  try {
+    const cd = JSON.parse(canvasData);
+    const spec: DesignSpec = {
+      baseColor: cd.primaryColor ?? null,
+      zoneColors: cd.zoneColors ?? null,
+      kashaDesignId: cd.kdDesignId || null,
+      kashaDesignLabel: null,
+      printId: cd.activePrintId ?? cd.allOverPrintId ?? null,
+      printLabel: null,
+      patColorA: cd.patColorA ?? null,
+      patColorB: cd.patColorB ?? null,
+      sleeveLength: cd.sleeveLength ?? null,
+    };
+    const objects: any[] = cd.canvasJSON ? JSON.parse(cd.canvasJSON)?.objects ?? [] : [];
+    const textObj = objects.find((o: any) => o.type === "i-text" || o.type === "text");
+    if (textObj) {
+      spec.textContent = textObj.text ?? null;
+      spec.fontFamily = textObj.fontFamily ?? null;
+      spec.fontSize = textObj.fontSize ?? null;
+      spec.textColor = textObj.fill ?? null;
+      spec.textBold = textObj.fontWeight === "700" || textObj.fontWeight === "bold";
+      spec.textItalic = textObj.fontStyle === "italic";
+    }
+    return spec;
+  } catch {
+    return null;
+  }
+}
+
+function DesignSpecCard({ spec, legacy = false }: { spec: DesignSpec; legacy?: boolean }) {
   const zones = spec.zoneColors ? Object.entries(spec.zoneColors).filter(([, v]) => !!v) : [];
   return (
     <div className="mb-3 p-3 bg-slate-50 border border-slate-200">
-      <div className="text-[10px] uppercase tracking-wider font-semibold text-slate-600 mb-2">Manufacturing Spec</div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] uppercase tracking-wider font-semibold text-slate-600">Manufacturing Spec</div>
+        {legacy && (
+          <span className="text-[9px] uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5">
+            Auto-derived from canvas — run backfill for full data
+          </span>
+        )}
+      </div>
       <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
         {spec.sleeveLength && (
           <div className="flex justify-between">
@@ -692,17 +732,31 @@ function DesignSpecCard({ spec }: { spec: DesignSpec }) {
             <span className="font-semibold">{spec.printCustomerLabel ?? spec.printLabel}</span>
           </div>
         )}
-        {spec.logoPosition && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Logo position</span>
-            <span className="font-semibold capitalize">{spec.logoPosition.replace(/-/g, " ")}</span>
-          </div>
-        )}
-        {spec.logoSize != null && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Logo size</span>
-            <span className="font-semibold">{spec.logoSize}%</span>
-          </div>
+        {(spec.hasLogo || spec.logoPosition) && (
+          <>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Logo</span>
+              <span className="font-semibold">Applied</span>
+            </div>
+            {spec.logoPosition && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Logo position</span>
+                <span className="font-semibold capitalize">{spec.logoPosition.replace(/-/g, " ")}</span>
+              </div>
+            )}
+            {spec.logoSize != null && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Logo size</span>
+                <span className="font-semibold">{spec.logoSize}%</span>
+              </div>
+            )}
+            {spec.logoUrl && (
+              <div className="flex justify-between col-span-2">
+                <span className="text-muted-foreground">Logo URL</span>
+                <a href={spec.logoUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-primary underline break-all">{spec.logoUrl}</a>
+              </div>
+            )}
+          </>
         )}
         {spec.textContent && (
           <div className="flex justify-between col-span-2">
@@ -724,84 +778,120 @@ function DesignSpecCard({ spec }: { spec: DesignSpec }) {
   );
 }
 
+function he(s: string | number | null | undefined): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function colorCell(hex: string | null | undefined): string {
+  if (!hex) return "";
+  const safe = he(hex);
+  return `${safe} <span style="display:inline-block;width:10px;height:10px;background:${safe};border:1px solid #ccc;vertical-align:middle"></span>`;
+}
+
 function printSpecSheet(order: AdminOrder) {
   const w = window.open("", "_blank", "width=800,height=900");
   if (!w) return;
   const rows: string[] = [];
   for (const it of order.items) {
     const c = it.customization;
-    const spec: DesignSpec | null = c?.designSpec ?? null;
+    const spec: DesignSpec | null = c?.designSpec
+      ? (c.designSpec as DesignSpec)
+      : deriveSpecFromCanvasData(c?.canvasData);
+    const isLegacy = c && !c.designSpec && !!spec;
     const views: Array<{ label: string; url: string }> = [];
-    if (c?.frontImageUrl) views.push({ label: "Front", url: c.frontImageUrl });
-    if (c?.backImageUrl)  views.push({ label: "Back",  url: c.backImageUrl  });
-    if (c?.sideImageUrl)  views.push({ label: "Side",  url: c.sideImageUrl  });
-    if (c?.previewImageUrl && !views.find(v => v.url === c.previewImageUrl)) views.push({ label: "3D Preview", url: c.previewImageUrl });
+    const seen = new Set<string>();
+    const tryAddView = (url: string | null | undefined, label: string) => {
+      if (url && !seen.has(url)) { seen.add(url); views.push({ label, url }); }
+    };
+    tryAddView(c?.frontImageUrl, "Front");
+    tryAddView(c?.backImageUrl, "Back");
+    tryAddView(c?.sideImageUrl, "Side");
+    tryAddView(c?.previewImageUrl, "3D Preview");
 
-    const zoneRows = spec?.zoneColors ? Object.entries(spec.zoneColors).filter(([, v]) => !!v).map(([z, color]) =>
-      `<tr><td>${ZONE_DISPLAY[z] ?? z}</td><td style="font-family:monospace">${color} <span style="display:inline-block;width:10px;height:10px;background:${color};border:1px solid #ccc;vertical-align:middle"></span></td></tr>`
-    ).join("") : "";
+    const measurements: Array<[string, string]> = (it as any).measurements
+      ? Object.entries((it as any).measurements as Record<string, string>)
+      : [];
+
+    const zoneRows = spec?.zoneColors
+      ? Object.entries(spec.zoneColors).filter(([, v]) => !!v)
+          .map(([z, color]) => `<tr><td>${he(ZONE_DISPLAY[z] ?? z)}</td><td style="font-family:monospace">${colorCell(color)}</td></tr>`)
+          .join("")
+      : "";
+
+    const printName = spec?.printCustomerLabel ?? spec?.printLabel ?? "";
 
     rows.push(`
       <div class="item">
         <div class="item-header">
-          <strong>${it.product?.name ?? "Unknown product"}</strong>
-          <span>Size: ${it.size} · Qty: ${it.quantity}</span>
+          <strong>${he(it.product?.name ?? "Unknown product")}</strong>
+          <span>Size: ${he(it.size)} &middot; Qty: ${he(it.quantity)}</span>
         </div>
-        ${c ? `<div class="design-name">Bespoke Design: ${c.name}</div>` : ""}
-        ${views.length > 0 ? `<div class="views">${views.map(v => `<div class="view-cell"><img src="${v.url}" /><div>${v.label}</div></div>`).join("")}</div>` : ""}
+        ${c ? `<div class="design-name">Bespoke Design: ${he(c.name)}${isLegacy ? ' <em style="color:#b45309">(spec auto-derived)</em>' : ""}</div>` : ""}
+        ${views.length > 0 ? `<div class="views">${views.map(v => `<div class="view-cell"><img src="${he(v.url)}" alt="${he(v.label)}" /><div>${he(v.label)}</div></div>`).join("")}</div>` : ""}
+        ${measurements.length > 0 ? `<table class="spec-table" style="margin-bottom:8px"><thead><tr><th colspan="2">Q Club Measurements</th></tr></thead><tbody>${measurements.map(([k, v]) => `<tr><td>${he(k.replace(/([A-Z])/g, " $1").trim())}</td><td>${he(v)}</td></tr>`).join("")}</tbody></table>` : ""}
         ${spec ? `<table class="spec-table">
           <thead><tr><th colspan="2">Manufacturing Specification</th></tr></thead>
           <tbody>
-            ${spec.sleeveLength ? `<tr><td>Sleeve</td><td style="text-transform:capitalize">${spec.sleeveLength}</td></tr>` : ""}
-            ${spec.baseColor ? `<tr><td>Base colour</td><td style="font-family:monospace">${spec.baseColor} <span style="display:inline-block;width:10px;height:10px;background:${spec.baseColor};border:1px solid #ccc;vertical-align:middle"></span></td></tr>` : ""}
+            ${spec.sleeveLength ? `<tr><td>Sleeve</td><td style="text-transform:capitalize">${he(spec.sleeveLength)}</td></tr>` : ""}
+            ${spec.baseColor ? `<tr><td>Base colour</td><td style="font-family:monospace">${colorCell(spec.baseColor)}</td></tr>` : ""}
             ${zoneRows}
-            ${spec.kashaDesignLabel ? `<tr><td>KA.SHA Design</td><td>${spec.kashaDesignLabel}</td></tr>` : ""}
-            ${spec.patColorA ? `<tr><td>Pattern colour A</td><td style="font-family:monospace">${spec.patColorA} <span style="display:inline-block;width:10px;height:10px;background:${spec.patColorA};border:1px solid #ccc;vertical-align:middle"></span></td></tr>` : ""}
-            ${spec.patColorB ? `<tr><td>Pattern colour B</td><td style="font-family:monospace">${spec.patColorB} <span style="display:inline-block;width:10px;height:10px;background:${spec.patColorB};border:1px solid #ccc;vertical-align:middle"></span></td></tr>` : ""}
-            ${spec.printCustomerLabel ?? spec.printLabel ? `<tr><td>Print</td><td>${spec.printCustomerLabel ?? spec.printLabel}</td></tr>` : ""}
-            ${spec.logoPosition ? `<tr><td>Logo position</td><td style="text-transform:capitalize">${spec.logoPosition.replace(/-/g, " ")}</td></tr>` : ""}
-            ${spec.logoSize != null ? `<tr><td>Logo size</td><td>${spec.logoSize}%</td></tr>` : ""}
-            ${spec.textContent ? `<tr><td>Text</td><td>&ldquo;${spec.textContent}&rdquo;${spec.fontFamily ? ` · ${spec.fontFamily}${spec.textBold ? ", Bold" : ""}${spec.textItalic ? ", Italic" : ""}` : ""}</td></tr>` : ""}
-            ${spec.textColor && spec.textContent ? `<tr><td>Text colour</td><td style="font-family:monospace">${spec.textColor} <span style="display:inline-block;width:10px;height:10px;background:${spec.textColor};border:1px solid #ccc;vertical-align:middle"></span></td></tr>` : ""}
+            ${spec.kashaDesignLabel ? `<tr><td>KA.SHA Design</td><td>${he(spec.kashaDesignLabel)}</td></tr>` : ""}
+            ${spec.patColorA ? `<tr><td>Pattern colour A</td><td style="font-family:monospace">${colorCell(spec.patColorA)}</td></tr>` : ""}
+            ${spec.patColorB ? `<tr><td>Pattern colour B</td><td style="font-family:monospace">${colorCell(spec.patColorB)}</td></tr>` : ""}
+            ${printName ? `<tr><td>Print</td><td>${he(printName)}</td></tr>` : ""}
+            ${spec.hasLogo || spec.logoPosition ? `<tr><td>Logo</td><td>Applied${spec.logoPosition ? ` · position: ${he(spec.logoPosition.replace(/-/g, " "))}` : ""}${spec.logoSize != null ? ` · size: ${he(spec.logoSize)}%` : ""}</td></tr>` : ""}
+            ${spec.logoUrl ? `<tr><td>Logo URL</td><td style="font-size:10px;word-break:break-all">${he(spec.logoUrl)}</td></tr>` : ""}
+            ${spec.textContent ? `<tr><td>Text</td><td>&ldquo;${he(spec.textContent)}&rdquo;${spec.fontFamily ? ` &middot; ${he(spec.fontFamily)}${spec.textBold ? ", Bold" : ""}${spec.textItalic ? ", Italic" : ""}` : ""}</td></tr>` : ""}
+            ${spec.textColor && spec.textContent ? `<tr><td>Text colour</td><td style="font-family:monospace">${colorCell(spec.textColor)}</td></tr>` : ""}
           </tbody>
-        </table>` : ""}
+        </table>` : `<p style="font-size:11px;color:#999;font-style:italic">No manufacturing spec recorded for this item.</p>`}
       </div>
     `);
   }
 
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>KA.SHA Print Spec — Order #${order.id}</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 12px; color: #1a1a18; padding: 32px; }
-    h1 { font-size: 18px; font-weight: 700; letter-spacing: .05em; margin-bottom: 4px; }
-    .meta { font-size: 11px; color: #666; margin-bottom: 24px; }
-    .customer { margin-bottom: 20px; padding: 12px; border: 1px solid #ddd; }
-    .customer strong { display: block; margin-bottom: 4px; }
-    .item { margin-bottom: 28px; padding-top: 16px; border-top: 1px solid #ccc; }
-    .item-header { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
-    .design-name { font-size: 11px; color: #555; margin-bottom: 10px; font-style: italic; }
-    .views { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
-    .view-cell { text-align: center; }
-    .view-cell img { width: 120px; height: 120px; object-fit: contain; border: 1px solid #ddd; display: block; }
-    .view-cell div { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; margin-top: 4px; color: #888; }
-    .spec-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    .spec-table th { background: #f5f5f5; text-align: left; padding: 6px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; border: 1px solid #ddd; }
-    .spec-table td { padding: 5px 8px; border: 1px solid #eee; }
-    .spec-table td:first-child { color: #666; width: 40%; }
-    .footer { margin-top: 32px; font-size: 10px; color: #aaa; text-align: center; }
-    @media print { body { padding: 16px; } }
-  </style></head><body>
-  <h1>KA.SHA — Print Specification</h1>
-  <div class="meta">Order #${order.id} · ${new Date(order.createdAt).toLocaleDateString("en-IN")} · Printed ${new Date().toLocaleString("en-IN")}</div>
-  <div class="customer">
-    <strong>${order.customerName} &lt;${order.customerEmail}&gt;</strong>
-    ${order.shippingAddress}, ${order.shippingCity}, ${order.shippingState} — ${order.shippingPostalCode} · ${order.shippingPhone}
-    ${order.remarks ? `<br><em>Remarks: ${order.remarks}</em>` : ""}
-  </div>
-  ${rows.join("")}
-  <div class="footer">KA.SHA — Internal Use Only</div>
-  <script>window.onload=function(){window.print();}</script>
-  </body></html>`);
+  const html = [
+    `<!DOCTYPE html><html><head><meta charset="utf-8">`,
+    `<title>KA.SHA Print Spec \u2014 Order #${he(order.id)}</title>`,
+    `<style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 12px; color: #1a1a18; padding: 32px; }
+      h1 { font-size: 18px; font-weight: 700; letter-spacing: .05em; margin-bottom: 4px; }
+      .meta { font-size: 11px; color: #666; margin-bottom: 24px; }
+      .customer { margin-bottom: 20px; padding: 12px; border: 1px solid #ddd; }
+      .customer strong { display: block; margin-bottom: 4px; }
+      .item { margin-bottom: 28px; padding-top: 16px; border-top: 1px solid #ccc; }
+      .item-header { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+      .design-name { font-size: 11px; color: #555; margin-bottom: 10px; font-style: italic; }
+      .views { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+      .view-cell { text-align: center; }
+      .view-cell img { width: 120px; height: 120px; object-fit: contain; border: 1px solid #ddd; display: block; }
+      .view-cell div { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; margin-top: 4px; color: #888; }
+      .spec-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 8px; }
+      .spec-table th { background: #f5f5f5; text-align: left; padding: 6px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; border: 1px solid #ddd; }
+      .spec-table td { padding: 5px 8px; border: 1px solid #eee; }
+      .spec-table td:first-child { color: #666; width: 40%; }
+      .footer { margin-top: 32px; font-size: 10px; color: #aaa; text-align: center; }
+      @media print { body { padding: 16px; } }
+    </style></head><body>`,
+    `<h1>KA.SHA \u2014 Print Specification</h1>`,
+    `<div class="meta">Order #${he(order.id)} &middot; ${he(new Date(order.createdAt).toLocaleDateString("en-IN"))} &middot; Printed ${he(new Date().toLocaleString("en-IN"))}</div>`,
+    `<div class="customer">`,
+    `  <strong>${he(order.customerName)} &lt;${he(order.customerEmail)}&gt;</strong>`,
+    `  ${he(order.shippingAddress)}, ${he(order.shippingCity)}, ${he(order.shippingState)} &mdash; ${he(order.shippingPostalCode)} &middot; ${he(order.shippingPhone)}`,
+    order.remarks ? `  <br><em>Remarks: ${he(order.remarks)}</em>` : "",
+    `</div>`,
+    rows.join(""),
+    `<div class="footer">KA.SHA &mdash; Internal Use Only</div>`,
+    `<script>window.onload=function(){window.print();}<\/script>`,
+    `</body></html>`,
+  ].join("\n");
+
+  w.document.write(html);
   w.document.close();
 }
 
@@ -1252,8 +1342,18 @@ export function AdminOrders() {
                               );
                             })()}
 
-                            {/* Design Spec card */}
-                            {c.designSpec && <DesignSpecCard spec={c.designSpec as DesignSpec} />}
+                            {/* Design Spec card — use stored spec or derive from canvasData for legacy records */}
+                            {(() => {
+                              const storedSpec = c.designSpec ? (c.designSpec as DesignSpec) : null;
+                              const derivedSpec = !storedSpec ? deriveSpecFromCanvasData(c.canvasData) : null;
+                              const spec = storedSpec ?? derivedSpec;
+                              if (spec) return <DesignSpecCard spec={spec} legacy={!storedSpec} />;
+                              return (
+                                <div className="mb-3 p-2.5 bg-slate-50 border border-slate-200 text-[11px] text-muted-foreground italic">
+                                  No manufacturing spec recorded for this design.
+                                </div>
+                              );
+                            })()}
                           </>
                         )}
 
