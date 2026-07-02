@@ -31,6 +31,7 @@ type CanvasItem = {
   y: number;
   width: number;
   defaultWidth: number;
+  bgRemoved?: boolean;
 };
 
 type DragState = {
@@ -164,10 +165,13 @@ export default function LookbookPage() {
     setStrippingIds(prev => new Set(prev).add(product.productId));
 
     let finalUrl: string = getAssetUrl(product.thumbnailUrl) ?? product.thumbnailUrl;
+    let bgRemoved = false;
     try {
       finalUrl = await stripBackground(finalUrl);
+      bgRemoved = true;
     } catch {
       finalUrl = getAssetUrl(product.thumbnailUrl) ?? product.thumbnailUrl;
+      bgRemoved = false;
     } finally {
       setStrippingIds(prev => {
         const next = new Set(prev);
@@ -185,8 +189,9 @@ export default function LookbookPage() {
         thumbnailUrl: finalUrl,
         x: Math.min(60 + offset, 280),
         y: Math.min(24 + offset, 160),
-        width: 190,
-        defaultWidth: 190,
+        width: 170,
+        defaultWidth: 170,
+        bgRemoved,
       }];
     });
   }, []);
@@ -208,6 +213,20 @@ export default function LookbookPage() {
     setCanvasItems(prev => prev.map(item =>
       item.id === id ? { ...item, width: item.defaultWidth } : item
     ));
+  }, []);
+
+  const fitItem = useCallback((id: string) => {
+    if (!canvasRef.current) return;
+    const canvasH = canvasRef.current.clientHeight;
+    const targetH = Math.round(canvasH * 0.72);
+    setCanvasItems(prev => prev.map(item => {
+      if (item.id !== id) return item;
+      const imgEl = document.querySelector<HTMLImageElement>(`[data-item-id="${id}"] img`);
+      const naturalW = imgEl?.naturalWidth || 1;
+      const naturalH = imgEl?.naturalHeight || 1;
+      const newWidth = Math.round(targetH * (naturalW / naturalH));
+      return { ...item, width: Math.max(60, Math.min(460, newWidth)) };
+    }));
   }, []);
 
   const handlePointerDown = useCallback((e: React.PointerEvent, itemId: string) => {
@@ -541,6 +560,93 @@ export default function LookbookPage() {
                           </div>
                         )}
 
+                        {/* ── Canvas toolbar — top right, targets selected item ── */}
+                        {selectedItemId && canvasItems.find(i => i.id === selectedItemId) && (
+                          <div
+                            onPointerDown={e => e.stopPropagation()}
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                              position: "absolute", top: 10, right: isMobile ? 10 : 56,
+                              zIndex: 300, display: "flex", alignItems: "center", gap: isMobile ? 10 : 16,
+                              background: "rgba(255,255,255,0.94)", backdropFilter: "blur(8px)",
+                              border: "1px solid rgba(0,0,0,0.08)", padding: "5px 12px",
+                              borderRadius: 3, boxShadow: "0 2px 10px rgba(0,0,0,0.09)",
+                            }}
+                          >
+                            {[
+                              { icon: <ZoomIn size={13} />, label: "ZOOM IN",  action: () => resizeItem(selectedItemId, 24) },
+                              { icon: <ZoomOut size={13} />, label: "ZOOM OUT", action: () => resizeItem(selectedItemId, -24) },
+                              { icon: <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.4"/><rect x="8" y="1" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.4"/><rect x="1" y="8" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.4"/><rect x="8" y="8" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.4"/></svg>, label: "FIT", action: () => fitItem(selectedItemId) },
+                              { icon: <RotateCcw size={13} />, label: "RESET",   action: () => resetItem(selectedItemId) },
+                            ].map(btn => (
+                              <button
+                                key={btn.label}
+                                onClick={btn.action}
+                                style={{
+                                  display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+                                  background: "transparent", border: "none", cursor: "pointer", padding: "3px 2px",
+                                  color: "#0A0A0A",
+                                }}
+                                onMouseEnter={e => (e.currentTarget.style.color = GOLD)}
+                                onMouseLeave={e => (e.currentTarget.style.color = "#0A0A0A")}
+                              >
+                                {btn.icon}
+                                {!isMobile && (
+                                  <span style={{ fontFamily: FONT_UI, fontSize: 7, letterSpacing: "0.15em", whiteSpace: "nowrap" }}>{btn.label}</span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* ── Right side panel — size slider for selected item ── */}
+                        {!isMobile && selectedItemId && (() => {
+                          const sel = canvasItems.find(i => i.id === selectedItemId);
+                          if (!sel) return null;
+                          return (
+                            <div
+                              onPointerDown={e => e.stopPropagation()}
+                              onClick={e => e.stopPropagation()}
+                              style={{
+                                position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                                zIndex: 300, display: "flex", flexDirection: "column", alignItems: "center", gap: 0,
+                                background: "#fff", border: "1px solid rgba(0,0,0,0.1)",
+                                boxShadow: "0 2px 12px rgba(0,0,0,0.10)", borderRadius: 4, overflow: "hidden",
+                              }}
+                            >
+                              {/* + */}
+                              <button
+                                onClick={() => resizeItem(sel.id, 24)}
+                                style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", borderBottom: "1px solid rgba(0,0,0,0.07)", cursor: "pointer", fontSize: 18, color: "#0A0A0A" }}
+                                onMouseEnter={e => (e.currentTarget.style.background = "rgba(184,146,90,0.08)")}
+                                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                              >+</button>
+                              {/* Vertical slider */}
+                              <div style={{ width: 36, height: 96, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 0", background: "#FAFAF7" }}>
+                                <input
+                                  type="range" min={60} max={460} value={sel.width}
+                                  onChange={e => setCanvasItems(prev => prev.map(i => i.id === sel.id ? { ...i, width: Number(e.target.value) } : i))}
+                                  style={{ width: 80, height: 20, transform: "rotate(-90deg)", cursor: "pointer", accentColor: GOLD }}
+                                />
+                              </div>
+                              {/* - */}
+                              <button
+                                onClick={() => resizeItem(sel.id, -24)}
+                                style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", borderTop: "1px solid rgba(0,0,0,0.07)", borderBottom: "1px solid rgba(0,0,0,0.07)", cursor: "pointer", fontSize: 18, color: "#0A0A0A" }}
+                                onMouseEnter={e => (e.currentTarget.style.background = "rgba(184,146,90,0.08)")}
+                                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                              >−</button>
+                              {/* fit */}
+                              <button
+                                onClick={() => fitItem(sel.id)}
+                                style={{ width: 36, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", fontFamily: FONT_UI, fontSize: 8, letterSpacing: "0.15em", color: GOLD, textTransform: "lowercase" }}
+                                onMouseEnter={e => (e.currentTarget.style.background = "rgba(184,146,90,0.08)")}
+                                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                              >fit</button>
+                            </div>
+                          );
+                        })()}
+
                         {/* Loading indicator when stripping */}
                         {canvasItems.length === 0 && strippingIds.size > 0 && (
                           <div style={{
@@ -564,6 +670,7 @@ export default function LookbookPage() {
                           return (
                             <div
                               key={item.id}
+                              data-item-id={item.id}
                               onPointerDown={e => handlePointerDown(e, item.id)}
                               onMouseEnter={() => setHoveredCanvasItem(item.id)}
                               onMouseLeave={() => setHoveredCanvasItem(null)}
@@ -574,12 +681,14 @@ export default function LookbookPage() {
                                 width: item.width,
                                 cursor: dragState?.itemId === item.id ? "grabbing" : "grab",
                                 zIndex: dragState?.itemId === item.id ? 100 : selectedItemId === item.id ? 50 : idx + 1,
-                                filter: isActive
-                                  ? "drop-shadow(0 12px 28px rgba(0,0,0,0.22))"
-                                  : "drop-shadow(0 4px 12px rgba(0,0,0,0.10))",
+                                filter: item.bgRemoved && isActive
+                                  ? "drop-shadow(0 8px 22px rgba(0,0,0,0.20))"
+                                  : item.bgRemoved
+                                    ? "drop-shadow(0 3px 10px rgba(0,0,0,0.10))"
+                                    : "none",
                                 transition: dragState?.itemId === item.id ? "none" : "filter 0.2s",
                                 outline: selectedItemId === item.id ? `2px solid ${GOLD}` : "2px solid transparent",
-                                outlineOffset: 2,
+                                outlineOffset: -1,
                               }}
                             >
                               <img
@@ -588,8 +697,9 @@ export default function LookbookPage() {
                                 draggable={false}
                                 style={{
                                   width: "100%", display: "block",
-                                  objectFit: "contain", aspectRatio: "3/4",
+                                  objectFit: "contain",
                                   pointerEvents: "none",
+                                  mixBlendMode: item.bgRemoved ? "normal" : "multiply",
                                 }}
                               />
 
