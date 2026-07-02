@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, type CSSProperties } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
@@ -758,56 +758,95 @@ export default function Home() {
 
           {/* 3-col tile grid */}
           <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: 10 }}>
-            {BULK.map((b) => (
-              <Link
-                key={b.title}
-                href={b.title === "Social Golf Clubs" ? "/social-clubs" : `/connect?type=bulk-order`}
-                style={{
-                  display:      "block",
-                  background:   BG_CARD,
-                  border:       "0.5px solid rgba(30,40,80,0.1)",
-                  borderRadius: 10,
-                  overflow:     "hidden",
-                  transition:   "transform 0.25s, box-shadow 0.25s, border-color 0.25s",
-                  textDecoration: "none",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)";
-                  (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 28px rgba(184,146,90,0.18)";
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.35)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
-                  (e.currentTarget as HTMLElement).style.boxShadow = "none";
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(30,40,80,0.1)";
-                }}
-              >
-                {/* Image */}
-                <div style={{ height: 300, position: "relative", overflow: "hidden" }}>
-                  <img src={b.img} alt={b.seoAlt || b.title} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }} />
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(15,18,35,0.4) 0%, transparent 55%)" }} />
-                  <span style={{ position: "absolute", top: 8, left: 10, fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", color: "black", textTransform: "uppercase", backgroundColor: "whitesmoke", padding: "3px 9px", borderRadius: 3 }}>
-                    {b.from}
-                  </span>
-                </div>
-                {/* Body */}
-                <div style={{ padding: "13px 16px 16px" }}>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.2em", color: GOLD, textTransform: "uppercase", flexShrink: 0 }}>{b.num}</span>
-                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 500, color: "#1a1f2e" }}>{b.title}</span>
+            {BULK.map((b) => {
+              const isSocialClubs = b.title === "Social Golf Clubs";
+              const cardStyle: CSSProperties = {
+                display: "block",
+                background: BG_CARD,
+                border: "0.5px solid rgba(30,40,80,0.1)",
+                borderRadius: 10,
+                overflow: "hidden",
+                transition: "transform 0.25s, box-shadow 0.25s, border-color 0.25s",
+                textDecoration: "none",
+              };
+              const hoverIn = (e: React.MouseEvent) => {
+                (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)";
+                (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 28px rgba(184,146,90,0.18)";
+                (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.35)";
+              };
+              const hoverOut = (e: React.MouseEvent) => {
+                (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                (e.currentTarget as HTMLElement).style.boxShadow = "none";
+                (e.currentTarget as HTMLElement).style.borderColor = "rgba(30,40,80,0.1)";
+              };
+              const cardInner = (
+                <>
+                  {/* Image */}
+                  <div style={{ height: 300, position: "relative", overflow: "hidden" }}>
+                    <img src={b.img} alt={b.seoAlt || b.title} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }} />
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(15,18,35,0.4) 0%, transparent 55%)" }} />
+                    <span style={{ position: "absolute", top: 8, left: 10, fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", color: "black", textTransform: "uppercase", backgroundColor: "whitesmoke", padding: "3px 9px", borderRadius: 3 }}>
+                      {b.from}
+                    </span>
                   </div>
-                  <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 16, color: "rgba(20,28,60,0.72)", letterSpacing: "0.04em", lineHeight: 1.7, marginBottom: 10 }}>{b.desc}</div>
-                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 14 }}>
-                    {b.tags.map((t) => (
-                      <span key={t} style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, padding: "3px 8px", background: BG_SECTION, color: "rgba(20,28,60,0.68)", borderRadius: 3, letterSpacing: "0.08em", textTransform: "uppercase", border: "0.5px solid rgba(30,40,80,0.12)" }}>{t}</span>
-                    ))}
+                  {/* Body */}
+                  <div style={{ padding: "13px 16px 16px" }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+                      <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.2em", color: GOLD, textTransform: "uppercase", flexShrink: 0 }}>{b.num}</span>
+                      <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 500, color: "#1a1f2e" }}>{b.title}</span>
+                    </div>
+                    <div style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 16, color: "rgba(20,28,60,0.72)", letterSpacing: "0.04em", lineHeight: 1.7, marginBottom: 10 }}>{b.desc}</div>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 14 }}>
+                      {b.tags.map((t) => (
+                        <span key={t} style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, padding: "3px 8px", background: BG_SECTION, color: "rgba(20,28,60,0.68)", borderRadius: 3, letterSpacing: "0.08em", textTransform: "uppercase", border: "0.5px solid rgba(30,40,80,0.12)" }}>{t}</span>
+                      ))}
+                    </div>
+                    {isSocialClubs ? (
+                      /* Social Golf Clubs — two action buttons */
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} onClick={e => e.stopPropagation()}>
+                        <Link
+                          href="/social-clubs?step=products"
+                          style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", background: GOLD, color: "#fff", padding: "7px 16px", borderRadius: 3, textDecoration: "none", fontWeight: 600 }}
+                        >
+                          Q Club
+                        </Link>
+                        <Link
+                          href="/connect?type=bulk-order"
+                          style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", border: `1px solid ${GOLD}`, color: GOLD, padding: "6px 16px", borderRadius: 3, textDecoration: "none", fontWeight: 500 }}
+                        >
+                          Enquiry
+                        </Link>
+                      </div>
+                    ) : (
+                      <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: GOLD, borderBottom: `0.5px solid ${GOLD}`, paddingBottom: 1 }}>
+                        Enquire Now →
+                      </span>
+                    )}
                   </div>
-                  <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: GOLD, borderBottom: `0.5px solid ${GOLD}`, paddingBottom: 1 }}>
-                    Enquire Now →
-                  </span>
+                </>
+              );
+
+              return isSocialClubs ? (
+                <div
+                  key={b.title}
+                  style={cardStyle}
+                  onMouseEnter={hoverIn}
+                  onMouseLeave={hoverOut}
+                >
+                  {cardInner}
                 </div>
-              </Link>
-            ))}
+              ) : (
+                <Link
+                  key={b.title}
+                  href="/connect?type=bulk-order"
+                  style={cardStyle}
+                  onMouseEnter={hoverIn}
+                  onMouseLeave={hoverOut}
+                >
+                  {cardInner}
+                </Link>
+              );
+            })}
           </div>
 
         </div>
