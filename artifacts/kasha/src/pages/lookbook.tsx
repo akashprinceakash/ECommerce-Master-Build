@@ -119,7 +119,44 @@ async function stripBackground(src: string): Promise<string> {
   }
 
   ctx.putImageData(d, 0, 0);
-  return c.toDataURL("image/png");
+
+  // Crop to the tight bounding box of the remaining (non-transparent) pixels.
+  // Source product photos have wildly inconsistent padding around the garment
+  // (some crop close to the fabric, some leave a large margin) — without this,
+  // object-fit: contain centers each garment differently inside the fixed
+  // anchor box, so the same-sized shirt renders at a different scale/position
+  // per product and the avatar's baked-in default outfit peeks through the gap.
+  let minX = w, minY = h, maxX = -1, maxY = -1;
+  const ALPHA_THRESHOLD = 10;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const a = p[(y * w + x) * 4 + 3];
+      if (a > ALPHA_THRESHOLD) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (maxX < minX || maxY < minY) {
+    // Nothing survived background removal (shouldn't normally happen) — bail
+    // out with the uncropped canvas rather than producing an empty image.
+    return c.toDataURL("image/png");
+  }
+
+  const PAD = Math.round(Math.max(w, h) * 0.01);
+  const cropX = Math.max(0, minX - PAD);
+  const cropY = Math.max(0, minY - PAD);
+  const cropW = Math.min(w, maxX + PAD) - cropX;
+  const cropH = Math.min(h, maxY + PAD) - cropY;
+
+  const cropped = document.createElement("canvas");
+  cropped.width = cropW;
+  cropped.height = cropH;
+  cropped.getContext("2d")!.drawImage(c, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+  return cropped.toDataURL("image/png");
 }
 
 function categoryRole(category: string): Role | null {
