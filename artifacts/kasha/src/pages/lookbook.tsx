@@ -13,7 +13,7 @@ import {
   getListProductsQueryKey,
   type LookbookOutfit,
 } from "@workspace/api-client-react";
-import { getAssetUrl } from "@/lib/api";
+import { getAssetUrl, toProxiedUrl } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Trash2, Save, X, CheckCircle, Heart, Plus, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 
@@ -49,7 +49,7 @@ async function stripBackground(src: string): Promise<string> {
   await new Promise<void>((res, rej) => {
     img.onload = () => res();
     img.onerror = () => rej(new Error("img load failed"));
-    img.src = src;
+    img.src = toProxiedUrl(src);
   });
 
   const c = document.createElement("canvas");
