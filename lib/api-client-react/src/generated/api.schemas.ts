@@ -248,6 +248,22 @@ export interface UpsertUserProfileBody {
   defaultShippingAddress?: string | null;
 }
 
+export type LookbookOutfitItemRole =
+  (typeof LookbookOutfitItemRole)[keyof typeof LookbookOutfitItemRole];
+
+export const LookbookOutfitItemRole = {
+  top: "top",
+  bottom: "bottom",
+} as const;
+
+export type LookbookOutfitItemGender =
+  (typeof LookbookOutfitItemGender)[keyof typeof LookbookOutfitItemGender];
+
+export const LookbookOutfitItemGender = {
+  male: "male",
+  female: "female",
+} as const;
+
 export interface LookbookOutfitItem {
   productId: number;
   name: string;
@@ -255,6 +271,8 @@ export interface LookbookOutfitItem {
   x: number;
   y: number;
   width: number;
+  role?: LookbookOutfitItemRole;
+  gender?: LookbookOutfitItemGender;
 }
 
 export interface LookbookOutfit {

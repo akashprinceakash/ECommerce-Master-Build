@@ -15,32 +15,39 @@ import {
 } from "@workspace/api-client-react";
 import { getAssetUrl, toProxiedUrl } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, Save, X, CheckCircle, Heart, Plus, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { Trash2, Save, CheckCircle, Heart, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import avatarMale from "@/assets/lookbook/avatar-male.png";
+import avatarFemale from "@/assets/lookbook/avatar-female.png";
 
 const GOLD = "#B8925A";
 const FONT_DISPLAY = "'Cormorant Garamond', serif";
 const FONT_UI = "'Josefin Sans', sans-serif";
 const CANVAS_BG = "#EDE9E3";
 
-type CanvasItem = {
-  id: string;
+type Gender = "male" | "female";
+type Role = "top" | "bottom";
+
+// Categories mapped onto the two avatar slots. Anything not listed here
+// (e.g. accessories) is simply not shown in the builder — it has no
+// sensible place on a single top/bottom silhouette.
+const TOP_CATEGORIES = new Set(["polo", "t-shirt", "hoodie", "jacket", "dress"]);
+const BOTTOM_CATEGORIES = new Set(["shorts", "trousers", "skorts"]);
+
+// Anchor boxes (percentages of the avatar image) that a garment is fit into.
+// Tuned to the generated mannequin's shoulder/hip/ankle proportions so
+// garments sit where a top or bottom would actually fall on the body.
+const ANCHORS: Record<Role, { top: number; bottom: number; left: number; right: number }> = {
+  top: { top: 19, bottom: 49, left: 20, right: 80 },
+  bottom: { top: 43, bottom: 93, left: 24, right: 76 },
+};
+
+type SlotItem = {
   productId: number;
   name: string;
   thumbnailUrl: string;
-  x: number;
-  y: number;
-  width: number;
-  defaultWidth: number;
-  bgRemoved?: boolean;
+  bgRemoved: boolean;
+  scale: number; // 1 = default fit
 };
-
-type DragState = {
-  itemId: string;
-  startMouseX: number;
-  startMouseY: number;
-  startItemX: number;
-  startItemY: number;
-} | null;
 
 // ── Background removal — corner sampling + near-white detection ──────────────
 async function stripBackground(src: string): Promise<string> {
@@ -115,18 +122,23 @@ async function stripBackground(src: string): Promise<string> {
   return c.toDataURL("image/png");
 }
 
+function categoryRole(category: string): Role | null {
+  const c = category.toLowerCase();
+  if (TOP_CATEGORIES.has(c)) return "top";
+  if (BOTTOM_CATEGORIES.has(c)) return "bottom";
+  return null;
+}
+
 export default function LookbookPage() {
   useEffect(() => { document.title = "Lookbook — Ka.Sha"; }, []);
   const { user } = useUser();
   const queryClient = useQueryClient();
 
-  const [canvasItems, setCanvasItems] = useState<CanvasItem[]>([]);
-  const [dragState, setDragState] = useState<DragState>(null);
+  const [gender, setGender] = useState<Gender>("female");
+  const [slots, setSlots] = useState<Record<Role, SlotItem | null>>({ top: null, bottom: null });
   const [outfitName, setOutfitName] = useState("My Outfit");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<"builder" | "saved">("builder");
-  const [hoveredCanvasItem, setHoveredCanvasItem] = useState<string | null>(null);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [strippingIds, setStrippingIds] = useState<Set<number>>(new Set());
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -150,18 +162,28 @@ export default function LookbookPage() {
   const createOutfit = useCreateLookbookOutfit();
   const deleteOutfit = useDeleteLookbookOutfit();
 
-  // Saved products = products that are in the user's saved list
-  const savedProducts = useMemo(() => {
+  // Saved products = products the user has hearted, split into tops / bottoms
+  const { tops, bottoms } = useMemo(() => {
     const idSet = new Set(savedIds);
-    return allProducts.filter(p => idSet.has(p.id)).map(p => ({
-      productId: p.id,
-      name: p.name,
-      thumbnailUrl: p.thumbnailUrl ?? "",
-    }));
+    const tops: { productId: number; name: string; thumbnailUrl: string }[] = [];
+    const bottoms: { productId: number; name: string; thumbnailUrl: string }[] = [];
+    for (const p of allProducts) {
+      if (!idSet.has(p.id)) continue;
+      const role = categoryRole(p.category);
+      if (!role) continue;
+      const entry = { productId: p.id, name: p.name, thumbnailUrl: p.thumbnailUrl ?? "" };
+      (role === "top" ? tops : bottoms).push(entry);
+    }
+    return { tops, bottoms };
   }, [savedIds, allProducts]);
 
-  // ── Canvas logic ──────────────────────────────────────────────────────────
-  const addToCanvas = useCallback(async (product: { productId: number; name: string; thumbnailUrl: string }) => {
+  const hasAnySaved = tops.length > 0 || bottoms.length > 0;
+
+  // ── Slot logic ────────────────────────────────────────────────────────────
+  const selectItem = useCallback(async (
+    role: Role,
+    product: { productId: number; name: string; thumbnailUrl: string },
+  ) => {
     setStrippingIds(prev => new Set(prev).add(product.productId));
 
     let finalUrl: string = getAssetUrl(product.thumbnailUrl) ?? product.thumbnailUrl;
@@ -180,99 +202,53 @@ export default function LookbookPage() {
       });
     }
 
-    setCanvasItems(prev => {
-      const offset = prev.length * 24;
-      return [...prev, {
-        id: `${product.productId}-${Date.now()}`,
-        productId: product.productId,
-        name: product.name,
-        thumbnailUrl: finalUrl,
-        x: Math.min(60 + offset, 280),
-        y: Math.min(24 + offset, 160),
-        width: 170,
-        defaultWidth: 170,
-        bgRemoved,
-      }];
-    });
-  }, []);
-
-  const removeFromCanvas = useCallback((id: string) => {
-    setCanvasItems(prev => prev.filter(item => item.id !== id));
-    setSelectedItemId(prev => prev === id ? null : prev);
-  }, []);
-
-  const resizeItem = useCallback((id: string, delta: number) => {
-    setCanvasItems(prev => prev.map(item =>
-      item.id === id
-        ? { ...item, width: Math.max(60, Math.min(460, item.width + delta)) }
-        : item
-    ));
-  }, []);
-
-  const resetItem = useCallback((id: string) => {
-    setCanvasItems(prev => prev.map(item =>
-      item.id === id ? { ...item, width: item.defaultWidth } : item
-    ));
-  }, []);
-
-  const fitItem = useCallback((id: string) => {
-    if (!canvasRef.current) return;
-    const canvasH = canvasRef.current.clientHeight;
-    const targetH = Math.round(canvasH * 0.72);
-    setCanvasItems(prev => prev.map(item => {
-      if (item.id !== id) return item;
-      const imgEl = document.querySelector<HTMLImageElement>(`[data-item-id="${id}"] img`);
-      const naturalW = imgEl?.naturalWidth || 1;
-      const naturalH = imgEl?.naturalHeight || 1;
-      const newWidth = Math.round(targetH * (naturalW / naturalH));
-      return { ...item, width: Math.max(60, Math.min(460, newWidth)) };
+    setSlots(prev => ({
+      ...prev,
+      [role]: { productId: product.productId, name: product.name, thumbnailUrl: finalUrl, bgRemoved, scale: 1 },
     }));
   }, []);
 
-  const handlePointerDown = useCallback((e: React.PointerEvent, itemId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const item = canvasItems.find(i => i.id === itemId);
-    if (!item) return;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    setDragState({ itemId, startMouseX: e.clientX, startMouseY: e.clientY, startItemX: item.x, startItemY: item.y });
-    setSelectedItemId(itemId);
-    // Bring to front
-    setCanvasItems(prev => {
-      const idx = prev.findIndex(i => i.id === itemId);
-      if (idx < 0) return prev;
-      return [...prev.filter(i => i.id !== itemId), prev[idx]];
+  const clearSlot = useCallback((role: Role) => {
+    setSlots(prev => ({ ...prev, [role]: null }));
+  }, []);
+
+  const resizeSlot = useCallback((role: Role, delta: number) => {
+    setSlots(prev => {
+      const item = prev[role];
+      if (!item) return prev;
+      const nextScale = Math.max(0.6, Math.min(1.6, item.scale + delta));
+      return { ...prev, [role]: { ...item, scale: nextScale } };
     });
-  }, [canvasItems]);
+  }, []);
 
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragState || !canvasRef.current) return;
-    const canvas = canvasRef.current.getBoundingClientRect();
-    const dx = e.clientX - dragState.startMouseX;
-    const dy = e.clientY - dragState.startMouseY;
-    setCanvasItems(prev => prev.map(item =>
-      item.id === dragState.itemId
-        ? {
-            ...item,
-            x: Math.max(0, Math.min(canvas.width - item.width, dragState.startItemX + dx)),
-            y: Math.max(0, Math.min(canvas.height - 60, dragState.startItemY + dy)),
-          }
-        : item
-    ));
-  }, [dragState]);
-
-  const handlePointerUp = useCallback(() => setDragState(null), []);
+  const resetSlot = useCallback((role: Role) => {
+    setSlots(prev => {
+      const item = prev[role];
+      if (!item) return prev;
+      return { ...prev, [role]: { ...item, scale: 1 } };
+    });
+  }, []);
 
   const handleSave = async () => {
-    if (canvasItems.length === 0 || createOutfit.isPending) return;
+    const items = (["top", "bottom"] as const)
+      .filter(role => slots[role])
+      .map(role => {
+        const item = slots[role]!;
+        const anchor = ANCHORS[role];
+        return {
+          productId: item.productId,
+          name: item.name,
+          thumbnailUrl: item.thumbnailUrl,
+          x: anchor.left,
+          y: anchor.top,
+          width: item.scale,
+          role,
+          gender,
+        };
+      });
+    if (items.length === 0 || createOutfit.isPending) return;
     await createOutfit.mutateAsync({
-      data: {
-        name: outfitName.trim() || "My Outfit",
-        items: canvasItems.map(i => ({
-          productId: i.productId, name: i.name,
-          thumbnailUrl: i.thumbnailUrl, x: i.x, y: i.y, width: i.width,
-        })),
-      },
+      data: { name: outfitName.trim() || "My Outfit", items },
     });
     queryClient.invalidateQueries({ queryKey: getListLookbookOutfitsQueryKey() });
     setSaveSuccess(true);
@@ -280,13 +256,16 @@ export default function LookbookPage() {
   };
 
   const loadOutfit = (outfit: LookbookOutfit) => {
-    setCanvasItems((outfit.items as CanvasItem[]).map(i => ({
-      ...i,
-      id: `${i.productId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      defaultWidth: i.defaultWidth ?? i.width,
-    })));
+    const next: Record<Role, SlotItem | null> = { top: null, bottom: null };
+    let loadedGender: Gender = gender;
+    for (const raw of outfit.items as Array<{ productId: number; name: string; thumbnailUrl: string; width: number; role?: Role; gender?: Gender }>) {
+      const role: Role = raw.role ?? "top";
+      next[role] = { productId: raw.productId, name: raw.name, thumbnailUrl: raw.thumbnailUrl, bgRemoved: true, scale: raw.width || 1 };
+      if (raw.gender) loadedGender = raw.gender;
+    }
+    setSlots(next);
+    setGender(loadedGender);
     setOutfitName(outfit.name);
-    setSelectedItemId(null);
     setActiveTab("builder");
   };
 
@@ -294,6 +273,8 @@ export default function LookbookPage() {
     await deleteOutfit.mutateAsync({ id });
     queryClient.invalidateQueries({ queryKey: getListLookbookOutfitsQueryKey() });
   };
+
+  const avatarSrc = gender === "male" ? avatarMale : avatarFemale;
 
   return (
     <Layout>
@@ -310,7 +291,7 @@ export default function LookbookPage() {
           Curate &nbsp;·&nbsp; Style &nbsp;·&nbsp; Inspire
         </p>
         <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(255,255,255,0.35)", letterSpacing: "0.15em", maxWidth: 500, margin: "0 auto" }}>
-          Tap the ♡ on any product to save it here, then drag pieces onto the canvas to build your perfect outfit.
+          Tap the ♡ on any product to save it here, then choose a top and a bottom to see them styled together.
         </p>
       </section>
 
@@ -328,7 +309,7 @@ export default function LookbookPage() {
                 Outfit Planner
               </h2>
               <p style={{ fontFamily: FONT_UI, fontSize: 12, color: "rgba(0,0,0,0.42)", letterSpacing: "0.1em" }}>
-                Save your favourite pieces with ♡, then drag them onto the canvas to build looks
+                Save your favourite pieces with ♡, then style them on your avatar
               </p>
             </div>
 
@@ -346,7 +327,7 @@ export default function LookbookPage() {
                     marginBottom: -1, transition: "color 0.2s",
                   }}
                 >
-                  {tab === "builder" ? "Outfit Canvas" : `Saved Looks (${savedOutfits.length})`}
+                  {tab === "builder" ? "Style Studio" : `Saved Looks (${savedOutfits.length})`}
                 </button>
               ))}
             </div>
@@ -355,7 +336,7 @@ export default function LookbookPage() {
             {activeTab === "builder" && (
               <>
                 {/* Empty state: no saved products */}
-                {!savedLoading && savedProducts.length === 0 && (
+                {!savedLoading && !hasAnySaved && (
                   <div style={{
                     textAlign: "center", padding: "72px 24px",
                     background: "#fff", border: "1px dashed rgba(184,146,90,0.35)",
@@ -373,7 +354,7 @@ export default function LookbookPage() {
                     </p>
                     <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.42)", letterSpacing: "0.12em", marginBottom: 28, maxWidth: 400, margin: "0 auto 28px", lineHeight: 1.8 }}>
                       Tap the ♡ icon on any product to save it here.<br />
-                      Then drag your pieces onto the canvas to style your look.
+                      Then style a top and bottom together on your avatar.
                     </p>
                     <Link href="/products">
                       <button style={{
@@ -397,298 +378,93 @@ export default function LookbookPage() {
                 )}
 
                 {/* Builder layout */}
-                {!savedLoading && savedProducts.length > 0 && (
-                  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 20, alignItems: "flex-start" }}>
+                {!savedLoading && hasAnySaved && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-                    {/* ── Saved Pieces Sidebar / Mobile Strip ── */}
-                    {isMobile ? (
-                      /* Mobile: horizontal scrollable strip */
-                      <div style={{ width: "100%", background: "#fff", border: "1px solid rgba(184,146,90,0.2)" }}>
-                        <div style={{
-                          padding: "10px 12px 8px",
-                          borderBottom: "1px solid rgba(0,0,0,0.06)",
-                          display: "flex", alignItems: "center", justifyContent: "space-between",
-                        }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <Heart size={11} fill={GOLD} color={GOLD} />
-                            <span style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.3em", color: GOLD, textTransform: "uppercase" }}>My Saved Pieces</span>
-                          </div>
-                          <Link href="/products" style={{ display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
-                            <Plus size={9} color={GOLD} />
-                            <span style={{ fontFamily: FONT_UI, fontSize: 8, letterSpacing: "0.15em", color: GOLD }}>ADD MORE</span>
-                          </Link>
-                        </div>
-                        <div style={{ display: "flex", gap: 8, padding: "10px 12px", overflowX: "auto", WebkitOverflowScrolling: "touch" as "touch" }}>
-                          {savedProducts.map(p => {
-                            const isStripping = strippingIds.has(p.productId);
-                            return (
-                              <button
-                                key={p.productId}
-                                onClick={() => !isStripping && addToCanvas(p)}
-                                disabled={isStripping}
-                                style={{
-                                  flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center",
-                                  gap: 4, padding: "8px 6px", width: 76,
-                                  background: "transparent", border: "1px solid rgba(0,0,0,0.07)",
-                                  cursor: isStripping ? "not-allowed" : "pointer",
-                                  opacity: isStripping ? 0.65 : 1,
-                                }}
-                              >
-                                <div style={{ position: "relative", width: 44, height: 56 }}>
-                                  <img src={getAssetUrl(p.thumbnailUrl)} alt={p.name}
-                                    style={{ width: 44, height: 56, objectFit: "contain", background: "#F5F2EC" }} />
-                                  {isStripping && (
-                                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(245,242,236,0.8)" }}>
-                                      <svg width="14" height="14" viewBox="0 0 14 14" style={{ animation: "ka-spin 0.9s linear infinite" }}>
-                                        <circle cx="7" cy="7" r="5" fill="none" stroke={GOLD} strokeWidth="2" strokeDasharray="24" strokeDashoffset="8" strokeLinecap="round" />
-                                      </svg>
-                                    </div>
-                                  )}
-                                </div>
-                                <span style={{ fontFamily: FONT_UI, fontSize: 7, letterSpacing: "0.06em", color: "#0A0A0A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", textAlign: "center" }}>
-                                  {p.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "").slice(0, 12)}
-                                </span>
-                                <span style={{ fontFamily: FONT_UI, fontSize: 7, color: GOLD, letterSpacing: "0.12em" }}>
-                                  {isStripping ? "Loading…" : "+ ADD"}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
+                    {/* On-page instructions + avatar toggle */}
+                    <div style={{
+                      display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between",
+                      background: "#fff", border: "1px solid rgba(184,146,90,0.2)", padding: "14px 18px",
+                    }}>
+                      <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.55)", letterSpacing: "0.06em", lineHeight: 1.7, margin: 0, maxWidth: 560 }}>
+                        Choose a top on the left and a bottom on the right — each click styles it onto your avatar,
+                        replacing whatever was there before. Select the item on the avatar and use the zoom controls to fine-tune the fit.
+                      </p>
+                      <div style={{ display: "flex", gap: 0, border: "1px solid rgba(0,0,0,0.12)" }}>
+                        {(["female", "male"] as const).map(g => (
+                          <button
+                            key={g}
+                            onClick={() => setGender(g)}
+                            style={{
+                              fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase",
+                              padding: "9px 20px", border: "none", cursor: "pointer",
+                              background: gender === g ? "#0A0A0A" : "transparent",
+                              color: gender === g ? "#fff" : "rgba(0,0,0,0.55)",
+                              transition: "background 0.2s, color 0.2s",
+                            }}
+                          >
+                            {g === "female" ? "Her" : "Him"}
+                          </button>
+                        ))}
                       </div>
-                    ) : (
-                      /* Desktop: vertical sidebar */
-                      <div style={{ width: 220, flexShrink: 0, background: "#fff", border: "1px solid rgba(184,146,90,0.2)" }}>
-                        <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 6 }}>
-                          <Heart size={12} fill={GOLD} color={GOLD} />
-                          <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.35em", color: GOLD, textTransform: "uppercase" }}>My Saved Pieces</p>
-                        </div>
-                        <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: 8, maxHeight: 520, overflowY: "auto" }}>
-                          {savedProducts.map(p => {
-                            const isStripping = strippingIds.has(p.productId);
-                            return (
-                              <button
-                                key={p.productId}
-                                onClick={() => !isStripping && addToCanvas(p)}
-                                disabled={isStripping}
-                                title={isStripping ? "Removing background…" : "Add to canvas"}
-                                style={{
-                                  display: "flex", alignItems: "center", gap: 10, padding: "8px",
-                                  background: "transparent", border: "1px solid rgba(0,0,0,0.07)",
-                                  cursor: isStripping ? "not-allowed" : "pointer",
-                                  textAlign: "left", transition: "border-color 0.2s, background 0.2s",
-                                  width: "100%", opacity: isStripping ? 0.65 : 1,
-                                }}
-                                onMouseEnter={e => { if (!isStripping) { (e.currentTarget as HTMLElement).style.borderColor = GOLD; (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.04)"; } }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.07)"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-                              >
-                                <div style={{ position: "relative", width: 48, height: 60, flexShrink: 0 }}>
-                                  <img src={getAssetUrl(p.thumbnailUrl)} alt={p.name}
-                                    style={{ width: 48, height: 60, objectFit: "contain", background: "#F5F2EC", display: "block", filter: isStripping ? "grayscale(0.4)" : "none", transition: "filter 0.2s" }} />
-                                  {isStripping && (
-                                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(245,242,236,0.75)" }}>
-                                      <svg width="16" height="16" viewBox="0 0 16 16" style={{ animation: "ka-spin 0.9s linear infinite" }}>
-                                        <circle cx="8" cy="8" r="6" fill="none" stroke={GOLD} strokeWidth="2" strokeDasharray="28" strokeDashoffset="10" strokeLinecap="round" />
-                                      </svg>
-                                    </div>
-                                  )}
-                                </div>
-                                <div style={{ minWidth: 0, flex: 1 }}>
-                                  <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.08em", color: "#0A0A0A", marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.4 }}>
-                                    {p.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}
-                                  </p>
-                                  {isStripping ? (
-                                    <span style={{ fontFamily: FONT_UI, fontSize: 8, color: GOLD, letterSpacing: "0.08em" }}>Removing BG…</span>
-                                  ) : (
-                                    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                                      <Plus size={9} color={GOLD} />
-                                      <span style={{ fontFamily: FONT_UI, fontSize: 8, color: GOLD, letterSpacing: "0.15em" }}>ADD TO BOARD</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <div style={{ padding: "10px 14px 14px", borderTop: "1px solid rgba(0,0,0,0.05)" }}>
-                          <Link href="/products" style={{ display: "flex", alignItems: "center", gap: 5, textDecoration: "none" }}>
-                            <Heart size={9} color={GOLD} />
-                            <span style={{ fontFamily: FONT_UI, fontSize: 8, letterSpacing: "0.18em", color: GOLD, textTransform: "uppercase" }}>Save More Pieces</span>
-                          </Link>
-                        </div>
-                      </div>
-                    )}
+                    </div>
 
-                    {/* ── Canvas area ── */}
-                    <div style={{ flex: 1, width: isMobile ? "100%" : undefined, display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 20, alignItems: "flex-start" }}>
+
+                      {/* ── Tops panel (left) ── */}
+                      <GarmentPanel
+                        title="Tops"
+                        items={tops}
+                        strippingIds={strippingIds}
+                        selectedId={slots.top?.productId ?? null}
+                        onSelect={p => selectItem("top", p)}
+                        isMobile={isMobile}
+                      />
+
+                      {/* ── Avatar canvas ── */}
                       <div
                         ref={canvasRef}
-                        onPointerMove={handlePointerMove}
-                        onPointerUp={handlePointerUp}
-                        onPointerLeave={handlePointerUp}
-                        onClick={() => setSelectedItemId(null)}
                         style={{
                           position: "relative",
-                          height: isMobile ? Math.max(360, Math.min(window.innerWidth - 48, 480)) : 680,
+                          flex: 1,
+                          width: isMobile ? "100%" : undefined,
+                          height: isMobile ? 480 : 680,
                           background: CANVAS_BG,
                           border: "1px solid rgba(184,146,90,0.22)",
                           overflow: "hidden",
-                          userSelect: "none",
-                          touchAction: "none",
                         }}
                       >
-                        {/* Empty canvas state */}
-                        {canvasItems.length === 0 && strippingIds.size === 0 && (
-                          <div style={{
-                            position: "absolute", inset: 0, display: "flex",
-                            flexDirection: "column", alignItems: "center", justifyContent: "center",
-                            pointerEvents: "none",
-                          }}>
-                            <div style={{
-                              width: 80, height: 80, borderRadius: "50%",
-                              background: "rgba(184,146,90,0.1)",
-                              display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18,
-                            }}>
-                              <Plus size={28} color="rgba(184,146,90,0.45)" />
-                            </div>
-                            <p style={{ fontFamily: FONT_DISPLAY, fontSize: 20, color: "rgba(0,0,0,0.22)", marginBottom: 6 }}>
-                              Your outfit canvas
-                            </p>
-                            <p style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.15em", color: "rgba(0,0,0,0.22)", textAlign: "center" }}>
-                              Click any piece on the left to add it here
-                            </p>
-                          </div>
-                        )}
+                        <img
+                          src={avatarSrc}
+                          alt={gender === "male" ? "Male avatar" : "Female avatar"}
+                          draggable={false}
+                          style={{
+                            position: "absolute", inset: 0, width: "100%", height: "100%",
+                            objectFit: "contain", pointerEvents: "none", userSelect: "none",
+                          }}
+                        />
 
-                        {/* ── Canvas toolbar — top right, targets selected item ── */}
-                        {selectedItemId && canvasItems.find(i => i.id === selectedItemId) && (
-                          <div
-                            onPointerDown={e => e.stopPropagation()}
-                            onClick={e => e.stopPropagation()}
-                            style={{
-                              position: "absolute", top: 10, right: isMobile ? 10 : 56,
-                              zIndex: 300, display: "flex", alignItems: "center", gap: isMobile ? 10 : 16,
-                              background: "rgba(255,255,255,0.94)", backdropFilter: "blur(8px)",
-                              border: "1px solid rgba(0,0,0,0.08)", padding: "5px 12px",
-                              borderRadius: 3, boxShadow: "0 2px 10px rgba(0,0,0,0.09)",
-                            }}
-                          >
-                            {[
-                              { icon: <ZoomIn size={13} />, label: "ZOOM IN",  action: () => resizeItem(selectedItemId, 24) },
-                              { icon: <ZoomOut size={13} />, label: "ZOOM OUT", action: () => resizeItem(selectedItemId, -24) },
-                              { icon: <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.4"/><rect x="8" y="1" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.4"/><rect x="1" y="8" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.4"/><rect x="8" y="8" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.4"/></svg>, label: "FIT", action: () => fitItem(selectedItemId) },
-                              { icon: <RotateCcw size={13} />, label: "RESET",   action: () => resetItem(selectedItemId) },
-                            ].map(btn => (
-                              <button
-                                key={btn.label}
-                                onClick={btn.action}
-                                style={{
-                                  display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-                                  background: "transparent", border: "none", cursor: "pointer", padding: "3px 2px",
-                                  color: "#0A0A0A",
-                                }}
-                                onMouseEnter={e => (e.currentTarget.style.color = GOLD)}
-                                onMouseLeave={e => (e.currentTarget.style.color = "#0A0A0A")}
-                              >
-                                {btn.icon}
-                                {!isMobile && (
-                                  <span style={{ fontFamily: FONT_UI, fontSize: 7, letterSpacing: "0.15em", whiteSpace: "nowrap" }}>{btn.label}</span>
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* ── Right side panel — size slider for selected item ── */}
-                        {!isMobile && selectedItemId && (() => {
-                          const sel = canvasItems.find(i => i.id === selectedItemId);
-                          if (!sel) return null;
+                        {(["top", "bottom"] as const).map(role => {
+                          const item = slots[role];
+                          if (!item) return null;
+                          const a = ANCHORS[role];
+                          const boxW = a.right - a.left;
+                          const boxH = a.bottom - a.top;
+                          const scale = item.scale;
                           return (
                             <div
-                              onPointerDown={e => e.stopPropagation()}
-                              onClick={e => e.stopPropagation()}
-                              style={{
-                                position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
-                                zIndex: 300, display: "flex", flexDirection: "column", alignItems: "center", gap: 0,
-                                background: "#fff", border: "1px solid rgba(0,0,0,0.1)",
-                                boxShadow: "0 2px 12px rgba(0,0,0,0.10)", borderRadius: 4, overflow: "hidden",
-                              }}
-                            >
-                              {/* + */}
-                              <button
-                                onClick={() => resizeItem(sel.id, 24)}
-                                style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", borderBottom: "1px solid rgba(0,0,0,0.07)", cursor: "pointer", fontSize: 18, color: "#0A0A0A" }}
-                                onMouseEnter={e => (e.currentTarget.style.background = "rgba(184,146,90,0.08)")}
-                                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                              >+</button>
-                              {/* Vertical slider */}
-                              <div style={{ width: 36, height: 96, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 0", background: "#FAFAF7" }}>
-                                <input
-                                  type="range" min={60} max={460} value={sel.width}
-                                  onChange={e => setCanvasItems(prev => prev.map(i => i.id === sel.id ? { ...i, width: Number(e.target.value) } : i))}
-                                  style={{ width: 80, height: 20, transform: "rotate(-90deg)", cursor: "pointer", accentColor: GOLD }}
-                                />
-                              </div>
-                              {/* - */}
-                              <button
-                                onClick={() => resizeItem(sel.id, -24)}
-                                style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", borderTop: "1px solid rgba(0,0,0,0.07)", borderBottom: "1px solid rgba(0,0,0,0.07)", cursor: "pointer", fontSize: 18, color: "#0A0A0A" }}
-                                onMouseEnter={e => (e.currentTarget.style.background = "rgba(184,146,90,0.08)")}
-                                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                              >−</button>
-                              {/* fit */}
-                              <button
-                                onClick={() => fitItem(sel.id)}
-                                style={{ width: 36, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer", fontFamily: FONT_UI, fontSize: 8, letterSpacing: "0.15em", color: GOLD, textTransform: "lowercase" }}
-                                onMouseEnter={e => (e.currentTarget.style.background = "rgba(184,146,90,0.08)")}
-                                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                              >fit</button>
-                            </div>
-                          );
-                        })()}
-
-                        {/* Loading indicator when stripping */}
-                        {canvasItems.length === 0 && strippingIds.size > 0 && (
-                          <div style={{
-                            position: "absolute", inset: 0, display: "flex",
-                            flexDirection: "column", alignItems: "center", justifyContent: "center",
-                            pointerEvents: "none",
-                          }}>
-                            <svg width="32" height="32" viewBox="0 0 32 32" style={{ animation: "ka-spin 0.9s linear infinite", marginBottom: 14 }}>
-                              <circle cx="16" cy="16" r="12" fill="none" stroke={GOLD} strokeWidth="3" strokeDasharray="56" strokeDashoffset="20" strokeLinecap="round" />
-                            </svg>
-                            <p style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.2em", color: GOLD }}>
-                              Removing background…
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Canvas items */}
-                        {canvasItems.map((item, idx) => {
-                          const isActive = hoveredCanvasItem === item.id || selectedItemId === item.id || dragState?.itemId === item.id;
-                          const scalePct = Math.round((item.width / (item.defaultWidth || 190)) * 100);
-                          return (
-                            <div
-                              key={item.id}
-                              data-item-id={item.id}
-                              onPointerDown={e => handlePointerDown(e, item.id)}
-                              onMouseEnter={() => setHoveredCanvasItem(item.id)}
-                              onMouseLeave={() => setHoveredCanvasItem(null)}
+                              key={role}
                               style={{
                                 position: "absolute",
-                                left: item.x,
-                                top: item.y,
-                                width: item.width,
-                                cursor: dragState?.itemId === item.id ? "grabbing" : "grab",
-                                zIndex: dragState?.itemId === item.id ? 100 : selectedItemId === item.id ? 50 : idx + 1,
-                                filter: item.bgRemoved && isActive
-                                  ? "drop-shadow(0 8px 22px rgba(0,0,0,0.20))"
-                                  : item.bgRemoved
-                                    ? "drop-shadow(0 3px 10px rgba(0,0,0,0.10))"
-                                    : "none",
-                                transition: dragState?.itemId === item.id ? "none" : "filter 0.2s",
-                                outline: selectedItemId === item.id ? `2px solid ${GOLD}` : "2px solid transparent",
-                                outlineOffset: -1,
+                                left: `${a.left - (boxW * (scale - 1)) / 2}%`,
+                                top: `${a.top - (boxH * (scale - 1)) / 2}%`,
+                                width: `${boxW * scale}%`,
+                                height: `${boxH * scale}%`,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                zIndex: role === "top" ? 2 : 1,
+                                filter: item.bgRemoved
+                                  ? "drop-shadow(0 6px 16px rgba(0,0,0,0.16))"
+                                  : "none",
                               }}
                             >
                               <img
@@ -696,151 +472,135 @@ export default function LookbookPage() {
                                 alt={item.name}
                                 draggable={false}
                                 style={{
-                                  width: "100%", display: "block",
-                                  objectFit: "contain",
+                                  width: "100%", height: "100%", objectFit: "contain",
                                   pointerEvents: "none",
                                   mixBlendMode: item.bgRemoved ? "normal" : "multiply",
                                 }}
                               />
-
-                              {/* Remove button — top right */}
-                              <button
-                                onPointerDown={e => e.stopPropagation()}
-                                onClick={() => removeFromCanvas(item.id)}
-                                style={{
-                                  position: "absolute", top: 4, right: 4,
-                                  width: 22, height: 22, borderRadius: "50%",
-                                  background: "rgba(0,0,0,0.65)", border: "none", cursor: "pointer",
-                                  display: "flex", alignItems: "center", justifyContent: "center",
-                                  opacity: isActive ? 1 : 0,
-                                  transition: "opacity 0.15s",
-                                }}
-                              >
-                                <X size={11} color="#fff" />
-                              </button>
-
-                              {/* Resize toolbar — bottom center */}
-                              <div
-                                onPointerDown={e => e.stopPropagation()}
-                                style={{
-                                  position: "absolute", bottom: 0, left: 0, right: 0,
-                                  display: "flex", alignItems: "center", justifyContent: "center",
-                                  gap: 0,
-                                  opacity: isActive ? 1 : 0,
-                                  transition: "opacity 0.15s",
-                                }}
-                              >
-                                <div style={{
-                                  display: "inline-flex", alignItems: "center",
-                                  background: "rgba(10,10,10,0.80)",
-                                  backdropFilter: "blur(6px)",
-                                  borderRadius: "12px 12px 0 0",
-                                  overflow: "hidden",
-                                }}>
-                                  {/* Shrink */}
-                                  <button
-                                    onClick={() => resizeItem(item.id, -20)}
-                                    title="Shrink"
-                                    style={{
-                                      width: 28, height: 26, display: "flex", alignItems: "center", justifyContent: "center",
-                                      background: "transparent", border: "none", cursor: "pointer",
-                                      color: "#fff", borderRight: "1px solid rgba(255,255,255,0.12)",
-                                    }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
-                                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                                  >
-                                    <ZoomOut size={11} color="#fff" />
-                                  </button>
-                                  {/* Scale % display */}
-                                  <span style={{
-                                    fontFamily: FONT_UI, fontSize: 9, color: "rgba(255,255,255,0.75)",
-                                    padding: "0 8px", letterSpacing: "0.06em", minWidth: 34, textAlign: "center",
-                                    userSelect: "none",
-                                  }}>
-                                    {scalePct}%
-                                  </span>
-                                  {/* Grow */}
-                                  <button
-                                    onClick={() => resizeItem(item.id, 20)}
-                                    title="Grow"
-                                    style={{
-                                      width: 28, height: 26, display: "flex", alignItems: "center", justifyContent: "center",
-                                      background: "transparent", border: "none", cursor: "pointer",
-                                      borderLeft: "1px solid rgba(255,255,255,0.12)", borderRight: "1px solid rgba(255,255,255,0.12)",
-                                    }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
-                                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                                  >
-                                    <ZoomIn size={11} color="#fff" />
-                                  </button>
-                                  {/* Reset */}
-                                  <button
-                                    onClick={() => resetItem(item.id)}
-                                    title="Reset size"
-                                    style={{
-                                      width: 28, height: 26, display: "flex", alignItems: "center", justifyContent: "center",
-                                      background: "transparent", border: "none", cursor: "pointer",
-                                    }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
-                                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                                  >
-                                    <RotateCcw size={10} color={scalePct === 100 ? "rgba(255,255,255,0.3)" : GOLD} />
-                                  </button>
-                                </div>
-                              </div>
                             </div>
                           );
                         })}
+
+                        {/* Zoom controls per slot — always visible, not hover-only */}
+                        <div style={{
+                          position: "absolute", top: 10, right: 10, zIndex: 10,
+                          display: "flex", flexDirection: "column", gap: 8,
+                        }}>
+                          {(["top", "bottom"] as const).map(role => {
+                            const item = slots[role];
+                            if (!item) return null;
+                            return (
+                              <div
+                                key={role}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: 4,
+                                  background: "rgba(255,255,255,0.94)", backdropFilter: "blur(8px)",
+                                  border: "1px solid rgba(0,0,0,0.08)", borderRadius: 4,
+                                  boxShadow: "0 2px 10px rgba(0,0,0,0.09)", padding: "4px 6px",
+                                }}
+                              >
+                                <span style={{ fontFamily: FONT_UI, fontSize: 8, letterSpacing: "0.15em", color: GOLD, textTransform: "uppercase", paddingRight: 2 }}>
+                                  {role}
+                                </span>
+                                <button onClick={() => resizeSlot(role, -0.1)} title="Zoom out" style={iconBtnStyle}>
+                                  <ZoomOut size={13} />
+                                </button>
+                                <button onClick={() => resizeSlot(role, 0.1)} title="Zoom in" style={iconBtnStyle}>
+                                  <ZoomIn size={13} />
+                                </button>
+                                <button onClick={() => resetSlot(role)} title="Reset size" style={iconBtnStyle}>
+                                  <RotateCcw size={11} />
+                                </button>
+                                <button onClick={() => clearSlot(role)} title={`Remove ${role}`} style={{ ...iconBtnStyle, color: "#a33" }}>
+                                  ×
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Empty state */}
+                        {!slots.top && !slots.bottom && strippingIds.size === 0 && (
+                          <div style={{
+                            position: "absolute", bottom: 18, left: 0, right: 0, textAlign: "center",
+                            pointerEvents: "none",
+                          }}>
+                            <p style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.15em", color: "rgba(0,0,0,0.32)" }}>
+                              Pick a top and a bottom to begin styling
+                            </p>
+                          </div>
+                        )}
+
+                        {strippingIds.size > 0 && (
+                          <div style={{
+                            position: "absolute", bottom: 18, left: 0, right: 0, display: "flex",
+                            alignItems: "center", justifyContent: "center", gap: 8, pointerEvents: "none",
+                          }}>
+                            <svg width="16" height="16" viewBox="0 0 16 16" style={{ animation: "ka-spin 0.9s linear infinite" }}>
+                              <style>{`@keyframes ka-spin { to { transform: rotate(360deg); } }`}</style>
+                              <circle cx="8" cy="8" r="6" fill="none" stroke={GOLD} strokeWidth="2" strokeDasharray="28" strokeDashoffset="10" strokeLinecap="round" />
+                            </svg>
+                            <p style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.2em", color: GOLD, margin: 0 }}>
+                              Styling…
+                            </p>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Save controls */}
-                      <div style={{
-                        display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center",
-                        background: "#fff", border: "1px solid rgba(184,146,90,0.2)", padding: "12px 14px",
-                      }}>
-                        <input
-                          value={outfitName}
-                          onChange={e => setOutfitName(e.target.value)}
-                          placeholder="Name your look…"
-                          style={{
-                            flex: 1, minWidth: 120, fontFamily: FONT_UI, fontSize: 12, letterSpacing: "0.1em",
-                            border: "1px solid rgba(0,0,0,0.1)", padding: "9px 12px",
-                            outline: "none", background: "#FAFAF7", color: "#0A0A0A",
-                          }}
-                        />
-                        <button
-                          onClick={() => { setCanvasItems([]); setSelectedItemId(null); }}
-                          disabled={canvasItems.length === 0}
-                          style={{
-                            display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_UI, fontSize: 10,
-                            letterSpacing: "0.2em", textTransform: "uppercase", padding: "10px 16px",
-                            border: "1px solid rgba(0,0,0,0.12)", background: "transparent",
-                            cursor: canvasItems.length === 0 ? "not-allowed" : "pointer",
-                            color: canvasItems.length === 0 ? "rgba(0,0,0,0.25)" : "rgba(0,0,0,0.6)",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          <RotateCcw size={13} /> Clear
-                        </button>
-                        <button
-                          onClick={handleSave}
-                          disabled={canvasItems.length === 0 || createOutfit.isPending}
-                          style={{
-                            display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_UI, fontSize: 10,
-                            letterSpacing: "0.2em", textTransform: "uppercase", padding: "10px 22px",
-                            background: canvasItems.length === 0 ? "rgba(0,0,0,0.15)" : saveSuccess ? "#2D7D46" : "#0A0A0A",
-                            color: "#fff", border: "none",
-                            cursor: canvasItems.length === 0 ? "not-allowed" : "pointer",
-                            transition: "background 0.3s", whiteSpace: "nowrap",
-                          }}
-                        >
-                          {saveSuccess ? <><CheckCircle size={13} /> Saved!</> : <><Save size={13} /> Save Look</>}
-                        </button>
-                      </div>
-                      {/* Hint */}
-                      <p style={{ fontFamily: FONT_UI, fontSize: 10, color: "rgba(0,0,0,0.38)", letterSpacing: "0.1em", textAlign: "center", margin: 0 }}>
-                        Tap a piece to select it · use <strong style={{ color: "rgba(0,0,0,0.5)" }}>+ / −</strong> to resize · drag to reposition
-                      </p>
+                      {/* ── Bottoms panel (right) ── */}
+                      <GarmentPanel
+                        title="Bottoms"
+                        items={bottoms}
+                        strippingIds={strippingIds}
+                        selectedId={slots.bottom?.productId ?? null}
+                        onSelect={p => selectItem("bottom", p)}
+                        isMobile={isMobile}
+                      />
+                    </div>
+
+                    {/* Save controls */}
+                    <div style={{
+                      display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center",
+                      background: "#fff", border: "1px solid rgba(184,146,90,0.2)", padding: "12px 14px",
+                    }}>
+                      <input
+                        value={outfitName}
+                        onChange={e => setOutfitName(e.target.value)}
+                        placeholder="Name your look…"
+                        style={{
+                          flex: 1, minWidth: 120, fontFamily: FONT_UI, fontSize: 12, letterSpacing: "0.1em",
+                          border: "1px solid rgba(0,0,0,0.1)", padding: "9px 12px",
+                          outline: "none", background: "#FAFAF7", color: "#0A0A0A",
+                        }}
+                      />
+                      <button
+                        onClick={() => { setSlots({ top: null, bottom: null }); }}
+                        disabled={!slots.top && !slots.bottom}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_UI, fontSize: 10,
+                          letterSpacing: "0.2em", textTransform: "uppercase", padding: "10px 16px",
+                          border: "1px solid rgba(0,0,0,0.12)", background: "transparent",
+                          cursor: !slots.top && !slots.bottom ? "not-allowed" : "pointer",
+                          color: !slots.top && !slots.bottom ? "rgba(0,0,0,0.25)" : "rgba(0,0,0,0.6)",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <RotateCcw size={13} /> Clear
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        disabled={(!slots.top && !slots.bottom) || createOutfit.isPending}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_UI, fontSize: 10,
+                          letterSpacing: "0.2em", textTransform: "uppercase", padding: "10px 22px",
+                          background: (!slots.top && !slots.bottom) ? "rgba(0,0,0,0.15)" : saveSuccess ? "#2D7D46" : "#0A0A0A",
+                          color: "#fff", border: "none",
+                          cursor: (!slots.top && !slots.bottom) ? "not-allowed" : "pointer",
+                          transition: "background 0.3s", whiteSpace: "nowrap",
+                        }}
+                      >
+                        {saveSuccess ? <><CheckCircle size={13} /> Saved!</> : <><Save size={13} /> Save Look</>}
+                      </button>
                     </div>
                   </div>
                 )}
@@ -862,78 +622,89 @@ export default function LookbookPage() {
                       No saved looks yet
                     </p>
                     <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.35)", letterSpacing: "0.12em", marginBottom: 20 }}>
-                      Build an outfit on the canvas and save it to see it here
+                      Style an outfit and save it to see it here
                     </p>
                     <button
                       onClick={() => setActiveTab("builder")}
                       style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", background: GOLD, color: "#fff", border: "none", padding: "10px 28px", cursor: "pointer" }}
                     >
-                      Open Canvas
+                      Open Style Studio
                     </button>
                   </div>
                 ) : (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 20 }}>
-                    {savedOutfits.map(outfit => (
-                      <div
-                        key={outfit.id}
-                        style={{ background: "#fff", border: "1px solid rgba(184,146,90,0.18)", overflow: "hidden" }}
-                      >
-                        {/* Outfit thumbnail preview */}
-                        <div style={{ position: "relative", height: 180, background: CANVAS_BG, overflow: "hidden" }}>
-                          {(outfit.items as CanvasItem[]).slice(0, 4).map((item, i) => (
+                    {savedOutfits.map(outfit => {
+                      const items = outfit.items as Array<{ productId: number; name: string; thumbnailUrl: string; role?: Role; gender?: Gender }>;
+                      const outfitGender = items.find(i => i.gender)?.gender ?? "female";
+                      return (
+                        <div
+                          key={outfit.id}
+                          style={{ background: "#fff", border: "1px solid rgba(184,146,90,0.18)", overflow: "hidden" }}
+                        >
+                          {/* Outfit thumbnail preview */}
+                          <div style={{ position: "relative", height: 200, background: CANVAS_BG, overflow: "hidden" }}>
                             <img
-                              key={i}
-                              src={getAssetUrl(item.thumbnailUrl)}
-                              alt={item.name}
-                              style={{
-                                position: "absolute",
-                                left: `${10 + i * 20}%`,
-                                top: "8%",
-                                width: "42%",
-                                objectFit: "contain",
-                                zIndex: i + 1,
-                                filter: "drop-shadow(0 6px 12px rgba(0,0,0,0.14))",
-                              }}
+                              src={outfitGender === "male" ? avatarMale : avatarFemale}
+                              alt=""
+                              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }}
                             />
-                          ))}
-                          <button
-                            style={{
-                              position: "absolute", top: 8, right: 8,
-                              background: "rgba(255,255,255,0.9)", borderRadius: "50%",
-                              width: 28, height: 28, border: "none",
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.10)",
-                            }}
-                            onClick={() => handleDeleteOutfit(outfit.id)}
-                            title="Delete outfit"
-                          >
-                            <Trash2 size={12} color="#e53e3e" />
-                          </button>
-                        </div>
+                            {items.map((item, i) => {
+                              const a = ANCHORS[item.role ?? "top"];
+                              return (
+                                <img
+                                  key={i}
+                                  src={getAssetUrl(item.thumbnailUrl) ?? item.thumbnailUrl}
+                                  alt={item.name}
+                                  style={{
+                                    position: "absolute",
+                                    left: `${a.left}%`, top: `${a.top}%`,
+                                    width: `${a.right - a.left}%`, height: `${a.bottom - a.top}%`,
+                                    objectFit: "contain",
+                                    zIndex: item.role === "top" ? 2 : 1,
+                                    filter: "drop-shadow(0 6px 12px rgba(0,0,0,0.14))",
+                                  }}
+                                />
+                              );
+                            })}
+                            <button
+                              style={{
+                                position: "absolute", top: 8, right: 8,
+                                background: "rgba(255,255,255,0.9)", borderRadius: "50%",
+                                width: 28, height: 28, border: "none",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.10)", zIndex: 5,
+                              }}
+                              onClick={() => handleDeleteOutfit(outfit.id)}
+                              title="Delete outfit"
+                            >
+                              <Trash2 size={12} color="#e53e3e" />
+                            </button>
+                          </div>
 
-                        <div style={{ padding: "12px 14px" }}>
-                          <p style={{ fontFamily: FONT_DISPLAY, fontSize: 18, color: "#0A0A0A", marginBottom: 3 }}>
-                            {outfit.name}
-                          </p>
-                          <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.12em", color: "rgba(0,0,0,0.38)", marginBottom: 12 }}>
-                            {(outfit.items as CanvasItem[]).length} piece{(outfit.items as CanvasItem[]).length !== 1 ? "s" : ""}&nbsp;·&nbsp;{new Date(outfit.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                          </p>
-                          <button
-                            onClick={() => loadOutfit(outfit)}
-                            style={{
-                              fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase",
-                              background: "transparent", border: `1px solid ${GOLD}`, color: GOLD,
-                              padding: "7px 16px", cursor: "pointer", width: "100%",
-                              transition: "background 0.2s, color 0.2s",
-                            }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = GOLD; (e.currentTarget as HTMLElement).style.color = "#fff"; }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = GOLD; }}
-                          >
-                            Load onto Canvas
-                          </button>
+                          <div style={{ padding: "12px 14px" }}>
+                            <p style={{ fontFamily: FONT_DISPLAY, fontSize: 18, color: "#0A0A0A", marginBottom: 3 }}>
+                              {outfit.name}
+                            </p>
+                            <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.12em", color: "rgba(0,0,0,0.38)", marginBottom: 12 }}>
+                              {items.length} piece{items.length !== 1 ? "s" : ""}&nbsp;·&nbsp;{new Date(outfit.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                            </p>
+                            <button
+                              onClick={() => loadOutfit(outfit)}
+                              style={{
+                                fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase",
+                                background: "transparent", border: `1px solid ${GOLD}`, color: GOLD,
+                                padding: "7px 16px", cursor: "pointer", width: "100%",
+                                transition: "background 0.2s, color 0.2s",
+                              }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = GOLD; (e.currentTarget as HTMLElement).style.color = "#fff"; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = GOLD; }}
+                            >
+                              Load onto Avatar
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -953,7 +724,7 @@ export default function LookbookPage() {
             Style Your Ka.Sha Wardrobe
           </h2>
           <p style={{ fontFamily: FONT_UI, fontSize: 12, color: "rgba(0,0,0,0.45)", letterSpacing: "0.1em", marginBottom: 28, maxWidth: 480, margin: "0 auto 28px", lineHeight: 1.8 }}>
-            Sign in to heart products, save your favourite pieces, and build stunning outfit combinations on your personal style board.
+            Sign in to heart products, save your favourite pieces, and style them onto an avatar to see how they look together.
           </p>
           <Link href="/sign-in">
             <button style={{
@@ -967,5 +738,133 @@ export default function LookbookPage() {
       </Show>
 
     </Layout>
+  );
+}
+
+const iconBtnStyle: React.CSSProperties = {
+  display: "flex", alignItems: "center", justifyContent: "center",
+  width: 22, height: 22, background: "transparent", border: "none", cursor: "pointer",
+  color: "#0A0A0A", fontSize: 14, lineHeight: 1,
+};
+
+function GarmentPanel({
+  title, items, strippingIds, selectedId, onSelect, isMobile,
+}: {
+  title: string;
+  items: { productId: number; name: string; thumbnailUrl: string }[];
+  strippingIds: Set<number>;
+  selectedId: number | null;
+  onSelect: (p: { productId: number; name: string; thumbnailUrl: string }) => void;
+  isMobile: boolean;
+}) {
+  if (isMobile) {
+    return (
+      <div style={{ width: "100%", background: "#fff", border: "1px solid rgba(184,146,90,0.2)" }}>
+        <div style={{ padding: "10px 12px 8px", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+          <span style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.3em", color: GOLD, textTransform: "uppercase" }}>{title}</span>
+        </div>
+        {items.length === 0 ? (
+          <p style={{ fontFamily: FONT_UI, fontSize: 9, color: "rgba(0,0,0,0.35)", padding: "14px 12px", letterSpacing: "0.06em" }}>
+            No saved {title.toLowerCase()} yet
+          </p>
+        ) : (
+          <div style={{ display: "flex", gap: 8, padding: "10px 12px", overflowX: "auto", WebkitOverflowScrolling: "touch" as "touch" }}>
+            {items.map(p => {
+              const isStripping = strippingIds.has(p.productId);
+              const isSelected = selectedId === p.productId;
+              return (
+                <button
+                  key={p.productId}
+                  onClick={() => !isStripping && onSelect(p)}
+                  disabled={isStripping}
+                  style={{
+                    flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center",
+                    gap: 4, padding: "8px 6px", width: 76,
+                    background: "transparent", border: isSelected ? `1px solid ${GOLD}` : "1px solid rgba(0,0,0,0.07)",
+                    cursor: isStripping ? "not-allowed" : "pointer",
+                    opacity: isStripping ? 0.65 : 1,
+                  }}
+                >
+                  <div style={{ position: "relative", width: 44, height: 56 }}>
+                    <img src={getAssetUrl(p.thumbnailUrl)} alt={p.name}
+                      style={{ width: 44, height: 56, objectFit: "contain", background: "#F5F2EC" }} />
+                    {isStripping && (
+                      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(245,242,236,0.8)" }}>
+                        <svg width="14" height="14" viewBox="0 0 14 14" style={{ animation: "ka-spin 0.9s linear infinite" }}>
+                          <circle cx="7" cy="7" r="5" fill="none" stroke={GOLD} strokeWidth="2" strokeDasharray="24" strokeDashoffset="8" strokeLinecap="round" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <span style={{ fontFamily: FONT_UI, fontSize: 7, letterSpacing: "0.06em", color: isSelected ? GOLD : "#0A0A0A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", textAlign: "center" }}>
+                    {p.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "").slice(0, 12)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ width: 220, flexShrink: 0, background: "#fff", border: "1px solid rgba(184,146,90,0.2)" }}>
+      <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+        <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.35em", color: GOLD, textTransform: "uppercase" }}>{title}</p>
+      </div>
+      <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: 8, maxHeight: 680, overflowY: "auto" }}>
+        {items.length === 0 ? (
+          <p style={{ fontFamily: FONT_UI, fontSize: 10, color: "rgba(0,0,0,0.35)", letterSpacing: "0.06em", padding: "8px 4px", lineHeight: 1.7 }}>
+            No saved {title.toLowerCase()} yet. Heart a {title.slice(0, -1).toLowerCase()} from the shop to see it here.
+          </p>
+        ) : items.map(p => {
+          const isStripping = strippingIds.has(p.productId);
+          const isSelected = selectedId === p.productId;
+          return (
+            <button
+              key={p.productId}
+              onClick={() => !isStripping && onSelect(p)}
+              disabled={isStripping}
+              title={isStripping ? "Styling…" : `Wear this ${title.slice(0, -1).toLowerCase()}`}
+              style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "8px",
+                background: isSelected ? "rgba(184,146,90,0.08)" : "transparent",
+                border: isSelected ? `1px solid ${GOLD}` : "1px solid rgba(0,0,0,0.07)",
+                cursor: isStripping ? "not-allowed" : "pointer",
+                textAlign: "left", transition: "border-color 0.2s, background 0.2s",
+                width: "100%", opacity: isStripping ? 0.65 : 1,
+              }}
+              onMouseEnter={e => { if (!isStripping && !isSelected) { (e.currentTarget as HTMLElement).style.borderColor = GOLD; (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.04)"; } }}
+              onMouseLeave={e => { if (!isSelected) { (e.currentTarget as HTMLElement).style.borderColor = "rgba(0,0,0,0.07)"; (e.currentTarget as HTMLElement).style.background = "transparent"; } }}
+            >
+              <div style={{ position: "relative", width: 48, height: 60, flexShrink: 0 }}>
+                <img src={getAssetUrl(p.thumbnailUrl)} alt={p.name}
+                  style={{ width: 48, height: 60, objectFit: "contain", background: "#F5F2EC" }} />
+                {isStripping && (
+                  <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(245,242,236,0.8)" }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" style={{ animation: "ka-spin 0.9s linear infinite" }}>
+                      <circle cx="8" cy="8" r="6" fill="none" stroke={GOLD} strokeWidth="2" strokeDasharray="28" strokeDashoffset="10" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.08em", color: "#0A0A0A", marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.4 }}>
+                  {p.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}
+                </p>
+                {isStripping ? (
+                  <span style={{ fontFamily: FONT_UI, fontSize: 8, color: GOLD, letterSpacing: "0.08em" }}>Styling…</span>
+                ) : (
+                  <span style={{ fontFamily: FONT_UI, fontSize: 8, color: GOLD, letterSpacing: "0.15em" }}>
+                    {isSelected ? "CURRENTLY WORN" : "CLICK TO WEAR"}
+                  </span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

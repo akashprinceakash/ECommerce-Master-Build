@@ -8,6 +8,8 @@ export const lookbookOutfitItemSchema = z.object({
   x: z.number(),
   y: z.number(),
   width: z.number(),
+  role: z.enum(["top", "bottom"]).optional(),
+  gender: z.enum(["male", "female"]).optional(),
 });
 
 export type LookbookOutfitItem = z.infer<typeof lookbookOutfitItemSchema>;

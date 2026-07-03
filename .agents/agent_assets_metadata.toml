@@ -24,6 +24,18 @@ uri = "file://artifacts/kasha/public/images/hero/slide-kids.png"
 type = "image"
 title = "kids golf polo"
 
+[[generated]]
+id = "alOGxssI_o22qnJqG2e7U"
+uri = "file://artifacts/kasha/src/assets/lookbook/avatar-male-raw.png"
+type = "image"
+title = "male fashion avatar mannequin"
+
+[[generated]]
+id = "XyBYAz3slfu6ugTXMM-TT"
+uri = "file://artifacts/kasha/src/assets/lookbook/avatar-female-raw.png"
+type = "image"
+title = "female fashion avatar mannequin"
+
 [[outputs]]
 id = "WicUZAl5xj8pkA_wEYvjt"
 uri = "file://kasha-project.tar.gz"

@@ -1178,6 +1178,12 @@ components:
           type: number
         width:
           type: number
+        role:
+          type: string
+          enum: [top, bottom]
+        gender:
+          type: string
+          enum: [male, female]
 
     LookbookOutfit:
       type: object

@@ -607,6 +607,8 @@ export const ListLookbookOutfitsResponseItem = zod.object({
       x: zod.number(),
       y: zod.number(),
       width: zod.number(),
+      role: zod.enum(["top", "bottom"]).optional(),
+      gender: zod.enum(["male", "female"]).optional(),
     }),
   ),
   createdAt: zod.coerce.date(),
@@ -631,6 +633,8 @@ export const CreateLookbookOutfitBody = zod.object({
       x: zod.number(),
       y: zod.number(),
       width: zod.number(),
+      role: zod.enum(["top", "bottom"]).optional(),
+      gender: zod.enum(["male", "female"]).optional(),
     }),
   ),
 });

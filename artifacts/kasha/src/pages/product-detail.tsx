@@ -366,13 +366,28 @@ export default function ProductDetailPage() {
               <div className="flex items-start gap-3 mb-2">
                 <h1 className="text-3xl md:text-4xl font-black text-black leading-tight flex-1">{product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+.*$/, "")}</h1>
                 {SHOW_LOOKBOOK && (
-                  <HeartButton
-                    productId={product.id}
-                    iconSize={20}
-                    className="mt-1 w-9 h-9 flex items-center justify-center border border-gray-200 hover:border-[#B8925A] transition-colors bg-white flex-shrink-0"
-                  />
+                  <div className="flex flex-col items-center flex-shrink-0 mt-1">
+                    <HeartButton
+                      productId={product.id}
+                      iconSize={20}
+                      showLabel={false}
+                      className="w-9 h-9 flex items-center justify-center border border-gray-200 hover:border-[#B8925A] transition-colors bg-white"
+                    />
+                    <span style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 8, letterSpacing: "0.06em", color: "rgba(0,0,0,0.4)", marginTop: 4, whiteSpace: "nowrap" }}>
+                      Save to Lookbook
+                    </span>
+                  </div>
                 )}
               </div>
+              {SHOW_LOOKBOOK && (
+                <Link
+                  href="/lookbook"
+                  className="inline-flex items-center gap-1 mb-3"
+                  style={{ fontFamily: "'Josefin Sans', sans-serif", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "#B8925A", textDecoration: "none", borderBottom: "1px solid rgba(184,146,90,0.35)", paddingBottom: 1, width: "fit-content" }}
+                >
+                  Visit the LookBook →
+                </Link>
+              )}
               {(() => {
                 const colorLabel = getProductColorLabel(product);
                 const swatchHex = colorLabelToSwatchHex(colorLabel);

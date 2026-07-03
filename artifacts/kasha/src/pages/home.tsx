@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, type CSSProperties } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout/Layout";
-import { SHOW_KIDS, SHOW_CUSTOMIZATION } from "@/lib/features";
+import { SHOW_KIDS, SHOW_CUSTOMIZATION, SHOW_LOOKBOOK } from "@/lib/features";
 import { CustomizeEntryModal } from "@/components/layout/CustomizeEntryModal";
 import { useQuery } from "@tanstack/react-query";
 import { getApiUrl } from "@/lib/api";
@@ -529,6 +529,30 @@ export default function Home() {
                     >
                       {s.outline.label}
                     </button>
+                  )}
+                  {SHOW_LOOKBOOK && (
+                    <Link
+                      href="/lookbook"
+                      style={{
+                        display:       "inline-flex",
+                        alignItems:    "center",
+                        gap:           6,
+                        background:    "rgba(255,255,255,0.08)",
+                        backdropFilter:"blur(8px)",
+                        color:         "#fff",
+                        fontFamily:    "'Josefin Sans', sans-serif",
+                        fontSize:      13,
+                        letterSpacing: "0.2em",
+                        textTransform: "uppercase",
+                        padding:       "13px 26px",
+                        border:        "0.5px solid rgba(184,146,90,0.6)",
+                        transition:    "background 0.2s, border-color 0.2s",
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(184,146,90,0.28)"; (e.currentTarget as HTMLElement).style.borderColor = GOLD_LIGHT; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,146,90,0.6)"; }}
+                    >
+                      ♥ My Lookbook
+                    </Link>
                   )}
                 </div>
               </div>
