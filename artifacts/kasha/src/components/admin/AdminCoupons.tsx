@@ -20,6 +20,8 @@ async function apiFetch(path: string, opts?: RequestInit): Promise<any> {
   return res.status === 204 ? null : res.json();
 }
 
+const PRODUCT_CATEGORIES = ["polo", "shorts", "trousers", "jacket", "t-shirt", "hoodie", "accessories", "skorts", "dress", "q_club"];
+
 interface CouponRow {
   id: number;
   code: string;
@@ -277,12 +279,16 @@ export function AdminCoupons() {
 
             <div className="flex flex-col gap-1.5">
               <Label>Category Restriction</Label>
-              <Input
+              <select
                 value={form.categoryRestriction}
                 onChange={e => setForm(p => ({ ...p, categoryRestriction: e.target.value }))}
-                placeholder="polo, trouser (optional)"
-                className="rounded-none"
-              />
+                className="h-10 border border-input bg-background px-3 text-sm rounded-none"
+              >
+                <option value="">— Any category —</option>
+                {PRODUCT_CATEGORIES.map(c => (
+                  <option key={c} value={c}>{c === "q_club" ? "Q Club" : c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                ))}
+              </select>
             </div>
 
             <div className="flex flex-col gap-1.5">

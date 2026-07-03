@@ -72,7 +72,9 @@ export async function validateCoupon(
         .where(inArray(productsTable.id, cartProductIds));
       effectiveCategories = products.map(p => p.category).filter(Boolean) as string[];
     }
-    if (effectiveCategories.length > 0 && !effectiveCategories.includes(coupon.categoryRestriction)) {
+    const restrictionLower = coupon.categoryRestriction.trim().toLowerCase();
+    const effectiveCategoriesLower = effectiveCategories.map(c => c.trim().toLowerCase());
+    if (effectiveCategoriesLower.length > 0 && !effectiveCategoriesLower.includes(restrictionLower)) {
       return { error: `This coupon is only valid for ${coupon.categoryRestriction} products` };
     }
   }
