@@ -1,3 +1,3 @@
 - [Placement flip rules](right-sleeve-uv-flip.md) — only collar-left key gets flipX=false/flipY=true; all others flipX=true/flipY=false. UI labels were swapped so key names no longer match display names.
 - [Razorpay verify must accept race-cancelled orders](razorpay-verify-cancelled-race.md) — keep verify/webhook/confirmOrder status gates consistent or customers get false "payment failed" despite a captured payment.
-- [Avatar-based Lookbook builder](avatar-based-lookbook-builder.md) — outfit builder uses fixed top/bottom slots on a mannequin avatar, not free-form canvas placement; client rejected free-form as "artificial."
+- [Avatar-based Lookbook builder](avatar-based-lookbook-builder.md) — fixed top/bottom slots on a photoreal human avatar (default outfit baked in); a grey mannequin was rejected as still "artificial."
