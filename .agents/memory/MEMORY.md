@@ -1,1 +1,2 @@
 - [Placement flip rules](right-sleeve-uv-flip.md) — only collar-left key gets flipX=false/flipY=true; all others flipX=true/flipY=false. UI labels were swapped so key names no longer match display names.
+- [Razorpay verify must accept race-cancelled orders](razorpay-verify-cancelled-race.md) — keep verify/webhook/confirmOrder status gates consistent or customers get false "payment failed" despite a captured payment.

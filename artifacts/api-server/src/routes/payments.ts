@@ -572,8 +572,14 @@ router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
     res.status(200).json(full); return;
   }
 
-  // Allow retry from payment_failed state (Razorpay allows multiple attempts per order)
-  if (!["pending", "payment_failed"].includes(dbOrder.status)) {
+  // Allow retry from payment_failed state (Razorpay allows multiple attempts per order).
+  // Also allow "cancelled" orders with no paymentId yet — this is the same race-recovery
+  // case the webhook already handles (see confirmOrder below): the order was cancelled
+  // (e.g. retried / cart changed) right as the customer completed payment on the original
+  // Razorpay order. The money was captured, so we must not tell the customer it failed —
+  // fall through to signature verification + confirmOrder, which will reconcile it.
+  const isRaceCancelled = dbOrder.status === "cancelled" && !dbOrder.paymentId;
+  if (!["pending", "payment_failed"].includes(dbOrder.status) && !isRaceCancelled) {
     res.status(409).json({ error: `Order is in '${dbOrder.status}' state and cannot be paid` }); return;
   }
 
