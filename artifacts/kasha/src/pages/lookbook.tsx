@@ -159,6 +159,50 @@ async function stripBackground(src: string): Promise<string> {
   return cropped.toDataURL("image/png");
 }
 
+// Builds a neutral (colour-stripped) shading map from the avatar's own baked
+// default garment for the given anchor region. The new garment texture is
+// later multiplied against this map so it inherits the avatar photo's real
+// folds, creases and shadows (shoulder seam, waistband crease, etc.) instead
+// of sitting on top as a flat, unshaded PNG. Highlights are normalised to
+// pure white so the multiply pass doesn't tint the garment with the baked
+// default's own colour (white tee / navy trousers) — only the *relative*
+// light-and-shadow pattern carries through.
+function buildShadingMap(
+  img: HTMLImageElement,
+  anchor: { top: number; bottom: number; left: number; right: number },
+): string {
+  const nw = img.naturalWidth || img.width;
+  const nh = img.naturalHeight || img.height;
+  const sx = Math.round((anchor.left / 100) * nw);
+  const sy = Math.round((anchor.top / 100) * nh);
+  const sw = Math.max(1, Math.round(((anchor.right - anchor.left) / 100) * nw));
+  const sh = Math.max(1, Math.round(((anchor.bottom - anchor.top) / 100) * nh));
+
+  const c = document.createElement("canvas");
+  c.width = sw;
+  c.height = sh;
+  const ctx = c.getContext("2d")!;
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+
+  const d = ctx.getImageData(0, 0, sw, sh);
+  const p = d.data;
+  const count = sw * sh;
+  const lum = new Float32Array(count);
+  let maxLum = 1;
+  for (let i = 0, px = 0; i < p.length; i += 4, px++) {
+    const l = 0.2126 * p[i] + 0.7152 * p[i + 1] + 0.0722 * p[i + 2];
+    lum[px] = l;
+    if (l > maxLum) maxLum = l;
+  }
+  const gain = 255 / maxLum;
+  for (let i = 0, px = 0; i < p.length; i += 4, px++) {
+    const v = Math.min(255, Math.round(lum[px] * gain));
+    p[i] = v; p[i + 1] = v; p[i + 2] = v; p[i + 3] = 255;
+  }
+  ctx.putImageData(d, 0, 0);
+  return c.toDataURL("image/png");
+}
+
 function categoryRole(category: string): Role | null {
   const c = category.toLowerCase();
   if (TOP_CATEGORIES.has(c)) return "top";
@@ -178,7 +222,22 @@ export default function LookbookPage() {
   const [activeTab, setActiveTab] = useState<"builder" | "saved">("builder");
   const [strippingIds, setStrippingIds] = useState<Set<number>>(new Set());
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [shadingMaps, setShadingMaps] = useState<Record<Role, string | null>>({ top: null, bottom: null });
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Recompute the fold/shadow maps whenever the avatar photo actually loads
+  // (including on gender switch, since male/female have different poses).
+  const handleAvatarLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    try {
+      setShadingMaps({
+        top: buildShadingMap(img, ANCHORS.top),
+        bottom: buildShadingMap(img, ANCHORS.bottom),
+      });
+    } catch {
+      setShadingMaps({ top: null, bottom: null });
+    }
+  }, []);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
@@ -464,6 +523,7 @@ export default function LookbookPage() {
                           src={avatarSrc}
                           alt={gender === "male" ? "Male avatar" : "Female avatar"}
                           draggable={false}
+                          onLoad={handleAvatarLoad}
                           style={{
                             position: "absolute", inset: 0, width: "100%", height: "100%",
                             objectFit: "contain", pointerEvents: "none", userSelect: "none",
@@ -493,16 +553,51 @@ export default function LookbookPage() {
                                   : "none",
                               }}
                             >
-                              <img
-                                src={item.thumbnailUrl}
-                                alt={item.name}
-                                draggable={false}
-                                style={{
-                                  width: "100%", height: "100%", objectFit: "contain",
-                                  pointerEvents: "none",
-                                  mixBlendMode: item.bgRemoved ? "normal" : "multiply",
-                                }}
-                              />
+                              {item.bgRemoved && shadingMaps[role] ? (
+                                // Multiply the garment through a neutral shading map lifted
+                                // from the avatar's own baked default garment, so the new
+                                // fabric picks up real folds/creases/shadows instead of
+                                // sitting flat on top like a pasted-on PNG. `isolation:
+                                // isolate` scopes the multiply blend to just these two
+                                // layers so it doesn't pick up unrelated page content.
+                                <div style={{ position: "relative", width: "100%", height: "100%", isolation: "isolate" }}>
+                                  <img
+                                    src={shadingMaps[role]!}
+                                    alt=""
+                                    draggable={false}
+                                    style={{
+                                      position: "absolute", inset: 0, width: "100%", height: "100%",
+                                      objectFit: "contain", pointerEvents: "none",
+                                      WebkitMaskImage: `url(${item.thumbnailUrl})`,
+                                      maskImage: `url(${item.thumbnailUrl})`,
+                                      WebkitMaskSize: "contain", maskSize: "contain",
+                                      WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+                                      WebkitMaskPosition: "center", maskPosition: "center",
+                                    } as React.CSSProperties}
+                                  />
+                                  <img
+                                    src={item.thumbnailUrl}
+                                    alt={item.name}
+                                    draggable={false}
+                                    style={{
+                                      position: "absolute", inset: 0, width: "100%", height: "100%",
+                                      objectFit: "contain", pointerEvents: "none",
+                                      mixBlendMode: "multiply",
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <img
+                                  src={item.thumbnailUrl}
+                                  alt={item.name}
+                                  draggable={false}
+                                  style={{
+                                    width: "100%", height: "100%", objectFit: "contain",
+                                    pointerEvents: "none",
+                                    mixBlendMode: item.bgRemoved ? "normal" : "multiply",
+                                  }}
+                                />
+                              )}
                             </div>
                           );
                         })}
