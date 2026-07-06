@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The Lookbook</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap');
+
+:root{
+  --fairway:#1F3A2E;
+  --cream:#F4EFE4;
+  --sand:#C9A876;
+  --ink:#26241F;
+  --chalk:#EAF1EA;
+  --flag:#B33A2C;
+  --line: rgba(38,36,29,0.14);
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--cream);
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+}
+
+.wrap{
+  max-width:1180px;
+  margin:0 auto;
+  padding:36px 24px 60px;
+}
+
+/* ---------- Header ---------- */
+.masthead{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  border-bottom:2px solid var(--ink);
+  padding-bottom:14px;
+  margin-bottom:28px;
+  flex-wrap:wrap;
+  gap:14px;
+}
+.masthead h1{
+  font-family:'Fraunces',serif;
+  font-weight:600;
+  font-size:42px;
+  letter-spacing:-0.01em;
+  margin:0;
+  line-height:1;
+}
+.masthead h1 em{
+  font-style:italic;
+  font-weight:500;
+  color:var(--fairway);
+}
+.masthead .tag{
+  font-size:11px;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  color:var(--fairway);
+  font-weight:600;
+}
+
+/* ---------- Gender toggle ---------- */
+.toggle-row{
+  display:flex;
+  justify-content:center;
+  gap:8px;
+  margin-bottom:26px;
+}
+.toggle-btn{
+  font-family:'Inter',sans-serif;
+  font-size:12px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  font-weight:600;
+  padding:9px 22px;
+  border:1px solid var(--ink);
+  background:transparent;
+  color:var(--ink);
+  cursor:pointer;
+  border-radius:999px;
+  transition:all .18s ease;
+}
+.toggle-btn:hover{ background:rgba(38,36,29,0.06); }
+.toggle-btn.active{
+  background:var(--fairway);
+  border-color:var(--fairway);
+  color:var(--chalk);
+}
+
+/* ---------- Main layout ---------- */
+.stage-grid{
+  display:grid;
+  grid-template-columns:230px 1fr 230px;
+  gap:22px;
+  align-items:start;
+}
+@media (max-width:860px){
+  .stage-grid{ grid-template-columns:1fr; }
+  .rail{ order:2; }
+  .stage-card{ order:1; }
+}
+
+/* ---------- Rails (tops / bottoms lists) ---------- */
+.rail{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.rail-label{
+  font-size:11px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  font-weight:700;
+  color:var(--fairway);
+  border-bottom:1px solid var(--line);
+  padding-bottom:8px;
+  margin-bottom:2px;
+  display:flex;
+  justify-content:space-between;
+}
+.rail-label span.count{ color:var(--sand); font-weight:700; }
+
+.piece{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:9px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#fff;
+  cursor:pointer;
+  transition:all .15s ease;
+  text-align:left;
+}
+.piece:hover{
+  border-color:var(--fairway);
+  transform:translateX(2px);
+}
+.piece.selected{
+  border-color:var(--fairway);
+  background:var(--chalk);
+  box-shadow: inset 0 0 0 1px var(--fairway);
+}
+.piece .swatch{
+  width:34px;
+  height:34px;
+  border-radius:8px;
+  flex:none;
+  border:1px solid rgba(0,0,0,0.12);
+  position:relative;
+  overflow:hidden;
+}
+.piece .info{ display:flex; flex-direction:column; gap:2px; min-width:0;}
+.piece .name{ font-size:12.5px; font-weight:600; line-height:1.25; }
+.piece .meta{ font-size:10.5px; color:#6b6a63; letter-spacing:0.03em; text-transform:uppercase; }
+.piece .check{
+  margin-left:auto;
+  width:16px;height:16px;
+  border-radius:50%;
+  border:1.5px solid var(--ink);
+  flex:none;
+  display:flex;align-items:center;justify-content:center;
+}
+.piece.selected .check{ background:var(--fairway); border-color:var(--fairway); }
+.piece.selected .check::after{
+  content:"";
+  width:5px;height:8px;
+  border-right:1.5px solid #fff;
+  border-bottom:1.5px solid #fff;
+  transform:rotate(45deg) translate(-1px,-1px);
+}
+
+/* ---------- Center stage ---------- */
+.stage-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:22px 18px 16px;
+  position:relative;
+}
+.stage-frame{
+  position:relative;
+  border-radius:10px;
+  overflow:hidden;
+  background:
+    linear-gradient(180deg, var(--chalk) 0%, var(--chalk) 78%, #DCE8DC 78%, #DCE8DC 100%);
+}
+.stage-frame svg{ display:block; width:100%; height:auto; }
+
+.pin-tag{
+  position:absolute;
+  top:12px;
+  left:12px;
+  background:var(--ink);
+  color:var(--cream);
+  font-size:10px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  font-weight:600;
+  padding:5px 9px;
+  border-radius:5px;
+}
+
+/* ---------- Scorecard summary strip ---------- */
+.scorecard{
+  margin-top:16px;
+  border-top:1px dashed var(--line);
+  padding-top:14px;
+}
+.scorecard-title{
+  font-size:10.5px;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  font-weight:700;
+  color:#8a887f;
+  margin-bottom:8px;
+}
+.scorecard-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:13px;
+  padding:6px 0;
+  border-bottom:1px solid var(--line);
+}
+.scorecard-row:last-child{ border-bottom:none; }
+.scorecard-row .label{ color:#8a887f; font-size:10.5px; text-transform:uppercase; letter-spacing:0.08em; width:64px; flex:none;}
+.scorecard-row .val{ font-weight:600; flex:1; }
+.scorecard-row .val.empty{ color:#b6b4aa; font-weight:400; font-style:italic; }
+.scorecard-row .clear{
+  border:none; background:none; cursor:pointer; color:var(--flag);
+  font-size:15px; line-height:1; padding:2px 4px; opacity:0.7;
+}
+.scorecard-row .clear:hover{ opacity:1; }
+
+.actions{
+  display:flex;
+  gap:8px;
+  margin-top:14px;
+}
+.btn{
+  flex:1;
+  font-family:'Inter',sans-serif;
+  font-size:11.5px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  font-weight:700;
+  padding:11px 10px;
+  border-radius:9px;
+  border:1px solid var(--ink);
+  background:transparent;
+  color:var(--ink);
+  cursor:pointer;
+  transition:all .15s ease;
+}
+.btn.primary{ background:var(--fairway); border-color:var(--fairway); color:#fff; }
+.btn:hover{ opacity:0.85; }
+.btn:disabled{ opacity:0.35; cursor:not-allowed; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="masthead">
+    <h1>The <em>Lookbook</em></h1>
+    <div class="tag">Build a look &middot; 18 pieces, endless rounds</div>
+  </div>
+
+  <div class="toggle-row">
+    <button class="toggle-btn active" data-gender="female" id="btnFemale">Female</button>
+    <button class="toggle-btn" data-gender="male" id="btnMale">Male</button>
+  </div>
+
+  <div class="stage-grid">
+
+    <!-- TOPS -->
+    <div class="rail">
+      <div class="rail-label">Tops <span class="count" id="topsCount">5</span></div>
+      <div id="topsList"></div>
+    </div>
+
+    <!-- STAGE -->
+    <div class="stage-card">
+      <div class="stage-frame">
+        <div class="pin-tag" id="pinTag">Build your look</div>
+        <svg id="avatarSvg" viewBox="0 0 320 640" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+
+      <div class="scorecard">
+        <div class="scorecard-title">Current look</div>
+        <div class="scorecard-row">
+          <div class="label">Top</div>
+          <div class="val empty" id="valTop">Select a top</div>
+          <button class="clear" id="clearTop" title="Remove top">&times;</button>
+        </div>
+        <div class="scorecard-row">
+          <div class="label">Bottom</div>
+          <div class="val empty" id="valBottom">Select a bottom</div>
+          <button class="clear" id="clearBottom" title="Remove bottom">&times;</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="btnClearAll">Clear look</button>
+        <button class="btn primary" id="btnRandom">Surprise me</button>
+      </div>
+    </div>
+
+    <!-- BOTTOMS -->
+    <div class="rail">
+      <div class="rail-label">Bottoms <span class="count" id="bottomsCount">5</span></div>
+      <div id="bottomsList"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ---------------------------------------------------------
+   CATALOG — swap these objects for real product data/images.
+   Each item: id, name, meta (fabric/collection line), color,
+   style (controls silhouette drawn), and optional stripe flag.
+--------------------------------------------------------- */
+const TOPS = [
+  { id:'t1', name:'Classic Piqué Polo', meta:'Core collection', color:'#1F3A2E', style:'polo' },
+  { id:'t2', name:'Chalk Stripe Polo', meta:'Clubhouse line', color:'#F4EFE4', style:'polo', stripe:'#1F3A2E' },
+  { id:'t3', name:'Quarter-Zip Pullover', meta:'Shoulder-season', color:'#B33A2C', style:'quarterzip' },
+  { id:'t4', name:'Sand Performance Polo', meta:'Tech fabric', color:'#C9A876', style:'polo' },
+  { id:'t5', name:'Navy Sleeveless Top', meta:'Warm weather', color:'#1B2A4A', style:'sleeveless' },
+];
+
+const BOTTOMS = [
+  { id:'b1', name:'Tailored Fairway Trouser', meta:'Core collection', color:'#26241F', style:'pants' },
+  { id:'b2', name:'Classic Golf Short', meta:'Core collection', color:'#C9A876', style:'shorts' },
+  { id:'b3', name:'Performance Short', meta:'Tech fabric', color:'#1F3A2E', style:'shorts' },
+  { id:'b4', name:'Pleated Golf Skort', meta:'Clubhouse line', color:'#B33A2C', style:'skort' },
+  { id:'b5', name:'Cropped Trouser', meta:'Warm weather', color:'#EAF1EA', style:'pants', crop:true },
+];
+
+/* ---------------------------------------------------------
+   BODY CONFIG — anchor points shared by both genders so
+   garments line up; widths vary for silhouette shape.
+--------------------------------------------------------- */
+const CX = 160;
+const BODY = {
+  female: { shoulderW:120, waistW:92,  hipW:132, armW:26, legW:38, legGap:14, skin:'#E7C6A8' },
+  male:   { shoulderW:156, waistW:118, hipW:120, armW:32, legW:46, legGap:12, skin:'#E7C6A8' }
+};
+const Y = { headCy:66, headR:34, neckTop:96, neckBot:122, shoulder:122, waist:250, hip:272, thigh:380, knee:480, ankle:572, wrist:302 };
+
+let gender = 'female';
+let selectedTop = null;
+let selectedBottom = null;
+
+/* ---------------------------------------------------------
+   SVG helpers
+--------------------------------------------------------- */
+function rr(x,y,w,h,rx){ return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" ry="${rx}"></rect>`; }
+
+function textureId(color){
+  // deterministic-ish id from color string
+  return 'tex-' + color.replace('#','');
+}
+
+function texturePattern(color, stripe){
+  const id = textureId(color) + (stripe ? '-s' : '');
+  if(stripe){
+    return `<pattern id="${id}" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(0)">
+      <rect width="10" height="10" fill="${color}"></rect>
+      <rect width="3" height="10" fill="${stripe}" opacity="0.85"></rect>
+    </pattern>`;
+  }
+  return `<pattern id="${id}" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="${color}"></rect>
+      <circle cx="2" cy="2" r="0.6" fill="#000" opacity="0.06"></circle>
+      <circle cx="6" cy="6" r="0.6" fill="#000" opacity="0.06"></circle>
+    </pattern>`;
+}
+
+/* ---------------------------------------------------------
+   Build base body (skin) for current gender
+--------------------------------------------------------- */
+function buildBody(cfg){
+  const { shoulderW, waistW, hipW, armW, legW, legGap, skin } = cfg;
+  const legX1 = CX - legGap/2 - legW;
+  const legX2 = CX + legGap/2;
+
+  // torso as a soft trapezoid via path (shoulder -> waist -> hip)
+  const torsoPath = `
+    M ${CX - shoulderW/2} ${Y.shoulder}
+    L ${CX + shoulderW/2} ${Y.shoulder}
+    L ${CX + waistW/2} ${Y.waist}
+    L ${CX + hipW/2} ${Y.hip}
+    L ${CX - hipW/2} ${Y.hip}
+    L ${CX - waistW/2} ${Y.waist}
+    Z`;
+
+  const armL = rr(CX-shoulderW/2-armW+8, Y.shoulder+4, armW, Y.wrist-Y.shoulder-4, armW/2);
+  const armR = rr(CX+shoulderW/2-8, Y.shoulder+4, armW, Y.wrist-Y.shoulder-4, armW/2);
+  const handL = `<ellipse cx="${CX-shoulderW/2-armW+8+armW/2}" cy="${Y.wrist+8}" rx="${armW*0.42}" ry="${armW*0.5}" fill="${skin}"></ellipse>`;
+  const handR = `<ellipse cx="${CX+shoulderW/2-8+armW/2}" cy="${Y.wrist+8}" rx="${armW*0.42}" ry="${armW*0.5}" fill="${skin}"></ellipse>`;
+
+  const legLeft = rr(legX1, Y.hip, legW, Y.ankle-Y.hip, legW*0.28);
+  const legRight = rr(legX2, Y.hip, legW, Y.ankle-Y.hip, legW*0.28);
+  const footL = `<ellipse cx="${legX1+legW/2}" cy="${Y.ankle+10}" rx="${legW*0.62}" ry="10" fill="${skin}"></ellipse>`;
+  const footR = `<ellipse cx="${legX2+legW/2}" cy="${Y.ankle+10}" rx="${legW*0.62}" ry="10" fill="${skin}"></ellipse>`;
+
+  return `
+    <g fill="${skin}">
+      ${legLeft}${legRight}${footL}${footR}
+      <path d="${torsoPath}"></path>
+      ${armL}${armR}${handL}${handR}
+      <rect x="${CX-13}" y="${Y.neckTop}" width="26" height="${Y.neckBot-Y.neckTop}" rx="8" fill="${skin}"></rect>
+      <circle cx="${CX}" cy="${Y.headCy}" r="${Y.headR}" fill="${skin}"></circle>
+      <path d="M ${CX-Y.headR} ${Y.headCy-6} a ${Y.headR} ${Y.headR} 0 0 1 ${Y.headR*2} 0" fill="${gender==='female' ? '#3B2A20' : '#2B2018'}"></path>
+    </g>`;
+}
+
+/* ---------------------------------------------------------
+   Build TOP garment
+--------------------------------------------------------- */
+function buildTop(item, cfg){
+  if(!item) return '';
+  const { shoulderW, waistW, armW } = cfg;
+  const fillId = fillFor(item);
+  const hemY = Y.waist + 26;
+  const sleeveLen = item.style === 'quarterzip' ? Y.wrist - 6 : Y.shoulder + 78;
+
+  const bodyPath = `
+    M ${CX - shoulderW/2 - 6} ${Y.shoulder - 6}
+    L ${CX + shoulderW/2 + 6} ${Y.shoulder - 6}
+    L ${CX + waistW/2 + 14} ${hemY}
+    L ${CX - waistW/2 - 14} ${hemY}
+    Z`;
+
+  const sleeveL = rr(CX-shoulderW/2-armW-2, Y.shoulder-8, armW+14, sleeveLen-Y.shoulder+8, (armW+14)/2.4);
+  const sleeveR = rr(CX+shoulderW/2-12, Y.shoulder-8, armW+14, sleeveLen-Y.shoulder+8, (armW+14)/2.4);
+
+  const collar = item.style === 'sleeveless'
+    ? `<path d="M ${CX-24} ${Y.shoulder-4} Q ${CX} ${Y.shoulder+22} ${CX+24} ${Y.shoulder-4} L ${CX+16} ${Y.shoulder-10} Q ${CX} ${Y.shoulder+6} ${CX-16} ${Y.shoulder-10} Z" fill="rgba(0,0,0,0.14)"></path>`
+    : `<path d="M ${CX-20} ${Y.shoulder-6} L ${CX} ${Y.shoulder+20} L ${CX+20} ${Y.shoulder-6}" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>`;
+
+  const zip = item.style === 'quarterzip'
+    ? `<line x1="${CX}" y1="${Y.shoulder+4}" x2="${CX}" y2="${Y.shoulder+70}" stroke="rgba(0,0,0,0.28)" stroke-width="3" stroke-linecap="round"></line>`
+    : '';
+
+  const sleeves = item.style === 'sleeveless' ? '' : `<g fill="${fillId}" stroke="rgba(0,0,0,0.06)" stroke-width="1">${sleeveL}${sleeveR}</g>`;
+
+  return `
+    <g>
+      ${sleeves}
+      <path d="${bodyPath}" fill="${fillId}" stroke="rgba(0,0,0,0.08)" stroke-width="1.5"></path>
+      ${collar}
+      ${zip}
+    </g>`;
+}
+
+/* ---------------------------------------------------------
+   Build BOTTOM garment
+--------------------------------------------------------- */
+function buildBottom(item, cfg){
+  if(!item) return '';
+  const { hipW, legW, legGap } = cfg;
+  const fillId = fillFor(item);
+  const topY = Y.hip - 10;
+
+  if(item.style === 'skort'){
+    const hemY = Y.thigh + 6;
+    const path = `
+      M ${CX-hipW/2-10} ${topY}
+      L ${CX+hipW/2+10} ${topY}
+      L ${CX+hipW/2+26} ${hemY}
+      L ${CX-hipW/2-26} ${hemY}
+      Z`;
+    return `<path d="${path}" fill="${fillId}" stroke="rgba(0,0,0,0.08)" stroke-width="1.5"></path>
+            <rect x="${CX-4}" y="${topY+4}" width="8" height="14" rx="3" fill="rgba(0,0,0,0.18)"></rect>`;
+  }
+
+  const legX1 = CX - legGap/2 - legW - 5;
+  const legX2 = CX + legGap/2 - 5;
+  const w = legW + 10;
+  const hemY = item.style === 'shorts' ? Y.thigh : (item.crop ? Y.ankle - 55 : Y.ankle + 6);
+
+  const waistband = rr(CX-hipW/2-8, topY, hipW+16, 18, 8);
+  const legLeft = rr(legX1, topY+10, w, hemY-topY-10, 14);
+  const legRight = rr(legX2, topY+10, w, hemY-topY-10, 14);
+
+  return `<g fill="${fillId}" stroke="rgba(0,0,0,0.08)" stroke-width="1.5">
+      ${legLeft}${legRight}
+      <rect x="${CX-hipW/2-8}" y="${topY}" width="${hipW+16}" height="18" rx="8"></rect>
+      <rect x="${CX-4}" y="${topY+2}" width="8" height="14" rx="3" fill="rgba(0,0,0,0.18)" stroke="none"></rect>
+    </g>`;
+}
+
+function fillFor(item){
+  return `url(#${patternIdFor(item)})`;
+}
+function patternIdFor(item){
+  return 'p-' + item.id;
+}
+
+/* ---------------------------------------------------------
+   Render everything
+--------------------------------------------------------- */
+function render(){
+  const cfg = BODY[gender];
+  const svg = document.getElementById('avatarSvg');
+
+  // defs: one pattern per catalog item (built once, reused)
+  const defs = [...TOPS, ...BOTTOMS].map(it => {
+    const id = patternIdFor(it);
+    const inner = it.stripe
+      ? `<rect width="8" height="8" fill="${it.color}"></rect><rect width="2.5" height="8" fill="${it.stripe}" opacity="0.9"></rect>`
+      : `<rect width="8" height="8" fill="${it.color}"></rect><circle cx="2" cy="2" r="0.55" fill="#000" opacity="0.07"></circle><circle cx="6" cy="6" r="0.55" fill="#000" opacity="0.07"></circle>`;
+    return `<pattern id="${id}" width="8" height="8" patternUnits="userSpaceOnUse">${inner}</pattern>`;
+  }).join('');
+
+  svg.innerHTML = `
+    <defs>${defs}</defs>
+    <ellipse cx="${CX}" cy="612" rx="92" ry="14" fill="rgba(31,58,46,0.10)"></ellipse>
+    ${buildBody(cfg)}
+    ${buildBottom(selectedBottom, cfg)}
+    ${buildTop(selectedTop, cfg)}
+  `;
+
+  // pin tag copy
+  const pin = document.getElementById('pinTag');
+  if(selectedTop && selectedBottom) pin.textContent = 'Look complete';
+  else if(selectedTop || selectedBottom) pin.textContent = 'One piece to go';
+  else pin.textContent = 'Build your look';
+
+  // scorecard
+  const valTop = document.getElementById('valTop');
+  const valBottom = document.getElementById('valBottom');
+  if(selectedTop){ valTop.textContent = selectedTop.name; valTop.classList.remove('empty'); }
+  else { valTop.textContent = 'Select a top'; valTop.classList.add('empty'); }
+  if(selectedBottom){ valBottom.textContent = selectedBottom.name; valBottom.classList.remove('empty'); }
+  else { valBottom.textContent = 'Select a bottom'; valBottom.classList.add('empty'); }
+
+  // rails selected state
+  document.querySelectorAll('#topsList .piece').forEach(el=>{
+    el.classList.toggle('selected', selectedTop && el.dataset.id === selectedTop.id);
+  });
+  document.querySelectorAll('#bottomsList .piece').forEach(el=>{
+    el.classList.toggle('selected', selectedBottom && el.dataset.id === selectedBottom.id);
+  });
+
+  document.getElementById('btnClearAll').disabled = !selectedTop && !selectedBottom;
+}
+
+/* ---------------------------------------------------------
+   Build rail lists (once)
+--------------------------------------------------------- */
+function swatchInner(item){
+  return `<div style="width:100%;height:100%;background:${item.color};position:relative;">
+    ${item.stripe ? `<div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg, ${item.stripe} 0 3px, transparent 3px 9px); opacity:0.85;"></div>` : ''}
+  </div>`;
+}
+
+function buildRail(containerId, items, kind){
+  const el = document.getElementById(containerId);
+  el.innerHTML = items.map(it => `
+    <button class="piece" data-id="${it.id}" data-kind="${kind}">
+      <div class="swatch">${swatchInner(it)}</div>
+      <div class="info">
+        <div class="name">${it.name}</div>
+        <div class="meta">${it.meta}</div>
+      </div>
+      <div class="check"></div>
+    </button>
+  `).join('');
+
+  el.querySelectorAll('.piece').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.id;
+      if(kind === 'top'){
+        selectedTop = (selectedTop && selectedTop.id === id) ? null : TOPS.find(t=>t.id===id);
+      } else {
+        selectedBottom = (selectedBottom && selectedBottom.id === id) ? null : BOTTOMS.find(b=>b.id===id);
+      }
+      render();
+    });
+  });
+}
+
+/* ---------------------------------------------------------
+   Wire up controls
+--------------------------------------------------------- */
+document.getElementById('btnFemale').addEventListener('click', ()=>{
+  gender='female';
+  document.getElementById('btnFemale').classList.add('active');
+  document.getElementById('btnMale').classList.remove('active');
+  render();
+});
+document.getElementById('btnMale').addEventListener('click', ()=>{
+  gender='male';
+  document.getElementById('btnMale').classList.add('active');
+  document.getElementById('btnFemale').classList.remove('active');
+  render();
+});
+document.getElementById('clearTop').addEventListener('click', ()=>{ selectedTop=null; render(); });
+document.getElementById('clearBottom').addEventListener('click', ()=>{ selectedBottom=null; render(); });
+document.getElementById('btnClearAll').addEventListener('click', ()=>{ selectedTop=null; selectedBottom=null; render(); });
+document.getElementById('btnRandom').addEventListener('click', ()=>{
+  selectedTop = TOPS[Math.floor(Math.random()*TOPS.length)];
+  selectedBottom = BOTTOMS[Math.floor(Math.random()*BOTTOMS.length)];
+  render();
+});
+
+document.getElementById('topsCount').textContent = TOPS.length;
+document.getElementById('bottomsCount').textContent = BOTTOMS.length;
+buildRail('topsList', TOPS, 'top');
+buildRail('bottomsList', BOTTOMS, 'bottom');
+render();
+</script>
+</body>
+</html>

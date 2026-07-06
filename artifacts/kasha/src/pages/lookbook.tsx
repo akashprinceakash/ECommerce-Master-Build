@@ -15,7 +15,7 @@ import {
 } from "@workspace/api-client-react";
 import { getAssetUrl, toProxiedUrl } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, Save, CheckCircle, Heart, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { Trash2, Save, CheckCircle, Heart, ZoomIn, ZoomOut, RotateCcw, Sparkles, Check, X } from "lucide-react";
 import avatarMale from "@/assets/lookbook/avatar-male.png";
 import avatarFemale from "@/assets/lookbook/avatar-female.png";
 
@@ -237,6 +237,23 @@ export default function LookbookPage() {
     });
   }, []);
 
+  const removeItem = useCallback((role: Role) => {
+    setSlots(prev => ({ ...prev, [role]: null }));
+  }, []);
+
+  // "Surprise me" — pulls a random saved top + bottom onto the avatar so
+  // browsing the wardrobe feels playful rather than a static form.
+  const randomizeOutfit = useCallback(() => {
+    if (tops.length > 0) {
+      const pick = tops[Math.floor(Math.random() * tops.length)];
+      selectItem("top", pick);
+    }
+    if (bottoms.length > 0) {
+      const pick = bottoms[Math.floor(Math.random() * bottoms.length)];
+      selectItem("bottom", pick);
+    }
+  }, [tops, bottoms, selectItem]);
+
   const handleSave = async () => {
     const items = (["top", "bottom"] as const)
       .filter(role => slots[role])
@@ -426,11 +443,30 @@ export default function LookbookPage() {
                           flex: 1,
                           width: isMobile ? "100%" : undefined,
                           height: isMobile ? 480 : 680,
-                          background: CANVAS_BG,
+                          background: `linear-gradient(180deg, ${CANVAS_BG} 0%, ${CANVAS_BG} 82%, #E2DCD2 82%, #E2DCD2 100%)`,
                           border: "1px solid rgba(184,146,90,0.22)",
+                          borderRadius: 6,
+                          boxShadow: "0 18px 40px -18px rgba(20,15,5,0.28)",
                           overflow: "hidden",
                         }}
                       >
+                        {/* Status pin — mirrors a stylist's "look complete" note */}
+                        <div style={{
+                          position: "absolute", top: 12, left: 12, zIndex: 10,
+                          background: "#0A0A0A", color: "#fff",
+                          fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase",
+                          padding: "6px 11px", borderRadius: 3,
+                        }}>
+                          {slots.top && slots.bottom ? "Look Complete" : slots.top || slots.bottom ? "One Piece to Go" : "Build Your Look"}
+                        </div>
+
+                        {/* Grounding shadow beneath the avatar's feet */}
+                        <div style={{
+                          position: "absolute", left: "50%", bottom: isMobile ? "6%" : "9%",
+                          width: "34%", height: 14, transform: "translateX(-50%)",
+                          background: "radial-gradient(ellipse at center, rgba(10,10,10,0.22) 0%, rgba(10,10,10,0) 72%)",
+                        }} />
+
                         <img
                           src={avatarSrc}
                           alt={gender === "male" ? "Male avatar" : "Female avatar"}
@@ -545,6 +581,52 @@ export default function LookbookPage() {
                       />
                     </div>
 
+                    {/* ── Current Look scorecard — plain-language confirmation of what's
+                        styled, with a quick per-item remove, like a stylist's fitting note. */}
+                    <div style={{ background: "#fff", border: "1px solid rgba(184,146,90,0.2)" }}>
+                      <div style={{ padding: "12px 16px 8px", borderBottom: "1px dashed rgba(0,0,0,0.1)" }}>
+                        <span style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.3em", color: "rgba(0,0,0,0.4)", textTransform: "uppercase" }}>
+                          Current Look
+                        </span>
+                      </div>
+                      {(["top", "bottom"] as const).map(role => {
+                        const item = slots[role];
+                        return (
+                          <div
+                            key={role}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 12, padding: "10px 16px",
+                              borderBottom: role === "top" ? "1px solid rgba(0,0,0,0.06)" : "none",
+                            }}
+                          >
+                            <span style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.15em", textTransform: "uppercase", color: GOLD, width: 64, flexShrink: 0 }}>
+                              {role === "top" ? "Top" : "Bottom"}
+                            </span>
+                            <span style={{
+                              fontFamily: FONT_DISPLAY, fontSize: 16, flex: 1, minWidth: 0,
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                              color: item ? "#0A0A0A" : "rgba(0,0,0,0.35)", fontStyle: item ? "normal" : "italic",
+                            }}>
+                              {item ? item.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "") : `Select a ${role}`}
+                            </span>
+                            {item && (
+                              <button
+                                onClick={() => removeItem(role)}
+                                title={`Remove ${role}`}
+                                style={{
+                                  display: "flex", alignItems: "center", justifyContent: "center",
+                                  width: 22, height: 22, background: "transparent", border: "none",
+                                  color: "rgba(0,0,0,0.4)", cursor: "pointer", flexShrink: 0,
+                                }}
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
                     {/* Save controls */}
                     <div style={{
                       display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center",
@@ -560,6 +642,21 @@ export default function LookbookPage() {
                           outline: "none", background: "#FAFAF7", color: "#0A0A0A",
                         }}
                       />
+                      <button
+                        onClick={randomizeOutfit}
+                        disabled={!hasAnySaved}
+                        title="Style a random outfit from your saved pieces"
+                        style={{
+                          display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_UI, fontSize: 10,
+                          letterSpacing: "0.2em", textTransform: "uppercase", padding: "10px 16px",
+                          border: `1px solid ${hasAnySaved ? GOLD : "rgba(0,0,0,0.12)"}`, background: "transparent",
+                          cursor: hasAnySaved ? "pointer" : "not-allowed",
+                          color: hasAnySaved ? GOLD : "rgba(0,0,0,0.25)",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <Sparkles size={13} /> Surprise Me
+                      </button>
                       <button
                         onClick={() => { setSlots({ top: null, bottom: null }); }}
                         disabled={!slots.top && !slots.bottom}
@@ -784,6 +881,15 @@ function GarmentPanel({
                         </svg>
                       </div>
                     )}
+                    {isSelected && !isStripping && (
+                      <div style={{
+                        position: "absolute", top: -4, right: -4, width: 15, height: 15, borderRadius: "50%",
+                        background: GOLD, display: "flex", alignItems: "center", justifyContent: "center",
+                        boxShadow: "0 1px 4px rgba(0,0,0,0.25)",
+                      }}>
+                        <Check size={9} color="#fff" strokeWidth={3} />
+                      </div>
+                    )}
                   </div>
                   <span style={{ fontFamily: FONT_UI, fontSize: 7, letterSpacing: "0.06em", color: isSelected ? GOLD : "#0A0A0A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", textAlign: "center" }}>
                     {p.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "").slice(0, 12)}
@@ -835,6 +941,15 @@ function GarmentPanel({
                     <svg width="16" height="16" viewBox="0 0 16 16" style={{ animation: "ka-spin 0.9s linear infinite" }}>
                       <circle cx="8" cy="8" r="6" fill="none" stroke={GOLD} strokeWidth="2" strokeDasharray="28" strokeDashoffset="10" strokeLinecap="round" />
                     </svg>
+                  </div>
+                )}
+                {isSelected && !isStripping && (
+                  <div style={{
+                    position: "absolute", top: -5, right: -5, width: 17, height: 17, borderRadius: "50%",
+                    background: GOLD, display: "flex", alignItems: "center", justifyContent: "center",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.25)",
+                  }}>
+                    <Check size={10} color="#fff" strokeWidth={3} />
                   </div>
                 )}
               </div>
