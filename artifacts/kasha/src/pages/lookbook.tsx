@@ -34,11 +34,11 @@ const TOP_CATEGORIES = new Set(["polo", "t-shirt", "hoodie", "jacket", "dress"])
 const BOTTOM_CATEGORIES = new Set(["shorts", "trousers", "skorts"]);
 
 // Anchor boxes (percentages of the avatar image) that a garment is fit into.
-// Tuned to the photoreal avatar's shoulder/waist/ankle proportions so garment
-// cutouts land on the torso and legs instead of floating over empty space.
+// Tuned to the generated mannequin's shoulder/hip/ankle proportions so
+// garments sit where a top or bottom would actually fall on the body.
 const ANCHORS: Record<Role, { top: number; bottom: number; left: number; right: number }> = {
-  top: { top: 16.5, bottom: 42.5, left: 29, right: 71 },
-  bottom: { top: 41, bottom: 93, left: 34, right: 66 },
+  top: { top: 19, bottom: 49, left: 20, right: 80 },
+  bottom: { top: 43, bottom: 93, left: 24, right: 76 },
 };
 
 type SlotItem = {
@@ -335,6 +335,38 @@ export default function LookbookPage() {
             {/* ── Builder tab ── */}
             {activeTab === "builder" && (
               <>
+                {/* Empty state: no saved products */}
+                {!savedLoading && !hasAnySaved && (
+                  <div style={{
+                    textAlign: "center", padding: "72px 24px",
+                    background: "#fff", border: "1px dashed rgba(184,146,90,0.35)",
+                  }}>
+                    <div style={{
+                      width: 72, height: 72, borderRadius: "50%",
+                      background: "rgba(184,146,90,0.08)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      margin: "0 auto 20px",
+                    }}>
+                      <Heart size={28} color="rgba(184,146,90,0.5)" />
+                    </div>
+                    <p style={{ fontFamily: FONT_DISPLAY, fontSize: 24, color: "#0A0A0A", marginBottom: 10 }}>
+                      Your Lookbook is empty
+                    </p>
+                    <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.42)", letterSpacing: "0.12em", marginBottom: 28, maxWidth: 400, margin: "0 auto 28px", lineHeight: 1.8 }}>
+                      Tap the ♡ icon on any product to save it here.<br />
+                      Then style a top and bottom together on your avatar.
+                    </p>
+                    <Link href="/products">
+                      <button style={{
+                        fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.28em", textTransform: "uppercase",
+                        background: GOLD, color: "#fff", border: "none", padding: "13px 40px", cursor: "pointer",
+                      }}>
+                        Explore the Collection
+                      </button>
+                    </Link>
+                  </div>
+                )}
+
                 {/* Loading skeleton */}
                 {savedLoading && (
                   <div style={{ height: 320, background: "#fff", border: "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -345,30 +377,9 @@ export default function LookbookPage() {
                   </div>
                 )}
 
-                {/* Builder layout — avatar always shown wearing its default outfit,
-                    even before the wardrobe has any saved pieces. */}
-                {!savedLoading && (
+                {/* Builder layout */}
+                {!savedLoading && hasAnySaved && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-                    {!hasAnySaved && (
-                      <div style={{
-                        display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12,
-                        background: "rgba(184,146,90,0.08)", border: "1px dashed rgba(184,146,90,0.4)", padding: "12px 16px",
-                      }}>
-                        <Heart size={16} color={GOLD} style={{ flexShrink: 0 }} />
-                        <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.55)", letterSpacing: "0.06em", margin: 0, flex: 1, minWidth: 200 }}>
-                          Your avatar starts dressed in our classic white tee and trousers. Tap ♡ on any product to save it here, then click it to style it on.
-                        </p>
-                        <Link href="/products">
-                          <button style={{
-                            fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase",
-                            background: GOLD, color: "#fff", border: "none", padding: "9px 20px", cursor: "pointer", whiteSpace: "nowrap",
-                          }}>
-                            Explore the Collection
-                          </button>
-                        </Link>
-                      </div>
-                    )}
 
                     {/* On-page instructions + avatar toggle */}
                     <div style={{
@@ -507,6 +518,18 @@ export default function LookbookPage() {
                             );
                           })}
                         </div>
+
+                        {/* Empty state */}
+                        {!slots.top && !slots.bottom && strippingIds.size === 0 && (
+                          <div style={{
+                            position: "absolute", bottom: 18, left: 0, right: 0, textAlign: "center",
+                            pointerEvents: "none",
+                          }}>
+                            <p style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.15em", color: "rgba(0,0,0,0.32)" }}>
+                              Pick a top and a bottom to begin styling
+                            </p>
+                          </div>
+                        )}
 
                         {strippingIds.size > 0 && (
                           <div style={{
