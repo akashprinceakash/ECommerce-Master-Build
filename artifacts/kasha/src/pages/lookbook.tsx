@@ -178,6 +178,7 @@ export default function LookbookPage() {
   }, [savedIds, allProducts]);
 
   const hasAnySaved = tops.length > 0 || bottoms.length > 0;
+  const hasStyledItem = !!slots.top || !!slots.bottom;
 
   // ── Slot logic ────────────────────────────────────────────────────────────
   const selectItem = useCallback(async (
@@ -208,24 +209,31 @@ export default function LookbookPage() {
     }));
   }, []);
 
-  const clearSlot = useCallback((role: Role) => {
-    setSlots(prev => ({ ...prev, [role]: null }));
-  }, []);
-
-  const resizeSlot = useCallback((role: Role, delta: number) => {
+  // Single global outfit zoom — adjusts whatever is currently styled (top
+  // and/or bottom) together, so the controls stay simple: Zoom In / Zoom Out /
+  // Reset Outfit, always visible, rather than a separate control per slot.
+  const zoomOutfit = useCallback((delta: number) => {
     setSlots(prev => {
-      const item = prev[role];
-      if (!item) return prev;
-      const nextScale = Math.max(0.6, Math.min(1.6, item.scale + delta));
-      return { ...prev, [role]: { ...item, scale: nextScale } };
+      const next = { ...prev };
+      (["top", "bottom"] as const).forEach(role => {
+        const item = prev[role];
+        if (!item) return;
+        const nextScale = Math.max(0.6, Math.min(1.6, item.scale + delta));
+        next[role] = { ...item, scale: nextScale };
+      });
+      return next;
     });
   }, []);
 
-  const resetSlot = useCallback((role: Role) => {
+  const resetOutfit = useCallback(() => {
     setSlots(prev => {
-      const item = prev[role];
-      if (!item) return prev;
-      return { ...prev, [role]: { ...item, scale: 1 } };
+      const next = { ...prev };
+      (["top", "bottom"] as const).forEach(role => {
+        const item = prev[role];
+        if (!item) return;
+        next[role] = { ...item, scale: 1 };
+      });
+      return next;
     });
   }, []);
 
@@ -470,42 +478,44 @@ export default function LookbookPage() {
                           );
                         })}
 
-                        {/* Zoom controls per slot — always visible, not hover-only */}
+                        {/* Controls — Zoom In / Zoom Out / Reset Outfit, always visible
+                            (not hover-gated), applying to the whole outfit at once. */}
                         <div style={{
                           position: "absolute", top: 10, right: 10, zIndex: 10,
-                          display: "flex", flexDirection: "column", gap: 8,
+                          display: "flex", alignItems: "center", gap: 2,
+                          background: "rgba(255,255,255,0.94)", backdropFilter: "blur(8px)",
+                          border: "1px solid rgba(0,0,0,0.08)", borderRadius: 4,
+                          boxShadow: "0 2px 10px rgba(0,0,0,0.09)", padding: "5px 6px",
                         }}>
-                          {(["top", "bottom"] as const).map(role => {
-                            const item = slots[role];
-                            if (!item) return null;
-                            return (
-                              <div
-                                key={role}
-                                style={{
-                                  display: "flex", alignItems: "center", gap: 4,
-                                  background: "rgba(255,255,255,0.94)", backdropFilter: "blur(8px)",
-                                  border: "1px solid rgba(0,0,0,0.08)", borderRadius: 4,
-                                  boxShadow: "0 2px 10px rgba(0,0,0,0.09)", padding: "4px 6px",
-                                }}
-                              >
-                                <span style={{ fontFamily: FONT_UI, fontSize: 8, letterSpacing: "0.15em", color: GOLD, textTransform: "uppercase", paddingRight: 2 }}>
-                                  {role}
-                                </span>
-                                <button onClick={() => resizeSlot(role, -0.1)} title="Zoom out" style={iconBtnStyle}>
-                                  <ZoomOut size={13} />
-                                </button>
-                                <button onClick={() => resizeSlot(role, 0.1)} title="Zoom in" style={iconBtnStyle}>
-                                  <ZoomIn size={13} />
-                                </button>
-                                <button onClick={() => resetSlot(role)} title="Reset size" style={iconBtnStyle}>
-                                  <RotateCcw size={11} />
-                                </button>
-                                <button onClick={() => clearSlot(role)} title={`Remove ${role}`} style={{ ...iconBtnStyle, color: "#a33" }}>
-                                  ×
-                                </button>
-                              </div>
-                            );
-                          })}
+                          <button
+                            onClick={() => zoomOutfit(-0.1)}
+                            disabled={!hasStyledItem}
+                            title="Zoom out"
+                            style={{ ...controlBtnStyle, opacity: hasStyledItem ? 1 : 0.4, cursor: hasStyledItem ? "pointer" : "not-allowed" }}
+                          >
+                            <ZoomOut size={13} />
+                            <span>Zoom Out</span>
+                          </button>
+                          <div style={{ width: 1, height: 16, background: "rgba(0,0,0,0.1)" }} />
+                          <button
+                            onClick={() => zoomOutfit(0.1)}
+                            disabled={!hasStyledItem}
+                            title="Zoom in"
+                            style={{ ...controlBtnStyle, opacity: hasStyledItem ? 1 : 0.4, cursor: hasStyledItem ? "pointer" : "not-allowed" }}
+                          >
+                            <ZoomIn size={13} />
+                            <span>Zoom In</span>
+                          </button>
+                          <div style={{ width: 1, height: 16, background: "rgba(0,0,0,0.1)" }} />
+                          <button
+                            onClick={resetOutfit}
+                            disabled={!hasStyledItem}
+                            title="Reset outfit"
+                            style={{ ...controlBtnStyle, opacity: hasStyledItem ? 1 : 0.4, cursor: hasStyledItem ? "pointer" : "not-allowed" }}
+                          >
+                            <RotateCcw size={12} />
+                            <span>Reset Outfit</span>
+                          </button>
                         </div>
 
                         {strippingIds.size > 0 && (
@@ -718,10 +728,12 @@ export default function LookbookPage() {
   );
 }
 
-const iconBtnStyle: React.CSSProperties = {
-  display: "flex", alignItems: "center", justifyContent: "center",
-  width: 22, height: 22, background: "transparent", border: "none", cursor: "pointer",
-  color: "#0A0A0A", fontSize: 14, lineHeight: 1,
+const controlBtnStyle: React.CSSProperties = {
+  display: "flex", alignItems: "center", gap: 5,
+  background: "transparent", border: "none",
+  padding: "5px 8px", color: "#0A0A0A",
+  fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase",
+  whiteSpace: "nowrap",
 };
 
 function GarmentPanel({
