@@ -35,6 +35,9 @@ import type {
   Product,
   SaveLookbookProduct201,
   SaveLookbookProductBody,
+  SubmitTryOnBody,
+  TryOnJobAccepted,
+  TryOnJobStatus,
   UpdateCartItemBody,
   UpdateCustomizationBody,
   UpsertUserProfileBody,
@@ -2121,6 +2124,179 @@ export const useUnsaveLookbookProduct = <
 > => {
   return useMutation(getUnsaveLookbookProductMutationOptions(options));
 };
+
+/**
+ * @summary Submit an AI virtual try-on job (top+bottom, or a single dress)
+ */
+export const getSubmitTryOnUrl = () => {
+  return `/api/lookbook-tryon`;
+};
+
+export const submitTryOn = async (
+  submitTryOnBody: SubmitTryOnBody,
+  options?: RequestInit,
+): Promise<TryOnJobAccepted> => {
+  return customFetch<TryOnJobAccepted>(getSubmitTryOnUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(submitTryOnBody),
+  });
+};
+
+export const getSubmitTryOnMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitTryOn>>,
+    TError,
+    { data: BodyType<SubmitTryOnBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitTryOn>>,
+  TError,
+  { data: BodyType<SubmitTryOnBody> },
+  TContext
+> => {
+  const mutationKey = ["submitTryOn"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitTryOn>>,
+    { data: BodyType<SubmitTryOnBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return submitTryOn(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitTryOnMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitTryOn>>
+>;
+export type SubmitTryOnMutationBody = BodyType<SubmitTryOnBody>;
+export type SubmitTryOnMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Submit an AI virtual try-on job (top+bottom, or a single dress)
+ */
+export const useSubmitTryOn = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitTryOn>>,
+    TError,
+    { data: BodyType<SubmitTryOnBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitTryOn>>,
+  TError,
+  { data: BodyType<SubmitTryOnBody> },
+  TContext
+> => {
+  return useMutation(getSubmitTryOnMutationOptions(options));
+};
+
+/**
+ * @summary Poll the status/result of a try-on job
+ */
+export const getGetTryOnJobUrl = (jobId: string) => {
+  return `/api/lookbook-tryon/${jobId}`;
+};
+
+export const getTryOnJob = async (
+  jobId: string,
+  options?: RequestInit,
+): Promise<TryOnJobStatus> => {
+  return customFetch<TryOnJobStatus>(getGetTryOnJobUrl(jobId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTryOnJobQueryKey = (jobId: string) => {
+  return [`/api/lookbook-tryon/${jobId}`] as const;
+};
+
+export const getGetTryOnJobQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTryOnJob>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  jobId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTryOnJob>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTryOnJobQueryKey(jobId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTryOnJob>>> = ({
+    signal,
+  }) => getTryOnJob(jobId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!jobId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTryOnJob>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTryOnJobQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTryOnJob>>
+>;
+export type GetTryOnJobQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Poll the status/result of a try-on job
+ */
+
+export function useGetTryOnJob<
+  TData = Awaited<ReturnType<typeof getTryOnJob>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  jobId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTryOnJob>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTryOnJobQueryOptions(jobId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary List the current user's club orders

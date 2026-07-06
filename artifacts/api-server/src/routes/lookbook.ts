@@ -1,28 +1,35 @@
 import { Router, type IRouter } from "express";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import {
   db,
   lookbookOutfitsTable,
-  lookbookOutfitItemSchema,
+  lookbookLookItemSchema,
   lookbookSavedProductsTable,
+  productsTable,
 } from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
-import type { LookbookOutfitItem } from "@workspace/db";
+import type { LookbookLookItem } from "@workspace/db";
+import { classifyProductRole } from "../services/vton/classifier";
+import { submitTryOnJob, getTryOnJob } from "../services/vton/jobQueue";
+import { AVATAR_IMAGE_URLS } from "../services/vton/humanImages";
+import type { GarmentRole, TryOnGarment } from "../services/vton/types";
 
 const router: IRouter = Router();
 
-function parseBody(body: unknown): { name: string; items: LookbookOutfitItem[] } | null {
+function parseOutfitBody(body: unknown): { name: string; items: LookbookLookItem[]; gender: "male" | "female"; resultImageUrl: string } | null {
   if (!body || typeof body !== "object") return null;
   const b = body as Record<string, unknown>;
   if (typeof b.name !== "string" || !b.name.trim() || b.name.length > 100) return null;
-  if (!Array.isArray(b.items)) return null;
-  const items: LookbookOutfitItem[] = [];
+  if (!Array.isArray(b.items) || b.items.length === 0) return null;
+  if (typeof b.resultImageUrl !== "string" || !b.resultImageUrl.trim()) return null;
+  const gender = b.gender === "male" ? "male" : "female";
+  const items: LookbookLookItem[] = [];
   for (const raw of b.items) {
-    const parsed = lookbookOutfitItemSchema.safeParse(raw);
+    const parsed = lookbookLookItemSchema.safeParse(raw);
     if (!parsed.success) return null;
     items.push(parsed.data);
   }
-  return { name: b.name.trim(), items };
+  return { name: b.name.trim(), items, gender, resultImageUrl: b.resultImageUrl.trim() };
 }
 
 // ── Outfit CRUD ──────────────────────────────────────────────────────────────
@@ -39,14 +46,20 @@ router.get("/lookbook-outfits", requireAuth, async (req, res): Promise<void> => 
 
 router.post("/lookbook-outfits", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
-  const parsed = parseBody(req.body);
+  const parsed = parseOutfitBody(req.body);
   if (!parsed) {
     res.status(400).json({ error: "Invalid body" });
     return;
   }
   const [outfit] = await db
     .insert(lookbookOutfitsTable)
-    .values({ userId, name: parsed.name, items: parsed.items })
+    .values({
+      userId,
+      name: parsed.name,
+      items: parsed.items,
+      gender: parsed.gender,
+      resultImageUrl: parsed.resultImageUrl,
+    })
     .returning();
   res.status(201).json(outfit);
 });
@@ -111,6 +124,71 @@ router.delete("/lookbook-saved/:productId", requireAuth, async (req, res): Promi
       ),
     );
   res.status(204).send();
+});
+
+// ── AI virtual try-on ─────────────────────────────────────────────────────────
+
+router.post("/lookbook-tryon", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const b = req.body as Record<string, unknown>;
+
+  const gender = b.gender === "male" ? "male" : b.gender === "female" ? "female" : null;
+  const productIds = Array.isArray(b.productIds)
+    ? b.productIds.filter((v): v is number => typeof v === "number")
+    : [];
+
+  if (!gender || productIds.length === 0 || productIds.length > 2) {
+    res.status(400).json({ error: "Provide a gender and 1-2 product IDs (top+bottom, or a single dress)" });
+    return;
+  }
+
+  const products = await db.select().from(productsTable).where(inArray(productsTable.id, productIds));
+  if (products.length !== productIds.length) {
+    res.status(400).json({ error: "One or more products were not found" });
+    return;
+  }
+
+  const garments: TryOnGarment[] = [];
+  const roles = new Set<GarmentRole>();
+  for (const product of products) {
+    const role = classifyProductRole(product.category);
+    if (!role) {
+      res.status(400).json({ error: `"${product.name}" is not yet supported for virtual try-on` });
+      return;
+    }
+    if (roles.has("dress") || (role === "dress" && roles.size > 0) || roles.has(role)) {
+      res.status(400).json({ error: "Select either a single dress, or a top and/or bottom" });
+      return;
+    }
+    roles.add(role);
+    const imageUrl = product.thumbnailUrl || "";
+    if (!imageUrl) {
+      res.status(400).json({ error: `"${product.name}" has no image available for try-on` });
+      return;
+    }
+    garments.push({ productId: product.id, role, name: product.name, imageUrl });
+  }
+
+  // Process top before bottom for a stable chaining order (dress is alone).
+  garments.sort((a, b2) => (a.role === "top" ? 0 : a.role === "bottom" ? 1 : 2) - (b2.role === "top" ? 0 : b2.role === "bottom" ? 1 : 2));
+
+  const job = submitTryOnJob(userId, AVATAR_IMAGE_URLS[gender], garments);
+  res.status(202).json({ jobId: job.id, status: job.status });
+});
+
+router.get("/lookbook-tryon/:jobId", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const job = getTryOnJob(String(req.params.jobId), userId);
+  if (!job) {
+    res.status(404).json({ error: "Job not found" });
+    return;
+  }
+  res.json({
+    jobId: job.id,
+    status: job.status,
+    resultImageUrl: job.resultImageUrl,
+    error: job.error,
+  });
 });
 
 export default router;

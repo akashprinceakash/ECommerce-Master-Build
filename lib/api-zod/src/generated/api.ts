@@ -602,15 +602,13 @@ export const ListLookbookOutfitsResponseItem = zod.object({
   items: zod.array(
     zod.object({
       productId: zod.number(),
+      role: zod.enum(["top", "bottom", "dress"]),
       name: zod.string(),
       thumbnailUrl: zod.string(),
-      x: zod.number(),
-      y: zod.number(),
-      width: zod.number(),
-      role: zod.enum(["top", "bottom"]).optional(),
-      gender: zod.enum(["male", "female"]).optional(),
     }),
   ),
+  gender: zod.enum(["male", "female"]),
+  resultImageUrl: zod.string(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -628,15 +626,13 @@ export const CreateLookbookOutfitBody = zod.object({
   items: zod.array(
     zod.object({
       productId: zod.number(),
+      role: zod.enum(["top", "bottom", "dress"]),
       name: zod.string(),
       thumbnailUrl: zod.string(),
-      x: zod.number(),
-      y: zod.number(),
-      width: zod.number(),
-      role: zod.enum(["top", "bottom"]).optional(),
-      gender: zod.enum(["male", "female"]).optional(),
     }),
   ),
+  gender: zod.enum(["male", "female"]),
+  resultImageUrl: zod.string(),
 });
 
 /**
@@ -666,6 +662,30 @@ export const SaveLookbookProductBody = zod.object({
  */
 export const UnsaveLookbookProductParams = zod.object({
   productId: zod.coerce.number(),
+});
+
+/**
+ * @summary Submit an AI virtual try-on job (top+bottom, or a single dress)
+ */
+export const submitTryOnBodyProductIdsMax = 2;
+
+export const SubmitTryOnBody = zod.object({
+  gender: zod.enum(["male", "female"]),
+  productIds: zod.array(zod.number()).min(1).max(submitTryOnBodyProductIdsMax),
+});
+
+/**
+ * @summary Poll the status/result of a try-on job
+ */
+export const GetTryOnJobParams = zod.object({
+  jobId: zod.coerce.string(),
+});
+
+export const GetTryOnJobResponse = zod.object({
+  jobId: zod.string(),
+  status: zod.enum(["pending", "processing", "succeeded", "failed"]),
+  resultImageUrl: zod.string().nullable(),
+  error: zod.string().nullable(),
 });
 
 /**

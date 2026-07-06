@@ -248,41 +248,48 @@ export interface UpsertUserProfileBody {
   defaultShippingAddress?: string | null;
 }
 
-export type LookbookOutfitItemRole =
-  (typeof LookbookOutfitItemRole)[keyof typeof LookbookOutfitItemRole];
+export type LookbookLookItemRole =
+  (typeof LookbookLookItemRole)[keyof typeof LookbookLookItemRole];
 
-export const LookbookOutfitItemRole = {
+export const LookbookLookItemRole = {
   top: "top",
   bottom: "bottom",
+  dress: "dress",
 } as const;
 
-export type LookbookOutfitItemGender =
-  (typeof LookbookOutfitItemGender)[keyof typeof LookbookOutfitItemGender];
+export interface LookbookLookItem {
+  productId: number;
+  role: LookbookLookItemRole;
+  name: string;
+  thumbnailUrl: string;
+}
 
-export const LookbookOutfitItemGender = {
+export type LookbookOutfitGender =
+  (typeof LookbookOutfitGender)[keyof typeof LookbookOutfitGender];
+
+export const LookbookOutfitGender = {
   male: "male",
   female: "female",
 } as const;
-
-export interface LookbookOutfitItem {
-  productId: number;
-  name: string;
-  thumbnailUrl: string;
-  x: number;
-  y: number;
-  width: number;
-  role?: LookbookOutfitItemRole;
-  gender?: LookbookOutfitItemGender;
-}
 
 export interface LookbookOutfit {
   id: number;
   userId: string;
   name: string;
-  items: LookbookOutfitItem[];
+  items: LookbookLookItem[];
+  gender: LookbookOutfitGender;
+  resultImageUrl: string;
   createdAt: string;
   updatedAt: string;
 }
+
+export type CreateLookbookOutfitBodyGender =
+  (typeof CreateLookbookOutfitBodyGender)[keyof typeof CreateLookbookOutfitBodyGender];
+
+export const CreateLookbookOutfitBodyGender = {
+  male: "male",
+  female: "female",
+} as const;
 
 export interface CreateLookbookOutfitBody {
   /**
@@ -290,11 +297,64 @@ export interface CreateLookbookOutfitBody {
    * @maxLength 100
    */
   name: string;
-  items: LookbookOutfitItem[];
+  items: LookbookLookItem[];
+  gender: CreateLookbookOutfitBodyGender;
+  resultImageUrl: string;
 }
 
 export interface SaveLookbookProductBody {
   productId: number;
+}
+
+export type SubmitTryOnBodyGender =
+  (typeof SubmitTryOnBodyGender)[keyof typeof SubmitTryOnBodyGender];
+
+export const SubmitTryOnBodyGender = {
+  male: "male",
+  female: "female",
+} as const;
+
+export interface SubmitTryOnBody {
+  gender: SubmitTryOnBodyGender;
+  /**
+   * @minItems 1
+   * @maxItems 2
+   */
+  productIds: number[];
+}
+
+export type TryOnJobAcceptedStatus =
+  (typeof TryOnJobAcceptedStatus)[keyof typeof TryOnJobAcceptedStatus];
+
+export const TryOnJobAcceptedStatus = {
+  pending: "pending",
+  processing: "processing",
+  succeeded: "succeeded",
+  failed: "failed",
+} as const;
+
+export interface TryOnJobAccepted {
+  jobId: string;
+  status: TryOnJobAcceptedStatus;
+}
+
+export type TryOnJobStatusStatus =
+  (typeof TryOnJobStatusStatus)[keyof typeof TryOnJobStatusStatus];
+
+export const TryOnJobStatusStatus = {
+  pending: "pending",
+  processing: "processing",
+  succeeded: "succeeded",
+  failed: "failed",
+} as const;
+
+export interface TryOnJobStatus {
+  jobId: string;
+  status: TryOnJobStatusStatus;
+  /** @nullable */
+  resultImageUrl: string | null;
+  /** @nullable */
+  error: string | null;
 }
 
 export interface ClubMeasurements {
