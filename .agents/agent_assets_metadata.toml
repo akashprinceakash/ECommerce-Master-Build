@@ -36,6 +36,18 @@ uri = "file://artifacts/kasha/src/assets/lookbook/avatar-female-raw.png"
 type = "image"
 title = "female fashion avatar mannequin"
 
+[[generated]]
+id = "kJ3nFnfdn2MVDuEW1XaSe"
+uri = "file://artifacts/kasha/src/assets/lookbook/avatar-male-raw2.png"
+type = "image"
+title = "male fashion model default outfit"
+
+[[generated]]
+id = "VSEGfnv2JZkFTicDnt1r6"
+uri = "file://artifacts/kasha/src/assets/lookbook/avatar-female-raw2.png"
+type = "image"
+title = "female fashion model default outfit"
+
 [[outputs]]
 id = "WicUZAl5xj8pkA_wEYvjt"
 uri = "file://kasha-project.tar.gz"
@@ -89,3 +101,9 @@ id = "MHpdQ79DRma_YatzLGgPq"
 uri = "file://lookbook.zip"
 type = "unspecified"
 title = "Lookbook Feature (frontend + backend + DB)"
+
+[[outputs]]
+id = "fI5QEo-bFdzfc0QAO26BH"
+uri = "file://attached_assets/exports/lookbook.zip"
+type = "unspecified"
+title = "Lookbook page + avatar assets"
