@@ -17,6 +17,7 @@ export const productsTable = pgTable("products", {
   thumbnailUrl: text("thumbnail_url"),
   additionalImages: text("additional_images"),
   available: boolean("available").notNull().default(true),
+  allowCustomization: boolean("allow_customization").notNull().default(false),
   sizes: text("sizes").array().notNull().default(["S", "M", "L", "XL"]),
   defaultColor: text("default_color").notNull().default("#FFFFFF"),
   colorLabel: text("color_label"),

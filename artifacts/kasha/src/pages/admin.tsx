@@ -31,6 +31,7 @@ interface Product {
   thumbnailUrl?: string | null;
   additionalImages?: string | null;
   available: boolean;
+  allowCustomization: boolean;
   sizes: string[];
   defaultColor: string;
   colorLabel?: string | null;
@@ -70,6 +71,7 @@ const EMPTY_FORM = {
   thumbnailUrl: "",
   additionalImages: "",
   available: true,
+  allowCustomization: false,
   sizes: ["S", "M", "L", "XL"],
   defaultColor: "#ffffff",
   colorLabel: "",
@@ -1033,6 +1035,15 @@ export default function AdminPage() {
                       <input type="checkbox" checked={form.available} onChange={e => setForm(f => ({ ...f, available: e.target.checked }))} className="w-4 h-4" />
                       <span className="text-sm">Product is live and purchasable</span>
                     </label>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs tracking-widest text-muted-foreground uppercase">Customization</label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={form.allowCustomization} onChange={e => setForm(f => ({ ...f, allowCustomization: e.target.checked }))} className="w-4 h-4" />
+                      <span className="text-sm">Allow bespoke customization for this product</span>
+                    </label>
+                    <p className="text-xs text-muted-foreground">When enabled (and the Customization feature is active site-wide), a "Personalise" button will appear on this product's page.</p>
                   </div>
                 </div>
 

@@ -818,6 +818,8 @@ components:
           type: ["string", "null"]
         available:
           type: boolean
+        allowCustomization:
+          type: boolean
         sizes:
           type: array
           items:
@@ -837,6 +839,7 @@ components:
         - priceInPaise
         - modelUrl
         - available
+        - allowCustomization
         - sizes
         - defaultColor
         - createdAt

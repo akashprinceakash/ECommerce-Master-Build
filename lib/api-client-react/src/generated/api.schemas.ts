@@ -32,6 +32,7 @@ export interface Product {
   /** @nullable */
   additionalImages?: string | null;
   available: boolean;
+  allowCustomization: boolean;
   sizes: string[];
   defaultColor: string;
   /** @nullable */
