@@ -19,7 +19,7 @@ import {
 } from "@workspace/api-client-react";
 import { getAssetUrl } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, Save, CheckCircle, Heart, Sparkles, Check, X, Wand2, AlertTriangle } from "lucide-react";
+import { Trash2, Save, CheckCircle, Heart, Check, X, Wand2, AlertTriangle, ZoomIn, ZoomOut, RotateCcw, Sparkles } from "lucide-react";
 
 const GOLD = "#B8925A";
 const FONT_DISPLAY = "'Cormorant Garamond', serif";
@@ -66,6 +66,11 @@ export default function LookbookPage() {
   const [activeTab, setActiveTab] = useState<"builder" | "saved">("builder");
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [generation, setGeneration] = useState<GenerationState>({ status: "idle" });
+  const [zoom, setZoom] = useState(1);
+
+  const zoomIn = useCallback(() => setZoom(z => Math.min(z + 0.25, 3)), []);
+  const zoomOut = useCallback(() => setZoom(z => Math.max(z - 0.25, 1)), []);
+  const zoomReset = useCallback(() => setZoom(1), []);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
@@ -370,12 +375,57 @@ export default function LookbookPage() {
                         </div>
 
                         {generation.status === "succeeded" ? (
-                          <img
-                            src={generation.resultImageUrl}
-                            alt="AI-generated try-on result"
-                            draggable={false}
-                            style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                          />
+                          <>
+                            {/* Zoom controls */}
+                            <div style={{
+                              position: "absolute", bottom: 12, right: 12, zIndex: 10,
+                              display: "flex", gap: 6,
+                            }}>
+                              {[
+                                { icon: <ZoomIn size={14} />, onClick: zoomIn, title: "Zoom in" },
+                                { icon: <ZoomOut size={14} />, onClick: zoomOut, title: "Zoom out", disabled: zoom <= 1 },
+                                { icon: <RotateCcw size={14} />, onClick: zoomReset, title: "Reset zoom", disabled: zoom === 1 },
+                              ].map(({ icon, onClick, title, disabled }, i) => (
+                                <button
+                                  key={i}
+                                  onClick={onClick}
+                                  title={title}
+                                  disabled={disabled}
+                                  style={{
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    width: 32, height: 32,
+                                    background: "rgba(0,0,0,0.65)", color: disabled ? "rgba(255,255,255,0.3)" : "#fff",
+                                    border: "1px solid rgba(255,255,255,0.15)", borderRadius: 4,
+                                    cursor: disabled ? "default" : "pointer", backdropFilter: "blur(4px)",
+                                  }}
+                                >
+                                  {icon}
+                                </button>
+                              ))}
+                              {zoom !== 1 && (
+                                <div style={{
+                                  display: "flex", alignItems: "center", padding: "0 10px",
+                                  background: "rgba(0,0,0,0.65)", color: "#fff",
+                                  fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.1em",
+                                  border: "1px solid rgba(255,255,255,0.15)", borderRadius: 4,
+                                  backdropFilter: "blur(4px)",
+                                }}>
+                                  {Math.round(zoom * 100)}%
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ width: "100%", height: "100%", overflow: "auto", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <img
+                                src={generation.resultImageUrl}
+                                alt="AI-generated try-on result"
+                                draggable={false}
+                                style={{
+                                  width: `${zoom * 100}%`, height: `${zoom * 100}%`,
+                                  objectFit: "contain", transition: "width 0.2s, height 0.2s",
+                                }}
+                              />
+                            </div>
+                          </>
                         ) : isGenerating ? (
                           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
                             <Spinner />

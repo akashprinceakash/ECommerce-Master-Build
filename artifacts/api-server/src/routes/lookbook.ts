@@ -16,7 +16,7 @@ import type { GarmentRole, TryOnGarment } from "../services/vton/types";
 
 const router: IRouter = Router();
 
-function parseOutfitBody(body: unknown): { name: string; items: LookbookLookItem[]; gender: "male" | "female"; resultImageUrl: string } | null {
+function parseOutfitBody(body: unknown): { name: string; items: LookbookLookItem[]; gender: "male" | "female"; resultImageUrl: string } | { error: string } | null {
   if (!body || typeof body !== "object") return null;
   const b = body as Record<string, unknown>;
   if (typeof b.name !== "string" || !b.name.trim() || b.name.length > 100) return null;
@@ -29,7 +29,31 @@ function parseOutfitBody(body: unknown): { name: string; items: LookbookLookItem
     if (!parsed.success) return null;
     items.push(parsed.data);
   }
+
+  // Enforce mutual exclusivity: either a single dress OR top/bottom combination
+  const roles = items.map(i => i.role);
+  const hasDress = roles.includes("dress");
+  const hasTopOrBottom = roles.includes("top") || roles.includes("bottom");
+  if (hasDress && hasTopOrBottom) {
+    return { error: "A dress cannot be combined with a top or bottom" };
+  }
+  if (hasDress && roles.length > 1) {
+    return { error: "Only one dress may be selected" };
+  }
+
   return { name: b.name.trim(), items, gender, resultImageUrl: b.resultImageUrl.trim() };
+}
+
+/** Convert a potentially relative URL (e.g. /api/public/thumbnails/...) to an
+ *  absolute URL that external services like Replicate can reach.
+ *  Uses the first domain from REPLIT_DOMAINS, falling back to the request host. */
+function toAbsoluteUrl(url: string, reqHost: string): string {
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  const domains = (process.env["REPLIT_DOMAINS"] ?? "").split(",").map(d => d.trim()).filter(Boolean);
+  const host = domains[0] ?? reqHost;
+  const scheme = host.includes("localhost") ? "http" : "https";
+  const base = `${scheme}://${host}`;
+  return url.startsWith("/") ? `${base}${url}` : `${base}/${url}`;
 }
 
 // ── Outfit CRUD ──────────────────────────────────────────────────────────────
@@ -49,6 +73,10 @@ router.post("/lookbook-outfits", requireAuth, async (req, res): Promise<void> =>
   const parsed = parseOutfitBody(req.body);
   if (!parsed) {
     res.status(400).json({ error: "Invalid body" });
+    return;
+  }
+  if ("error" in parsed) {
+    res.status(400).json({ error: parsed.error });
     return;
   }
   const [outfit] = await db
@@ -161,11 +189,12 @@ router.post("/lookbook-tryon", requireAuth, async (req, res): Promise<void> => {
       return;
     }
     roles.add(role);
-    const imageUrl = product.thumbnailUrl || "";
-    if (!imageUrl) {
+    const rawUrl = product.thumbnailUrl || "";
+    if (!rawUrl) {
       res.status(400).json({ error: `"${product.name}" has no image available for try-on` });
       return;
     }
+    const imageUrl = toAbsoluteUrl(rawUrl, req.hostname);
     garments.push({ productId: product.id, role, name: product.name, imageUrl });
   }
 
