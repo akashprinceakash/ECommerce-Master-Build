@@ -107,3 +107,9 @@ id = "fI5QEo-bFdzfc0QAO26BH"
 uri = "file://attached_assets/exports/lookbook.zip"
 type = "unspecified"
 title = "Lookbook page + avatar assets"
+
+[[outputs]]
+id = "YOaCARKvY0W57sPw_CX5-"
+uri = "file://attached_assets/exports/kasha-customization-studio.zip"
+type = "unspecified"
+title = "KA.SHA Customization Studio — source code export"
