@@ -3191,15 +3191,38 @@ export default function CustomizePage() {
                           ?<input type="color" value={(activeKashaDesign||colorTarget==="all")?primaryColor:zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]||primaryColor} onChange={e=>applyPrimary(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
                           :<input type="color" value={zoneColors[colorTarget as Exclude<typeof colorTarget,"all">]||primaryColor} onChange={e=>applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>}
                       </label>
-                      {/* Canvas eyedropper — reads exact pixel from the flat design canvas (no lighting shift) */}
+                      {/* Eyedropper — reads exact pixel from the flat, unlit design canvas.
+                          Note: the native browser EyeDropper (e.g. from the OS colour-picker
+                          dialog) samples the actual lit 3D render, so colours placed on the
+                          garment (logos, prints) will look darker/duller there than their true
+                          value. This tool avoids that by sampling the flat source artwork
+                          directly — use it (not the OS picker) to match a placed design's colour. */}
                       <button
-                        title="Sample a colour directly from your uploaded design (no lighting effects)"
-                        onClick={()=>{
+                        title="Eyedropper — sample the exact colour from your uploaded design, unaffected by 3D lighting"
+                        onClick={async ()=>{
                           const fc=fcRef.current; if(!fc) return;
                           fc.renderAll();
                           const rawEl: HTMLCanvasElement|null = typeof (fc as any).getElement==="function"?(fc as any).getElement():null;
                           if(!rawEl) return;
-                          setSamplerPreview(rawEl.toDataURL("image/png"));
+                          const dataUrl=rawEl.toDataURL("image/png");
+                          const EyeDropperCtor=(window as any).EyeDropper;
+                          if(typeof EyeDropperCtor==="function"){
+                            setSamplerPreview(dataUrl);
+                            setSamplerActive(true);
+                            try{
+                              await new Promise(r=>setTimeout(r,50));
+                              const result=await new EyeDropperCtor().open();
+                              const sampledHex=String(result.sRGBHex);
+                              if(activeKashaDesign||colorTarget==="all") applyPrimary(sampledHex);
+                              else applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,sampledHex);
+                            }catch{
+                              // Cancelled — leave the click-to-sample overlay open as a fallback.
+                              return;
+                            }
+                            setSamplerActive(false);
+                            return;
+                          }
+                          setSamplerPreview(dataUrl);
                           setSamplerActive(true);
                         }}
                         style={{
@@ -3209,7 +3232,7 @@ export default function CustomizePage() {
                           fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:600,
                           color:V.tx,letterSpacing:".05em",flex:"1 1 auto",justifyContent:"center",
                         }}
-                      >🔬 Sample from Design</button>
+                      >💧 Eyedropper (Exact Colour)</button>
                     </div>
                     {/* Canvas sampler overlay */}
                     {samplerActive&&samplerPreview&&(
