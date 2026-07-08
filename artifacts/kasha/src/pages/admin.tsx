@@ -17,6 +17,12 @@ import { formatPrice } from "@/lib/format";
 import { getApiUrl, getAssetUrl } from "@/lib/api";
 import { PATTERNS, patternUrl } from "@/components/3d/patterns";
 
+interface ProductAddOn {
+  id: string;
+  label: string;
+  imageUrl?: string | null;
+}
+
 interface Product {
   id: number;
   name: string;
@@ -35,6 +41,8 @@ interface Product {
   sizes: string[];
   defaultColor: string;
   colorLabel?: string | null;
+  customizationMode?: string | null;
+  addOns?: ProductAddOn[] | null;
 }
 
 interface UserDesign {
@@ -75,6 +83,8 @@ const EMPTY_FORM = {
   sizes: ["S", "M", "L", "XL"],
   defaultColor: "#ffffff",
   colorLabel: "",
+  customizationMode: "zone",
+  addOns: [] as ProductAddOn[],
 };
 
 function isLightHex(hex: string): boolean {
@@ -667,6 +677,8 @@ export default function AdminPage() {
       sku: p.sku ?? "",
       stock: p.stock ?? 100,
       colorLabel: p.colorLabel ?? "",
+      customizationMode: p.customizationMode ?? "zone",
+      addOns: p.addOns ?? [],
     });
     setEditingId(p.id);
     setShowForm(true);
@@ -717,6 +729,50 @@ export default function AdminPage() {
       toast({ title: "Thumbnail uploaded", description: savedKB > 0 ? `Compressed by ${savedKB} KB` : undefined });
     } catch (err: any) { toast({ title: "Upload failed", description: err.message, variant: "destructive" }); }
     finally { setUploadingThumb(false); if (e.target) e.target.value = ""; }
+  };
+
+  const [uploadingAddOnIdx, setUploadingAddOnIdx] = useState<number | null>(null);
+
+  const handleAddOnImageUpload = async (idx: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAddOnIdx(idx);
+    try {
+      const token = await getToken();
+      const { compressImage } = await import("@/lib/imageCompression");
+      const compressed = await compressImage(file, { maxPx: 800, quality: 0.82 });
+      const fd = new FormData(); fd.append("thumbnail", compressed);
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`${getApiUrl()}/api/admin/upload/thumbnail`, { method: "POST", body: fd, headers });
+      if (!res.ok) throw new Error(await res.text());
+      const { url } = await res.json();
+      setForm(f => {
+        const addOns = [...(f.addOns ?? [])];
+        addOns[idx] = { ...addOns[idx], imageUrl: url };
+        return { ...f, addOns };
+      });
+      toast({ title: "Reference image uploaded" });
+    } catch (err: any) { toast({ title: "Upload failed", description: err.message, variant: "destructive" }); }
+    finally { setUploadingAddOnIdx(null); if (e.target) e.target.value = ""; }
+  };
+
+  const addAddOn = () => {
+    setForm(f => ({ ...f, addOns: [...(f.addOns ?? []), { id: `addon-${Date.now()}`, label: "", imageUrl: null }] }));
+  };
+  const updateAddOnLabel = (idx: number, label: string) => {
+    setForm(f => {
+      const addOns = [...(f.addOns ?? [])];
+      addOns[idx] = { ...addOns[idx], label };
+      return { ...f, addOns };
+    });
+  };
+  const removeAddOn = (idx: number) => {
+    setForm(f => {
+      const addOns = [...(f.addOns ?? [])];
+      addOns.splice(idx, 1);
+      return { ...f, addOns };
+    });
   };
 
   function safeParseImages(raw: string | null | undefined): string[] {
@@ -1045,6 +1101,55 @@ export default function AdminPage() {
                     </label>
                     <p className="text-xs text-muted-foreground">When enabled (and the Customization feature is active site-wide), a "Personalise" button will appear on this product's page.</p>
                   </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs tracking-widest text-muted-foreground uppercase">Customization Mode</label>
+                    <select value={form.customizationMode ?? "zone"} onChange={e => setForm(f => ({ ...f, customizationMode: e.target.value }))} className="h-10 border border-input bg-background px-3 text-sm rounded-none">
+                      <option value="zone">Zone-based (per-part colours/prints)</option>
+                      <option value="whole-garment">Whole Garment (single colour/print, no zones)</option>
+                      <option value="collar-only">Collar Only</option>
+                      <option value="two-part">Two-Part</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground">Controls how the customiser behaves for this product. Pants &amp; shorts should use "Whole Garment".</p>
+                  </div>
+
+                  {form.customizationMode === "whole-garment" && (
+                    <div className="flex flex-col gap-2 md:col-span-2 border border-dashed border-border p-4">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs tracking-widest text-muted-foreground uppercase">Yes/No Add-Ons</label>
+                        <Button type="button" variant="outline" size="sm" onClick={addAddOn} className="rounded-none text-xs flex items-center gap-1">
+                          <Plus className="w-3 h-3" /> Add Option
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Customer-facing Yes/No toggles shown during customization (e.g. Tee Holder, Side Pocket w/ Zipper, Velcro), each with an optional reference photo.</p>
+                      {(form.addOns ?? []).length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic">No add-ons yet.</p>
+                      ) : (
+                        <div className="flex flex-col gap-3 mt-1">
+                          {(form.addOns ?? []).map((a, idx) => (
+                            <div key={a.id} className="flex items-center gap-3 border border-input p-2">
+                              {a.imageUrl ? (
+                                <img src={getAssetUrl(a.imageUrl)} alt={a.label} className="h-12 w-12 object-cover border border-input shrink-0" />
+                              ) : (
+                                <div className="h-12 w-12 bg-muted flex items-center justify-center shrink-0 text-[8px] text-muted-foreground">IMG</div>
+                              )}
+                              <Input value={a.label} onChange={e => updateAddOnLabel(idx, e.target.value)} placeholder="e.g. Tee Holder" className="rounded-none flex-1 text-sm" />
+                              <label className="cursor-pointer shrink-0">
+                                <div className={`h-9 px-3 flex items-center gap-1.5 border border-input text-xs font-medium transition-colors ${uploadingAddOnIdx === idx ? "opacity-50" : "hover:bg-accent cursor-pointer"}`}>
+                                  {uploadingAddOnIdx === idx ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                                  <span>Photo</span>
+                                </div>
+                                <input type="file" accept="image/*" onChange={e => handleAddOnImageUpload(idx, e)} className="hidden" disabled={uploadingAddOnIdx === idx} />
+                              </label>
+                              <button type="button" onClick={() => removeAddOn(idx)} className="shrink-0 text-muted-foreground hover:text-destructive">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-border">

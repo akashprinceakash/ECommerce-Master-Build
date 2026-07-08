@@ -37,6 +37,21 @@ export const ListProductsResponseItem = zod.object({
   additionalImages: zod.string().nullish(),
   available: zod.boolean(),
   allowCustomization: zod.boolean(),
+  customizationMode: zod.enum([
+    "zone",
+    "whole-garment",
+    "collar-only",
+    "two-part",
+  ]),
+  addOns: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        label: zod.string(),
+        imageUrl: zod.string().nullable(),
+      }),
+    )
+    .nullish(),
   sizes: zod.array(zod.string()),
   defaultColor: zod.string(),
   colorLabel: zod.string().nullish(),
@@ -66,6 +81,21 @@ export const GetProductResponse = zod.object({
   additionalImages: zod.string().nullish(),
   available: zod.boolean(),
   allowCustomization: zod.boolean(),
+  customizationMode: zod.enum([
+    "zone",
+    "whole-garment",
+    "collar-only",
+    "two-part",
+  ]),
+  addOns: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        label: zod.string(),
+        imageUrl: zod.string().nullable(),
+      }),
+    )
+    .nullish(),
   sizes: zod.array(zod.string()),
   defaultColor: zod.string(),
   colorLabel: zod.string().nullish(),
@@ -235,6 +265,21 @@ export const GetCartResponse = zod.object({
         additionalImages: zod.string().nullish(),
         available: zod.boolean(),
         allowCustomization: zod.boolean(),
+        customizationMode: zod.enum([
+          "zone",
+          "whole-garment",
+          "collar-only",
+          "two-part",
+        ]),
+        addOns: zod
+          .array(
+            zod.object({
+              id: zod.string(),
+              label: zod.string(),
+              imageUrl: zod.string().nullable(),
+            }),
+          )
+          .nullish(),
         sizes: zod.array(zod.string()),
         defaultColor: zod.string(),
         colorLabel: zod.string().nullish(),
@@ -313,6 +358,21 @@ export const UpdateCartItemResponse = zod.object({
     additionalImages: zod.string().nullish(),
     available: zod.boolean(),
     allowCustomization: zod.boolean(),
+    customizationMode: zod.enum([
+      "zone",
+      "whole-garment",
+      "collar-only",
+      "two-part",
+    ]),
+    addOns: zod
+      .array(
+        zod.object({
+          id: zod.string(),
+          label: zod.string(),
+          imageUrl: zod.string().nullable(),
+        }),
+      )
+      .nullish(),
     sizes: zod.array(zod.string()),
     defaultColor: zod.string(),
     colorLabel: zod.string().nullish(),
@@ -403,6 +463,21 @@ export const ListOrdersResponseItem = zod.object({
         additionalImages: zod.string().nullish(),
         available: zod.boolean(),
         allowCustomization: zod.boolean(),
+        customizationMode: zod.enum([
+          "zone",
+          "whole-garment",
+          "collar-only",
+          "two-part",
+        ]),
+        addOns: zod
+          .array(
+            zod.object({
+              id: zod.string(),
+              label: zod.string(),
+              imageUrl: zod.string().nullable(),
+            }),
+          )
+          .nullish(),
         sizes: zod.array(zod.string()),
         defaultColor: zod.string(),
         colorLabel: zod.string().nullish(),
@@ -517,6 +592,21 @@ export const GetOrderResponse = zod.object({
         additionalImages: zod.string().nullish(),
         available: zod.boolean(),
         allowCustomization: zod.boolean(),
+        customizationMode: zod.enum([
+          "zone",
+          "whole-garment",
+          "collar-only",
+          "two-part",
+        ]),
+        addOns: zod
+          .array(
+            zod.object({
+              id: zod.string(),
+              label: zod.string(),
+              imageUrl: zod.string().nullable(),
+            }),
+          )
+          .nullish(),
         sizes: zod.array(zod.string()),
         defaultColor: zod.string(),
         colorLabel: zod.string().nullish(),

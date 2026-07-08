@@ -820,6 +820,24 @@ components:
           type: boolean
         allowCustomization:
           type: boolean
+        customizationMode:
+          type: string
+          enum: ["zone", "whole-garment", "collar-only", "two-part"]
+        addOns:
+          type: ["array", "null"]
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+              imageUrl:
+                type: ["string", "null"]
+            required:
+              - id
+              - label
+              - imageUrl
         sizes:
           type: array
           items:
@@ -840,6 +858,7 @@ components:
         - modelUrl
         - available
         - allowCustomization
+        - customizationMode
         - sizes
         - defaultColor
         - createdAt

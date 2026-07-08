@@ -1,6 +1,14 @@
-import { pgTable, text, serial, timestamp, integer, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+
+// Optional customer-facing add-on toggles (e.g. Tee Holder, Side pocket w/zipper, Velcro).
+// Each entry is a Yes/No choice with an optional reference photo of that garment part.
+export interface ProductAddOn {
+  id: string;
+  label: string;
+  imageUrl: string | null;
+}
 
 export const productsTable = pgTable("products", {
   id: serial("id").primaryKey(),
@@ -18,6 +26,11 @@ export const productsTable = pgTable("products", {
   additionalImages: text("additional_images"),
   available: boolean("available").notNull().default(true),
   allowCustomization: boolean("allow_customization").notNull().default(false),
+  // "zone" (default, per-part collar/sleeve customization) | "whole-garment" (single colour/print
+  // for the entire garment, e.g. pants/shorts) | "collar-only" | "two-part" (reserved for future
+  // dress/skorts garments — no 3D logic implemented yet, groundwork only).
+  customizationMode: text("customization_mode").notNull().default("zone"),
+  addOns: jsonb("add_ons").$type<ProductAddOn[] | null>().default(null),
   sizes: text("sizes").array().notNull().default(["S", "M", "L", "XL"]),
   defaultColor: text("default_color").notNull().default("#FFFFFF"),
   colorLabel: text("color_label"),

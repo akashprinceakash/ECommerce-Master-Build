@@ -241,6 +241,7 @@ function toProxiedUrl(url: string | null | undefined): string {
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+interface ProductAddOn { id: string; label: string; imageUrl?: string | null; }
 interface Product {
   id: number; name: string; description: string;
   category: string;
@@ -248,6 +249,8 @@ interface Product {
   sku?: string | null;
   priceInPaise: number; modelUrl: string;
   thumbnailUrl?: string|null; defaultColor?: string;
+  customizationMode?: string | null; // "zone" | "whole-garment" | "collar-only" | "two-part"
+  addOns?: ProductAddOn[] | null;
 }
 interface MatEntry { idx: number; name: string; mat: any; color: string; }
 
@@ -478,6 +481,8 @@ export default function CustomizePage() {
   const [printModalFor, setPrintModalFor] = useState<"all"|"base-body"|"collar"|"accent"|null>(null);
   const [pendingPrintKey, setPendingPrintKey] = useState<string|null>(null);
   const [bgRemoving, setBgRemoving] = useState(false);
+  // ── Whole-garment add-ons (Yes/No toggles, e.g. Tee Holder, Side Pocket w/ Zipper, Velcro) ──
+  const [selectedAddOns, setSelectedAddOns] = useState<Record<string, boolean>>({});
   const [modelPaused, setModelPaused] = useState(false);
   const historyStack = useRef<string[]>([]);
   const historyIdx = useRef(-1);
@@ -1445,6 +1450,9 @@ export default function CustomizePage() {
       textBold: textPlaced ? textBold : null,
       textItalic: textPlaced ? textItalic : null,
       sleeveLength,
+      addOns: (product?.addOns ?? [])
+        .filter(a => selectedAddOns[a.id])
+        .map(a => ({ id: a.id, label: a.label })),
     };
     return {
       productId:id, name:designName||`${product?.name} Custom`,
@@ -1986,6 +1994,7 @@ export default function CustomizePage() {
               if (userStyle !== null) {
                 const isPatternMode = effectiveSkuType === "pattern";
                 const isPrintMode   = effectiveSkuType === "print";
+                const isWholeGarment = product?.customizationMode === "whole-garment";
 
                 const TargetRow = ({title,desc,showColour,colourFor,showPrint,printFor}:{
                   title:string; desc?:string;
@@ -2065,7 +2074,7 @@ export default function CustomizePage() {
                       </div>
                     )}
 
-                    {isPrintMode&&(
+                    {isPrintMode&&!isWholeGarment&&(
                       <>
                         <TargetRow title="Full Body" desc="Apply a premium print to the entire garment" showPrint printFor="all"/>
                         <TargetRow title="Base Body" desc="Colour or print the body, excluding the collar" showColour colourFor="base-body" showPrint printFor="base-body"/>
@@ -2073,12 +2082,49 @@ export default function CustomizePage() {
                       </>
                     )}
 
-                    {!isPatternMode&&!isPrintMode&&(
+                    {isPrintMode&&isWholeGarment&&(
+                      <TargetRow title="Full Garment" desc="Apply a premium print to the entire garment" showPrint printFor="all"/>
+                    )}
+
+                    {!isPatternMode&&!isPrintMode&&!isWholeGarment&&(
                       <>
                         <TargetRow title="Full Body" desc="Colour or print the entire garment" showColour colourFor="all" showPrint printFor="all"/>
                         <TargetRow title="Base Body" desc="Body colour, excluding the collar" showColour colourFor="base-body" showPrint printFor="base-body"/>
                         <TargetRow title="Collar" desc="Collar accent colour or print" showColour colourFor="collar" showPrint printFor="collar"/>
                       </>
+                    )}
+
+                    {!isPatternMode&&!isPrintMode&&isWholeGarment&&(
+                      <TargetRow title="Full Garment" desc="Colour or print the entire garment — a single colour or print applies to the whole piece" showColour colourFor="all" showPrint printFor="all"/>
+                    )}
+
+                    {isWholeGarment&&product?.addOns&&product.addOns.length>0&&(
+                      <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:4}}>
+                        <div style={{fontFamily:"'Jost',sans-serif",fontSize:11,fontWeight:700,color:V.tx,letterSpacing:".08em",textTransform:"uppercase" as const}}>Add-Ons</div>
+                        {product.addOns.map(a=>{
+                          const isYes=!!selectedAddOns[a.id];
+                          return (
+                            <div key={a.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:`1.5px solid ${isYes?V.ac:V.bd}`,background:isYes?V.aclt:V.sf2}}>
+                              {a.imageUrl&&<img src={a.imageUrl} alt={a.label} style={{width:40,height:40,objectFit:"cover",borderRadius:6,border:`1px solid ${V.bd}`,flexShrink:0}}/>}
+                              <div style={{flex:1,fontFamily:"'Jost',sans-serif",fontSize:12,fontWeight:600,color:V.tx}}>{a.label}</div>
+                              <div style={{display:"flex",gap:4}}>
+                                {(["Yes","No"] as const).map(opt=>{
+                                  const isSel=opt==="Yes"?isYes:!isYes;
+                                  return (
+                                    <button key={opt} onClick={()=>setSelectedAddOns(s=>({...s,[a.id]:opt==="Yes"}))} style={{
+                                      padding:"6px 14px",borderRadius:99,fontSize:10,fontWeight:700,cursor:"pointer",
+                                      fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase" as const,
+                                      border:isSel?`1.5px solid ${V.ac}`:`1px solid ${V.bd}`,
+                                      background:isSel?V.ac:"transparent",
+                                      color:isSel?V.tx:V.mu,transition:"all .2s",
+                                    }}>{opt}</button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
 
                   </div>

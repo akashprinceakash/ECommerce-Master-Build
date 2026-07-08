@@ -13,6 +13,23 @@ export interface ErrorResponse {
   error: string;
 }
 
+export type ProductCustomizationMode =
+  (typeof ProductCustomizationMode)[keyof typeof ProductCustomizationMode];
+
+export const ProductCustomizationMode = {
+  zone: "zone",
+  "whole-garment": "whole-garment",
+  "collar-only": "collar-only",
+  "two-part": "two-part",
+} as const;
+
+export type ProductAddOnsItem = {
+  id: string;
+  label: string;
+  /** @nullable */
+  imageUrl: string | null;
+};
+
 export interface Product {
   id: number;
   name: string;
@@ -33,6 +50,9 @@ export interface Product {
   additionalImages?: string | null;
   available: boolean;
   allowCustomization: boolean;
+  customizationMode: ProductCustomizationMode;
+  /** @nullable */
+  addOns?: ProductAddOnsItem[] | null;
   sizes: string[];
   defaultColor: string;
   /** @nullable */
