@@ -324,6 +324,11 @@ export default function CustomizePage() {
     enabled:  !!id,
   });
 
+  // Whole-garment products (pants/shorts/skorts) are restricted to the client's
+  // spec: single colour/print for the whole piece + Yes/No add-ons only.
+  // Logo placement and text/personalization are intentionally NOT offered.
+  const isWholeGarment = product?.customizationMode === "whole-garment";
+
   const { data: siteSettingsRaw } = useQuery<Record<string, unknown>>({
     queryKey: ["site-settings"],
     queryFn:  () => apiFetch("/api/site-settings"),
@@ -1775,7 +1780,7 @@ export default function CustomizePage() {
           {n:2,label:"Design"},
           {n:3,label:"Logo & Text"},
           {n:4,label:"Sizing"},
-        ] as const).filter(s => !(_fromSource==="saved" && s.n===1)).map((s,i)=>{
+        ] as const).filter(s => !(_fromSource==="saved" && s.n===1) && !(isWholeGarment && s.n===3)).map((s,i)=>{
           const active=step===s.n; const done=step>s.n;
           // Style step is locked when the user arrived with a pre-selected style
           // (e.g. from a product page). Clicking it does nothing to prevent
@@ -1994,7 +1999,6 @@ export default function CustomizePage() {
               if (userStyle !== null) {
                 const isPatternMode = effectiveSkuType === "pattern";
                 const isPrintMode   = effectiveSkuType === "print";
-                const isWholeGarment = product?.customizationMode === "whole-garment";
 
                 const TargetRow = ({title,desc,showColour,colourFor,showPrint,printFor}:{
                   title:string; desc?:string;
@@ -2441,7 +2445,8 @@ export default function CustomizePage() {
             })()}
 
             {/* ══════════════════ STEP 3: LOGO & TEXT ══════════════════════ */}
-            {step===3&&(
+            {/* Disabled entirely for whole-garment products (pants/shorts/skorts) per client spec. */}
+            {step===3&&!isWholeGarment&&(
               <div style={{display:"flex",flexDirection:"column",gap:18}}>
 
                 {/* Logo section */}
@@ -2846,7 +2851,7 @@ export default function CustomizePage() {
           }}>
             {/* Back */}
             <button
-              onClick={()=>setStep(s=>Math.max(initialStep,s-1))}
+              onClick={()=>setStep(s=>{const prev=s-1; return Math.max(initialStep, isWholeGarment&&prev===3?2:prev);})}
               disabled={step===initialStep}
               style={{
                 flex:1,padding:"11px 0",borderRadius:99,minHeight:44,
@@ -2866,7 +2871,7 @@ export default function CustomizePage() {
             {step<4 ? (
               <>
                 <button
-                  onClick={()=>setStep(s=>Math.min(4,s+1))}
+                  onClick={()=>setStep(s=>{const next=s+1; return Math.min(4, isWholeGarment&&next===3?4:next);})}
                   style={{
                     flex:2,padding:"11px 0",borderRadius:99,minHeight:44,
                     border:"none",background:V.tx,color:"#fff",
@@ -2876,7 +2881,7 @@ export default function CustomizePage() {
                   }}
                   onMouseEnter={e=>{e.currentTarget.style.background=V.ac;e.currentTarget.style.color=V.tx;}}
                   onMouseLeave={e=>{e.currentTarget.style.background=V.tx;e.currentTarget.style.color="#fff";}}>
-                  {step===1?(isXs?"Design →":"Continue to Design →"):step===2?(isXs?"Logo →":"Continue to Logo & Text →"):(isXs?"Sizing →":"Continue to Sizing →")}
+                  {step===1?(isXs?"Design →":"Continue to Design →"):step===2?(isWholeGarment?(isXs?"Sizing →":"Continue to Sizing →"):(isXs?"Logo →":"Continue to Logo & Text →")):(isXs?"Sizing →":"Continue to Sizing →")}
                 </button>
                 {!isTypeMode&&(
                   <button
@@ -4096,7 +4101,7 @@ export default function CustomizePage() {
         </div>
 
         {/* ── RIGHT PANEL: Placement chips (step 3 desktop only) ─────────── */}
-        {step===3&&isDesktop&&(
+        {step===3&&isDesktop&&!isWholeGarment&&(
           <div className="placement-right-panel" style={{
             width:200,flexShrink:0,overflowY:"auto",
             background:V.bg,
