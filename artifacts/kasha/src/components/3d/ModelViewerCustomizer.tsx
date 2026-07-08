@@ -588,6 +588,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
             shadow-intensity="1.2"
             environment-image="neutral"
             exposure="1"
+            tone-mapping="commerce"
             style={{ width: "100%", height: "100%", "--poster-color": "transparent", borderRadius: "24px" } as any}
           />
         )}

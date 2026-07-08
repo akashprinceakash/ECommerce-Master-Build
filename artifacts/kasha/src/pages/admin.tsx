@@ -190,6 +190,7 @@ function DesignLeftPanel({ design, mvReady, viewerRef, textureReady, canvasDataL
           shadow-intensity="1"
           environment-image="neutral"
           exposure="1"
+          tone-mapping="commerce"
           style={{ width: "100%", height: "100%", minHeight: "300px", "--poster-color": "transparent" } as any}
         />
       </div>

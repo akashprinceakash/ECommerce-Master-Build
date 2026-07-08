@@ -13,6 +13,7 @@ declare module "react" {
         "shadow-intensity"?: string | number;
         "environment-image"?: string;
         exposure?: string | number;
+        "tone-mapping"?: string;
         scale?: string;
         "poster-color"?: string;
         "camera-orbit"?: string;

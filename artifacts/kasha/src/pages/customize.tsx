@@ -4006,7 +4006,7 @@ export default function CustomizePage() {
           {mvReady&&displayProduct?.modelUrl&&webglAvailable&&(
             <model-viewer ref={mvRef} src={toProxiedUrl(displayProduct.modelUrl)}
               camera-controls {...(step===3||modelPaused?{}:{"auto-rotate":true,"rotation-per-second":"8deg"})}
-              shadow-intensity="1" environment-image="neutral" exposure="1.0"
+              shadow-intensity="1" environment-image="neutral" exposure="1.0" tone-mapping="commerce"
               camera-orbit="0deg 75deg 2.5m" min-camera-orbit="auto auto 1.5m" max-camera-orbit="auto auto 5m"
               interaction-prompt="none" {...{"loading":"eager"}}
               style={{width:"100%",height:"100%","--poster-color":"transparent",opacity:modelDisplayed?1:0,transition:"opacity .4s"} as any}/>
