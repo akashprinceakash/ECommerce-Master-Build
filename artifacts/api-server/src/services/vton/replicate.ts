@@ -20,49 +20,16 @@ function getToken(): string {
   return token;
 }
 
-let loggedAccountOnce = false;
-
-async function logAccountDiagnosticsOnce(): Promise<void> {
-  if (loggedAccountOnce) return;
-  loggedAccountOnce = true;
-  const token = getToken();
-  try {
-    const res = await fetch(`${API_BASE}/account`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const body = await res.json();
-    logger.info(
-      { tokenPrefix: token.slice(0, 6), tokenLength: token.length, status: res.status, account: body },
-      "vton diagnostic: /v1/account check for token in use",
-    );
-  } catch (err) {
-    logger.error({ err }, "vton diagnostic: failed to check /v1/account");
-  }
-}
-
 async function replicateFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  await logAccountDiagnosticsOnce();
-  const token = getToken();
-  logger.info(
-    {
-      path,
-      method: init?.method ?? "GET",
-      tokenPrefix: token.slice(0, 6),
-      tokenLength: token.length,
-      body: init?.body ? JSON.parse(init.body as string) : undefined,
-    },
-    "vton diagnostic: outgoing replicate request",
-  );
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${getToken()}`,
       "Content-Type": "application/json",
       ...(init?.headers ?? {}),
     },
   });
   const body = await res.json();
-  logger.info({ path, status: res.status, body }, "vton diagnostic: replicate response");
   if (!res.ok) {
     throw new Error(`Replicate API error (${res.status}): ${JSON.stringify(body)}`);
   }
