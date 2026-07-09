@@ -761,6 +761,17 @@ export const UnsaveLookbookProductParams = zod.object({
 });
 
 /**
+ * @summary Upload a personal photo to use as the try-on model instead of the AI avatar
+ */
+export const UploadLookbookPhotoBody = zod.object({
+  photo: zod.instanceof(File),
+});
+
+export const UploadLookbookPhotoResponse = zod.object({
+  url: zod.string(),
+});
+
+/**
  * @summary Submit an AI virtual try-on job (top+bottom, or a single dress)
  */
 export const submitTryOnBodyProductIdsMax = 2;
@@ -768,6 +779,12 @@ export const submitTryOnBodyProductIdsMax = 2;
 export const SubmitTryOnBody = zod.object({
   gender: zod.enum(["male", "female"]),
   productIds: zod.array(zod.number()).min(1).max(submitTryOnBodyProductIdsMax),
+  humanImageUrl: zod
+    .string()
+    .nullish()
+    .describe(
+      "URL of a user-uploaded photo (from \/lookbook-photo) to use instead of the default AI avatar",
+    ),
 });
 
 /**

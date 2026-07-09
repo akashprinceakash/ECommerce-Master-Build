@@ -342,6 +342,11 @@ export interface SubmitTryOnBody {
    * @maxItems 2
    */
   productIds: number[];
+  /**
+   * URL of a user-uploaded photo (from /lookbook-photo) to use instead of the default AI avatar
+   * @nullable
+   */
+  humanImageUrl?: string | null;
 }
 
 export type TryOnJobAcceptedStatus =
@@ -427,4 +432,12 @@ export type ListProductsParams = {
 
 export type SaveLookbookProduct201 = {
   productId: number;
+};
+
+export type UploadLookbookPhotoBody = {
+  photo: Blob;
+};
+
+export type UploadLookbookPhoto200 = {
+  url: string;
 };

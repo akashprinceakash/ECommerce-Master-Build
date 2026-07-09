@@ -1,5 +1,9 @@
 import { Router, type IRouter } from "express";
 import { eq, and, desc, inArray } from "drizzle-orm";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import sharp from "sharp";
 import {
   db,
   lookbookOutfitsTable,
@@ -12,9 +16,68 @@ import type { LookbookLookItem } from "@workspace/db";
 import { classifyProductRole } from "../services/vton/classifier";
 import { submitTryOnJob, getTryOnJob } from "../services/vton/jobQueue";
 import { AVATAR_IMAGE_URLS } from "../services/vton/humanImages";
+import { uploadToR2, r2Enabled } from "../lib/r2";
 import type { GarmentRole, TryOnGarment } from "../services/vton/types";
 
 const router: IRouter = Router();
+
+// ── User-uploaded try-on photo ────────────────────────────────────────────────
+const LOOKBOOK_PHOTOS_DIR = path.join(process.cwd(), "public", "lookbook-photos");
+if (!fs.existsSync(LOOKBOOK_PHOTOS_DIR)) fs.mkdirSync(LOOKBOOK_PHOTOS_DIR, { recursive: true });
+
+const uploadPhotoMem = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Only image files are allowed"));
+  },
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
+
+const photoDiskStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, LOOKBOOK_PHOTOS_DIR),
+  filename: (_req, file, cb) => {
+    const s = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `photo-${s}${path.extname(file.originalname) || ".jpg"}`);
+  },
+});
+const uploadPhotoDisk = multer({
+  storage: photoDiskStorage,
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Only image files are allowed"));
+  },
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
+
+router.post("/lookbook-photo", requireAuth, (req, res): void => {
+  if (r2Enabled()) {
+    uploadPhotoMem.single("photo")(req, res, async (err) => {
+      if (err) { res.status(400).json({ error: err.message }); return; }
+      if (!req.file) { res.status(400).json({ error: "No file uploaded" }); return; }
+      try {
+        const processed = await sharp(req.file.buffer)
+          .rotate()
+          .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
+          .jpeg({ quality: 88 })
+          .toBuffer();
+        const key = `lookbook-photos/photo-${Date.now()}-${Math.round(Math.random() * 1e9)}.jpg`;
+        const url = await uploadToR2(key, processed, "image/jpeg");
+        res.json({ url });
+      } catch {
+        res.status(500).json({ error: "Upload to storage failed" });
+      }
+    });
+  } else {
+    uploadPhotoDisk.single("photo")(req, res, (err) => {
+      if (err) { res.status(400).json({ error: err.message }); return; }
+      if (!req.file) { res.status(400).json({ error: "No file uploaded" }); return; }
+      const apiBase = process.env["API_BASE_URL"] ?? "";
+      const url = `${apiBase}/api/public/lookbook-photos/${req.file.filename}`;
+      res.json({ url });
+    });
+  }
+});
 
 function parseOutfitBody(body: unknown): { name: string; items: LookbookLookItem[]; gender: "male" | "female"; resultImageUrl: string } | { error: string } | null {
   if (!body || typeof body !== "object") return null;
@@ -164,10 +227,29 @@ router.post("/lookbook-tryon", requireAuth, async (req, res): Promise<void> => {
   const productIds = Array.isArray(b.productIds)
     ? b.productIds.filter((v): v is number => typeof v === "number")
     : [];
+  const humanImageUrl = typeof b.humanImageUrl === "string" && b.humanImageUrl.trim() ? b.humanImageUrl.trim() : null;
 
   if (!gender || productIds.length === 0 || productIds.length > 2) {
     res.status(400).json({ error: "Provide a gender and 1-2 product IDs (top+bottom, or a single dress)" });
     return;
+  }
+  if (humanImageUrl) {
+    // Only accept our own uploaded/hosted images — never an arbitrary
+    // user-supplied URL, to avoid SSRF via the Replicate fetch.
+    const domains = (process.env["REPLIT_DOMAINS"] ?? "").split(",").map(d => d.trim()).filter(Boolean);
+    const allowedHosts = [req.hostname, ...domains, "pub-15ec2d2670b445b79fe9a23aa5c7f2f0.r2.dev"];
+    let isAllowed = humanImageUrl.startsWith("/");
+    if (!isAllowed) {
+      try {
+        isAllowed = allowedHosts.includes(new URL(humanImageUrl).hostname);
+      } catch {
+        isAllowed = false;
+      }
+    }
+    if (!isAllowed) {
+      res.status(400).json({ error: "Invalid photo URL" });
+      return;
+    }
   }
 
   const products = await db.select().from(productsTable).where(inArray(productsTable.id, productIds));
@@ -201,7 +283,8 @@ router.post("/lookbook-tryon", requireAuth, async (req, res): Promise<void> => {
   // Process top before bottom for a stable chaining order (dress is alone).
   garments.sort((a, b2) => (a.role === "top" ? 0 : a.role === "bottom" ? 1 : 2) - (b2.role === "top" ? 0 : b2.role === "bottom" ? 1 : 2));
 
-  const job = submitTryOnJob(userId, AVATAR_IMAGE_URLS[gender], garments);
+  const personImageUrl = humanImageUrl ? toAbsoluteUrl(humanImageUrl, req.hostname) : AVATAR_IMAGE_URLS[gender];
+  const job = submitTryOnJob(userId, personImageUrl, garments);
   res.status(202).json({ jobId: job.id, status: job.status });
 });
 

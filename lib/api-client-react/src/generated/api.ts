@@ -40,6 +40,8 @@ import type {
   TryOnJobStatus,
   UpdateCartItemBody,
   UpdateCustomizationBody,
+  UploadLookbookPhoto200,
+  UploadLookbookPhotoBody,
   UpsertUserProfileBody,
   UserProfile,
 } from "./api.schemas";
@@ -2123,6 +2125,94 @@ export const useUnsaveLookbookProduct = <
   TContext
 > => {
   return useMutation(getUnsaveLookbookProductMutationOptions(options));
+};
+
+/**
+ * @summary Upload a personal photo to use as the try-on model instead of the AI avatar
+ */
+export const getUploadLookbookPhotoUrl = () => {
+  return `/api/lookbook-photo`;
+};
+
+export const uploadLookbookPhoto = async (
+  uploadLookbookPhotoBody: UploadLookbookPhotoBody,
+  options?: RequestInit,
+): Promise<UploadLookbookPhoto200> => {
+  const formData = new FormData();
+  formData.append(`photo`, uploadLookbookPhotoBody.photo);
+
+  return customFetch<UploadLookbookPhoto200>(getUploadLookbookPhotoUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getUploadLookbookPhotoMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadLookbookPhoto>>,
+    TError,
+    { data: BodyType<UploadLookbookPhotoBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadLookbookPhoto>>,
+  TError,
+  { data: BodyType<UploadLookbookPhotoBody> },
+  TContext
+> => {
+  const mutationKey = ["uploadLookbookPhoto"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadLookbookPhoto>>,
+    { data: BodyType<UploadLookbookPhotoBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return uploadLookbookPhoto(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadLookbookPhotoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadLookbookPhoto>>
+>;
+export type UploadLookbookPhotoMutationBody = BodyType<UploadLookbookPhotoBody>;
+export type UploadLookbookPhotoMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Upload a personal photo to use as the try-on model instead of the AI avatar
+ */
+export const useUploadLookbookPhoto = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadLookbookPhoto>>,
+    TError,
+    { data: BodyType<UploadLookbookPhotoBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof uploadLookbookPhoto>>,
+  TError,
+  { data: BodyType<UploadLookbookPhotoBody> },
+  TContext
+> => {
+  return useMutation(getUploadLookbookPhotoMutationOptions(options));
 };
 
 /**

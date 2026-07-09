@@ -19,7 +19,8 @@ import {
 } from "@workspace/api-client-react";
 import { getAssetUrl } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, Save, CheckCircle, Heart, Check, X, Wand2, AlertTriangle, ZoomIn, ZoomOut, RotateCcw, Sparkles } from "lucide-react";
+import { Trash2, Save, CheckCircle, Heart, Check, X, Wand2, AlertTriangle, ZoomIn, ZoomOut, RotateCcw, Sparkles, Upload, User } from "lucide-react";
+import { useUploadLookbookPhoto } from "@workspace/api-client-react";
 
 const GOLD = "#B8925A";
 const FONT_DISPLAY = "'Cormorant Garamond', serif";
@@ -67,6 +68,28 @@ export default function LookbookPage() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [generation, setGeneration] = useState<GenerationState>({ status: "idle" });
   const [zoom, setZoom] = useState(1);
+
+  // ── Model choice: default AI avatar, or the customer's own photo ──────────
+  const [modelSource, setModelSource] = useState<"avatar" | "photo">("avatar");
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
+  const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const uploadPhoto = useUploadLookbookPhoto();
+
+  const handlePhotoSelected = useCallback(async (file: File) => {
+    setPhotoUploadError(null);
+    setUploadedPhotoUrl(null);
+    setGeneration({ status: "idle" });
+    const localPreview = URL.createObjectURL(file);
+    setPhotoPreviewUrl(localPreview);
+    try {
+      const res = await uploadPhoto.mutateAsync({ data: { photo: file } });
+      setUploadedPhotoUrl(res.url);
+    } catch (err) {
+      setPhotoUploadError(err instanceof Error ? err.message : "Failed to upload photo");
+    }
+  }, [uploadPhoto]);
 
   const zoomIn = useCallback(() => setZoom(z => Math.min(z + 0.25, 3)), []);
   const zoomOut = useCallback(() => setZoom(z => Math.max(z - 0.25, 1)), []);
@@ -168,20 +191,36 @@ export default function LookbookPage() {
     setSelection(next);
   }, [tops, bottoms, dresses]);
 
-  const handleGenerate = useCallback(async () => {
-    const items = selection.dress
-      ? [selection.dress]
-      : [selection.top, selection.bottom].filter((x): x is WardrobeItem => !!x);
-    if (items.length === 0 || submitTryOn.isPending) return;
+  const selectedItems = useMemo(
+    () => selection.dress ? [selection.dress] : [selection.top, selection.bottom].filter((x): x is WardrobeItem => !!x),
+    [selection],
+  );
+
+  const canGenerate = selectedItems.length > 0
+    && !submitTryOn.isPending
+    && (modelSource === "avatar" || (!!uploadedPhotoUrl && !uploadPhoto.isPending));
+
+  const runGenerate = useCallback(async () => {
+    if (selectedItems.length === 0 || submitTryOn.isPending) return;
+    setShowConfirm(false);
     try {
       const res = await submitTryOn.mutateAsync({
-        data: { gender, productIds: items.map(i => i.productId) },
+        data: {
+          gender,
+          productIds: selectedItems.map(i => i.productId),
+          humanImageUrl: modelSource === "photo" ? uploadedPhotoUrl : null,
+        },
       });
       setGeneration({ status: "generating", jobId: res.jobId });
     } catch (err) {
       setGeneration({ status: "failed", error: err instanceof Error ? err.message : "Failed to start try-on" });
     }
-  }, [selection, gender, submitTryOn]);
+  }, [selectedItems, gender, submitTryOn, modelSource, uploadedPhotoUrl]);
+
+  const handleGenerate = useCallback(() => {
+    if (!canGenerate) return;
+    setShowConfirm(true);
+  }, [canGenerate]);
 
   const handleSave = async () => {
     if (generation.status !== "succeeded" || createOutfit.isPending) return;
@@ -332,6 +371,110 @@ export default function LookbookPage() {
                           </button>
                         ))}
                       </div>
+                    </div>
+
+                    {/* ── Model choice: AI avatar vs the customer's own photo ── */}
+                    <div style={{ background: "#fff", border: "1px solid rgba(184,146,90,0.2)", padding: "14px 18px" }}>
+                      <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.3em", color: "rgba(0,0,0,0.4)", textTransform: "uppercase", marginBottom: 12 }}>
+                        Choose Model
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: modelSource === "photo" ? 16 : 0 }}>
+                        {([
+                          { key: "avatar" as const, label: "Use AI Model", sub: "Quick", icon: <Sparkles size={14} /> },
+                          { key: "photo" as const, label: "Upload My Photo", sub: "Best Results", icon: <User size={14} /> },
+                        ]).map(opt => (
+                          <button
+                            key={opt.key}
+                            onClick={() => { setModelSource(opt.key); setGeneration({ status: "idle" }); }}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 8, flex: "1 1 200px",
+                              fontFamily: FONT_UI, padding: "10px 16px", cursor: "pointer",
+                              border: `1.5px solid ${modelSource === opt.key ? GOLD : "rgba(0,0,0,0.12)"}`,
+                              background: modelSource === opt.key ? "rgba(184,146,90,0.08)" : "transparent",
+                              textAlign: "left",
+                            }}
+                          >
+                            {opt.icon}
+                            <span>
+                              <span style={{ display: "block", fontSize: 12, letterSpacing: "0.05em", color: "#0A0A0A" }}>{opt.label}</span>
+                              <span style={{ display: "block", fontSize: 9, letterSpacing: "0.15em", textTransform: "uppercase", color: GOLD, marginTop: 2 }}>{opt.sub}</span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {modelSource === "photo" && (
+                        <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 16 }}>
+                          {/* Guidelines */}
+                          <div style={{ flex: 1, minWidth: 220, background: "#FAFAF7", border: "1px dashed rgba(184,146,90,0.35)", padding: "12px 14px" }}>
+                            <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(0,0,0,0.5)", marginBottom: 8 }}>
+                              For the best result
+                            </p>
+                            {[
+                              ["✅", "Full body visible, facing forward"],
+                              ["✅", "Arms slightly away from your body"],
+                              ["✅", "Plain background, good lighting"],
+                              ["❌", "No oversized jackets"],
+                              ["❌", "Don't crop your feet"],
+                              ["❌", "No mirror selfies"],
+                            ].map(([mark, text], i) => (
+                              <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5 }}>
+                                <span style={{ fontSize: 11 }}>{mark}</span>
+                                <span style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.6)", letterSpacing: "0.02em" }}>{text}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Upload */}
+                          <div style={{ flex: 1, minWidth: 220, display: "flex", flexDirection: "column", gap: 10 }}>
+                            <label
+                              htmlFor="lookbook-photo-input"
+                              style={{
+                                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
+                                border: `1.5px dashed ${photoPreviewUrl ? GOLD : "rgba(0,0,0,0.2)"}`, borderRadius: 4,
+                                height: 160, cursor: "pointer", background: photoPreviewUrl ? "#000" : "#FAFAF7", overflow: "hidden", position: "relative",
+                              }}
+                            >
+                              {photoPreviewUrl ? (
+                                <img src={photoPreviewUrl} alt="Your uploaded photo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                              ) : (
+                                <>
+                                  <Upload size={22} color="rgba(0,0,0,0.35)" />
+                                  <span style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(0,0,0,0.4)" }}>
+                                    Click to upload a full-body photo
+                                  </span>
+                                </>
+                              )}
+                              {uploadPhoto.isPending && (
+                                <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                  <Spinner />
+                                </div>
+                              )}
+                            </label>
+                            <input
+                              id="lookbook-photo-input"
+                              type="file"
+                              accept="image/*"
+                              style={{ display: "none" }}
+                              onChange={e => {
+                                const file = e.target.files?.[0];
+                                if (file) void handlePhotoSelected(file);
+                                e.target.value = "";
+                              }}
+                            />
+                            {uploadedPhotoUrl && !uploadPhoto.isPending && (
+                              <p style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.1em", color: "#2D7D46", margin: 0 }}>
+                                <Check size={12} /> Photo ready
+                              </p>
+                            )}
+                            {photoUploadError && (
+                              <p style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.05em", color: "#c0392b", margin: 0 }}>
+                                {photoUploadError}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 20, alignItems: "flex-start" }}>
@@ -570,13 +713,13 @@ export default function LookbookPage() {
 
                       <button
                         onClick={handleGenerate}
-                        disabled={!hasSelection || isGenerating}
+                        disabled={!canGenerate || isGenerating}
                         style={{
                           display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_UI, fontSize: 10,
                           letterSpacing: "0.2em", textTransform: "uppercase", padding: "10px 22px",
-                          background: (!hasSelection || isGenerating) ? "rgba(0,0,0,0.15)" : GOLD,
+                          background: (!canGenerate || isGenerating) ? "rgba(0,0,0,0.15)" : GOLD,
                           color: "#fff", border: "none",
-                          cursor: (!hasSelection || isGenerating) ? "not-allowed" : "pointer",
+                          cursor: (!canGenerate || isGenerating) ? "not-allowed" : "pointer",
                           transition: "background 0.3s", whiteSpace: "nowrap",
                         }}
                       >
@@ -730,6 +873,80 @@ export default function LookbookPage() {
           </Link>
         </section>
       </Show>
+
+      {showConfirm && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setShowConfirm(false)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(10,10,10,0.6)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: "#fff", maxWidth: 420, width: "100%", padding: "28px 26px", boxShadow: "0 12px 40px rgba(0,0,0,0.25)" }}
+          >
+            <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.3em", textTransform: "uppercase", color: GOLD, marginBottom: 10 }}>
+              Confirm Your Look
+            </p>
+            <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 24, color: "#0A0A0A", marginBottom: 14 }}>
+              Ready to generate?
+            </h3>
+
+            <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center" }}>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", overflow: "hidden", background: "#F5F2EC", flexShrink: 0, border: `1px solid ${GOLD}` }}>
+                {modelSource === "photo" && photoPreviewUrl ? (
+                  <img src={photoPreviewUrl} alt="Your photo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <User size={22} color={GOLD} />
+                  </div>
+                )}
+              </div>
+              <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.55)", letterSpacing: "0.05em", margin: 0 }}>
+                Model: {modelSource === "photo" ? "Your uploaded photo" : `AI ${gender === "female" ? "female" : "male"} avatar`}
+              </p>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
+              {selectedItems.map(item => (
+                <div key={item.productId} style={{ width: 52, height: 52, background: "#F5F2EC", overflow: "hidden", border: "1px solid rgba(184,146,90,0.25)" }}>
+                  <img src={getAssetUrl(item.thumbnailUrl)} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+              ))}
+            </div>
+
+            <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.5)", letterSpacing: "0.04em", lineHeight: 1.7, marginBottom: 22 }}>
+              This will use 1 AI generation. Rendering usually takes under a minute.
+            </p>
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowConfirm(false)}
+                style={{
+                  fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase",
+                  background: "transparent", border: "1px solid rgba(0,0,0,0.15)", color: "rgba(0,0,0,0.6)",
+                  padding: "10px 20px", cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={runGenerate}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_UI, fontSize: 10,
+                  letterSpacing: "0.2em", textTransform: "uppercase", background: GOLD, color: "#fff",
+                  border: "none", padding: "10px 20px", cursor: "pointer",
+                }}
+              >
+                <Wand2 size={13} /> Generate Look
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </Layout>
   );
