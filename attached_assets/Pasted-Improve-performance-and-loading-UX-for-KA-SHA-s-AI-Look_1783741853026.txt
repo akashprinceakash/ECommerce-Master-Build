@@ -1,0 +1,36 @@
+Improve performance and loading UX for KA.SHA's AI Lookbook / Style Studio (React/Vite/TypeScript frontend, Express/TypeScript backend, Replicate for AI generation, Cloudflare R2 for storage).
+
+## Problem
+1. AI generation (IDM-VTON via Replicate) takes too long and the current UI doesn't handle this well — likely just a spinner or nothing, causing users to think it's broken or abandon the flow.
+2. Avatar upload flow also feels slow / lacks proper progress feedback.
+
+## Part 1: Generation speed — backend
+
+1. Report current average generation time (from generation_logs.predict_time_seconds if already logged, or add logging if not).
+2. Check if we're using Replicate's synchronous API (blocking until complete) vs async with webhooks/polling. If synchronous, switch to Replicate's async prediction flow:
+   - POST to create prediction → get prediction ID immediately.
+   - Use Replicate's webhook callback (preferred) or client-side polling (every 2-3s) to check status, instead of holding the HTTP connection open.
+   - This alone usually fixes perceived slowness even if actual model runtime doesn't change, since the frontend can show real progress instead of a blocked request.
+3. Check denoise_steps value (from the IDM-VTON audit) — confirm we're not using an unnecessarily high step count that trades speed for quality beyond what's visually noticeable.
+4. Check image sizes being sent to Replicate — downscale avatar/garment images to the model's expected input resolution (768x1024 for IDM-VTON) before sending, rather than sending full-resolution originals, which adds upload + processing time for no quality benefit.
+5. Consider a queue (e.g. simple in-house job queue or Replicate's built-in queuing) if multiple users can trigger generations concurrently, so requests don't compete for the same Replicate rate limits.
+
+## Part 2: Frontend loading UX — generation flow
+
+1. Replace any blocking/generic spinner with a proper multi-stage progress indicator:
+   - "Preparing your look..." (immediately on click)
+   - "Fitting garment to your avatar..." (once Replicate prediction starts)
+   - "Almost done — adding final details..." (based on elapsed time or webhook progress if available)
+   - Show an estimated time (e.g. "usually takes 15-25 seconds") based on our actual average from generation_logs, not a made-up number.
+2. Disable the Generate button during processing (prevent duplicate submissions/duplicate credit deductions).
+3. If generation exceeds a reasonable timeout (e.g. 45-60s), show: "This is taking longer than usual — you can keep waiting or try again" with a manual retry option, rather than hanging indefinitely.
+4. Handle failure states distinctly in the UI (network fail vs Replicate fail vs validation fail) reusing the existing "your credits are safe" messaging where a credit wasn't deducted.
+
+## Part 3: Avatar upload flow — loading UX
+
+1. Show upload progress (percentage or progress bar) while the photo uploads to R2, not just a spinner.
+2. After upload, if we're running pose/body validation (from the earlier avatar feature), show a distinct step: "Checking your photo..." separate from the upload step, so users understand what's happening at each stage.
+3. Compress/resize images client-side before upload (e.g. to max 1600px on the longest side) to speed up upload time, since full-resolution phone photos are unnecessarily large for this use case.
+4. Show clear success confirmation ("Photo ready!") before returning the user to the Style Studio, so it's obvious the avatar saved correctly and which one is now active/default.
+
+Please implement backend async flow changes first (Part 1), then the corresponding frontend progress UI (Parts 2 and 3), and report the actual before/after generation time from generation_logs so we can confirm the improvement.

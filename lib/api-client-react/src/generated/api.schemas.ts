@@ -377,6 +377,8 @@ export const TryOnJobStatusStatus = {
 export interface TryOnJobStatus {
   jobId: string;
   status: TryOnJobStatusStatus;
+  garmentCount: number;
+  processedCount: number;
   /** @nullable */
   resultImageUrl: string | null;
   /** @nullable */

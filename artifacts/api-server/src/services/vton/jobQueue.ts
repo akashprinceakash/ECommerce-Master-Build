@@ -39,6 +39,8 @@ export function submitTryOnJob(userId: string, humanImageUrl: string, garments: 
     userId,
     status: "pending",
     garments,
+    garmentCount: garments.length,
+    processedCount: 0,
     resultImageUrl: null,
     error: null,
     createdAt: now,
@@ -60,6 +62,8 @@ async function processTryOnJob(job: TryOnJob, humanImageUrl: string): Promise<vo
   job.status = "processing";
   job.updatedAt = Date.now();
 
+  const jobStart = Date.now();
+
   try {
     // Chain garments sequentially: dress alone, or top then bottom (each pass
     // uses the previous result as the new "person" image so both pieces show).
@@ -73,6 +77,8 @@ async function processTryOnJob(job: TryOnJob, humanImageUrl: string): Promise<vo
         vtonCategory,
       });
       currentHumanImage = resultUrl;
+      job.processedCount += 1;
+      job.updatedAt = Date.now();
     }
 
     // Persist the final Replicate-hosted result into our own R2 storage so
@@ -82,6 +88,9 @@ async function processTryOnJob(job: TryOnJob, humanImageUrl: string): Promise<vo
     const buffer = Buffer.from(await imgRes.arrayBuffer());
     const key = `lookbook/tryon-${job.id}.png`;
     const permanentUrl = await uploadToR2(key, buffer, "image/png");
+
+    const totalSecs = ((Date.now() - jobStart) / 1000).toFixed(1);
+    logger.info({ jobId: job.id, garmentCount: job.garmentCount, totalSecs }, "vton: job succeeded");
 
     job.resultImageUrl = permanentUrl;
     job.status = "succeeded";

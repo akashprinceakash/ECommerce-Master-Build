@@ -28,6 +28,10 @@ export interface TryOnJob {
   userId: string;
   status: TryOnJobStatus;
   garments: TryOnGarment[];
+  /** Total number of garments to process (so frontend can show "Step 1 of 2"). */
+  garmentCount: number;
+  /** How many garments have been fully processed so far. */
+  processedCount: number;
   resultImageUrl: string | null;
   error: string | null;
   createdAt: number;

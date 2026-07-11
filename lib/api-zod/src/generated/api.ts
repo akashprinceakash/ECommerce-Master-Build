@@ -797,6 +797,8 @@ export const GetTryOnJobParams = zod.object({
 export const GetTryOnJobResponse = zod.object({
   jobId: zod.string(),
   status: zod.enum(["pending", "processing", "succeeded", "failed"]),
+  garmentCount: zod.number(),
+  processedCount: zod.number(),
   resultImageUrl: zod.string().nullable(),
   error: zod.string().nullable(),
 });

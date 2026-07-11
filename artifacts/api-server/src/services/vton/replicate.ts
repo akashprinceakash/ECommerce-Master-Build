@@ -73,13 +73,15 @@ export async function runIdmVton(params: {
         category: vtonCategory,
         crop: false,
         force_dc: vtonCategory === "dresses",
-        steps: 30,
+        steps: 20,
         seed: Math.floor(Math.random() * 1_000_000),
       },
     }),
   });
 
   const start = Date.now();
+  logger.info({ predictionId: prediction.id, vtonCategory }, "vton: prediction started");
+
   const TIMEOUT_MS = 5 * 60 * 1000;
   while (prediction.status === "starting" || prediction.status === "processing") {
     if (Date.now() - start > TIMEOUT_MS) {
@@ -89,10 +91,14 @@ export async function runIdmVton(params: {
     prediction = await replicateFetch<ReplicatePrediction>(`/predictions/${prediction.id}`);
   }
 
+  const predictTimeSecs = ((Date.now() - start) / 1000).toFixed(1);
+
   if (prediction.status !== "succeeded") {
-    logger.error({ prediction }, "vton: replicate prediction failed");
+    logger.error({ prediction, predictTimeSecs }, "vton: replicate prediction failed");
     throw new Error(prediction.error || "Try-on generation failed");
   }
+
+  logger.info({ predictionId: prediction.id, predictTimeSecs, vtonCategory }, "vton: prediction succeeded");
 
   const output = Array.isArray(prediction.output) ? prediction.output[0] : prediction.output;
   if (!output) throw new Error("Try-on generation returned no output image");

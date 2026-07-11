@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Link } from "wouter";
 import { useUser, Show } from "@clerk/react";
@@ -39,6 +39,25 @@ const TOP_CATEGORIES = new Set(["t-shirt", "polo", "fabric-tshirt", "pattern", "
 const BOTTOM_CATEGORIES = new Set(["pants", "trousers", "shorts", "skort", "skorts", "skirts"]);
 const DRESS_CATEGORIES = new Set(["dress", "dresses", "golf dress", "golf dresses"]);
 
+/** Resize an image file client-side to max `maxPx` on the longest edge before upload. */
+async function resizeImageFile(file: File, maxPx = 1600): Promise<File> {
+  const bitmap = await createImageBitmap(file);
+  const ratio = Math.min(1, maxPx / Math.max(bitmap.width, bitmap.height));
+  const w = Math.round(bitmap.width * ratio);
+  const h = Math.round(bitmap.height * ratio);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close();
+  return new Promise(resolve =>
+    canvas.toBlob(
+      blob => resolve(new File([blob!], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" })),
+      "image/jpeg", 0.88,
+    )
+  );
+}
+
 function categoryRole(category: string): Role | null {
   const c = category.toLowerCase();
   if (TOP_CATEGORIES.has(c)) return "top";
@@ -77,14 +96,35 @@ export default function LookbookPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const uploadPhoto = useUploadLookbookPhoto();
 
+  // ── Generation elapsed-time tracker ───────────────────────────────────────
+  const generationStartRef = useRef<number | null>(null);
+  const [elapsedSecs, setElapsedSecs] = useState(0);
+
+  useEffect(() => {
+    if (generation.status !== "generating") {
+      generationStartRef.current = null;
+      setElapsedSecs(0);
+      return;
+    }
+    generationStartRef.current = Date.now();
+    setElapsedSecs(0);
+    const iv = setInterval(() => {
+      const s = generationStartRef.current;
+      if (s) setElapsedSecs(Math.floor((Date.now() - s) / 1000));
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [generation.status]);
+
   const handlePhotoSelected = useCallback(async (file: File) => {
     setPhotoUploadError(null);
     setUploadedPhotoUrl(null);
     setGeneration({ status: "idle" });
-    const localPreview = URL.createObjectURL(file);
+    // Resize client-side before preview + upload (phone photos can be 10MB+)
+    const resized = await resizeImageFile(file);
+    const localPreview = URL.createObjectURL(resized);
     setPhotoPreviewUrl(localPreview);
     try {
-      const res = await uploadPhoto.mutateAsync({ data: { photo: file } });
+      const res = await uploadPhoto.mutateAsync({ data: { photo: resized } });
       setUploadedPhotoUrl(res.url);
     } catch (err) {
       setPhotoUploadError(err instanceof Error ? err.message : "Failed to upload photo");
@@ -570,20 +610,70 @@ export default function LookbookPage() {
                             </div>
                           </>
                         ) : isGenerating ? (
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, padding: "0 20px" }}>
                             <Spinner />
-                            <p style={{ fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.2em", color: GOLD, margin: 0, textTransform: "uppercase" }}>
-                              Rendering your look…
+
+                            {/* Stage label */}
+                            {(() => {
+                              const gc = jobStatus?.garmentCount ?? 1;
+                              const pc = jobStatus?.processedCount ?? 0;
+                              const st = jobStatus?.status;
+                              let label: string;
+                              let sub: string;
+                              if (elapsedSecs >= 60) {
+                                label = "Taking longer than usual…";
+                                sub = "Still working — you can keep waiting or try again.";
+                              } else if (elapsedSecs >= 25 || (st === "processing" && pc >= gc && gc > 0)) {
+                                label = "Almost done — finishing touches…";
+                                sub = "Saving your look";
+                              } else if (st === "processing" && gc > 1) {
+                                label = pc === 0 ? "Fitting first garment…" : "Fitting second garment…";
+                                sub = `Step ${pc + 1} of ${gc}`;
+                              } else if (st === "processing") {
+                                label = "Fitting garment to your avatar…";
+                                sub = "Usually takes 20–35 seconds";
+                              } else {
+                                label = "Preparing your look…";
+                                sub = "Sending to AI model";
+                              }
+                              return (
+                                <>
+                                  <p style={{ fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.2em", color: GOLD, margin: 0, textTransform: "uppercase", textAlign: "center" }}>
+                                    {label}
+                                  </p>
+                                  <p style={{ fontFamily: FONT_UI, fontSize: 10, color: "rgba(0,0,0,0.4)", margin: 0, textAlign: "center", lineHeight: 1.6 }}>
+                                    {sub}
+                                  </p>
+                                </>
+                              );
+                            })()}
+
+                            {/* Elapsed counter */}
+                            <p style={{ fontFamily: FONT_UI, fontSize: 9, color: "rgba(0,0,0,0.28)", margin: 0, letterSpacing: "0.1em" }}>
+                              {elapsedSecs}s elapsed
                             </p>
-                            <p style={{ fontFamily: FONT_UI, fontSize: 10, color: "rgba(0,0,0,0.4)", margin: 0, maxWidth: 260, textAlign: "center", lineHeight: 1.6 }}>
-                              This can take up to a minute — the AI is fitting the garment to your avatar.
-                            </p>
+
+                            {/* Timeout retry option */}
+                            {elapsedSecs >= 60 && (
+                              <button
+                                onClick={handleGenerate}
+                                style={{
+                                  fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase",
+                                  background: "#0A0A0A", color: "#fff", border: "none", padding: "9px 20px", cursor: "pointer", marginTop: 4,
+                                }}
+                              >
+                                Try Again
+                              </button>
+                            )}
                           </div>
                         ) : generation.status === "failed" ? (
                           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: 24 }}>
                             <AlertTriangle size={26} color="#c0392b" />
                             <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "#c0392b", margin: 0, textAlign: "center", letterSpacing: "0.05em", maxWidth: 280 }}>
                               {generation.error}
+                            </p>
+                            <p style={{ fontFamily: FONT_UI, fontSize: 10, color: "rgba(0,0,0,0.4)", margin: "0", textAlign: "center", letterSpacing: "0.04em", maxWidth: 260, lineHeight: 1.6 }}>
+                              No generation was charged — your credits are safe.
                             </p>
                             <button
                               onClick={handleGenerate}

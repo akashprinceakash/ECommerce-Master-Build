@@ -1386,13 +1386,17 @@ components:
 
     TryOnJobStatus:
       type: object
-      required: [jobId, status, resultImageUrl, error]
+      required: [jobId, status, garmentCount, processedCount, resultImageUrl, error]
       properties:
         jobId:
           type: string
         status:
           type: string
           enum: [pending, processing, succeeded, failed]
+        garmentCount:
+          type: integer
+        processedCount:
+          type: integer
         resultImageUrl:
           type: ["string", "null"]
         error:

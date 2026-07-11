@@ -298,6 +298,8 @@ router.get("/lookbook-tryon/:jobId", requireAuth, async (req, res): Promise<void
   res.json({
     jobId: job.id,
     status: job.status,
+    garmentCount: job.garmentCount,
+    processedCount: job.processedCount,
     resultImageUrl: job.resultImageUrl,
     error: job.error,
   });
