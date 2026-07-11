@@ -1873,6 +1873,78 @@ function AdminCreditPackages() {
         Prices are stored in paise (1 ₹ = 100 paise). Changes apply to new Razorpay orders immediately — existing unpaid orders are unaffected.
         Use <strong>Hidden</strong> to temporarily remove a package from the storefront without deleting it.
       </p>
+
+      <AdminGrantCredits />
+    </div>
+  );
+}
+
+function AdminGrantCredits() {
+  const { toast } = useToast();
+  const [userId, setUserId] = useState("");
+  const [amount, setAmount] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  const grant = async () => {
+    if (!userId.trim()) { toast({ title: "Enter a Clerk user ID", variant: "destructive" }); return; }
+    if (amount < 1 || amount > 1000) { toast({ title: "Amount must be 1–1000", variant: "destructive" }); return; }
+    setLoading(true);
+    try {
+      const { getToken } = (window as any).Clerk?.session ?? {};
+      const token = typeof getToken === "function" ? await getToken() : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`${getApiUrl()}/api/admin/credits/grant`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ userId: userId.trim(), amount }),
+      });
+      const data = await res.json() as { success?: boolean; creditsRemaining?: number; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      toast({ title: `✓ Granted ${amount} credit${amount > 1 ? "s" : ""}`, description: `User now has ${data.creditsRemaining} credits.` });
+      setUserId("");
+      setAmount(1);
+    } catch (e: any) {
+      toast({ title: "Grant failed", description: String(e?.message ?? e), variant: "destructive" });
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="mt-8 border border-border p-5">
+      <h3 className="text-sm font-semibold mb-1">Grant Credits to a User</h3>
+      <p className="text-xs text-muted-foreground mb-4">
+        Use this to manually add credits — e.g. after a UPI QR payment that the system didn't auto-credit.
+        Find the Clerk User ID in the Users tab.
+      </p>
+      <div className="flex gap-3 flex-wrap items-end">
+        <div className="flex-1 min-w-48">
+          <label className="text-xs text-muted-foreground mb-1 block">Clerk User ID</label>
+          <Input
+            value={userId}
+            onChange={e => setUserId(e.target.value)}
+            placeholder="user_xxxxxxxxxxxxxxxx"
+            className="h-9 rounded-none font-mono text-xs"
+          />
+        </div>
+        <div className="w-24">
+          <label className="text-xs text-muted-foreground mb-1 block">Credits</label>
+          <Input
+            type="number" min={1} max={1000}
+            value={amount}
+            onChange={e => setAmount(parseInt(e.target.value) || 1)}
+            className="h-9 rounded-none"
+          />
+        </div>
+        <Button
+          onClick={() => void grant()}
+          disabled={loading || !userId.trim()}
+          className="h-9 rounded-none px-5"
+        >
+          {loading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Zap className="w-4 h-4 mr-1" />}
+          Grant
+        </Button>
+      </div>
     </div>
   );
 }

@@ -23,7 +23,7 @@ import {
   type LookbookLookItem,
   type CreditPackage,
 } from "@workspace/api-client-react";
-import { getAssetUrl } from "@/lib/api";
+import { getAssetUrl, getApiUrl } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Trash2, Save, CheckCircle, Heart, Check, X, Wand2, AlertTriangle, ZoomIn, ZoomOut, RotateCcw, Sparkles, Upload, User, Maximize2, Minimize2, Download, ShoppingBag, Zap } from "lucide-react";
 
@@ -144,6 +144,10 @@ export default function LookbookPage() {
   // ── Credit system ──────────────────────────────────────────────────────────
   const [showBuyCredits, setShowBuyCredits] = useState(false);
   const [creditPurchaseError, setCreditPurchaseError] = useState<string | null>(null);
+  const [pendingOrder, setPendingOrder] = useState<{ razorpayOrderId: string; packageId: number } | null>(null);
+  const [paymentDismissed, setPaymentDismissed] = useState(false);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const [paymentVerified, setPaymentVerified] = useState(false);
 
   const ensureWelcome = useEnsureWelcomeCredits();
   const purchaseCredits = usePurchaseCreditPackage();
@@ -169,12 +173,53 @@ export default function LookbookPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!user]);
 
+  const checkOrderStatus = useCallback(async (orderId: string, packageId: number) => {
+    setCheckingPayment(true);
+    try {
+      const { session } = (window as any).Clerk ?? {};
+      const token = session ? await session.getToken() : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`${getApiUrl()}/api/credits/check-order`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ orderId, packageId }),
+      });
+      const data = await res.json() as { paid?: boolean; creditsRemaining?: number };
+      if (data.paid) {
+        setPaymentVerified(true);
+        setPendingOrder(null);
+        setPaymentDismissed(false);
+        await refetchCredits();
+        setTimeout(() => {
+          setPaymentVerified(false);
+          setShowBuyCredits(false);
+          setCreditPurchaseError(null);
+        }, 2500);
+      }
+    } catch { /* silent — user can retry */ }
+    setCheckingPayment(false);
+  }, [refetchCredits]);
+
+  // Auto-poll order status every 5 s while a Razorpay modal is open.
+  // This catches UPI QR payments that complete on the user's phone.
+  useEffect(() => {
+    if (!pendingOrder || paymentDismissed || paymentVerified) return;
+    const id = setInterval(() => {
+      void checkOrderStatus(pendingOrder.razorpayOrderId, pendingOrder.packageId);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [pendingOrder, paymentDismissed, paymentVerified, checkOrderStatus]);
+
   const openRazorpayForCredits = useCallback(
     (order: { razorpayOrderId: string; amount: number; currency: string; keyId: string; package: CreditPackage }) => {
       if (!window.Razorpay) {
         setCreditPurchaseError("Payment service unavailable — please refresh and try again.");
         return;
       }
+      setPendingOrder({ razorpayOrderId: order.razorpayOrderId, packageId: order.package.id });
+      setPaymentDismissed(false);
+      setPaymentVerified(false);
       const rzp = new window.Razorpay({
         key: order.keyId,
         amount: order.amount,
@@ -192,6 +237,7 @@ export default function LookbookPage() {
                 packageId: order.package.id,
               },
             });
+            setPendingOrder(null);
             await refetchCredits();
             setShowBuyCredits(false);
             setCreditPurchaseError(null);
@@ -199,16 +245,18 @@ export default function LookbookPage() {
             setCreditPurchaseError("Payment verification failed — please contact support.");
           }
         },
-        modal: { ondismiss: () => {} },
+        modal: { ondismiss: () => { setPaymentDismissed(true); } },
         theme: { color: "#B8925A" },
       });
       rzp.open();
     },
-    [verifyPayment, refetchCredits],
+    [verifyPayment, refetchCredits, checkOrderStatus],
   );
 
   const handleBuyPackage = useCallback(async (pkg: CreditPackage) => {
     setCreditPurchaseError(null);
+    setPaymentDismissed(false);
+    setPaymentVerified(false);
     try {
       const order = await purchaseCredits.mutateAsync({ data: { packageId: pkg.id } });
       openRazorpayForCredits(order);
@@ -1235,7 +1283,7 @@ export default function LookbookPage() {
       {/* ── Buy Credits Modal ───────────────────────────────────────────────── */}
       {showBuyCredits && (
         <div
-          onClick={() => { setShowBuyCredits(false); setCreditPurchaseError(null); }}
+          onClick={() => { setShowBuyCredits(false); setCreditPurchaseError(null); setPendingOrder(null); setPaymentDismissed(false); setPaymentVerified(false); }}
           style={{
             position: "fixed", inset: 0, background: "rgba(10,10,10,0.7)",
             display: "flex", alignItems: "center", justifyContent: "center", zIndex: 250, padding: 20,
@@ -1255,85 +1303,125 @@ export default function LookbookPage() {
                 </h3>
               </div>
               <button
-                onClick={() => { setShowBuyCredits(false); setCreditPurchaseError(null); }}
+                onClick={() => { setShowBuyCredits(false); setCreditPurchaseError(null); setPendingOrder(null); setPaymentDismissed(false); setPaymentVerified(false); }}
                 style={{ background: "transparent", border: "none", cursor: "pointer", color: "rgba(0,0,0,0.35)", padding: 4 }}
               >
                 <X size={18} />
               </button>
             </div>
 
-            <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.5)", letterSpacing: "0.05em", lineHeight: 1.7, marginBottom: 22 }}>
-              Each AI credit powers one photorealistic try-on. Credits never expire.
-              {creditsRemaining !== null && (
-                <span style={{ display: "block", marginTop: 4, color: creditsRemaining === 0 ? "#c0392b" : "rgba(0,0,0,0.4)" }}>
-                  You currently have <strong>{creditsRemaining}</strong> credit{creditsRemaining !== 1 ? "s" : ""}.
-                </span>
-              )}
-            </p>
-
-            {creditPackages.length === 0 && (
-              <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.4)", textAlign: "center", padding: "20px 0" }}>
-                Loading packages…
-              </p>
+            {/* ── Payment success ─────────────────────────────────────────── */}
+            {paymentVerified && (
+              <div style={{ textAlign: "center", padding: "24px 0" }}>
+                <CheckCircle size={44} color="#27ae60" style={{ marginBottom: 12 }} />
+                <p style={{ fontFamily: FONT_DISPLAY, fontSize: 22, color: "#0A0A0A", marginBottom: 6 }}>Payment confirmed!</p>
+                <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.5)", letterSpacing: "0.05em" }}>
+                  Your credits have been added. Closing…
+                </p>
+              </div>
             )}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-              {creditPackages.map(pkg => (
+            {/* ── "I already paid" panel — shown after Razorpay modal dismissal ── */}
+            {!paymentVerified && paymentDismissed && pendingOrder && (
+              <div style={{ background: "rgba(184,146,90,0.06)", border: `1px solid rgba(184,146,90,0.25)`, padding: "18px 16px", marginBottom: 20 }}>
+                <p style={{ fontFamily: FONT_UI, fontSize: 10, color: "#0A0A0A", letterSpacing: "0.06em", marginBottom: 10, lineHeight: 1.6 }}>
+                  Did you complete the UPI payment on your phone? Click below to verify it — credits will be added instantly.
+                </p>
                 <button
-                  key={pkg.id}
-                  onClick={() => handleBuyPackage(pkg)}
-                  disabled={purchaseCredits.isPending || verifyPayment.isPending}
+                  onClick={() => void checkOrderStatus(pendingOrder.razorpayOrderId, pendingOrder.packageId)}
+                  disabled={checkingPayment}
                   style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "14px 16px", border: `1px solid rgba(184,146,90,0.3)`,
-                    background: "transparent", cursor: purchaseCredits.isPending || verifyPayment.isPending ? "not-allowed" : "pointer",
-                    textAlign: "left", transition: "border-color 0.2s, background 0.2s",
+                    width: "100%", fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.18em",
+                    textTransform: "uppercase", background: GOLD, color: "#fff", border: "none",
+                    padding: "11px 0", cursor: checkingPayment ? "not-allowed" : "pointer", opacity: checkingPayment ? 0.7 : 1,
                   }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = GOLD; (e.currentTarget as HTMLButtonElement).style.background = "rgba(184,146,90,0.04)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(184,146,90,0.3)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 36, height: 36, background: "rgba(184,146,90,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Zap size={16} color={GOLD} />
-                    </div>
-                    <div>
-                      <p style={{ fontFamily: FONT_DISPLAY, fontSize: 18, color: "#0A0A0A", margin: 0 }}>
-                        {pkg.name}
-                      </p>
-                      {pkg.bonusCredits > 0 && (
-                        <p style={{ fontFamily: FONT_UI, fontSize: 9, color: GOLD, letterSpacing: "0.1em", margin: 0, marginTop: 2 }}>
-                          +{pkg.bonusCredits} bonus credit{pkg.bonusCredits > 1 ? "s" : ""}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <p style={{ fontFamily: FONT_UI, fontSize: 14, color: GOLD, fontWeight: 600, margin: 0, letterSpacing: "0.02em" }}>
-                      ₹{Math.round(pkg.priceInPaise / 100)}
-                    </p>
-                    <p style={{ fontFamily: FONT_UI, fontSize: 9, color: "rgba(0,0,0,0.35)", margin: 0, marginTop: 2, letterSpacing: "0.08em" }}>
-                      ₹{Math.round(pkg.priceInPaise / pkg.creditsAmount / 100)} / credit
-                    </p>
-                  </div>
+                  {checkingPayment ? "Checking payment…" : "✓ I've already paid — verify now"}
                 </button>
-              ))}
-            </div>
-
-            {creditPurchaseError && (
-              <p style={{ fontFamily: FONT_UI, fontSize: 10, color: "#c0392b", letterSpacing: "0.05em", textAlign: "center", marginBottom: 14 }}>
-                {creditPurchaseError}
-              </p>
+                {!checkingPayment && (
+                  <p style={{ fontFamily: FONT_UI, fontSize: 9, color: "rgba(0,0,0,0.35)", textAlign: "center", marginTop: 8, marginBottom: 0, letterSpacing: "0.06em" }}>
+                    Or choose a package below to try a different payment method
+                  </p>
+                )}
+              </div>
             )}
 
-            {(purchaseCredits.isPending || verifyPayment.isPending) && (
-              <p style={{ fontFamily: FONT_UI, fontSize: 10, color: GOLD, letterSpacing: "0.1em", textAlign: "center", marginBottom: 14 }}>
-                Processing…
-              </p>
-            )}
+            {!paymentVerified && (
+              <>
+                <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.5)", letterSpacing: "0.05em", lineHeight: 1.7, marginBottom: 22 }}>
+                  Each AI credit powers one photorealistic try-on. Credits never expire.
+                  {creditsRemaining !== null && (
+                    <span style={{ display: "block", marginTop: 4, color: creditsRemaining === 0 ? "#c0392b" : "rgba(0,0,0,0.4)" }}>
+                      You currently have <strong>{creditsRemaining}</strong> credit{creditsRemaining !== 1 ? "s" : ""}.
+                    </span>
+                  )}
+                </p>
 
-            <p style={{ fontFamily: FONT_UI, fontSize: 9, color: "rgba(0,0,0,0.3)", letterSpacing: "0.08em", textAlign: "center", margin: 0 }}>
-              Secure checkout via Razorpay · UPI, card, netbanking accepted
-            </p>
+                {creditPackages.length === 0 && (
+                  <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.4)", textAlign: "center", padding: "20px 0" }}>
+                    Loading packages…
+                  </p>
+                )}
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+                  {creditPackages.map(pkg => (
+                    <button
+                      key={pkg.id}
+                      onClick={() => handleBuyPackage(pkg)}
+                      disabled={purchaseCredits.isPending || verifyPayment.isPending}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        padding: "14px 16px", border: `1px solid rgba(184,146,90,0.3)`,
+                        background: "transparent", cursor: purchaseCredits.isPending || verifyPayment.isPending ? "not-allowed" : "pointer",
+                        textAlign: "left", transition: "border-color 0.2s, background 0.2s",
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = GOLD; (e.currentTarget as HTMLButtonElement).style.background = "rgba(184,146,90,0.04)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(184,146,90,0.3)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 36, height: 36, background: "rgba(184,146,90,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Zap size={16} color={GOLD} />
+                        </div>
+                        <div>
+                          <p style={{ fontFamily: FONT_DISPLAY, fontSize: 18, color: "#0A0A0A", margin: 0 }}>
+                            {pkg.name}
+                          </p>
+                          {pkg.bonusCredits > 0 && (
+                            <p style={{ fontFamily: FONT_UI, fontSize: 9, color: GOLD, letterSpacing: "0.1em", margin: 0, marginTop: 2 }}>
+                              +{pkg.bonusCredits} bonus credit{pkg.bonusCredits > 1 ? "s" : ""}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <p style={{ fontFamily: FONT_UI, fontSize: 14, color: GOLD, fontWeight: 600, margin: 0, letterSpacing: "0.02em" }}>
+                          ₹{Math.round(pkg.priceInPaise / 100)}
+                        </p>
+                        <p style={{ fontFamily: FONT_UI, fontSize: 9, color: "rgba(0,0,0,0.35)", margin: 0, marginTop: 2, letterSpacing: "0.08em" }}>
+                          ₹{Math.round(pkg.priceInPaise / pkg.creditsAmount / 100)} / credit
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {creditPurchaseError && (
+                  <p style={{ fontFamily: FONT_UI, fontSize: 10, color: "#c0392b", letterSpacing: "0.05em", textAlign: "center", marginBottom: 14 }}>
+                    {creditPurchaseError}
+                  </p>
+                )}
+
+                {(purchaseCredits.isPending || verifyPayment.isPending) && (
+                  <p style={{ fontFamily: FONT_UI, fontSize: 10, color: GOLD, letterSpacing: "0.1em", textAlign: "center", marginBottom: 14 }}>
+                    Processing…
+                  </p>
+                )}
+
+                <p style={{ fontFamily: FONT_UI, fontSize: 9, color: "rgba(0,0,0,0.3)", letterSpacing: "0.08em", textAlign: "center", margin: 0 }}>
+                  Secure checkout via Razorpay · UPI, card, netbanking accepted
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -143,6 +143,56 @@ router.post("/credits/verify", requireAuth, async (req, res): Promise<void> => {
   res.json({ success: true, creditsRemaining });
 });
 
+/* ── POST /credits/check-order ──────────────────────────────────────────── */
+// Called after UPI QR payment when Razorpay's handler callback didn't fire.
+// Fetches all payments for the order from Razorpay; if a captured payment
+// exists, grants credits idempotently (safe to call multiple times).
+router.post("/credits/check-order", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).userId;
+  if (!rzp) { res.status(500).json({ error: "Razorpay not configured" }); return; }
+
+  const { orderId, packageId: rawPackageId } = req.body ?? {};
+  if (!orderId || !rawPackageId) {
+    res.status(400).json({ error: "orderId and packageId are required" }); return;
+  }
+
+  const packageId = parseInt(String(rawPackageId), 10);
+  const [pkg] = await db
+    .select()
+    .from(creditPackagesTable)
+    .where(eq(creditPackagesTable.id, packageId));
+  if (!pkg) { res.status(404).json({ error: "Package not found" }); return; }
+
+  let orderPayments: any;
+  try {
+    orderPayments = await (rzp.orders as any).fetchPayments(orderId);
+  } catch (e: any) {
+    logger.error({ e, orderId }, "credits/check-order: failed to fetch order payments");
+    res.status(502).json({ error: "Could not reach Razorpay to verify payment" }); return;
+  }
+
+  const captured = (orderPayments?.items ?? []).find((p: any) => p.status === "captured");
+  if (!captured) {
+    res.json({ paid: false }); return;
+  }
+
+  // Extra safety: verify the order's userId note matches the authenticated user.
+  const noteUserId = captured.notes?.userId ?? "";
+  if (noteUserId && noteUserId !== userId) {
+    res.status(403).json({ error: "Unauthorized" }); return;
+  }
+
+  const creditsRemaining = await creditAccountAfterPurchase({
+    userId,
+    creditsAmount: pkg.creditsAmount,
+    bonusCredits: pkg.bonusCredits,
+    razorpayPaymentId: captured.id,
+  });
+
+  logger.info({ userId, packageId, paymentId: captured.id }, "credits: check-order credited account");
+  res.json({ paid: true, creditsRemaining });
+});
+
 /* ── Razorpay webhook (payment.captured) ─────────────────────────────────── */
 // Fallback for cases where the frontend /verify call doesn't complete.
 router.post("/credits/webhook", async (req, res): Promise<void> => {
