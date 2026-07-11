@@ -19,7 +19,7 @@ import {
 } from "@workspace/api-client-react";
 import { getAssetUrl } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, Save, CheckCircle, Heart, Check, X, Wand2, AlertTriangle, ZoomIn, ZoomOut, RotateCcw, Sparkles, Upload, User } from "lucide-react";
+import { Trash2, Save, CheckCircle, Heart, Check, X, Wand2, AlertTriangle, ZoomIn, ZoomOut, RotateCcw, Sparkles, Upload, User, Maximize2, Minimize2, Download } from "lucide-react";
 import { useUploadLookbookPhoto } from "@workspace/api-client-react";
 
 const GOLD = "#B8925A";
@@ -130,6 +130,33 @@ export default function LookbookPage() {
       setPhotoUploadError(err instanceof Error ? err.message : "Failed to upload photo");
     }
   }, [uploadPhoto]);
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const handleDownload = useCallback(async () => {
+    if (generation.status !== "succeeded") return;
+    const url = generation.resultImageUrl;
+    try {
+      const res = await fetch(url, { mode: "cors" });
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `kasha-look-${Date.now()}.jpg`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch {
+      // CORS blocked — fall back to opening in a new tab
+      window.open(url, "_blank");
+    }
+  }, [generation]);
+
+  // Close fullscreen on Escape
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setIsFullscreen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isFullscreen]);
 
   const zoomIn = useCallback(() => setZoom(z => Math.min(z + 0.25, 3)), []);
   const zoomOut = useCallback(() => setZoom(z => Math.max(z - 0.25, 1)), []);
@@ -559,7 +586,33 @@ export default function LookbookPage() {
 
                         {generation.status === "succeeded" ? (
                           <>
-                            {/* Zoom controls */}
+                            {/* Top-right: download + fullscreen */}
+                            <div style={{
+                              position: "absolute", top: 12, right: 12, zIndex: 10,
+                              display: "flex", gap: 6,
+                            }}>
+                              {[
+                                { icon: <Download size={14} />, onClick: handleDownload, title: "Download image" },
+                                { icon: <Maximize2 size={14} />, onClick: () => setIsFullscreen(true), title: "Full screen" },
+                              ].map(({ icon, onClick, title }, i) => (
+                                <button
+                                  key={i}
+                                  onClick={onClick}
+                                  title={title}
+                                  style={{
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    width: 32, height: 32,
+                                    background: "rgba(0,0,0,0.65)", color: "#fff",
+                                    border: "1px solid rgba(255,255,255,0.15)", borderRadius: 4,
+                                    cursor: "pointer", backdropFilter: "blur(4px)",
+                                  }}
+                                >
+                                  {icon}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Bottom-right: zoom controls */}
                             <div style={{
                               position: "absolute", bottom: 12, right: 12, zIndex: 10,
                               display: "flex", gap: 6,
@@ -963,6 +1016,70 @@ export default function LookbookPage() {
           </Link>
         </section>
       </Show>
+
+      {/* ── Fullscreen image viewer ── */}
+      {isFullscreen && generation.status === "succeeded" && (
+        <div
+          onClick={() => setIsFullscreen(false)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.96)", zIndex: 300,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >
+          {/* Close */}
+          <button
+            onClick={() => setIsFullscreen(false)}
+            title="Exit full screen (Esc)"
+            style={{
+              position: "absolute", top: 16, right: 16,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: 40, height: 40, background: "rgba(255,255,255,0.12)",
+              border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6,
+              color: "#fff", cursor: "pointer",
+            }}
+          >
+            <Minimize2 size={18} />
+          </button>
+
+          {/* Download inside fullscreen too */}
+          <button
+            onClick={e => { e.stopPropagation(); void handleDownload(); }}
+            title="Download image"
+            style={{
+              position: "absolute", top: 16, right: 64,
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "0 14px", height: 40,
+              background: "rgba(255,255,255,0.12)",
+              border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6,
+              color: "#fff", cursor: "pointer",
+              fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase",
+            }}
+          >
+            <Download size={14} /> Download
+          </button>
+
+          {/* Image — click does not propagate so backdrop click closes */}
+          <img
+            src={generation.resultImageUrl}
+            alt="AI-generated try-on result"
+            onClick={e => e.stopPropagation()}
+            style={{
+              maxWidth: "92vw", maxHeight: "90vh",
+              objectFit: "contain",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.6)",
+            }}
+          />
+
+          {/* Hint */}
+          <p style={{
+            position: "absolute", bottom: 18,
+            fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.15em",
+            color: "rgba(255,255,255,0.35)", textTransform: "uppercase",
+          }}>
+            Press Esc or click outside to close
+          </p>
+        </div>
+      )}
 
       {showConfirm && (
         <div
