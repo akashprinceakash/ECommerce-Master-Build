@@ -15,7 +15,7 @@ import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAu
 import type { LookbookLookItem } from "@workspace/db";
 import { classifyProductRole } from "../services/vton/classifier";
 import { submitTryOnJob, getTryOnJob } from "../services/vton/jobQueue";
-import { AVATAR_IMAGE_URLS } from "../services/vton/humanImages";
+import { AVATAR_IMAGE_PATHS } from "../services/vton/humanImages";
 import { uploadToR2, r2Enabled } from "../lib/r2";
 import type { GarmentRole, TryOnGarment } from "../services/vton/types";
 import { ROLE_TO_VTON_CATEGORY } from "../services/vton/types";
@@ -292,7 +292,9 @@ router.post("/lookbook-tryon", requireAuth, async (req, res): Promise<void> => {
   // Process top before bottom for a stable chaining order (dress is alone).
   garments.sort((a, b2) => (a.role === "top" ? 0 : a.role === "bottom" ? 1 : 2) - (b2.role === "top" ? 0 : b2.role === "bottom" ? 1 : 2));
 
-  const personImageUrl = humanImageUrl ? toAbsoluteUrl(humanImageUrl, req.hostname) : AVATAR_IMAGE_URLS[gender];
+  const personImageUrl = humanImageUrl
+    ? toAbsoluteUrl(humanImageUrl, req.hostname)
+    : toAbsoluteUrl(AVATAR_IMAGE_PATHS[gender], req.hostname);
 
   // ── Credit system gate ────────────────────────────────────────────────────
   const UNAVAILABLE_MSG =

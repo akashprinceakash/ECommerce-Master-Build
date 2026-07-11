@@ -540,21 +540,31 @@ export default function LookbookPage() {
                       </p>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: modelSource === "photo" ? 16 : 0 }}>
                         {([
-                          { key: "avatar" as const, label: "Use AI Model", sub: "Quick", icon: <Sparkles size={14} /> },
-                          { key: "photo" as const, label: "Upload My Photo", sub: "Best Results", icon: <User size={14} /> },
+                          { key: "avatar" as const, label: "Use AI Model", sub: "Quick" },
+                          { key: "photo" as const, label: "Upload My Photo", sub: "Best Results" },
                         ]).map(opt => (
                           <button
                             key={opt.key}
                             onClick={() => { setModelSource(opt.key); setGeneration({ status: "idle" }); }}
                             style={{
-                              display: "flex", alignItems: "center", gap: 8, flex: "1 1 200px",
-                              fontFamily: FONT_UI, padding: "10px 16px", cursor: "pointer",
+                              display: "flex", alignItems: "center", gap: 10, flex: "1 1 200px",
+                              fontFamily: FONT_UI, padding: "8px 14px", cursor: "pointer",
                               border: `1.5px solid ${modelSource === opt.key ? GOLD : "rgba(0,0,0,0.12)"}`,
                               background: modelSource === opt.key ? "rgba(184,146,90,0.08)" : "transparent",
                               textAlign: "left",
                             }}
                           >
-                            {opt.icon}
+                            {opt.key === "avatar" ? (
+                              <img
+                                src={`/api/public/avatars/avatar-${gender}.png`}
+                                alt={`${gender} avatar`}
+                                style={{ width: 36, height: 48, objectFit: "cover", objectPosition: "top", flexShrink: 0, border: `1px solid rgba(184,146,90,0.2)` }}
+                              />
+                            ) : (
+                              <div style={{ width: 36, height: 48, display: "flex", alignItems: "center", justifyContent: "center", background: "#F5F2EC", flexShrink: 0 }}>
+                                <User size={18} color="rgba(0,0,0,0.35)" />
+                              </div>
+                            )}
                             <span>
                               <span style={{ display: "block", fontSize: 12, letterSpacing: "0.05em", color: "#0A0A0A" }}>{opt.label}</span>
                               <span style={{ display: "block", fontSize: 9, letterSpacing: "0.15em", textTransform: "uppercase", color: GOLD, marginTop: 2 }}>{opt.sub}</span>
@@ -1354,9 +1364,11 @@ export default function LookbookPage() {
                 {modelSource === "photo" && photoPreviewUrl ? (
                   <img src={photoPreviewUrl} alt="Your photo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 ) : (
-                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <User size={22} color={GOLD} />
-                  </div>
+                  <img
+                    src={`/api/public/avatars/avatar-${gender}.png`}
+                    alt={`${gender} model`}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }}
+                  />
                 )}
               </div>
               <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.55)", letterSpacing: "0.05em", margin: 0 }}>
