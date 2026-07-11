@@ -37,6 +37,14 @@ async function requireAdmin(req: Request, res: Response): Promise<string | null>
   }
 }
 
+/* ── GET /admin/credits/packages ────────────────────────────────────────── */
+router.get("/admin/credits/packages", requireAuth, async (req, res): Promise<void> => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  const rows = await db.select().from(creditPackagesTable).orderBy(creditPackagesTable.creditsAmount);
+  res.json(rows);
+});
+
 /* ── GET /admin/credits/replicate-balance ───────────────────────────────── */
 router.get("/admin/credits/replicate-balance", requireAuth, async (req, res): Promise<void> => {
   const adminId = await requireAdmin(req, res);

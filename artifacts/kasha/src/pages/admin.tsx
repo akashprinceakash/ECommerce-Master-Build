@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Plus, Pencil, Trash2, Upload, X, Check,
-  ShieldCheck, Package, Users, Eye, ArrowLeft, BarChart3, ShoppingBag, UserCog, Download, ImageIcon, Mail, Tag,
+  ShieldCheck, Package, Users, Eye, ArrowLeft, BarChart3, ShoppingBag, UserCog, Download, ImageIcon, Mail, Tag, Zap,
 } from "lucide-react";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { AdminOrders } from "@/components/admin/AdminOrders";
@@ -538,7 +538,7 @@ export default function AdminPage() {
   const modelFileRef = useRef<HTMLInputElement>(null);
   const thumbFileRef = useRef<HTMLInputElement>(null);
 
-  const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "orders" | "users" | "designs" | "site" | "skuassets" | "enquiries" | "coupons">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "products" | "orders" | "users" | "designs" | "site" | "skuassets" | "enquiries" | "coupons" | "credits">("dashboard");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
@@ -914,6 +914,7 @@ export default function AdminPage() {
             { id: "skuassets", label: "SKU Assets", icon: Upload, count: skuAssets.length },
             { id: "enquiries", label: "Enquiries", icon: Mail, count: enquiries.length },
             { id: "coupons", label: "Coupons", icon: Tag, count: 0 },
+            { id: "credits", label: "AI Credits", icon: Zap, count: 0 },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1651,10 +1652,227 @@ export default function AdminPage() {
           </div>
         )}
 
+        {activeTab === "credits" && <AdminCreditPackages />}
+
       {/* Design Viewer Modal */}
       {viewingDesign && (
         <DesignViewerModal design={viewingDesign} onClose={() => setViewingDesign(null)} />
       )}
     </Layout>
+  );
+}
+
+/* ── Admin Credit Packages Component ──────────────────────────────────────── */
+interface CreditPackageRow {
+  id: number;
+  name: string;
+  creditsAmount: number;
+  priceInPaise: number;
+  bonusCredits: number;
+  active: boolean;
+}
+
+function AdminCreditPackages() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<Partial<CreditPackageRow>>({});
+
+  const { data: packages = [], isLoading } = useQuery<CreditPackageRow[]>({
+    queryKey: ["admin-credit-packages"],
+    queryFn: () => apiFetch("/api/admin/credits/packages"),
+  });
+
+  const patchPackage = useMutation({
+    mutationFn: async ({ id, ...body }: Partial<CreditPackageRow> & { id: number }) => {
+      const { getToken } = (window as any).Clerk?.session ?? {};
+      const token = typeof getToken === "function" ? await getToken() : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`${getApiUrl()}/api/admin/credits/packages/${id}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json() as Promise<CreditPackageRow>;
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData<CreditPackageRow[]>(["admin-credit-packages"], old =>
+        old ? old.map(p => p.id === updated.id ? updated : p) : old
+      );
+      setEditingId(null);
+      toast({ title: "Package updated" });
+    },
+    onError: () => toast({ title: "Update failed", variant: "destructive" }),
+  });
+
+  const startEdit = (pkg: CreditPackageRow) => {
+    setEditingId(pkg.id);
+    setEditForm({ name: pkg.name, creditsAmount: pkg.creditsAmount, priceInPaise: pkg.priceInPaise, bonusCredits: pkg.bonusCredits });
+  };
+
+  const saveEdit = (id: number) => {
+    if (!editForm.name?.trim()) { toast({ title: "Name is required", variant: "destructive" }); return; }
+    patchPackage.mutate({ id, ...editForm });
+  };
+
+  const toggleActive = (pkg: CreditPackageRow) =>
+    patchPackage.mutate({ id: pkg.id, active: !pkg.active });
+
+  if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin w-8 h-8" /></div>;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-lg font-semibold">AI Credit Packages</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Edit package names, prices, and credit amounts. Changes take effect immediately for new purchases.
+          </p>
+        </div>
+      </div>
+
+      <div className="border border-border overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted/40">
+              <th className="text-left px-4 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">Package Name</th>
+              <th className="text-left px-4 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">Credits</th>
+              <th className="text-left px-4 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">Bonus Credits</th>
+              <th className="text-left px-4 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">Price (₹)</th>
+              <th className="text-left px-4 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">Per Credit</th>
+              <th className="text-left px-4 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">Active</th>
+              <th className="px-4 py-3" />
+            </tr>
+          </thead>
+          <tbody>
+            {packages.map(pkg => {
+              const isEditing = editingId === pkg.id;
+              const priceRs = pkg.priceInPaise / 100;
+              const perCredit = pkg.creditsAmount > 0 ? Math.round(pkg.priceInPaise / pkg.creditsAmount / 100) : 0;
+
+              return (
+                <tr key={pkg.id} className={`border-b border-border last:border-0 ${!pkg.active ? "opacity-50" : ""}`}>
+
+                  {/* Name */}
+                  <td className="px-4 py-3">
+                    {isEditing ? (
+                      <Input
+                        value={editForm.name ?? ""}
+                        onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                        className="h-8 rounded-none w-40"
+                      />
+                    ) : (
+                      <span className="font-medium">{pkg.name}</span>
+                    )}
+                  </td>
+
+                  {/* Credits amount */}
+                  <td className="px-4 py-3">
+                    {isEditing ? (
+                      <Input
+                        type="number" min={1}
+                        value={editForm.creditsAmount ?? ""}
+                        onChange={e => setEditForm(f => ({ ...f, creditsAmount: parseInt(e.target.value) || 1 }))}
+                        className="h-8 rounded-none w-20"
+                      />
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        <Zap className="w-3 h-3 text-amber-500" /> {pkg.creditsAmount}
+                      </span>
+                    )}
+                  </td>
+
+                  {/* Bonus credits */}
+                  <td className="px-4 py-3">
+                    {isEditing ? (
+                      <Input
+                        type="number" min={0}
+                        value={editForm.bonusCredits ?? ""}
+                        onChange={e => setEditForm(f => ({ ...f, bonusCredits: parseInt(e.target.value) || 0 }))}
+                        className="h-8 rounded-none w-20"
+                      />
+                    ) : (
+                      <span className="text-emerald-600">{pkg.bonusCredits > 0 ? `+${pkg.bonusCredits}` : "—"}</span>
+                    )}
+                  </td>
+
+                  {/* Price in paise → display as ₹ */}
+                  <td className="px-4 py-3">
+                    {isEditing ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">₹</span>
+                        <Input
+                          type="number" min={1} step={1}
+                          value={editForm.priceInPaise !== undefined ? editForm.priceInPaise / 100 : ""}
+                          onChange={e => setEditForm(f => ({ ...f, priceInPaise: Math.round(parseFloat(e.target.value) * 100) || 0 }))}
+                          className="h-8 rounded-none w-24"
+                          placeholder="49"
+                        />
+                      </div>
+                    ) : (
+                      <span className="font-semibold">₹{priceRs}</span>
+                    )}
+                  </td>
+
+                  {/* Per-credit rate (read-only) */}
+                  <td className="px-4 py-3 text-muted-foreground">₹{perCredit}</td>
+
+                  {/* Active toggle */}
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => toggleActive(pkg)}
+                      disabled={patchPackage.isPending}
+                      className={`px-2 py-1 text-xs font-medium rounded-none border transition-colors ${
+                        pkg.active
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+                          : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
+                      }`}
+                    >
+                      {pkg.active ? "Active" : "Hidden"}
+                    </button>
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-4 py-3">
+                    {isEditing ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => saveEdit(pkg.id)}
+                          disabled={patchPackage.isPending}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                        >
+                          {patchPackage.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-border hover:bg-muted transition-colors"
+                        >
+                          <X className="w-3 h-3" /> Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => startEdit(pkg)}
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-border hover:bg-muted transition-colors"
+                      >
+                        <Pencil className="w-3 h-3" /> Edit
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="text-xs text-muted-foreground mt-4">
+        Prices are stored in paise (1 ₹ = 100 paise). Changes apply to new Razorpay orders immediately — existing unpaid orders are unaffected.
+        Use <strong>Hidden</strong> to temporarily remove a package from the storefront without deleting it.
+      </p>
+    </div>
   );
 }
