@@ -16,6 +16,8 @@ import lookbookRouter from "./lookbook";
 import clubOrdersRouter from "./club-orders";
 import shiprocketWebhookRouter from "./shiprocketWebhook";
 import couponsRouter from "./coupons";
+import creditsRouter from "./credits";
+import adminCreditsRouter from "./adminCredits";
 
 const router: IRouter = Router();
 
@@ -36,5 +38,7 @@ router.use(contactRouter);
 router.use(lookbookRouter);
 router.use(clubOrdersRouter);
 router.use(couponsRouter);
+router.use(creditsRouter);
+router.use(adminCreditsRouter);
 
 export default router;

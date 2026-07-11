@@ -25,6 +25,8 @@ import type {
   CreateCustomizationBody,
   CreateLookbookOutfitBody,
   CreateOrderBody,
+  CreditPurchaseOrder,
+  CreditsBalance,
   Customization,
   CustomizationOrNull,
   ErrorResponse,
@@ -33,6 +35,7 @@ import type {
   LookbookOutfit,
   Order,
   Product,
+  PurchaseCreditBody,
   SaveLookbookProduct201,
   SaveLookbookProductBody,
   SubmitTryOnBody,
@@ -44,6 +47,9 @@ import type {
   UploadLookbookPhotoBody,
   UpsertUserProfileBody,
   UserProfile,
+  VerifyCreditBody,
+  VerifyCreditResult,
+  WelcomeGrantResult,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -2547,4 +2553,332 @@ export const useCreateClubOrder = <
   TContext
 > => {
   return useMutation(getCreateClubOrderMutationOptions(options));
+};
+
+/**
+ * @summary Get current user's credit balance and available packages
+ */
+export const getGetCreditsBalanceUrl = () => {
+  return `/api/credits/balance`;
+};
+
+export const getCreditsBalance = async (
+  options?: RequestInit,
+): Promise<CreditsBalance> => {
+  return customFetch<CreditsBalance>(getGetCreditsBalanceUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCreditsBalanceQueryKey = () => {
+  return [`/api/credits/balance`] as const;
+};
+
+export const getGetCreditsBalanceQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCreditsBalance>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCreditsBalance>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCreditsBalanceQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCreditsBalance>>
+  > = ({ signal }) => getCreditsBalance({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCreditsBalance>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCreditsBalanceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCreditsBalance>>
+>;
+export type GetCreditsBalanceQueryError = ErrorType<void>;
+
+/**
+ * @summary Get current user's credit balance and available packages
+ */
+
+export function useGetCreditsBalance<
+  TData = Awaited<ReturnType<typeof getCreditsBalance>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCreditsBalance>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCreditsBalanceQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Grant 2 free welcome credits on first Lookbook/Studio visit (idempotent)
+ */
+export const getEnsureWelcomeCreditsUrl = () => {
+  return `/api/credits/ensure-welcome`;
+};
+
+export const ensureWelcomeCredits = async (
+  options?: RequestInit,
+): Promise<WelcomeGrantResult> => {
+  return customFetch<WelcomeGrantResult>(getEnsureWelcomeCreditsUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getEnsureWelcomeCreditsMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof ensureWelcomeCredits>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof ensureWelcomeCredits>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["ensureWelcomeCredits"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof ensureWelcomeCredits>>,
+    void
+  > = () => {
+    return ensureWelcomeCredits(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type EnsureWelcomeCreditsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof ensureWelcomeCredits>>
+>;
+
+export type EnsureWelcomeCreditsMutationError = ErrorType<void>;
+
+/**
+ * @summary Grant 2 free welcome credits on first Lookbook/Studio visit (idempotent)
+ */
+export const useEnsureWelcomeCredits = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof ensureWelcomeCredits>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof ensureWelcomeCredits>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getEnsureWelcomeCreditsMutationOptions(options));
+};
+
+/**
+ * @summary Create a Razorpay order to purchase a credit package
+ */
+export const getPurchaseCreditPackageUrl = () => {
+  return `/api/credits/purchase`;
+};
+
+export const purchaseCreditPackage = async (
+  purchaseCreditBody: PurchaseCreditBody,
+  options?: RequestInit,
+): Promise<CreditPurchaseOrder> => {
+  return customFetch<CreditPurchaseOrder>(getPurchaseCreditPackageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(purchaseCreditBody),
+  });
+};
+
+export const getPurchaseCreditPackageMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof purchaseCreditPackage>>,
+    TError,
+    { data: BodyType<PurchaseCreditBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof purchaseCreditPackage>>,
+  TError,
+  { data: BodyType<PurchaseCreditBody> },
+  TContext
+> => {
+  const mutationKey = ["purchaseCreditPackage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof purchaseCreditPackage>>,
+    { data: BodyType<PurchaseCreditBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return purchaseCreditPackage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PurchaseCreditPackageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof purchaseCreditPackage>>
+>;
+export type PurchaseCreditPackageMutationBody = BodyType<PurchaseCreditBody>;
+export type PurchaseCreditPackageMutationError = ErrorType<void>;
+
+/**
+ * @summary Create a Razorpay order to purchase a credit package
+ */
+export const usePurchaseCreditPackage = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof purchaseCreditPackage>>,
+    TError,
+    { data: BodyType<PurchaseCreditBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof purchaseCreditPackage>>,
+  TError,
+  { data: BodyType<PurchaseCreditBody> },
+  TContext
+> => {
+  return useMutation(getPurchaseCreditPackageMutationOptions(options));
+};
+
+/**
+ * @summary Verify Razorpay payment and credit the account
+ */
+export const getVerifyCreditPaymentUrl = () => {
+  return `/api/credits/verify`;
+};
+
+export const verifyCreditPayment = async (
+  verifyCreditBody: VerifyCreditBody,
+  options?: RequestInit,
+): Promise<VerifyCreditResult> => {
+  return customFetch<VerifyCreditResult>(getVerifyCreditPaymentUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(verifyCreditBody),
+  });
+};
+
+export const getVerifyCreditPaymentMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof verifyCreditPayment>>,
+    TError,
+    { data: BodyType<VerifyCreditBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof verifyCreditPayment>>,
+  TError,
+  { data: BodyType<VerifyCreditBody> },
+  TContext
+> => {
+  const mutationKey = ["verifyCreditPayment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof verifyCreditPayment>>,
+    { data: BodyType<VerifyCreditBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return verifyCreditPayment(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type VerifyCreditPaymentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof verifyCreditPayment>>
+>;
+export type VerifyCreditPaymentMutationBody = BodyType<VerifyCreditBody>;
+export type VerifyCreditPaymentMutationError = ErrorType<void>;
+
+/**
+ * @summary Verify Razorpay payment and credit the account
+ */
+export const useVerifyCreditPayment = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof verifyCreditPayment>>,
+    TError,
+    { data: BodyType<VerifyCreditBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof verifyCreditPayment>>,
+  TError,
+  { data: BodyType<VerifyCreditBody> },
+  TContext
+> => {
+  return useMutation(getVerifyCreditPaymentMutationOptions(options));
 };

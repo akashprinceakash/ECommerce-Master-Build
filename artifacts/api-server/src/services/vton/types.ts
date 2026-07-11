@@ -36,4 +36,6 @@ export interface TryOnJob {
   error: string | null;
   createdAt: number;
   updatedAt: number;
+  /** DB row ID of the generation_logs entry for this job (null when credits are disabled). */
+  generationLogId: number | null;
 }

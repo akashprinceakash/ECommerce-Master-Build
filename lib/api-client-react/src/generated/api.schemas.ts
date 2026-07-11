@@ -5,6 +5,48 @@
  * KA.SHA Luxury Fashion eCommerce API
  * OpenAPI spec version: 0.1.0
  */
+export interface CreditPackage {
+  id: number;
+  name: string;
+  creditsAmount: number;
+  priceInPaise: number;
+  bonusCredits: number;
+}
+
+export interface CreditsBalance {
+  creditsRemaining: number;
+  packages: CreditPackage[];
+}
+
+export interface WelcomeGrantResult {
+  granted: boolean;
+  creditsRemaining: number;
+}
+
+export interface PurchaseCreditBody {
+  packageId: number;
+}
+
+export interface CreditPurchaseOrder {
+  razorpayOrderId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+  package: CreditPackage;
+}
+
+export interface VerifyCreditBody {
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+  packageId: number;
+}
+
+export interface VerifyCreditResult {
+  success: boolean;
+  creditsRemaining: number;
+}
+
 export interface HealthStatus {
   status: string;
 }

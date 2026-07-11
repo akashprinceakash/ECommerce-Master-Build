@@ -10,3 +10,4 @@ export * from "./lookbook";
 export * from "./contact";
 export * from "./club-orders";
 export * from "./coupons";
+export * from "./credits";

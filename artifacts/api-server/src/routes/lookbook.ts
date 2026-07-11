@@ -18,6 +18,15 @@ import { submitTryOnJob, getTryOnJob } from "../services/vton/jobQueue";
 import { AVATAR_IMAGE_URLS } from "../services/vton/humanImages";
 import { uploadToR2, r2Enabled } from "../lib/r2";
 import type { GarmentRole, TryOnGarment } from "../services/vton/types";
+import { ROLE_TO_VTON_CATEGORY } from "../services/vton/types";
+import { startIdmVtonPrediction } from "../services/vton/replicate";
+import {
+  areGenerationsDisabled,
+  getUserCredits,
+  insertGenerationLog,
+  insertFailedGenerationLog,
+  deductCreditForGeneration,
+} from "../services/creditService";
 
 const router: IRouter = Router();
 
@@ -284,7 +293,64 @@ router.post("/lookbook-tryon", requireAuth, async (req, res): Promise<void> => {
   garments.sort((a, b2) => (a.role === "top" ? 0 : a.role === "bottom" ? 1 : 2) - (b2.role === "top" ? 0 : b2.role === "bottom" ? 1 : 2));
 
   const personImageUrl = humanImageUrl ? toAbsoluteUrl(humanImageUrl, req.hostname) : AVATAR_IMAGE_URLS[gender];
-  const job = submitTryOnJob(userId, personImageUrl, garments);
+
+  // ── Credit system gate ────────────────────────────────────────────────────
+  const UNAVAILABLE_MSG =
+    "AI generation is temporarily unavailable. Our AI service is currently undergoing maintenance or recharge. Your AI credits are safe and have not been deducted. Please try again later.";
+
+  if (areGenerationsDisabled()) {
+    res.status(503).json({ error: UNAVAILABLE_MSG }); return;
+  }
+
+  const credits = await getUserCredits(userId);
+  if (!credits || credits.creditsRemaining < 1) {
+    res.status(402).json({
+      error: "You're out of AI credits — top up to keep styling looks.",
+      creditsRemaining: credits?.creditsRemaining ?? 0,
+    });
+    return;
+  }
+
+  // Derive a human-readable generation type from the selected garments.
+  const hasTop    = garments.some(g => g.role === "top");
+  const hasBottom = garments.some(g => g.role === "bottom");
+  const hasDress  = garments.some(g => g.role === "dress");
+  const generationType = hasDress ? "dress" : (hasTop && hasBottom) ? "full_lookbook" : hasTop ? "topwear" : "bottomwear";
+
+  // ── Start garment[0]'s Replicate prediction synchronously ─────────────────
+  // We only deduct the credit once we know Replicate accepted the request.
+  const firstGarment = garments[0]!;
+  let firstPredictionId: string;
+  try {
+    firstPredictionId = await startIdmVtonPrediction({
+      humanImageUrl: personImageUrl,
+      garmentImageUrl: firstGarment.imageUrl,
+      garmentDescription: firstGarment.name,
+      vtonCategory: ROLE_TO_VTON_CATEGORY[firstGarment.role],
+    });
+  } catch (replicateErr: any) {
+    // Replicate rejected or unreachable — do NOT deduct a credit.
+    await insertFailedGenerationLog({
+      userId,
+      generationType,
+      errorMessage: replicateErr?.message ?? "Replicate unavailable",
+    });
+    res.status(503).json({ error: UNAVAILABLE_MSG });
+    return;
+  }
+
+  // ── Replicate accepted — atomically deduct credit + log ───────────────────
+  const generationLogId = await insertGenerationLog({
+    userId,
+    generationType,
+    replicatePredictionId: firstPredictionId,
+  });
+  await deductCreditForGeneration({ userId, generationLogId });
+
+  const job = submitTryOnJob(userId, personImageUrl, garments, {
+    firstPredictionId,
+    generationLogId,
+  });
   res.status(202).json({ jobId: job.id, status: job.status });
 });
 

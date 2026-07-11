@@ -852,3 +852,63 @@ export const CreateClubOrderBody = zod.object({
   }),
   notes: zod.string().optional(),
 });
+
+/**
+ * @summary Get current user's credit balance and available packages
+ */
+export const GetCreditsBalanceResponse = zod.object({
+  creditsRemaining: zod.number(),
+  packages: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      creditsAmount: zod.number(),
+      priceInPaise: zod.number(),
+      bonusCredits: zod.number(),
+    }),
+  ),
+});
+
+/**
+ * @summary Grant 2 free welcome credits on first Lookbook/Studio visit (idempotent)
+ */
+export const EnsureWelcomeCreditsResponse = zod.object({
+  granted: zod.boolean(),
+  creditsRemaining: zod.number(),
+});
+
+/**
+ * @summary Create a Razorpay order to purchase a credit package
+ */
+export const PurchaseCreditPackageBody = zod.object({
+  packageId: zod.number(),
+});
+
+export const PurchaseCreditPackageResponse = zod.object({
+  razorpayOrderId: zod.string(),
+  amount: zod.number(),
+  currency: zod.string(),
+  keyId: zod.string(),
+  package: zod.object({
+    id: zod.number(),
+    name: zod.string(),
+    creditsAmount: zod.number(),
+    priceInPaise: zod.number(),
+    bonusCredits: zod.number(),
+  }),
+});
+
+/**
+ * @summary Verify Razorpay payment and credit the account
+ */
+export const VerifyCreditPaymentBody = zod.object({
+  razorpayOrderId: zod.string(),
+  razorpayPaymentId: zod.string(),
+  razorpaySignature: zod.string(),
+  packageId: zod.number(),
+});
+
+export const VerifyCreditPaymentResponse = zod.object({
+  success: zod.boolean(),
+  creditsRemaining: zod.number(),
+});

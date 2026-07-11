@@ -1,5 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { startCreditCron } from "./services/vton/creditCron";
+import { seedDefaultPackages } from "./services/creditService";
 
 // ── Global crash guards ───────────────────────────────────────────────────────
 // These prevent the process from silently dying on unhandled async errors.
@@ -35,4 +37,8 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Seed credit packages (no-op if rows already exist) and start hourly balance cron.
+  void seedDefaultPackages().catch(e => logger.error({ e }, "Failed to seed credit packages"));
+  startCreditCron();
 });

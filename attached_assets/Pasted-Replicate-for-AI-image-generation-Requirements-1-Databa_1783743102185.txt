@@ -1,0 +1,199 @@
+Replicate for AI image generation.
+
+
+
+## Requirements
+
+
+
+### 1. Database schema  
+
+
+
+Create these tables:
+
+
+
+**user_credits**
+
+- id (pk)
+
+- user_id (fk to users table, unique)
+
+- credits_remaining (integer, default 0) — always a whole number, never fractional
+
+- total_credits_purchased (integer, default 0)
+
+- total_credits_used (integer, default 0)
+
+- created_at, updated_at
+
+
+
+**credit_transactions**
+
+- id (pk)
+
+- user_id (fk)
+
+- type (enum: 'purchase', 'generation_deduct', 'free_grant', 'purchase_bonus', 'refund')
+
+- credits_delta (integer, can be negative for deductions)
+
+- razorpay_payment_id (nullable, for purchase-type rows)
+
+- related_generation_id (nullable, fk to generation_logs)
+
+- created_at
+
+
+
+**generation_logs**
+
+- id (pk)
+
+- user_id (fk)
+
+- generation_type (e.g. 'topwear', 'bottomwear', 'full_lookbook')
+
+- replicate_prediction_id
+
+- replicate_status (enum: 'pending', 'succeeded', 'failed')
+
+- predict_time_seconds (decimal, nullable — from Replicate's response metrics)
+
+- replicate_cost_usd (decimal, nullable — computed as predict_time_seconds * model's per-second rate)
+
+- credit_deducted (boolean, default false)
+
+- error_message (nullable)
+
+- created_at, completed_at
+
+
+
+**credit_packages** (admin-configurable pricing, don't hardcode)
+
+- id (pk)
+
+- name (e.g. "1 Credit", "3 Credits")
+
+- credits_amount (integer)
+
+- price_inr (integer, in paise for Razorpay)
+
+- bonus_credits (integer, default 0 — for promos)
+
+- active (boolean, default true)
+
+
+
+### 2. Credit purchase flow
+
+
+
+- Endpoint: POST /api/credits/purchase — takes package_id, creates Razorpay order.
+
+- Webhook/callback on payment success: increment user_credits.credits_remaining by the package's credits_amount + bonus_credits, log a 'purchase' row in credit_transactions with the razorpay_payment_id.
+
+- Credits purchased are NEVER sent to or tied to Replicate directly — they only update our internal ledger. Replicate's account balance is topped up separately by Kasha admin, completely decoupled from customer transactions.
+
+
+
+### 3. Generation request flow (critical logic)
+
+
+
+When a user clicks "Generate" on the Lookbook/Studio:
+
+
+
+1. Check user_credits.credits_remaining >= 1.
+
+   - If 0: return 402 with message "You're out of AI credits — top up to keep styling looks." Do NOT call Replicate.
+
+2. If credits available, attempt the Replicate prediction request.
+
+3. Handle the Replicate response:
+
+   - If Replicate returns 402 (insufficient account credit), 500, or the request times out/fails to start: 
+
+     - Do NOT deduct a credit.
+
+     - Log the attempt in generation_logs with replicate_status = 'failed'.
+
+     - Return a friendly error: "AI generation is temporarily unavailable. Our AI service is currently undergoing maintenance or recharge. Your AI credits are safe and have not been deducted. Please try again later."
+
+   - If Replicate successfully ACCEPTS the request (returns a prediction ID, status 'starting' or 'processing'):
+
+     - ONLY NOW deduct 1 credit from user_credits.credits_remaining.
+
+     - Log a 'generation_deduct' row in credit_transactions (credits_delta: -1).
+
+     - Create/update the generation_logs row with the prediction_id.
+
+4. On webhook/poll completion from Replicate:
+
+   - Update generation_logs.replicate_status, predict_time_seconds, and compute replicate_cost_usd using predict_time_seconds * [model's published per-second rate, make this a config constant].
+
+   - If the job fails AFTER acceptance (rare, but possible) — do NOT auto-refund the credit; log it for manual review, since the compute was still consumed on Replicate's side.
+
+
+
+All of this should be wrapped in a DB transaction where the credit deduction and generation_logs insert happen atomically — never deduct without a corresponding log entry.
+
+
+
+### 4. Admin monitoring for Replicate balance
+
+
+
+- Since Replicate doesn't expose a simple wallet balance endpoint reliably, track it ourselves:
+
+  - Add a `replicate_topups` table: id, amount_usd, topped_up_at, added_by_admin_id.
+
+  - Compute estimated remaining balance as: SUM(replicate_topups.amount_usd) - SUM(generation_logs.replicate_cost_usd where replicate_status = 'succeeded').
+
+- Build an admin dashboard widget showing this estimated balance.
+
+- Add a scheduled job (cron, runs hourly) that checks this estimated balance against thresholds and sends alerts:
+
+  - Below $20 → email to admin + in-app notification.
+
+  - Below $10 → dashboard warning banner (red).
+
+  - Below $5 → optional config flag to auto-disable new generations, showing the "temporarily unavailable" message to all users until an admin tops up.
+
+- Add an admin endpoint to manually log a Replicate top-up (amount_usd), which inserts into replicate_topups.
+
+
+
+### 5. Frontend requirements
+
+
+
+- Always display credits_remaining as a clean whole number ("3 Credits remaining"). Never show partial credits, rupee amounts, or Replicate-related figures to the customer.
+
+- Generate button should be disabled with a clear CTA ("Buy more credits") when credits_remaining = 0.
+
+- On the "temporarily unavailable" error, show the exact message from section 3 — reassure the customer their credits are untouched.
+
+- Free allowance: on first account creation (or first Bespoke Studio visit), auto-grant 2 free credits via a 'free_grant' transaction — implement as a one-time check (has the user ever received a free_grant row?).
+
+
+
+### 6. Pricing config (use these initial values, but keep them admin-editable via credit_packages table)
+
+
+
+- 1 Credit → ₹49
+
+- 3 Credits → ₹129
+
+- 5 Credits → ₹199
+
+- 10 Credits → ₹349
+
+
+
+Please build this as a set of complete files: Drizzle schema file, a credits service module (creditService.ts) handling all deduction/purchase/grant logic, the generation route handler integrating the check-then-generate-then-deduct flow, an admin routes file for balance monitoring and manual top-up logging, and a small cron job file for the hourly alert check. Give me full file contents, not diffs.

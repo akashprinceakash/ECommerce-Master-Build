@@ -808,6 +808,90 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /credits/balance:
+    get:
+      operationId: getCreditsBalance
+      tags: [credits]
+      summary: Get current user's credit balance and available packages
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Credit balance and packages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditsBalance"
+        "401":
+          description: Unauthorized
+
+  /credits/ensure-welcome:
+    post:
+      operationId: ensureWelcomeCredits
+      tags: [credits]
+      summary: Grant 2 free welcome credits on first Lookbook/Studio visit (idempotent)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Welcome grant result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WelcomeGrantResult"
+        "401":
+          description: Unauthorized
+
+  /credits/purchase:
+    post:
+      operationId: purchaseCreditPackage
+      tags: [credits]
+      summary: Create a Razorpay order to purchase a credit package
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseCreditBody"
+      responses:
+        "200":
+          description: Razorpay order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditPurchaseOrder"
+        "400":
+          description: Invalid package
+        "401":
+          description: Unauthorized
+
+  /credits/verify:
+    post:
+      operationId: verifyCreditPayment
+      tags: [credits]
+      summary: Verify Razorpay payment and credit the account
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyCreditBody"
+      responses:
+        "200":
+          description: Payment verified and credits added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyCreditResult"
+        "400":
+          description: Invalid signature or fields
+        "401":
+          description: Unauthorized
+
 components:
   securitySchemes:
     bearerAuth:
@@ -815,6 +899,67 @@ components:
       scheme: bearer
 
   schemas:
+    CreditPackage:
+      type: object
+      required: [id, name, creditsAmount, priceInPaise, bonusCredits]
+      properties:
+        id:            { type: integer }
+        name:          { type: string }
+        creditsAmount: { type: integer }
+        priceInPaise:  { type: integer }
+        bonusCredits:  { type: integer }
+
+    CreditsBalance:
+      type: object
+      required: [creditsRemaining, packages]
+      properties:
+        creditsRemaining:
+          type: integer
+        packages:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreditPackage"
+
+    WelcomeGrantResult:
+      type: object
+      required: [granted, creditsRemaining]
+      properties:
+        granted:          { type: boolean }
+        creditsRemaining: { type: integer }
+
+    PurchaseCreditBody:
+      type: object
+      required: [packageId]
+      properties:
+        packageId: { type: integer }
+
+    CreditPurchaseOrder:
+      type: object
+      required: [razorpayOrderId, amount, currency, keyId, package]
+      properties:
+        razorpayOrderId: { type: string }
+        amount:          { type: integer }
+        currency:        { type: string }
+        keyId:           { type: string }
+        package:
+          $ref: "#/components/schemas/CreditPackage"
+
+    VerifyCreditBody:
+      type: object
+      required: [razorpayOrderId, razorpayPaymentId, razorpaySignature, packageId]
+      properties:
+        razorpayOrderId:    { type: string }
+        razorpayPaymentId:  { type: string }
+        razorpaySignature:  { type: string }
+        packageId:          { type: integer }
+
+    VerifyCreditResult:
+      type: object
+      required: [success, creditsRemaining]
+      properties:
+        success:          { type: boolean }
+        creditsRemaining: { type: integer }
+
     HealthStatus:
       type: object
       properties:
