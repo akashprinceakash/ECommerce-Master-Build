@@ -1,8 +1,12 @@
 import { Router, type IRouter } from "express";
 import crypto from "crypto";
 import Razorpay from "razorpay";
-import { eq } from "drizzle-orm";
-import { db, creditPackagesTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
+import {
+  db,
+  creditPackagesTable,
+  pendingCreditPurchasesTable,
+} from "@workspace/db";
 import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAuth";
 import {
   getUserCredits,
@@ -15,15 +19,49 @@ import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
-const keyId     = process.env["RAZORPAY_KEY_ID"]     ?? "";
-const keySecret = process.env["RAZORPAY_KEY_SECRET"]  ?? "";
-const webhookSecret = process.env["RAZORPAY_WEBHOOK_SECRET"] ?? "";
+const keyId        = process.env["RAZORPAY_KEY_ID"]        ?? "";
+const keySecret    = process.env["RAZORPAY_KEY_SECRET"]     ?? "";
+const webhookSecret= process.env["RAZORPAY_WEBHOOK_SECRET"] ?? "";
+
+if (!keyId || !keySecret) {
+  logger.warn("Razorpay not configured — RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET missing");
+}
+if (!webhookSecret) {
+  logger.warn(
+    "RAZORPAY_WEBHOOK_SECRET is not set — webhook endpoint is disabled. " +
+    "Set it and configure https://<your-domain>/api/credits/webhook in the Razorpay dashboard " +
+    "with event 'payment.captured' to enable reliable payment confirmation."
+  );
+}
 
 const rzp = keyId && keySecret
   ? new Razorpay({ key_id: keyId, key_secret: keySecret })
   : null;
 
-/* ── GET /credits/balance ────────────────────────────────────────────────── */
+/* ─── Helpers ─────────────────────────────────────────────────────────────── */
+
+/** Complete a pending purchase: grant credits + mark row completed. */
+async function completePendingPurchase(params: {
+  pendingId:         number;
+  userId:            string;
+  creditsAmount:     number;
+  bonusCredits:      number;
+  razorpayPaymentId: string;
+  orderId:           string;
+}) {
+  const { pendingId, userId, creditsAmount, bonusCredits, razorpayPaymentId, orderId } = params;
+  const creditsRemaining = await creditAccountAfterPurchase({
+    userId, creditsAmount, bonusCredits, razorpayPaymentId,
+  });
+  await db
+    .update(pendingCreditPurchasesTable)
+    .set({ status: "completed", razorpayPaymentId, completedAt: new Date() })
+    .where(eq(pendingCreditPurchasesTable.id, pendingId));
+  logger.info({ userId, orderId, razorpayPaymentId, creditsRemaining }, "credits: purchase completed");
+  return creditsRemaining;
+}
+
+/* ─── GET /credits/balance ────────────────────────────────────────────────── */
 router.get("/credits/balance", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const credits = await ensureUserCredits(userId);
@@ -44,8 +82,7 @@ router.get("/credits/balance", requireAuth, async (req, res): Promise<void> => {
   });
 });
 
-/* ── POST /credits/ensure-welcome ────────────────────────────────────────── */
-// Called on first Lookbook/Bespoke visit to auto-grant 2 free credits.
+/* ─── POST /credits/ensure-welcome ───────────────────────────────────────── */
 router.post("/credits/ensure-welcome", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const alreadyGranted = await hasReceivedFreeGrant(userId);
@@ -59,8 +96,9 @@ router.post("/credits/ensure-welcome", requireAuth, async (req, res): Promise<vo
   res.json({ granted: true, creditsRemaining });
 });
 
-/* ── POST /credits/purchase ──────────────────────────────────────────────── */
-// Step 1: create Razorpay order for the chosen credit package.
+/* ─── POST /credits/purchase ──────────────────────────────────────────────── */
+// Step 1: create a Razorpay order and insert a pending_credit_purchases row.
+// The pending row is the source of truth — it gets completed by webhook or polling.
 router.post("/credits/purchase", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   if (!rzp) { res.status(500).json({ error: "Razorpay not configured" }); return; }
@@ -83,9 +121,24 @@ router.post("/credits/purchase", requireAuth, async (req, res): Promise<void> =>
       notes: { userId, packageId: String(pkg.id), creditsAmount: String(pkg.creditsAmount) },
     } as any);
   } catch (e: any) {
+    logger.error({ e, userId, packageId }, "credits/purchase: Razorpay order creation failed");
     res.status(500).json({ error: e?.error?.description || e?.message || "Failed to create payment order" });
     return;
   }
+
+  // Insert pending purchase record — this is our source of truth for this payment.
+  await db.insert(pendingCreditPurchasesTable).values({
+    userId,
+    razorpayOrderId: rzpOrder.id,
+    packageId: pkg.id,
+    amountInPaise: pkg.priceInPaise,
+    status: "pending",
+  });
+
+  logger.info(
+    { userId, orderId: rzpOrder.id, packageId, amountInPaise: pkg.priceInPaise },
+    "credits/purchase: Razorpay order created and pending record inserted"
+  );
 
   res.json({
     razorpayOrderId: rzpOrder.id,
@@ -101,8 +154,9 @@ router.post("/credits/purchase", requireAuth, async (req, res): Promise<void> =>
   });
 });
 
-/* ── POST /credits/verify ────────────────────────────────────────────────── */
-// Step 2: verify Razorpay signature, then credit the account.
+/* ─── POST /credits/verify ────────────────────────────────────────────────── */
+// Called by the Razorpay checkout.js handler callback (in-browser payment path).
+// Verifies the HMAC signature, then completes the pending purchase.
 router.post("/credits/verify", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   const {
@@ -110,162 +164,292 @@ router.post("/credits/verify", requireAuth, async (req, res): Promise<void> => {
   } = req.body ?? {};
 
   if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature || !rawPackageId) {
+    logger.warn({ userId, razorpayOrderId }, "credits/verify: missing fields in request body");
     res.status(400).json({ error: "Missing required payment verification fields" });
     return;
   }
 
-  // Verify HMAC signature
+  // Verify HMAC signature — rejects any tampered response.
   const expectedSig = crypto
     .createHmac("sha256", keySecret)
     .update(`${razorpayOrderId}|${razorpayPaymentId}`)
     .digest("hex");
+
   if (expectedSig !== razorpaySignature) {
-    logger.warn({ userId, razorpayOrderId }, "credits/verify: invalid signature");
+    logger.error(
+      { userId, razorpayOrderId, razorpayPaymentId, expectedSig, receivedSig: razorpaySignature },
+      "credits/verify: HMAC signature mismatch — possible tampering or key mode mismatch (test vs live)"
+    );
     res.status(400).json({ error: "Payment verification failed — invalid signature" });
     return;
   }
 
-  const packageId = parseInt(String(rawPackageId), 10);
+  // Find the pending purchase record for this order.
+  const [pending] = await db
+    .select()
+    .from(pendingCreditPurchasesTable)
+    .where(eq(pendingCreditPurchasesTable.razorpayOrderId, razorpayOrderId));
+
+  if (!pending) {
+    logger.warn({ userId, razorpayOrderId }, "credits/verify: no pending purchase found for order");
+    // Fallback: look up the package from the request body.
+  }
+
+  const packageId = pending?.packageId ?? parseInt(String(rawPackageId), 10);
   const [pkg] = await db
     .select()
     .from(creditPackagesTable)
     .where(eq(creditPackagesTable.id, packageId));
   if (!pkg) { res.status(404).json({ error: "Package not found" }); return; }
 
-  const creditsRemaining = await creditAccountAfterPurchase({
-    userId,
-    creditsAmount: pkg.creditsAmount,
-    bonusCredits: pkg.bonusCredits,
-    razorpayPaymentId,
-  });
+  // If already completed (e.g. webhook got here first), just return current balance.
+  if (pending?.status === "completed") {
+    const credits = await getUserCredits(userId);
+    logger.info({ userId, razorpayOrderId }, "credits/verify: already completed (webhook was faster)");
+    res.json({ success: true, creditsRemaining: credits?.creditsRemaining ?? 0 });
+    return;
+  }
 
-  logger.info({ userId, packageId, creditsRemaining }, "credits: purchase verified and credited");
+  const creditsRemaining = pending
+    ? await completePendingPurchase({
+        pendingId: pending.id,
+        userId,
+        creditsAmount: pkg.creditsAmount,
+        bonusCredits: pkg.bonusCredits,
+        razorpayPaymentId,
+        orderId: razorpayOrderId,
+      })
+    : await creditAccountAfterPurchase({
+        userId,
+        creditsAmount: pkg.creditsAmount,
+        bonusCredits: pkg.bonusCredits,
+        razorpayPaymentId,
+      });
+
+  logger.info({ userId, packageId, razorpayOrderId, razorpayPaymentId, creditsRemaining }, "credits/verify: success");
   res.json({ success: true, creditsRemaining });
 });
 
-/* ── POST /credits/check-order ──────────────────────────────────────────── */
-// Called after UPI QR payment when Razorpay's handler callback didn't fire.
-// Fetches all payments for the order from Razorpay; if a captured payment
-// exists, grants credits idempotently (safe to call multiple times).
+/* ─── GET /credits/purchase-status/:orderId ──────────────────────────────── */
+// Frontend polls this every 3 s after creating an order.
+// Returns { status: "pending"|"completed", creditsRemaining? }.
+// Does NOT call Razorpay — it reads our own DB, so it's fast and free.
+router.get("/credits/purchase-status/:orderId", requireAuth, async (req, res): Promise<void> => {
+  const userId  = (req as AuthenticatedRequest).userId;
+  const orderId = String(req.params["orderId"] ?? "");
+
+  const [pending] = await db
+    .select()
+    .from(pendingCreditPurchasesTable)
+    .where(
+      and(
+        eq(pendingCreditPurchasesTable.razorpayOrderId, orderId),
+        eq(pendingCreditPurchasesTable.userId, userId),
+      )
+    );
+
+  if (!pending) {
+    res.status(404).json({ error: "Order not found" }); return;
+  }
+
+  if (pending.status === "completed") {
+    const credits = await getUserCredits(userId);
+    res.json({ status: "completed", creditsRemaining: credits?.creditsRemaining ?? 0 });
+    return;
+  }
+
+  res.json({ status: "pending" });
+});
+
+/* ─── POST /credits/check-order ──────────────────────────────────────────── */
+// Called by the "I've already paid" button and background polling fallback.
+// Queries Razorpay directly for the order status; if paid, completes the purchase.
 router.post("/credits/check-order", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
   if (!rzp) { res.status(500).json({ error: "Razorpay not configured" }); return; }
 
-  const { orderId, packageId: rawPackageId } = req.body ?? {};
-  if (!orderId || !rawPackageId) {
-    res.status(400).json({ error: "orderId and packageId are required" }); return;
+  const { orderId } = req.body ?? {};
+  if (!orderId) { res.status(400).json({ error: "orderId is required" }); return; }
+
+  // Look up our pending record first.
+  const [pending] = await db
+    .select()
+    .from(pendingCreditPurchasesTable)
+    .where(
+      and(
+        eq(pendingCreditPurchasesTable.razorpayOrderId, orderId),
+        eq(pendingCreditPurchasesTable.userId, userId),
+      )
+    );
+
+  if (!pending) {
+    res.status(404).json({ error: "Order not found" }); return;
   }
 
-  const packageId = parseInt(String(rawPackageId), 10);
+  // Already completed (e.g. webhook fired while user was waiting).
+  if (pending.status === "completed") {
+    const credits = await getUserCredits(userId);
+    res.json({ paid: true, creditsRemaining: credits?.creditsRemaining ?? 0, source: "already_completed" });
+    return;
+  }
+
   const [pkg] = await db
     .select()
     .from(creditPackagesTable)
-    .where(eq(creditPackagesTable.id, packageId));
+    .where(eq(creditPackagesTable.id, pending.packageId));
   if (!pkg) { res.status(404).json({ error: "Package not found" }); return; }
 
-  // Step 1: fetch the order to check top-level status.
+  // Fetch the Razorpay order to check its top-level status.
   let rzpOrder: any;
   try {
     rzpOrder = await rzp.orders.fetch(orderId);
   } catch (e: any) {
-    logger.error({ e, orderId }, "credits/check-order: failed to fetch order");
-    res.status(502).json({ error: "Could not reach Razorpay to verify payment" }); return;
+    logger.error({ e, orderId, userId }, "credits/check-order: Razorpay order fetch failed");
+    res.status(502).json({ error: "Could not reach Razorpay" }); return;
   }
 
-  logger.info({ orderId, orderStatus: rzpOrder?.status, amountPaid: rzpOrder?.amount_paid }, "credits/check-order: order fetched");
-
-  // Order is not paid yet — return early without hitting the payments endpoint.
-  if (rzpOrder?.status !== "paid") {
-    res.json({ paid: false }); return;
-  }
-
-  // Step 2: fetch payments on this order to get the payment ID.
-  let orderPayments: any;
-  try {
-    orderPayments = await (rzp.orders as any).fetchPayments(orderId);
-  } catch (e: any) {
-    logger.error({ e, orderId }, "credits/check-order: failed to fetch order payments");
-    res.status(502).json({ error: "Could not reach Razorpay to verify payment" }); return;
-  }
-
-  logger.info({ orderId, paymentCount: orderPayments?.count, items: (orderPayments?.items ?? []).map((p: any) => ({ id: p.id, status: p.status })) }, "credits/check-order: payments fetched");
-
-  // Accept both "captured" and "authorized" (Razorpay captures UPI async).
-  const successPayment = (orderPayments?.items ?? []).find(
-    (p: any) => p.status === "captured" || p.status === "authorized"
+  logger.info(
+    { orderId, userId, orderStatus: rzpOrder?.status, amountPaid: rzpOrder?.amount_paid, amountDue: rzpOrder?.amount_due },
+    "credits/check-order: Razorpay order status"
   );
 
-  if (!successPayment) {
-    // Fallback: order is "paid" but payment list is empty — use order amount_paid as confirmation.
-    // This can happen for some UPI flows. Grant using a synthetic payment ID derived from order.
-    if (rzpOrder?.amount_paid > 0) {
-      const syntheticPaymentId = `order_paid_${orderId}`;
-      const creditsRemaining = await creditAccountAfterPurchase({
-        userId,
-        creditsAmount: pkg.creditsAmount,
-        bonusCredits: pkg.bonusCredits,
-        razorpayPaymentId: syntheticPaymentId,
-      });
-      logger.info({ userId, packageId, orderId, syntheticPaymentId }, "credits: check-order (fallback) credited account");
-      res.json({ paid: true, creditsRemaining }); return;
-    }
-    res.json({ paid: false }); return;
+  // Order not paid yet.
+  if (rzpOrder?.status !== "paid") {
+    res.json({ paid: false, razorpayOrderStatus: rzpOrder?.status }); return;
   }
 
-  // Extra safety: verify the order's userId note matches the authenticated user.
-  const noteUserId = successPayment.notes?.userId ?? rzpOrder?.notes?.userId ?? "";
-  if (noteUserId && noteUserId !== userId) {
-    res.status(403).json({ error: "Unauthorized" }); return;
+  // Order is paid — get the payment ID.
+  let paymentId: string | undefined;
+  try {
+    const orderPayments: any = await (rzp.orders as any).fetchPayments(orderId);
+    const items: any[] = orderPayments?.items ?? [];
+    logger.info(
+      { orderId, paymentCount: items.length, payments: items.map((p: any) => ({ id: p.id, status: p.status, method: p.method })) },
+      "credits/check-order: order payments"
+    );
+    const hit = items.find((p: any) => p.status === "captured" || p.status === "authorized");
+    paymentId = hit?.id;
+  } catch (e: any) {
+    logger.warn({ e, orderId }, "credits/check-order: fetchPayments failed — using synthetic ID");
   }
 
-  const creditsRemaining = await creditAccountAfterPurchase({
+  // Fallback: use a synthetic ID if payment list is unavailable.
+  const effectivePaymentId = paymentId ?? `rzp_order_paid_${orderId}`;
+
+  const creditsRemaining = await completePendingPurchase({
+    pendingId: pending.id,
     userId,
     creditsAmount: pkg.creditsAmount,
     bonusCredits: pkg.bonusCredits,
-    razorpayPaymentId: successPayment.id,
+    razorpayPaymentId: effectivePaymentId,
+    orderId,
   });
 
-  logger.info({ userId, packageId, paymentId: successPayment.id, paymentStatus: successPayment.status }, "credits: check-order credited account");
-  res.json({ paid: true, creditsRemaining });
+  res.json({ paid: true, creditsRemaining, source: "check_order" });
 });
 
-/* ── Razorpay webhook (payment.captured) ─────────────────────────────────── */
-// Fallback for cases where the frontend /verify call doesn't complete.
+/* ─── POST /credits/webhook ───────────────────────────────────────────────── */
+// Razorpay server-to-server callback — the MOST RELIABLE path for UPI/QR payments.
+//
+// Setup required (one-time, in Razorpay dashboard):
+//   URL:    https://<your-domain>/api/credits/webhook
+//   Events: payment.captured
+//   Secret: set RAZORPAY_WEBHOOK_SECRET env var to the secret shown in dashboard
+//
+// This fires regardless of whether the user's browser ever gets the handler callback.
 router.post("/credits/webhook", async (req, res): Promise<void> => {
-  if (!webhookSecret) { res.status(200).json({}); return; }
+  // Always return 200 quickly — Razorpay retries on non-200.
+  if (!webhookSecret) {
+    logger.warn("credits/webhook: received webhook but RAZORPAY_WEBHOOK_SECRET is not set — ignoring");
+    res.status(200).json({}); return;
+  }
 
-  const sig = req.headers["x-razorpay-signature"] as string;
+  const sig     = req.headers["x-razorpay-signature"] as string | undefined;
   const rawBody = JSON.stringify(req.body);
+
+  if (!sig) {
+    logger.warn("credits/webhook: missing X-Razorpay-Signature header");
+    res.status(200).json({}); return;
+  }
+
   const expected = crypto
     .createHmac("sha256", webhookSecret)
     .update(rawBody)
     .digest("hex");
-  if (sig !== expected) { res.status(400).json({ error: "Invalid signature" }); return; }
 
-  const event = req.body?.event;
-  if (event !== "payment.captured") { res.status(200).json({}); return; }
+  if (sig !== expected) {
+    logger.error({ sig, expected }, "credits/webhook: HMAC signature mismatch — rejecting");
+    res.status(200).json({}); return; // Return 200 so Razorpay doesn't retry a bad request
+  }
 
-  const payment = req.body?.payload?.payment?.entity;
-  const notes   = payment?.notes ?? {};
-  const userId       = String(notes.userId        ?? "");
-  const packageId    = parseInt(String(notes.packageId  ?? "0"), 10);
-  const paymentId    = String(payment?.id ?? "");
+  const event = req.body?.event as string;
+  logger.info({ event }, "credits/webhook: received verified event");
 
-  if (!userId || !packageId || !paymentId) { res.status(200).json({}); return; }
+  if (event !== "payment.captured") {
+    res.status(200).json({}); return;
+  }
 
+  const payment  = req.body?.payload?.payment?.entity ?? {};
+  const orderId  = String(payment?.order_id ?? "");
+  const paymentId= String(payment?.id ?? "");
+  const notes    = payment?.notes ?? {};
+
+  logger.info({ orderId, paymentId, method: payment?.method, amount: payment?.amount }, "credits/webhook: payment.captured");
+
+  if (!orderId || !paymentId) {
+    logger.warn({ payment }, "credits/webhook: missing order_id or payment id");
+    res.status(200).json({}); return;
+  }
+
+  // Look up our pending purchase record.
+  const [pending] = await db
+    .select()
+    .from(pendingCreditPurchasesTable)
+    .where(eq(pendingCreditPurchasesTable.razorpayOrderId, orderId));
+
+  if (!pending) {
+    // This order wasn't created via our system — ignore.
+    logger.warn({ orderId, paymentId }, "credits/webhook: no pending record found for order — ignoring");
+    res.status(200).json({}); return;
+  }
+
+  if (pending.status === "completed") {
+    logger.info({ orderId, paymentId }, "credits/webhook: already completed — skipping");
+    res.status(200).json({}); return;
+  }
+
+  const userId = pending.userId;
   const [pkg] = await db
     .select()
     .from(creditPackagesTable)
-    .where(eq(creditPackagesTable.id, packageId));
-  if (!pkg) { res.status(200).json({}); return; }
+    .where(eq(creditPackagesTable.id, pending.packageId));
 
-  await creditAccountAfterPurchase({
-    userId,
-    creditsAmount: pkg.creditsAmount,
-    bonusCredits: pkg.bonusCredits,
-    razorpayPaymentId: paymentId,
-  });
-  logger.info({ userId, packageId, paymentId }, "credits: webhook credited account");
+  if (!pkg) {
+    logger.error({ orderId, paymentId, packageId: pending.packageId }, "credits/webhook: package not found");
+    res.status(200).json({}); return;
+  }
+
+  // Sanity check: note userId (if present) should match our record.
+  const noteUserId = String(notes.userId ?? "");
+  if (noteUserId && noteUserId !== userId) {
+    logger.error({ orderId, paymentId, noteUserId, recordUserId: userId }, "credits/webhook: userId mismatch");
+    res.status(200).json({}); return;
+  }
+
+  try {
+    const creditsRemaining = await completePendingPurchase({
+      pendingId: pending.id,
+      userId,
+      creditsAmount: pkg.creditsAmount,
+      bonusCredits: pkg.bonusCredits,
+      razorpayPaymentId: paymentId,
+      orderId,
+    });
+    logger.info({ userId, orderId, paymentId, creditsRemaining }, "credits/webhook: account credited");
+  } catch (e) {
+    logger.error({ e, userId, orderId, paymentId }, "credits/webhook: failed to credit account");
+  }
+
   res.status(200).json({});
 });
 

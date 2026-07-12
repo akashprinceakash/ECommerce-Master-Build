@@ -1,0 +1,24 @@
+We have a critical payment bug: a test payment of ₹1 was made successfully via Razorpay (confirmed via UPI/PhonePe — "Transaction Successful" shown, UTR present), but:
+- The Kasha AI Credits balance was NOT updated
+- No "Payment Successful" confirmation appeared in our UI
+- The page did not refresh or respond after payment
+
+This means money moved but our backend never confirmed/credited it. Please investigate and fix:
+
+1. Show me exactly how /api/credits/verify currently gets triggered. Is it ONLY via the Razorpay checkout.js client-side `handler` callback, or do we also have a server-side webhook configured?
+
+2. If we're only relying on the client-side handler: this is unreliable for UPI QR-code payments made from a separate app (like PhonePe), since the checkout modal doesn't always detect completion the same way it does for in-modal card/netbanking payments. Implement a Razorpay webhook as the primary, authoritative source of truth:
+   - Register a webhook endpoint (e.g. POST /api/webhooks/razorpay) in our backend.
+   - Subscribe to the `payment.captured` event in the Razorpay dashboard, pointed at this endpoint.
+   - Verify the webhook signature using our Razorpay webhook secret (X-Razorpay-Signature header) — reject anything that doesn't match.
+   - On a verified `payment.captured` event, look up the associated order_id, find the pending credit purchase record, and credit the user's account — this should work independent of whether the frontend ever gets a callback at all.
+
+3. Check whether our Razorpay account is in Test mode or Live mode, and confirm the checkout key (key_id) and the backend's verification secret (key_secret) are from the SAME mode/account — a mismatch here silently breaks verification.
+
+4. Add a "pending purchase" state: when we create the Razorpay order, insert a row in credit_transactions (or a new pending_purchases table) with status='pending'. Only mark it 'completed' and credit the user once the webhook confirms payment.captured. This lets us reconcile: if a payment succeeds on Razorpay's side but our webhook never fires (network issue, etc.), we can see the mismatch and manually resolve it rather than losing track of the payment entirely.
+
+5. Add proper error logging around the /api/credits/verify endpoint — right now a failure here fails silently with no visible message to the user or in our logs. Any signature mismatch or verification failure should be logged with enough detail (order_id, payment_id, reason) to debug.
+
+6. Frontend: after Razorpay checkout closes (regardless of how), poll our backend (e.g. GET /api/credits/purchase-status/:order_id) every 2-3 seconds for up to 30 seconds to check if the webhook has confirmed and credited the purchase yet, then show the success message and refresh the balance. Don't rely solely on the checkout SDK's own callback firing.
+
+Please report back: (a) whether a webhook currently exists at all, (b) test vs live mode confirmation, and (c) what happened to this specific ₹1 payment in our logs (do we have any record of the order_id at all, or does it not exist in our system?) before implementing the fix.

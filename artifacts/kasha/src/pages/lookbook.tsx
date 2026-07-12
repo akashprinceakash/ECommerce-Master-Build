@@ -173,42 +173,80 @@ export default function LookbookPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!user]);
 
-  const checkOrderStatus = useCallback(async (orderId: string, packageId: number) => {
-    setCheckingPayment(true);
+  // Gets an auth token from Clerk for manual fetch calls.
+  const getAuthToken = useCallback(async (): Promise<string | null> => {
     try {
       const { session } = (window as any).Clerk ?? {};
-      const token = session ? await session.getToken() : null;
+      return session ? (await session.getToken() as string | null) : null;
+    } catch { return null; }
+  }, []);
+
+  // Called automatically by the poller and manually via "I've already paid" button.
+  // Primary path: polls GET /credits/purchase-status/:orderId (reads our DB, instant).
+  // Fallback path: calls POST /credits/check-order (queries Razorpay directly).
+  const checkOrderStatus = useCallback(async (orderId: string) => {
+    setCheckingPayment(true);
+    try {
+      const token = await getAuthToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      // Primary: check our own DB for completed status.
+      const res = await fetch(`${getApiUrl()}/api/credits/purchase-status/${encodeURIComponent(orderId)}`, { headers });
+
+      if (res.ok) {
+        const data = await res.json() as { status?: string; creditsRemaining?: number };
+        if (data.status === "completed") {
+          setPaymentVerified(true);
+          setPendingOrder(null);
+          setPaymentDismissed(false);
+          await refetchCredits();
+          setTimeout(() => { setPaymentVerified(false); setShowBuyCredits(false); setCreditPurchaseError(null); }, 2500);
+          setCheckingPayment(false);
+          return;
+        }
+      }
+
+      // Fallback: call Razorpay-direct check (only when user manually clicks "I've paid").
+      // We don't spam this in the background — it's triggered via the button only.
+    } catch { /* silent — poller will retry */ }
+    setCheckingPayment(false);
+  }, [refetchCredits, getAuthToken]);
+
+  // Manual fallback: query Razorpay directly when user clicks "I've already paid".
+  const checkOrderWithRazorpay = useCallback(async (orderId: string) => {
+    setCheckingPayment(true);
+    try {
+      const token = await getAuthToken();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const res = await fetch(`${getApiUrl()}/api/credits/check-order`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ orderId, packageId }),
+        method: "POST", headers, body: JSON.stringify({ orderId }),
       });
-      const data = await res.json() as { paid?: boolean; creditsRemaining?: number };
-      if (data.paid) {
-        setPaymentVerified(true);
-        setPendingOrder(null);
-        setPaymentDismissed(false);
-        await refetchCredits();
-        setTimeout(() => {
-          setPaymentVerified(false);
-          setShowBuyCredits(false);
-          setCreditPurchaseError(null);
-        }, 2500);
+      if (res.ok) {
+        const data = await res.json() as { paid?: boolean; creditsRemaining?: number };
+        if (data.paid) {
+          setPaymentVerified(true);
+          setPendingOrder(null);
+          setPaymentDismissed(false);
+          await refetchCredits();
+          setTimeout(() => { setPaymentVerified(false); setShowBuyCredits(false); setCreditPurchaseError(null); }, 2500);
+        } else {
+          setCreditPurchaseError("Payment not yet confirmed by Razorpay — please wait a moment and try again.");
+        }
       }
-    } catch { /* silent — user can retry */ }
+    } catch { setCreditPurchaseError("Could not verify payment — please try again."); }
     setCheckingPayment(false);
-  }, [refetchCredits]);
+  }, [refetchCredits, getAuthToken]);
 
-  // Auto-poll order status every 5 s while a pending order exists.
-  // Continues even after modal dismissal — UPI QR payments complete asynchronously.
+  // Auto-poll our DB every 3 s after an order is created.
+  // Continues even after modal dismissal — webhook or check-order will complete the DB record.
   // Stops only when payment is verified or order is explicitly cleared.
   useEffect(() => {
     if (!pendingOrder || paymentVerified) return;
     const id = setInterval(() => {
-      void checkOrderStatus(pendingOrder.razorpayOrderId, pendingOrder.packageId);
-    }, 5000);
+      void checkOrderStatus(pendingOrder.razorpayOrderId);
+    }, 3000);
     return () => clearInterval(id);
   }, [pendingOrder, paymentVerified, checkOrderStatus]);
 
@@ -1329,7 +1367,7 @@ export default function LookbookPage() {
                   Did you complete the UPI payment on your phone? Click below to verify it — credits will be added instantly.
                 </p>
                 <button
-                  onClick={() => void checkOrderStatus(pendingOrder.razorpayOrderId, pendingOrder.packageId)}
+                  onClick={() => void checkOrderWithRazorpay(pendingOrder.razorpayOrderId)}
                   disabled={checkingPayment}
                   style={{
                     width: "100%", fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.18em",

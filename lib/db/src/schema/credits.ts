@@ -66,8 +66,28 @@ export const replicateTopupsTable = pgTable("replicate_topups", {
   notes:           text("notes"),
 });
 
-export type UserCredits         = typeof userCreditsTable.$inferSelect;
-export type GenerationLog       = typeof generationLogsTable.$inferSelect;
-export type CreditTransaction   = typeof creditTransactionsTable.$inferSelect;
-export type CreditPackage       = typeof creditPackagesTable.$inferSelect;
-export type ReplicateTopup      = typeof replicateTopupsTable.$inferSelect;
+/* ── Pending credit purchases ─────────────────────────────────────────────── */
+// Created when a Razorpay order is created; completed when payment is confirmed
+// via webhook or polling. This is the source of truth for in-flight purchases.
+export const pendingCreditPurchasesTable = pgTable("pending_credit_purchases", {
+  id:                serial("id").primaryKey(),
+  userId:            text("user_id").notNull(),
+  razorpayOrderId:   text("razorpay_order_id").notNull().unique(),
+  packageId:         integer("package_id").notNull(),
+  amountInPaise:     integer("amount_in_paise").notNull(),
+  status:            text("status", { enum: ["pending", "completed", "failed"] }).notNull().default("pending"),
+  razorpayPaymentId: text("razorpay_payment_id"),
+  completedAt:       timestamp("completed_at", { withTimezone: true }),
+  createdAt:         timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index("pending_purchases_user_idx").on(t.userId),
+  index("pending_purchases_order_idx").on(t.razorpayOrderId),
+  index("pending_purchases_status_idx").on(t.status),
+]);
+
+export type UserCredits                = typeof userCreditsTable.$inferSelect;
+export type GenerationLog              = typeof generationLogsTable.$inferSelect;
+export type CreditTransaction          = typeof creditTransactionsTable.$inferSelect;
+export type CreditPackage              = typeof creditPackagesTable.$inferSelect;
+export type ReplicateTopup             = typeof replicateTopupsTable.$inferSelect;
+export type PendingCreditPurchase      = typeof pendingCreditPurchasesTable.$inferSelect;
