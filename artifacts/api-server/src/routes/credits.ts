@@ -163,6 +163,23 @@ router.post("/credits/check-order", requireAuth, async (req, res): Promise<void>
     .where(eq(creditPackagesTable.id, packageId));
   if (!pkg) { res.status(404).json({ error: "Package not found" }); return; }
 
+  // Step 1: fetch the order to check top-level status.
+  let rzpOrder: any;
+  try {
+    rzpOrder = await rzp.orders.fetch(orderId);
+  } catch (e: any) {
+    logger.error({ e, orderId }, "credits/check-order: failed to fetch order");
+    res.status(502).json({ error: "Could not reach Razorpay to verify payment" }); return;
+  }
+
+  logger.info({ orderId, orderStatus: rzpOrder?.status, amountPaid: rzpOrder?.amount_paid }, "credits/check-order: order fetched");
+
+  // Order is not paid yet — return early without hitting the payments endpoint.
+  if (rzpOrder?.status !== "paid") {
+    res.json({ paid: false }); return;
+  }
+
+  // Step 2: fetch payments on this order to get the payment ID.
   let orderPayments: any;
   try {
     orderPayments = await (rzp.orders as any).fetchPayments(orderId);
@@ -171,13 +188,32 @@ router.post("/credits/check-order", requireAuth, async (req, res): Promise<void>
     res.status(502).json({ error: "Could not reach Razorpay to verify payment" }); return;
   }
 
-  const captured = (orderPayments?.items ?? []).find((p: any) => p.status === "captured");
-  if (!captured) {
+  logger.info({ orderId, paymentCount: orderPayments?.count, items: (orderPayments?.items ?? []).map((p: any) => ({ id: p.id, status: p.status })) }, "credits/check-order: payments fetched");
+
+  // Accept both "captured" and "authorized" (Razorpay captures UPI async).
+  const successPayment = (orderPayments?.items ?? []).find(
+    (p: any) => p.status === "captured" || p.status === "authorized"
+  );
+
+  if (!successPayment) {
+    // Fallback: order is "paid" but payment list is empty — use order amount_paid as confirmation.
+    // This can happen for some UPI flows. Grant using a synthetic payment ID derived from order.
+    if (rzpOrder?.amount_paid > 0) {
+      const syntheticPaymentId = `order_paid_${orderId}`;
+      const creditsRemaining = await creditAccountAfterPurchase({
+        userId,
+        creditsAmount: pkg.creditsAmount,
+        bonusCredits: pkg.bonusCredits,
+        razorpayPaymentId: syntheticPaymentId,
+      });
+      logger.info({ userId, packageId, orderId, syntheticPaymentId }, "credits: check-order (fallback) credited account");
+      res.json({ paid: true, creditsRemaining }); return;
+    }
     res.json({ paid: false }); return;
   }
 
   // Extra safety: verify the order's userId note matches the authenticated user.
-  const noteUserId = captured.notes?.userId ?? "";
+  const noteUserId = successPayment.notes?.userId ?? rzpOrder?.notes?.userId ?? "";
   if (noteUserId && noteUserId !== userId) {
     res.status(403).json({ error: "Unauthorized" }); return;
   }
@@ -186,10 +222,10 @@ router.post("/credits/check-order", requireAuth, async (req, res): Promise<void>
     userId,
     creditsAmount: pkg.creditsAmount,
     bonusCredits: pkg.bonusCredits,
-    razorpayPaymentId: captured.id,
+    razorpayPaymentId: successPayment.id,
   });
 
-  logger.info({ userId, packageId, paymentId: captured.id }, "credits: check-order credited account");
+  logger.info({ userId, packageId, paymentId: successPayment.id, paymentStatus: successPayment.status }, "credits: check-order credited account");
   res.json({ paid: true, creditsRemaining });
 });
 

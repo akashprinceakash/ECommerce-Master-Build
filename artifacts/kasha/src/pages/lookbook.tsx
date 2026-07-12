@@ -201,15 +201,16 @@ export default function LookbookPage() {
     setCheckingPayment(false);
   }, [refetchCredits]);
 
-  // Auto-poll order status every 5 s while a Razorpay modal is open.
-  // This catches UPI QR payments that complete on the user's phone.
+  // Auto-poll order status every 5 s while a pending order exists.
+  // Continues even after modal dismissal — UPI QR payments complete asynchronously.
+  // Stops only when payment is verified or order is explicitly cleared.
   useEffect(() => {
-    if (!pendingOrder || paymentDismissed || paymentVerified) return;
+    if (!pendingOrder || paymentVerified) return;
     const id = setInterval(() => {
       void checkOrderStatus(pendingOrder.razorpayOrderId, pendingOrder.packageId);
     }, 5000);
     return () => clearInterval(id);
-  }, [pendingOrder, paymentDismissed, paymentVerified, checkOrderStatus]);
+  }, [pendingOrder, paymentVerified, checkOrderStatus]);
 
   const openRazorpayForCredits = useCallback(
     (order: { razorpayOrderId: string; amount: number; currency: string; keyId: string; package: CreditPackage }) => {
