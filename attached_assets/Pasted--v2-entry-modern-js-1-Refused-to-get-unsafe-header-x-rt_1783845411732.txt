@@ -1,0 +1,61 @@
+
+v2-entry.modern.js:1 Refused to get unsafe header "x-rtb-fingerprint-id"
+J.d.onreadystatechange	@	v2-entry.modern.js:1
+XMLHttpRequest.send		
+J.XMLHttpRequest.send	@	ajaxRequestInterceptor.ps.js:1
+await in J.XMLHttpRequest.send		
+(anonymous)	@	v2-entry.modern.js:1
+J	@	v2-entry.modern.js:1
+(anonymous)	@	v2-entry-festivity-f…7ae3ef5.modern.js:1
+u	@	v2-entry-festivity-f…7ae3ef5.modern.js:1
+t	@	v2-entry-festivity-f…7ae3ef5.modern.js:1
+sync	@	v2-entry-festivity-f…7ae3ef5.modern.js:1
+d	@	v2-entry-festivity-f…7ae3ef5.modern.js:1
+(anonymous)	@	v2-entry.modern.js:1
+Promise.then		
+o	@	v2-entry.modern.js:1
+(anonymous)	@	v2-entry-app-e63e1180.modern.js:1
+z	@	v2-entry-app-e63e1180.modern.js:1
+Pn	@	v2-entry-app-e63e1180.modern.js:1
+(anonymous)	@	v2-entry-e58f6b1a.modern.js:1
+B	@	v2-entry-e58f6b1a.modern.js:1
+K	@	v2-entry-e58f6b1a.modern.js:1
+d	@	v2-entry-e58f6b1a.modern.js:1
+S	@	v2-entry-e58f6b1a.modern.js:1
+(anonymous)	@	v2-entry-e58f6b1a.modern.js:1
+B	@	v2-entry-e58f6b1a.modern.js:1
+K	@	v2-entry-e58f6b1a.modern.js:1
+d	@	v2-entry-e58f6b1a.modern.js:1
+m	@	v2-entry-e58f6b1a.modern.js:1
+x	@	v2-entry-e58f6b1a.modern.js:1
+_	@	v2-entry-e58f6b1a.modern.js:1
+p	@	v2-entry-e58f6b1a.modern.js:1
+v	@	v2-entry-e58f6b1a.modern.js:1
+Pn	@	v2-entry-app-e63e1180.modern.js:1
+(anonymous)	@	v2-entry-app-e63e1180.modern.js:1
+Promise.then		
+C	@	v2-entry-app-e63e1180.modern.js:1
+(anonymous)	@	v2-entry.modern.js:1
+Promise.then		
+p	@	v2-entry.modern.js:1
+(anonymous)	@	v2-entry.modern.js:1
+Promise.finally		
+o	@	v2-entry.modern.js:1
+(anonymous)	@	v2-entry.modern.js:1
+n	@	v2-entry.modern.js:1
+(anonymous)	@	v2-entry.modern.js:1
+v2-entry.modern.js:1 Refused to get unsafe header "request-id"
+trycatch.ts:232 [Violation] Permissions policy violation: accelerometer is not allowed in this document.
+(anonymous)	@	trycatch.ts:232
+(anonymous)	@	instrument.js:539
+A	@	loader.min.js:1
+SA.<computed>	@	loader.min.js:1
+initBiometricAndTracking	@	loader.min.js:1
+Sy.<computed>	@	loader.min.js:1
+trycatch.ts:232 The devicemotion events are blocked by permissions policy. See https://github.com/w3c/webappsec-permissions-policy/blob/master/features.md#sensor-features
+trycatch.ts:232 [Violation] Permissions policy violation: accelerometer is not allowed in this document.
+(anonymous)	@	trycatch.ts:232
+(anonymous)	@	instrument.js:539
+A	@	loader.min.js:1
+SA.<computed>	@	loader.min.js:1
+initBiometricAndTracking	@	loader.min.js:1
