@@ -165,6 +165,10 @@ router.put("/admin/products/:id", requireAuth, async (req, res): Promise<void> =
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
 
+  // ── Step 1: read current row so we know what R2 objects might be replaced ──
+  const [existing] = await db.select().from(productsTable).where(eq(productsTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Product not found" }); return; }
+
   const { name, description, priceInPaise, category, modelUrl, thumbnailUrl, available, allowCustomization, customizationMode, addOns, gender, productType, subType, sku, stock, additionalImages, sizes, defaultColor, colorLabel } = req.body;
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
   if (name !== undefined) updateData.name = name;
@@ -187,9 +191,32 @@ router.put("/admin/products/:id", requireAuth, async (req, res): Promise<void> =
   if (defaultColor !== undefined) updateData.defaultColor = defaultColor;
   if (colorLabel !== undefined) updateData.colorLabel = colorLabel?.trim() || null;
 
+  // ── Step 2: persist the update ─────────────────────────────────────────────
   const [product] = await db.update(productsTable).set(updateData).where(eq(productsTable.id, id)).returning();
   if (!product) { res.status(404).json({ error: "Product not found" }); return; }
+
+  // ── Step 3: respond immediately so the admin UI is unblocked ───────────────
   res.json(product);
+
+  // ── Step 4: best-effort R2 cleanup — runs after the response is sent ───────
+  // Only delete if the URL actually changed and the old one was an R2 object.
+  // Failures are logged but never surface as errors to the caller.
+  const cleanupOldAsset = async (oldUrl: string | null | undefined, newUrl: string | null | undefined, label: string) => {
+    if (!oldUrl || !newUrl || oldUrl === newUrl) return;
+    const oldKey = keyFromR2Url(oldUrl);
+    if (!oldKey) return; // not an R2 asset (e.g. legacy local-disk URL)
+    try {
+      await deleteFromR2(oldKey);
+      req.log.info({ key: oldKey, label }, "admin/products: cleaned up replaced R2 asset");
+    } catch (e) {
+      req.log.warn({ e, key: oldKey, label }, "admin/products: R2 cleanup failed — orphan may remain, but product update succeeded");
+    }
+  };
+
+  await Promise.allSettled([
+    cleanupOldAsset(existing.modelUrl, product.modelUrl, "model"),
+    cleanupOldAsset(existing.thumbnailUrl, product.thumbnailUrl, "thumbnail"),
+  ]);
 });
 
 router.delete("/admin/products/:id", requireAuth, async (req, res): Promise<void> => {
