@@ -14,7 +14,7 @@ import { AdminCoupons } from "@/components/admin/AdminCoupons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/format";
-import { getApiUrl, getAssetUrl } from "@/lib/api";
+import { getApiUrl, getUploadApiUrl, getAssetUrl } from "@/lib/api";
 import { PATTERNS, patternUrl } from "@/components/3d/patterns";
 
 interface ProductAddOn {
@@ -702,7 +702,7 @@ export default function AdminPage() {
       const fd = new FormData(); fd.append("model", file);
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(`${getApiUrl()}/api/admin/upload/model`, { method: "POST", body: fd, headers });
+      const res = await fetch(`${getUploadApiUrl()}/api/admin/upload/model`, { method: "POST", body: fd, headers });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setForm(f => ({ ...f, modelUrl: data.url }));
@@ -728,7 +728,7 @@ export default function AdminPage() {
       const fd = new FormData(); fd.append("thumbnail", compressed);
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(`${getApiUrl()}/api/admin/upload/thumbnail`, { method: "POST", body: fd, headers });
+      const res = await fetch(`${getUploadApiUrl()}/api/admin/upload/thumbnail`, { method: "POST", body: fd, headers });
       if (!res.ok) throw new Error(await res.text());
       const { url } = await res.json();
       setForm(f => ({ ...f, thumbnailUrl: url }));
@@ -751,7 +751,7 @@ export default function AdminPage() {
       const fd = new FormData(); fd.append("thumbnail", compressed);
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(`${getApiUrl()}/api/admin/upload/thumbnail`, { method: "POST", body: fd, headers });
+      const res = await fetch(`${getUploadApiUrl()}/api/admin/upload/thumbnail`, { method: "POST", body: fd, headers });
       if (!res.ok) throw new Error(await res.text());
       const { url } = await res.json();
       setForm(f => {
@@ -808,7 +808,7 @@ export default function AdminPage() {
       const urls: string[] = [];
       for (const file of compressed) {
         const fd = new FormData(); fd.append("thumbnail", file);
-        const res = await fetch(`${getApiUrl()}/api/admin/upload/thumbnail`, { method: "POST", body: fd, headers });
+        const res = await fetch(`${getUploadApiUrl()}/api/admin/upload/thumbnail`, { method: "POST", body: fd, headers });
         if (!res.ok) throw new Error(await res.text());
         const { url } = await res.json();
         urls.push(url);
@@ -833,7 +833,7 @@ export default function AdminPage() {
       const fd = new FormData(); fd.append("hero", compressed);
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(`${getApiUrl()}/api/admin/upload/hero`, { method: "POST", body: fd, headers });
+      const res = await fetch(`${getUploadApiUrl()}/api/admin/upload/hero`, { method: "POST", body: fd, headers });
       if (!res.ok) throw new Error(await res.text());
       const { url } = await res.json();
       const newUrls = [...heroImageUrls];

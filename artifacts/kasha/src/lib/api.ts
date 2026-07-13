@@ -4,6 +4,18 @@ export function getApiUrl(): string {
 }
 
 /**
+ * Returns the base URL to use for file uploads (multipart/form-data).
+ * Large files (3D models, images) must bypass the Vercel rewrite proxy, which
+ * times out on payloads >~50 MB. Set VITE_UPLOAD_API_URL to the Render API
+ * origin (e.g. https://api.kashaonline.in) so uploads go direct.
+ * Falls back to getApiUrl() so local dev continues to work unchanged.
+ */
+export function getUploadApiUrl(): string {
+  const url = import.meta.env.VITE_UPLOAD_API_URL as string | undefined;
+  return url ? url.replace(/\/+$/, "") : getApiUrl();
+}
+
+/**
  * Resolves a stored asset path to an absolute URL.
  * Paths starting with /api/public/ are served by the API server, so
  * they need the API base URL prepended when frontend and backend run on
