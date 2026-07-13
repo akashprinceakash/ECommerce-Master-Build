@@ -704,9 +704,15 @@ export default function AdminPage() {
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const res = await fetch(`${getApiUrl()}/api/admin/upload/model`, { method: "POST", body: fd, headers });
       if (!res.ok) throw new Error(await res.text());
-      const { url } = await res.json();
-      setForm(f => ({ ...f, modelUrl: url }));
-      toast({ title: "Model uploaded" });
+      const data = await res.json();
+      setForm(f => ({ ...f, modelUrl: data.url }));
+      const stats = data.optimization;
+      toast({
+        title: "Model uploaded",
+        description: stats && stats.reductionPct > 0
+          ? `Optimised: ${(stats.originalBytes / 1024 / 1024).toFixed(1)} MB → ${(stats.optimizedBytes / 1024 / 1024).toFixed(1)} MB (−${stats.reductionPct}%)`
+          : undefined,
+      });
     } catch (err: any) { toast({ title: "Upload failed", description: err.message, variant: "destructive" }); }
     finally { setUploadingModel(false); if (e.target) e.target.value = ""; }
   };

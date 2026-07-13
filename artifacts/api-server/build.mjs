@@ -96,6 +96,9 @@ async function buildAll() {
       "wrangler",
       "zeromq",
       "zeromq-prebuilt",
+      // draco3d and meshoptimizer load WASM at runtime — must not be bundled
+      "draco3d",
+      "meshoptimizer",
       "playwright",
       "puppeteer",
       "puppeteer-core",

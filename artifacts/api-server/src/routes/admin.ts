@@ -9,6 +9,7 @@ import path from "path";
 import fs from "fs";
 import type { Request, Response } from "express";
 import { uploadToR2, r2Enabled, keyFromR2Url, deleteFromR2 } from "../lib/r2";
+import { optimizeGlb } from "../lib/glbOptimize";
 import sharp from "sharp";
 
 const router: IRouter = Router();
@@ -260,16 +261,37 @@ router.post("/admin/upload/model", requireAuth, (req, res) => {
     if (!adminId) return;
 
     if (r2Enabled()) {
-      // R2 path: multer reads into memory, we stream to R2
+      // R2 path: multer reads into memory, we optimise then stream to R2
       uploadModel.single("model")(req, res, async (err) => {
         if (err) { res.status(400).json({ error: err.message }); return; }
         if (!req.file) { res.status(400).json({ error: "No file uploaded" }); return; }
 
-        const ext      = path.extname(req.file.originalname).toLowerCase() || ".glb";
-        const key      = `models/model-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+        // ── Optimise: prune → dedup → weld → Draco compression ──────────────
+        const optimization = await optimizeGlb(req.file.buffer);
+
+        // Reject if the model is still too large after optimisation (25 MB).
+        const MAX_BYTES = 25 * 1024 * 1024;
+        if (optimization.optimizedBytes > MAX_BYTES) {
+          res.status(400).json({
+            error: `Model is too large even after optimisation (${(optimization.optimizedBytes / 1024 / 1024).toFixed(1)} MB). ` +
+              `Maximum stored size is 25 MB. Reduce polygon count or remove unused geometry before uploading.`,
+          });
+          return;
+        }
+
+        // Always store as .glb (Draco-compressed output is binary glTF)
+        const key = `models/model-${Date.now()}-${Math.round(Math.random() * 1e9)}.glb`;
         try {
-          const url = await uploadToR2(key, req.file.buffer, req.file.mimetype || "model/gltf-binary");
-          res.json({ url, filename: path.basename(key) });
+          const url = await uploadToR2(key, optimization.buffer, "model/gltf-binary");
+          res.json({
+            url,
+            filename: path.basename(key),
+            optimization: {
+              originalBytes: optimization.originalBytes,
+              optimizedBytes: optimization.optimizedBytes,
+              reductionPct: optimization.reductionPct,
+            },
+          });
         } catch (e) {
           res.status(500).json({ error: "Upload to storage failed" });
         }
