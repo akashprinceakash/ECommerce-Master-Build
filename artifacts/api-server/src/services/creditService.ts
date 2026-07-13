@@ -261,9 +261,15 @@ export async function getEstimatedReplicateBalance(): Promise<{
   totalTopupsUsd: number;
   totalCostUsd: number;
   estimatedBalanceUsd: number;
+  /** Number of top-up entries recorded in the DB ledger. Zero means the Replicate
+   *  account may have been funded but no top-up was ever logged via /admin → Replicate Balance. */
+  topupCount: number;
 }> {
   const [topupRow] = await db
-    .select({ total: sql<string>`COALESCE(SUM(${replicateTopupsTable.amountUsd}), 0)` })
+    .select({
+      total: sql<string>`COALESCE(SUM(${replicateTopupsTable.amountUsd}), 0)`,
+      count: sql<string>`COUNT(*)`,
+    })
     .from(replicateTopupsTable);
 
   const [costRow] = await db
@@ -273,11 +279,17 @@ export async function getEstimatedReplicateBalance(): Promise<{
     .from(generationLogsTable)
     .where(eq(generationLogsTable.replicateStatus, "succeeded"));
 
-  const totalTopupsUsd   = parseFloat(topupRow?.total ?? "0");
-  const totalCostUsd     = parseFloat(costRow?.total  ?? "0");
+  const totalTopupsUsd      = parseFloat(topupRow?.total ?? "0");
+  const topupCount          = parseInt(topupRow?.count   ?? "0", 10);
+  const totalCostUsd        = parseFloat(costRow?.total  ?? "0");
   const estimatedBalanceUsd = totalTopupsUsd - totalCostUsd;
 
-  return { totalTopupsUsd, totalCostUsd, estimatedBalanceUsd };
+  logger.info(
+    { totalTopupsUsd, topupCount, totalCostUsd, estimatedBalanceUsd },
+    "creditService: balance from DB ledger (topupCount=0 means no top-up logged yet)",
+  );
+
+  return { totalTopupsUsd, totalCostUsd, estimatedBalanceUsd, topupCount };
 }
 
 // ── Admin: log a Replicate top-up ────────────────────────────────────────────
