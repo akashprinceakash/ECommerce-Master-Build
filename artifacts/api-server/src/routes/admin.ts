@@ -261,19 +261,56 @@ router.post("/admin/upload/model", requireAuth, (req, res) => {
     if (!adminId) return;
 
     if (r2Enabled()) {
-      // R2 path: multer reads into memory, we optimise then stream to R2
-      uploadModel.single("model")(req, res, async (err) => {
+      // ── Write to disk first to avoid buffering the whole file in RAM ────────
+      // memoryStorage() would load 90 MB into the Node.js heap before we can
+      // check the size, easily OOM-ing a small Render instance.  diskStorage()
+      // lets the OS handle the bytes; we read the (already size-checked) file
+      // into RAM only after confirming it is small enough to optimise safely.
+      uploadModelDisk.single("model")(req, res, async (err) => {
         if (err) { res.status(400).json({ error: err.message }); return; }
         if (!req.file) { res.status(400).json({ error: "No file uploaded" }); return; }
 
-        // ── Optimise: prune → dedup → weld → Draco compression ──────────────
-        const optimization = await optimizeGlb(req.file.buffer);
+        const filePath = req.file.path;
+        const fileSize = req.file.size;
+
+        // ── Pre-optimisation size gate (50 MB) ───────────────────────────────
+        // The Draco optimiser parses the whole document into memory and can use
+        // 3–5× the raw file size during processing.  90 MB → ~300 MB peak RAM,
+        // which crashes a 512 MB instance.  Reject large files early so the
+        // server stays alive and the admin gets a useful error message.
+        const MAX_INPUT_BYTES = 50 * 1024 * 1024;
+        if (fileSize > MAX_INPUT_BYTES) {
+          fs.unlink(filePath, () => {});
+          res.status(400).json({
+            error:
+              `File too large: ${(fileSize / 1024 / 1024).toFixed(1)} MB (limit 50 MB before optimisation). ` +
+              `Please reduce the model first — open it in Blender and use File → Export → glTF 2.0 ` +
+              `with "Apply Modifiers" and "Draco Mesh Compression" enabled, or run it through ` +
+              `https://gltf.report to identify and strip heavy geometry / unused textures.`,
+          });
+          return;
+        }
+
+        // ── Read from disk into buffer, then delete the temp file ─────────────
+        let fileBuffer: Buffer;
+        try {
+          fileBuffer = await fs.promises.readFile(filePath);
+        } catch {
+          fs.unlink(filePath, () => {});
+          res.status(500).json({ error: "Failed to read uploaded file from disk" });
+          return;
+        }
+        fs.unlink(filePath, () => {});
+
+        // ── Optimise: prune → dedup → weld → Draco compression ───────────────
+        const optimization = await optimizeGlb(fileBuffer);
 
         // Reject if the model is still too large after optimisation (25 MB).
-        const MAX_BYTES = 25 * 1024 * 1024;
-        if (optimization.optimizedBytes > MAX_BYTES) {
+        const MAX_STORED_BYTES = 25 * 1024 * 1024;
+        if (optimization.optimizedBytes > MAX_STORED_BYTES) {
           res.status(400).json({
-            error: `Model is too large even after optimisation (${(optimization.optimizedBytes / 1024 / 1024).toFixed(1)} MB). ` +
+            error:
+              `Model is too large even after optimisation (${(optimization.optimizedBytes / 1024 / 1024).toFixed(1)} MB). ` +
               `Maximum stored size is 25 MB. Reduce polygon count or remove unused geometry before uploading.`,
           });
           return;
@@ -292,12 +329,12 @@ router.post("/admin/upload/model", requireAuth, (req, res) => {
               reductionPct: optimization.reductionPct,
             },
           });
-        } catch (e) {
-          res.status(500).json({ error: "Upload to storage failed" });
+        } catch {
+          res.status(500).json({ error: "Upload to R2 storage failed — check R2 credentials and bucket permissions." });
         }
       });
     } else {
-      // Disk fallback
+      // Disk fallback (no R2 configured)
       uploadModelDisk.single("model")(req, res, (err) => {
         if (err) { res.status(400).json({ error: err.message }); return; }
         if (!req.file) { res.status(400).json({ error: "No file uploaded" }); return; }
