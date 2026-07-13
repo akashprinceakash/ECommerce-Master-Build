@@ -92,7 +92,8 @@ export default function LookbookPage() {
   const [outfitName, setOutfitName] = useState("My Outfit");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<"builder" | "saved">("builder");
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+  const [isTablet, setIsTablet] = useState(() => window.innerWidth >= 640 && window.innerWidth < 1100);
   const [generation, setGeneration] = useState<GenerationState>({ status: "idle" });
   const [zoom, setZoom] = useState(1);
 
@@ -139,7 +140,8 @@ export default function LookbookPage() {
     }
   }, [uploadPhoto]);
 
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenImageUrl, setFullscreenImageUrl] = useState<string | null>(null);
+  const [paymentConfirmPkg, setPaymentConfirmPkg] = useState<CreditPackage | null>(null);
 
   // ── Credit system ──────────────────────────────────────────────────────────
   const [showBuyCredits, setShowBuyCredits] = useState(false);
@@ -323,18 +325,21 @@ export default function LookbookPage() {
 
   // Close fullscreen on Escape
   useEffect(() => {
-    if (!isFullscreen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setIsFullscreen(false); };
+    if (!fullscreenImageUrl) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFullscreenImageUrl(null); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isFullscreen]);
+  }, [fullscreenImageUrl]);
 
   const zoomIn = useCallback(() => setZoom(z => Math.min(z + 0.25, 3)), []);
   const zoomOut = useCallback(() => setZoom(z => Math.max(z - 0.25, 1)), []);
   const zoomReset = useCallback(() => setZoom(1), []);
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768);
+    const onResize = () => {
+      setIsMobile(window.innerWidth < 640);
+      setIsTablet(window.innerWidth >= 640 && window.innerWidth < 1100);
+    };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -510,16 +515,16 @@ export default function LookbookPage() {
 
       {/* ── Hero ──────────────────────────────────────────────────────────────── */}
       <section style={{ background: "#0a0c14", padding: "120px 24px 80px", textAlign: "center" }}>
-        <p style={{ fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.45em", color: GOLD, textTransform: "uppercase", marginBottom: 20 }}>
+        <p style={{ fontFamily: FONT_UI, fontSize: 13, letterSpacing: "0.45em", color: GOLD, textTransform: "uppercase", marginBottom: 20 }}>
           Ka.Sha
         </p>
         <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(40px, 5.5vw, 72px)", fontWeight: 400, color: "#fff", lineHeight: 1.05, marginBottom: 20, letterSpacing: "0.03em" }}>
           The Lookbook
         </h1>
-        <p style={{ fontFamily: FONT_UI, fontSize: 13, letterSpacing: "0.25em", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", marginBottom: 28 }}>
+        <p style={{ fontFamily: FONT_UI, fontSize: 15, letterSpacing: "0.25em", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", marginBottom: 28 }}>
           Curate &nbsp;·&nbsp; Try On &nbsp;·&nbsp; Inspire
         </p>
-        <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(255,255,255,0.35)", letterSpacing: "0.15em", maxWidth: 520, margin: "0 auto" }}>
+        <p style={{ fontFamily: FONT_UI, fontSize: 13, color: "rgba(255,255,255,0.35)", letterSpacing: "0.12em", maxWidth: 540, margin: "0 auto" }}>
           Tap the ♡ on any product to save it here, then choose your pieces and let AI generate a realistic try-on.
         </p>
       </section>
@@ -531,7 +536,7 @@ export default function LookbookPage() {
 
             {/* Section header */}
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <p style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.45em", color: GOLD, textTransform: "uppercase", marginBottom: 12 }}>
+              <p style={{ fontFamily: FONT_UI, fontSize: 12, letterSpacing: "0.45em", color: GOLD, textTransform: "uppercase", marginBottom: 12 }}>
                 My Wardrobe
               </p>
               <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(28px, 3.5vw, 42px)", fontWeight: 400, color: "#0A0A0A", letterSpacing: "0.02em", marginBottom: 12 }}>
@@ -549,8 +554,8 @@ export default function LookbookPage() {
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   style={{
-                    fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase",
-                    padding: "10px 28px", border: "none", cursor: "pointer", background: "transparent",
+                    fontFamily: FONT_UI, fontSize: 13, letterSpacing: "0.2em", textTransform: "uppercase",
+                    padding: "11px 28px", border: "none", cursor: "pointer", background: "transparent",
                     color: activeTab === tab ? GOLD : "rgba(0,0,0,0.45)",
                     borderBottom: activeTab === tab ? `2px solid ${GOLD}` : "2px solid transparent",
                     marginBottom: -1, transition: "color 0.2s",
@@ -734,250 +739,63 @@ export default function LookbookPage() {
                       )}
                     </div>
 
-                    <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 20, alignItems: "flex-start" }}>
-
-                      {/* ── Tops panel (left) ── */}
-                      <GarmentPanel
-                        title="Tops"
-                        items={tops}
-                        selectedId={selection.top?.productId ?? null}
-                        onSelect={p => selectItem("top", p)}
-                        isMobile={isMobile}
-                      />
-
-                      {/* ── Result canvas ── */}
-                      <div
-                        style={{
-                          position: "relative",
-                          flex: 1,
-                          width: isMobile ? "100%" : undefined,
-                          height: isMobile ? 480 : 680,
-                          background: generation.status === "succeeded"
-                            ? "#000"
-                            : `linear-gradient(180deg, ${CANVAS_BG} 0%, ${CANVAS_BG} 82%, #E2DCD2 82%, #E2DCD2 100%)`,
-                          border: "1px solid rgba(184,146,90,0.22)",
-                          borderRadius: 6,
-                          boxShadow: "0 18px 40px -18px rgba(20,15,5,0.28)",
-                          overflow: "hidden",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                        }}
-                      >
-                        {/* Status pin */}
-                        <div style={{
-                          position: "absolute", top: 12, left: 12, zIndex: 10,
-                          background: "#0A0A0A", color: "#fff",
-                          fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase",
-                          padding: "6px 11px", borderRadius: 3,
-                        }}>
-                          {generation.status === "succeeded" ? "Your AI Try-On" :
-                            isGenerating ? "Generating…" :
-                            hasSelection ? "Ready to Generate" : "Build Your Look"}
-                        </div>
-
-                        {generation.status === "succeeded" ? (
-                          <>
-                            {/* Top-right: download + fullscreen */}
-                            <div style={{
-                              position: "absolute", top: 12, right: 12, zIndex: 10,
-                              display: "flex", gap: 6,
-                            }}>
-                              {[
-                                { icon: <Download size={14} />, onClick: handleDownload, title: "Download image" },
-                                { icon: <Maximize2 size={14} />, onClick: () => setIsFullscreen(true), title: "Full screen" },
-                              ].map(({ icon, onClick, title }, i) => (
-                                <button
-                                  key={i}
-                                  onClick={onClick}
-                                  title={title}
-                                  style={{
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                    width: 32, height: 32,
-                                    background: "rgba(0,0,0,0.65)", color: "#fff",
-                                    border: "1px solid rgba(255,255,255,0.15)", borderRadius: 4,
-                                    cursor: "pointer", backdropFilter: "blur(4px)",
-                                  }}
-                                >
-                                  {icon}
-                                </button>
-                              ))}
-                            </div>
-
-                            {/* Bottom-right: zoom controls */}
-                            <div style={{
-                              position: "absolute", bottom: 12, right: 12, zIndex: 10,
-                              display: "flex", gap: 6,
-                            }}>
-                              {[
-                                { icon: <ZoomIn size={14} />, onClick: zoomIn, title: "Zoom in" },
-                                { icon: <ZoomOut size={14} />, onClick: zoomOut, title: "Zoom out", disabled: zoom <= 1 },
-                                { icon: <RotateCcw size={14} />, onClick: zoomReset, title: "Reset zoom", disabled: zoom === 1 },
-                              ].map(({ icon, onClick, title, disabled }, i) => (
-                                <button
-                                  key={i}
-                                  onClick={onClick}
-                                  title={title}
-                                  disabled={disabled}
-                                  style={{
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                    width: 32, height: 32,
-                                    background: "rgba(0,0,0,0.65)", color: disabled ? "rgba(255,255,255,0.3)" : "#fff",
-                                    border: "1px solid rgba(255,255,255,0.15)", borderRadius: 4,
-                                    cursor: disabled ? "default" : "pointer", backdropFilter: "blur(4px)",
-                                  }}
-                                >
-                                  {icon}
-                                </button>
-                              ))}
-                              {zoom !== 1 && (
-                                <div style={{
-                                  display: "flex", alignItems: "center", padding: "0 10px",
-                                  background: "rgba(0,0,0,0.65)", color: "#fff",
-                                  fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.1em",
-                                  border: "1px solid rgba(255,255,255,0.15)", borderRadius: 4,
-                                  backdropFilter: "blur(4px)",
-                                }}>
-                                  {Math.round(zoom * 100)}%
-                                </div>
-                              )}
-                            </div>
-                            <div style={{ width: "100%", height: "100%", overflow: "auto", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                              <img
-                                src={generation.resultImageUrl}
-                                alt="AI-generated try-on result"
-                                draggable={false}
-                                style={{
-                                  width: `${zoom * 100}%`, height: `${zoom * 100}%`,
-                                  objectFit: "contain", transition: "width 0.2s, height 0.2s",
-                                }}
-                              />
-                            </div>
-                          </>
-                        ) : isGenerating ? (
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, padding: "0 20px" }}>
-                            <Spinner />
-
-                            {/* Stage label */}
-                            {(() => {
-                              const gc = jobStatus?.garmentCount ?? 1;
-                              const pc = jobStatus?.processedCount ?? 0;
-                              const st = jobStatus?.status;
-                              let label: string;
-                              let sub: string;
-                              if (elapsedSecs >= 60) {
-                                label = "Taking longer than usual…";
-                                sub = "Still working — you can keep waiting or try again.";
-                              } else if (elapsedSecs >= 25 || (st === "processing" && pc >= gc && gc > 0)) {
-                                label = "Almost done — finishing touches…";
-                                sub = "Saving your look";
-                              } else if (st === "processing" && gc > 1) {
-                                label = pc === 0 ? "Fitting first garment…" : "Fitting second garment…";
-                                sub = `Step ${pc + 1} of ${gc}`;
-                              } else if (st === "processing") {
-                                label = "Fitting garment to your avatar…";
-                                sub = "Usually takes 20–35 seconds";
-                              } else {
-                                label = "Preparing your look…";
-                                sub = "Sending to AI model";
-                              }
-                              return (
-                                <>
-                                  <p style={{ fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.2em", color: GOLD, margin: 0, textTransform: "uppercase", textAlign: "center" }}>
-                                    {label}
-                                  </p>
-                                  <p style={{ fontFamily: FONT_UI, fontSize: 10, color: "rgba(0,0,0,0.4)", margin: 0, textAlign: "center", lineHeight: 1.6 }}>
-                                    {sub}
-                                  </p>
-                                </>
-                              );
-                            })()}
-
-                            {/* Elapsed counter */}
-                            <p style={{ fontFamily: FONT_UI, fontSize: 9, color: "rgba(0,0,0,0.28)", margin: 0, letterSpacing: "0.1em" }}>
-                              {elapsedSecs}s elapsed
-                            </p>
-
-                            {/* Timeout retry option */}
-                            {elapsedSecs >= 60 && (
-                              <button
-                                onClick={handleGenerate}
-                                style={{
-                                  fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase",
-                                  background: "#0A0A0A", color: "#fff", border: "none", padding: "9px 20px", cursor: "pointer", marginTop: 4,
-                                }}
-                              >
-                                Try Again
-                              </button>
-                            )}
-                          </div>
-                        ) : generation.status === "failed" ? (
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: 24 }}>
-                            <AlertTriangle size={26} color="#c0392b" />
-                            <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "#c0392b", margin: 0, textAlign: "center", letterSpacing: "0.05em", maxWidth: 280 }}>
-                              {generation.error}
-                            </p>
-                            {outOfCredits ? (
-                              <button
-                                onClick={() => setShowBuyCredits(true)}
-                                style={{
-                                  display: "flex", alignItems: "center", gap: 6,
-                                  fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase",
-                                  background: "#c0392b", color: "#fff", border: "none", padding: "9px 20px", cursor: "pointer", marginTop: 4,
-                                }}
-                              >
-                                <ShoppingBag size={12} /> Buy More Credits
-                              </button>
-                            ) : (
-                              <>
-                                <p style={{ fontFamily: FONT_UI, fontSize: 10, color: "rgba(0,0,0,0.4)", margin: "0", textAlign: "center", letterSpacing: "0.04em", maxWidth: 260, lineHeight: 1.6 }}>
-                                  No credit was charged — your balance is safe.
-                                </p>
-                                <button
-                                  onClick={handleGenerate}
-                                  style={{
-                                    fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase",
-                                    background: "#0A0A0A", color: "#fff", border: "none", padding: "9px 20px", cursor: "pointer", marginTop: 6,
-                                  }}
-                                >
-                                  Try Again
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        ) : (
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: 24 }}>
-                            <Wand2 size={30} color="rgba(0,0,0,0.25)" />
-                            <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.4)", letterSpacing: "0.1em", textAlign: "center", maxWidth: 280, lineHeight: 1.7, margin: 0 }}>
-                              {hasSelection
-                                ? "Ready when you are — click Generate Look below."
-                                : "Select a dress, or a top and/or bottom, from your saved pieces."}
-                            </p>
-                          </div>
-                        )}
+                    {/* ── Responsive Studio Layout ── */}
+                    {!isMobile && !isTablet ? (
+                      /* Desktop (≥ 1100 px): side panels flanking the canvas */
+                      <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+                        <GarmentPanel title="Tops" items={tops} selectedId={selection.top?.productId ?? null} onSelect={p => selectItem("top", p)} isMobile={false} />
+                        <GenerationCanvas
+                          generation={generation} isGenerating={isGenerating} hasSelection={hasSelection}
+                          outOfCredits={outOfCredits} zoom={zoom} elapsedSecs={elapsedSecs} jobStatus={jobStatus}
+                          height={820} canvasStyle={{ flex: 1 }}
+                          handleDownload={handleDownload}
+                          onOpenFullscreen={() => { if (generation.status === "succeeded" && generation.resultImageUrl) setFullscreenImageUrl(generation.resultImageUrl); }}
+                          zoomIn={zoomIn} zoomOut={zoomOut} zoomReset={zoomReset}
+                          handleGenerate={handleGenerate} setShowBuyCredits={setShowBuyCredits}
+                        />
+                        <GarmentPanel title="Bottoms" items={bottoms} selectedId={selection.bottom?.productId ?? null} onSelect={p => selectItem("bottom", p)} isMobile={false} />
+                        <GarmentPanel title="Dresses" items={dresses} selectedId={selection.dress?.productId ?? null} onSelect={p => selectItem("dress", p)} isMobile={false} />
                       </div>
-
-                      {/* ── Bottoms panel (middle-right) ── */}
-                      <GarmentPanel
-                        title="Bottoms"
-                        items={bottoms}
-                        selectedId={selection.bottom?.productId ?? null}
-                        onSelect={p => selectItem("bottom", p)}
-                        isMobile={isMobile}
-                      />
-
-                      {/* ── Dresses panel (right) ── */}
-                      <GarmentPanel
-                        title="Dresses"
-                        items={dresses}
-                        selectedId={selection.dress?.productId ?? null}
-                        onSelect={p => selectItem("dress", p)}
-                        isMobile={isMobile}
-                      />
-                    </div>
+                    ) : isTablet ? (
+                      /* Tablet (640–1099 px): canvas full-width above, three panels in a row below */
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        <GenerationCanvas
+                          generation={generation} isGenerating={isGenerating} hasSelection={hasSelection}
+                          outOfCredits={outOfCredits} zoom={zoom} elapsedSecs={elapsedSecs} jobStatus={jobStatus}
+                          height={640} canvasStyle={{ width: "100%" }}
+                          handleDownload={handleDownload}
+                          onOpenFullscreen={() => { if (generation.status === "succeeded" && generation.resultImageUrl) setFullscreenImageUrl(generation.resultImageUrl); }}
+                          zoomIn={zoomIn} zoomOut={zoomOut} zoomReset={zoomReset}
+                          handleGenerate={handleGenerate} setShowBuyCredits={setShowBuyCredits}
+                        />
+                        <div style={{ display: "flex", gap: 12 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}><GarmentPanel title="Tops" items={tops} selectedId={selection.top?.productId ?? null} onSelect={p => selectItem("top", p)} isMobile={true} /></div>
+                          <div style={{ flex: 1, minWidth: 0 }}><GarmentPanel title="Bottoms" items={bottoms} selectedId={selection.bottom?.productId ?? null} onSelect={p => selectItem("bottom", p)} isMobile={true} /></div>
+                          <div style={{ flex: 1, minWidth: 0 }}><GarmentPanel title="Dresses" items={dresses} selectedId={selection.dress?.productId ?? null} onSelect={p => selectItem("dress", p)} isMobile={true} /></div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Mobile (< 640 px): stacked column */
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        <GarmentPanel title="Tops" items={tops} selectedId={selection.top?.productId ?? null} onSelect={p => selectItem("top", p)} isMobile={true} />
+                        <GenerationCanvas
+                          generation={generation} isGenerating={isGenerating} hasSelection={hasSelection}
+                          outOfCredits={outOfCredits} zoom={zoom} elapsedSecs={elapsedSecs} jobStatus={jobStatus}
+                          height={560} canvasStyle={{ width: "100%" }}
+                          handleDownload={handleDownload}
+                          onOpenFullscreen={() => { if (generation.status === "succeeded" && generation.resultImageUrl) setFullscreenImageUrl(generation.resultImageUrl); }}
+                          zoomIn={zoomIn} zoomOut={zoomOut} zoomReset={zoomReset}
+                          handleGenerate={handleGenerate} setShowBuyCredits={setShowBuyCredits}
+                        />
+                        <GarmentPanel title="Bottoms" items={bottoms} selectedId={selection.bottom?.productId ?? null} onSelect={p => selectItem("bottom", p)} isMobile={true} />
+                        <GarmentPanel title="Dresses" items={dresses} selectedId={selection.dress?.productId ?? null} onSelect={p => selectItem("dress", p)} isMobile={true} />
+                      </div>
+                    )}
 
                     {/* ── Current selection scorecard ── */}
                     <div style={{ background: "#fff", border: "1px solid rgba(184,146,90,0.2)" }}>
                       <div style={{ padding: "12px 16px 8px", borderBottom: "1px dashed rgba(0,0,0,0.1)" }}>
-                        <span style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.3em", color: "rgba(0,0,0,0.4)", textTransform: "uppercase" }}>
+                        <span style={{ fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.3em", color: "rgba(0,0,0,0.4)", textTransform: "uppercase" }}>
                           Current Selection
                         </span>
                       </div>
@@ -1178,24 +996,36 @@ export default function LookbookPage() {
                           key={outfit.id}
                           style={{ background: "#fff", border: "1px solid rgba(184,146,90,0.18)", overflow: "hidden" }}
                         >
-                          <div style={{ position: "relative", height: 260, background: "#000", overflow: "hidden" }}>
+                          <div
+                            style={{ position: "relative", height: 340, background: "#000", overflow: "hidden", cursor: "zoom-in" }}
+                            onClick={() => setFullscreenImageUrl(outfit.resultImageUrl)}
+                            title="Click to view full screen"
+                          >
                             <img
                               src={outfit.resultImageUrl}
                               alt={outfit.name}
                               style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }}
                             />
+                            <div style={{
+                              position: "absolute", top: 8, left: 8, zIndex: 4, pointerEvents: "none",
+                              background: "rgba(0,0,0,0.55)", borderRadius: 4, padding: "4px 8px",
+                              display: "flex", alignItems: "center", gap: 5,
+                            }}>
+                              <Maximize2 size={11} color="#fff" />
+                              <span style={{ fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.1em", color: "#fff", textTransform: "uppercase" }}>View</span>
+                            </div>
                             <button
                               style={{
                                 position: "absolute", top: 8, right: 8,
                                 background: "rgba(255,255,255,0.9)", borderRadius: "50%",
-                                width: 28, height: 28, border: "none",
+                                width: 30, height: 30, border: "none",
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.10)", zIndex: 5,
                               }}
-                              onClick={() => handleDeleteOutfit(outfit.id)}
+                              onClick={e => { e.stopPropagation(); void handleDeleteOutfit(outfit.id); }}
                               title="Delete outfit"
                             >
-                              <Trash2 size={12} color="#e53e3e" />
+                              <Trash2 size={13} color="#e53e3e" />
                             </button>
                           </div>
 
@@ -1256,9 +1086,9 @@ export default function LookbookPage() {
       </Show>
 
       {/* ── Fullscreen image viewer ── */}
-      {isFullscreen && generation.status === "succeeded" && (
+      {fullscreenImageUrl && (
         <div
-          onClick={() => setIsFullscreen(false)}
+          onClick={() => setFullscreenImageUrl(null)}
           style={{
             position: "fixed", inset: 0, background: "rgba(0,0,0,0.96)", zIndex: 300,
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -1266,7 +1096,7 @@ export default function LookbookPage() {
         >
           {/* Close */}
           <button
-            onClick={() => setIsFullscreen(false)}
+            onClick={() => setFullscreenImageUrl(null)}
             title="Exit full screen (Esc)"
             style={{
               position: "absolute", top: 16, right: 16,
@@ -1298,7 +1128,7 @@ export default function LookbookPage() {
 
           {/* Image — click does not propagate so backdrop click closes */}
           <img
-            src={generation.resultImageUrl}
+            src={fullscreenImageUrl}
             alt="AI-generated try-on result"
             onClick={e => e.stopPropagation()}
             style={{
@@ -1387,78 +1217,135 @@ export default function LookbookPage() {
 
             {!paymentVerified && (
               <>
-                <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.5)", letterSpacing: "0.05em", lineHeight: 1.7, marginBottom: 22 }}>
-                  Each AI credit powers one photorealistic try-on. Credits never expire.
-                  {creditsRemaining !== null && (
-                    <span style={{ display: "block", marginTop: 4, color: creditsRemaining === 0 ? "#c0392b" : "rgba(0,0,0,0.4)" }}>
-                      You currently have <strong>{creditsRemaining}</strong> credit{creditsRemaining !== 1 ? "s" : ""}.
-                    </span>
-                  )}
-                </p>
-
-                {creditPackages.length === 0 && (
-                  <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.4)", textAlign: "center", padding: "20px 0" }}>
-                    Loading packages…
-                  </p>
-                )}
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-                  {creditPackages.map(pkg => (
-                    <button
-                      key={pkg.id}
-                      onClick={() => handleBuyPackage(pkg)}
-                      disabled={purchaseCredits.isPending || verifyPayment.isPending}
-                      style={{
-                        display: "flex", alignItems: "center", justifyContent: "space-between",
-                        padding: "14px 16px", border: `1px solid rgba(184,146,90,0.3)`,
-                        background: "transparent", cursor: purchaseCredits.isPending || verifyPayment.isPending ? "not-allowed" : "pointer",
-                        textAlign: "left", transition: "border-color 0.2s, background 0.2s",
-                      }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = GOLD; (e.currentTarget as HTMLButtonElement).style.background = "rgba(184,146,90,0.04)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(184,146,90,0.3)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-                    >
+                {paymentConfirmPkg ? (
+                  /* ── Step 2: Confirm payment ── */
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <p style={{ fontFamily: FONT_UI, fontSize: 13, color: "rgba(0,0,0,0.55)", letterSpacing: "0.04em", lineHeight: 1.8, margin: 0 }}>
+                      You're about to purchase the following package:
+                    </p>
+                    <div style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      border: `1px solid ${GOLD}`, padding: "16px 18px",
+                      background: "rgba(184,146,90,0.04)",
+                    }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 36, height: 36, background: "rgba(184,146,90,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ width: 36, height: 36, background: "rgba(184,146,90,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <Zap size={16} color={GOLD} />
                         </div>
                         <div>
-                          <p style={{ fontFamily: FONT_DISPLAY, fontSize: 18, color: "#0A0A0A", margin: 0 }}>
-                            {pkg.name}
+                          <p style={{ fontFamily: FONT_DISPLAY, fontSize: 17, color: "#0A0A0A", margin: 0 }}>{paymentConfirmPkg.name}</p>
+                          <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.45)", letterSpacing: "0.06em", margin: "3px 0 0" }}>
+                            {paymentConfirmPkg.creditsAmount} AI credits
+                            {paymentConfirmPkg.bonusCredits > 0 && <span style={{ color: GOLD }}> +{paymentConfirmPkg.bonusCredits} bonus</span>}
                           </p>
-                          {pkg.bonusCredits > 0 && (
-                            <p style={{ fontFamily: FONT_UI, fontSize: 9, color: GOLD, letterSpacing: "0.1em", margin: 0, marginTop: 2 }}>
-                              +{pkg.bonusCredits} bonus credit{pkg.bonusCredits > 1 ? "s" : ""}
-                            </p>
-                          )}
                         </div>
                       </div>
-                      <div style={{ textAlign: "right" }}>
-                        <p style={{ fontFamily: FONT_UI, fontSize: 14, color: GOLD, fontWeight: 600, margin: 0, letterSpacing: "0.02em" }}>
-                          ₹{Math.round(pkg.priceInPaise / 100)}
-                        </p>
-                        <p style={{ fontFamily: FONT_UI, fontSize: 9, color: "rgba(0,0,0,0.35)", margin: 0, marginTop: 2, letterSpacing: "0.08em" }}>
-                          ₹{Math.round(pkg.priceInPaise / pkg.creditsAmount / 100)} / credit
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                      <p style={{ fontFamily: FONT_UI, fontSize: 15, color: GOLD, fontWeight: 600, margin: 0 }}>₹{Math.round(paymentConfirmPkg.priceInPaise / 100)}</p>
+                    </div>
+                    <p style={{ fontFamily: FONT_UI, fontSize: 12, color: "rgba(0,0,0,0.45)", letterSpacing: "0.04em", lineHeight: 1.8, margin: 0 }}>
+                      Clicking <strong style={{ color: "#0A0A0A" }}>Proceed to Payment</strong> will open the Razorpay secure checkout. You can go back to choose a different package.
+                    </p>
+                    {creditPurchaseError && (
+                      <p style={{ fontFamily: FONT_UI, fontSize: 12, color: "#c0392b", letterSpacing: "0.04em", margin: 0, lineHeight: 1.6 }}>{creditPurchaseError}</p>
+                    )}
+                    {(purchaseCredits.isPending || verifyPayment.isPending) && (
+                      <p style={{ fontFamily: FONT_UI, fontSize: 12, color: GOLD, letterSpacing: "0.1em", textAlign: "center" }}>
+                        {purchaseCredits.isPending ? "Opening checkout…" : "Verifying payment…"}
+                      </p>
+                    )}
+                    <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                      <button
+                        onClick={() => setPaymentConfirmPkg(null)}
+                        disabled={purchaseCredits.isPending || verifyPayment.isPending}
+                        style={{
+                          flex: 1, fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase",
+                          background: "#fff", color: "#0A0A0A", border: "1px solid rgba(0,0,0,0.2)",
+                          padding: "12px 0", cursor: "pointer",
+                        }}
+                      >
+                        ← Back
+                      </button>
+                      <button
+                        onClick={() => { void handleBuyPackage(paymentConfirmPkg); setPaymentConfirmPkg(null); }}
+                        disabled={purchaseCredits.isPending || verifyPayment.isPending}
+                        style={{
+                          flex: 2, fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase",
+                          background: "#0A0A0A", color: "#fff", border: "none",
+                          padding: "12px 0", cursor: purchaseCredits.isPending ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        Proceed to Payment →
+                      </button>
+                    </div>
+                    <p style={{ fontFamily: FONT_UI, fontSize: 10, color: "rgba(0,0,0,0.3)", letterSpacing: "0.06em", textAlign: "center", margin: 0 }}>
+                      Secure checkout via Razorpay · 100% safe &amp; encrypted.
+                    </p>
+                  </div>
+                ) : (
+                  /* ── Step 1: Choose a package ── */
+                  <>
+                    <p style={{ fontFamily: FONT_UI, fontSize: 13, color: "rgba(0,0,0,0.5)", letterSpacing: "0.05em", lineHeight: 1.7, marginBottom: 22 }}>
+                      Each AI credit powers one photorealistic try-on. Credits never expire.
+                      {creditsRemaining !== null && (
+                        <span style={{ display: "block", marginTop: 4, color: creditsRemaining === 0 ? "#c0392b" : "rgba(0,0,0,0.4)" }}>
+                          You currently have <strong>{creditsRemaining}</strong> credit{creditsRemaining !== 1 ? "s" : ""}.
+                        </span>
+                      )}
+                    </p>
 
-                {creditPurchaseError && (
-                  <p style={{ fontFamily: FONT_UI, fontSize: 10, color: "#c0392b", letterSpacing: "0.05em", textAlign: "center", marginBottom: 14 }}>
-                    {creditPurchaseError}
-                  </p>
+                    {creditPackages.length === 0 && (
+                      <p style={{ fontFamily: FONT_UI, fontSize: 13, color: "rgba(0,0,0,0.4)", textAlign: "center", padding: "20px 0" }}>
+                        Loading packages…
+                      </p>
+                    )}
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+                      {creditPackages.map(pkg => (
+                        <button
+                          key={pkg.id}
+                          onClick={() => setPaymentConfirmPkg(pkg)}
+                          disabled={purchaseCredits.isPending || verifyPayment.isPending}
+                          style={{
+                            display: "flex", alignItems: "center", justifyContent: "space-between",
+                            padding: "14px 16px", border: `1px solid rgba(184,146,90,0.3)`,
+                            background: "transparent", cursor: purchaseCredits.isPending || verifyPayment.isPending ? "not-allowed" : "pointer",
+                            textAlign: "left", transition: "border-color 0.2s, background 0.2s",
+                          }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = GOLD; (e.currentTarget as HTMLButtonElement).style.background = "rgba(184,146,90,0.04)"; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(184,146,90,0.3)"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <div style={{ width: 36, height: 36, background: "rgba(184,146,90,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <Zap size={16} color={GOLD} />
+                            </div>
+                            <div>
+                              <p style={{ fontFamily: FONT_DISPLAY, fontSize: 18, color: "#0A0A0A", margin: 0 }}>
+                                {pkg.name}
+                              </p>
+                              {pkg.bonusCredits > 0 && (
+                                <p style={{ fontFamily: FONT_UI, fontSize: 11, color: GOLD, letterSpacing: "0.1em", margin: 0, marginTop: 2 }}>
+                                  +{pkg.bonusCredits} bonus credit{pkg.bonusCredits > 1 ? "s" : ""}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <p style={{ fontFamily: FONT_UI, fontSize: 14, color: GOLD, fontWeight: 600, margin: 0, letterSpacing: "0.02em" }}>
+                              ₹{Math.round(pkg.priceInPaise / 100)}
+                            </p>
+                            <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.35)", margin: 0, marginTop: 2, letterSpacing: "0.08em" }}>
+                              ₹{Math.round(pkg.priceInPaise / pkg.creditsAmount / 100)} / credit
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.3)", letterSpacing: "0.08em", textAlign: "center", margin: 0 }}>
+                      Secure checkout via Razorpay · UPI, card, netbanking accepted
+                    </p>
+                  </>
                 )}
-
-                {(purchaseCredits.isPending || verifyPayment.isPending) && (
-                  <p style={{ fontFamily: FONT_UI, fontSize: 10, color: GOLD, letterSpacing: "0.1em", textAlign: "center", marginBottom: 14 }}>
-                    Processing…
-                  </p>
-                )}
-
-                <p style={{ fontFamily: FONT_UI, fontSize: 9, color: "rgba(0,0,0,0.3)", letterSpacing: "0.08em", textAlign: "center", margin: 0 }}>
-                  Secure checkout via Razorpay · UPI, card, netbanking accepted
-                </p>
               </>
             )}
           </div>
@@ -1624,7 +1511,7 @@ function GarmentPanel({
       <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
         <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.35em", color: GOLD, textTransform: "uppercase" }}>{title}</p>
       </div>
-      <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: 8, maxHeight: 680, overflowY: "auto" }}>
+      <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: 8, maxHeight: 820, overflowY: "auto" }}>
         {items.length === 0 ? (
           <p style={{ fontFamily: FONT_UI, fontSize: 10, color: "rgba(0,0,0,0.35)", letterSpacing: "0.06em", padding: "8px 4px", lineHeight: 1.7 }}>
             No saved {title.toLowerCase()} yet. Heart one from the shop to see it here.
@@ -1657,6 +1544,192 @@ function GarmentPanel({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ── GenerationCanvas ──────────────────────────────────────────────────────────
+interface GenerationCanvasProps {
+  generation: GenerationState;
+  isGenerating: boolean;
+  hasSelection: boolean;
+  outOfCredits: boolean;
+  zoom: number;
+  elapsedSecs: number;
+  jobStatus?: { garmentCount?: number; processedCount?: number; status?: string } | null;
+  height: number;
+  canvasStyle?: React.CSSProperties;
+  handleDownload: () => void;
+  onOpenFullscreen: () => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  zoomReset: () => void;
+  handleGenerate: () => void;
+  setShowBuyCredits: (v: boolean) => void;
+}
+
+function GenerationCanvas({
+  generation, isGenerating, hasSelection, outOfCredits,
+  zoom, elapsedSecs, jobStatus, height, canvasStyle,
+  handleDownload, onOpenFullscreen, zoomIn, zoomOut, zoomReset,
+  handleGenerate, setShowBuyCredits,
+}: GenerationCanvasProps) {
+  return (
+    <div
+      style={{
+        position: "relative",
+        height,
+        background: generation.status === "succeeded"
+          ? "#000"
+          : `linear-gradient(180deg, ${CANVAS_BG} 0%, ${CANVAS_BG} 82%, #E2DCD2 82%, #E2DCD2 100%)`,
+        border: "1px solid rgba(184,146,90,0.22)",
+        borderRadius: 6,
+        boxShadow: "0 18px 40px -18px rgba(20,15,5,0.28)",
+        overflow: "hidden",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        ...canvasStyle,
+      }}
+    >
+      {/* Status pin */}
+      <div style={{
+        position: "absolute", top: 12, left: 12, zIndex: 10,
+        background: "#0A0A0A", color: "#fff",
+        fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase",
+        padding: "6px 11px", borderRadius: 3,
+      }}>
+        {generation.status === "succeeded" ? "Your AI Try-On" :
+          isGenerating ? "Generating…" :
+          hasSelection ? "Ready to Generate" : "Build Your Look"}
+      </div>
+
+      {generation.status === "succeeded" ? (
+        <>
+          {/* Top-right: download + fullscreen */}
+          <div style={{ position: "absolute", top: 12, right: 12, zIndex: 10, display: "flex", gap: 6 }}>
+            {[
+              { icon: <Download size={14} />, onClick: handleDownload, title: "Download image" },
+              { icon: <Maximize2 size={14} />, onClick: onOpenFullscreen, title: "Full screen" },
+            ].map(({ icon, onClick, title }, i) => (
+              <button key={i} onClick={onClick} title={title} style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                width: 32, height: 32, background: "rgba(0,0,0,0.65)", color: "#fff",
+                border: "1px solid rgba(255,255,255,0.15)", borderRadius: 4,
+                cursor: "pointer", backdropFilter: "blur(4px)",
+              }}>
+                {icon}
+              </button>
+            ))}
+          </div>
+
+          {/* Bottom-right: zoom controls */}
+          <div style={{ position: "absolute", bottom: 12, right: 12, zIndex: 10, display: "flex", gap: 6 }}>
+            {[
+              { icon: <ZoomIn size={14} />, onClick: zoomIn, title: "Zoom in", disabled: false },
+              { icon: <ZoomOut size={14} />, onClick: zoomOut, title: "Zoom out", disabled: zoom <= 1 },
+              { icon: <RotateCcw size={14} />, onClick: zoomReset, title: "Reset zoom", disabled: zoom === 1 },
+            ].map(({ icon, onClick, title, disabled }, i) => (
+              <button key={i} onClick={onClick} title={title} disabled={disabled} style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                width: 32, height: 32,
+                background: "rgba(0,0,0,0.65)", color: disabled ? "rgba(255,255,255,0.3)" : "#fff",
+                border: "1px solid rgba(255,255,255,0.15)", borderRadius: 4,
+                cursor: disabled ? "default" : "pointer", backdropFilter: "blur(4px)",
+              }}>
+                {icon}
+              </button>
+            ))}
+            {zoom !== 1 && (
+              <div style={{
+                display: "flex", alignItems: "center", padding: "0 10px",
+                background: "rgba(0,0,0,0.65)", color: "#fff",
+                fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.1em",
+                border: "1px solid rgba(255,255,255,0.15)", borderRadius: 4, backdropFilter: "blur(4px)",
+              }}>
+                {Math.round(zoom * 100)}%
+              </div>
+            )}
+          </div>
+
+          <div style={{ width: "100%", height: "100%", overflow: "auto", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <img
+              src={generation.resultImageUrl}
+              alt="AI-generated try-on result"
+              draggable={false}
+              style={{ width: `${zoom * 100}%`, height: `${zoom * 100}%`, objectFit: "contain", transition: "width 0.2s, height 0.2s" }}
+            />
+          </div>
+        </>
+      ) : isGenerating ? (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, padding: "0 20px" }}>
+          <Spinner />
+          {(() => {
+            const gc = jobStatus?.garmentCount ?? 1;
+            const pc = jobStatus?.processedCount ?? 0;
+            const st = jobStatus?.status;
+            let label: string;
+            let sub: string;
+            if (elapsedSecs >= 60) {
+              label = "Taking longer than usual…"; sub = "Still working — you can keep waiting or try again.";
+            } else if (elapsedSecs >= 25 || (st === "processing" && pc >= gc && gc > 0)) {
+              label = "Almost done — finishing touches…"; sub = "Saving your look";
+            } else if (st === "processing" && gc > 1) {
+              label = pc === 0 ? "Fitting first garment…" : "Fitting second garment…"; sub = `Step ${pc + 1} of ${gc}`;
+            } else if (st === "processing") {
+              label = "Fitting garment to your avatar…"; sub = "Usually takes 20–35 seconds";
+            } else {
+              label = "Preparing your look…"; sub = "Sending to AI model";
+            }
+            return (
+              <>
+                <p style={{ fontFamily: FONT_UI, fontSize: 13, letterSpacing: "0.2em", color: GOLD, margin: 0, textTransform: "uppercase", textAlign: "center" }}>{label}</p>
+                <p style={{ fontFamily: FONT_UI, fontSize: 12, color: "rgba(0,0,0,0.4)", margin: 0, textAlign: "center", lineHeight: 1.6 }}>{sub}</p>
+              </>
+            );
+          })()}
+          <p style={{ fontFamily: FONT_UI, fontSize: 11, color: "rgba(0,0,0,0.28)", margin: 0, letterSpacing: "0.1em" }}>{elapsedSecs}s elapsed</p>
+          {elapsedSecs >= 60 && (
+            <button onClick={handleGenerate} style={{
+              fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase",
+              background: "#0A0A0A", color: "#fff", border: "none", padding: "9px 20px", cursor: "pointer", marginTop: 4,
+            }}>Try Again</button>
+          )}
+        </div>
+      ) : generation.status === "failed" ? (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: 24 }}>
+          <AlertTriangle size={26} color="#c0392b" />
+          <p style={{ fontFamily: FONT_UI, fontSize: 13, color: "#c0392b", margin: 0, textAlign: "center", letterSpacing: "0.05em", maxWidth: 280 }}>
+            {generation.error}
+          </p>
+          {outOfCredits ? (
+            <button onClick={() => setShowBuyCredits(true)} style={{
+              display: "flex", alignItems: "center", gap: 6,
+              fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase",
+              background: "#c0392b", color: "#fff", border: "none", padding: "9px 20px", cursor: "pointer", marginTop: 4,
+            }}>
+              <ShoppingBag size={12} /> Buy More Credits
+            </button>
+          ) : (
+            <>
+              <p style={{ fontFamily: FONT_UI, fontSize: 12, color: "rgba(0,0,0,0.4)", margin: "0", textAlign: "center", letterSpacing: "0.04em", maxWidth: 260, lineHeight: 1.6 }}>
+                No credit was charged — your balance is safe.
+              </p>
+              <button onClick={handleGenerate} style={{
+                fontFamily: FONT_UI, fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase",
+                background: "#0A0A0A", color: "#fff", border: "none", padding: "9px 20px", cursor: "pointer", marginTop: 6,
+              }}>Try Again</button>
+            </>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: 24 }}>
+          <Wand2 size={30} color="rgba(0,0,0,0.25)" />
+          <p style={{ fontFamily: FONT_UI, fontSize: 13, color: "rgba(0,0,0,0.4)", letterSpacing: "0.1em", textAlign: "center", maxWidth: 300, lineHeight: 1.7, margin: 0 }}>
+            {hasSelection
+              ? "Ready when you are — click Generate Look below."
+              : "Select a dress, or a top and/or bottom, from your saved pieces."}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
