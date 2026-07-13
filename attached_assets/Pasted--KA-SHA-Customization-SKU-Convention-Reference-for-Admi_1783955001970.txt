@@ -1,0 +1,164 @@
+# KA.SHA Customization SKU Convention
+### Reference for Admin (Raj) + Developer 3D Mapping
+
+---
+
+## 1. Decoding the existing Men's T-Shirt SKUs
+
+Before extending the pattern, here's what your three live examples actually encode:
+
+| SKU | Style Code | Garment Type Letter | Customization Type | Variant |
+|---|---|---|---|---|
+| `KS1001B-BP` | 1001 | `B` = Basic Tee | Pattern (pick-a-pattern) | `BP` = pattern/colorway id |
+| `KS1001B-black` | 1001 | `B` = Basic Tee | Pattern | `black` = colorway id |
+| `KS1000BGP001` | 1000 | `B` = Basic Tee | Print (all-over) | `GP001` = graphic print #001 |
+| `KS1000BPINK` | 1000 | `B` = Basic Tee | Solid | `PINK` = color name |
+
+So the structure is: **`[Prefix][StyleNo][TypeLetter][Separator][Variant]`**
+- `KS` = Men's / `KL` = Women's (already true in your doc — men's are all `KS…`, women's are all `KL…`)
+- `TypeLetter` tells the 3D pipeline which garment mesh/zone-map to load: `B` = Top/Tee, `F` = Bottom (Pant/Short), `D` = Dress, `G` = Skort
+- One inconsistency worth fixing with Raj: Pattern uses a hyphen (`-BP`), Print/Solid don't (`GP001`, `PINK`). I've kept everything **hyphenated** below so the developer can reliably `split('-')` instead of writing per-type parsing logic. Suggest asking Raj to standardize the existing men's tee entries the same way (`KS1000B-GP001`, `KS1000B-PINK`) — low-risk cleanup, one-time.
+
+**Recommended universal parser logic for developer:**
+```
+[PREFIX][STYLE#][TYPE]-[VARIANT_TYPE]-[VARIANT_VALUE]
+KS1000B-PRT-001   → Men, Style 1000, Top, Print, print #001
+KS1000B-SLD-BLK   → Men, Style 1000, Top, Solid, black
+KS1001B-PAT-BLK   → Men, Style 1001, Top, Pattern, black colorway
+```
+`VARIANT_TYPE` (`PRT`/`SLD`/`PAT`) lets the frontend switch customization UI (print grid vs. color picker vs. pattern picker) off one SKU field, instead of inferring type from string shape.
+
+---
+
+## 2. Women's T-Shirts — Styles KL1001–KL1004
+
+Same three customization types as men's tee, same `B` type-letter, `KL` prefix.
+
+| Type | SKU Pattern | Example (KL1001) |
+|---|---|---|
+| Solid | `KL1001B-SLD-<COLOR>` | `KL1001B-SLD-BLK`, `KL1001B-SLD-PNK`, `KL1001B-SLD-WHT` |
+| Print (all-over) | `KL1001B-PRT-<SEQ>` | `KL1001B-PRT-001`, `KL1001B-PRT-002`, … up to however many prints exist in the asset library |
+| Pattern (pick-a-pattern) | `KL1001B-PAT-<COLOR>` | `KL1001B-PAT-BLK`, `KL1001B-PAT-WHT` |
+
+Repeat identically for `KL1002B`, `KL1003B`, `KL1004B`. Raj just swaps the style number; the suffix logic never changes.
+
+---
+
+## 3. Men's Pants/Shorts — Styles KS1008F, KS1009F, KS1010F
+
+Per the doc: **no per-zone customization** — whole garment only, and **no pattern option**, only Solid + Print (color picker + print library).
+
+| Type | SKU Pattern | Example (KS1008F) |
+|---|---|---|
+| Solid | `KS1008F-SLD-<COLOR>` | `KS1008F-SLD-BLK`, `KS1008F-SLD-NVY` |
+| Print | `KS1008F-PRT-<SEQ>` | `KS1008F-PRT-001`, `KS1008F-PRT-002` |
+
+Same for `KS1009F` and `KS1010F` (Side Elastic Pants).
+
+---
+
+## 4. Women's Pants / Shorts / Skorts
+
+The doc says these are "same customisation as men's collection" but doesn't assign style numbers to the unlabeled shorts/pants images. Suggest Raj assign the next open numbers in the `F` range so they don't collide with `KL1014D`/`KL1015G`:
+
+| Garment | Suggested Style | Type | SKU Pattern |
+|---|---|---|---|
+| Shorts (4 styles shown) | `KL1005F`–`KL1008F` | Solid / Print only | `KL1005F-SLD-<COLOR>` / `KL1005F-PRT-<SEQ>` |
+| Pants (4 styles shown) | `KL1009F`–`KL1012F` | Solid / Print only | `KL1009F-SLD-<COLOR>` / `KL1009F-PRT-<SEQ>` |
+
+### Skort — Style KL1015G (two-zone garment, needs a compound SKU)
+This one has **two independently customizable zones** — solid belt + printed body — so a single flat SKU needs both values encoded:
+
+`KL1015G-SLD-<BELT_COLOR>_PRT-<PRINT_SEQ>`
+
+Example: `KL1015G-SLD-BLK_PRT-004` → black belt + print #004 on the body.
+
+Developer note: split on `_` first to get the two zone-assignments, then split each half on `-` as usual. This keeps it a single admin-facing SKU field rather than needing two separate DB columns, but still machine-parseable.
+
+### Dress — Style KL1014D (solid only, single control drives two mesh parts)
+Only the collar is customizable, and the shorts underneath auto-match the collar color — so this only ever needs the Solid type, and the *same* variant value drives both the collar material and the shorts material in the 3D scene.
+
+`KL1014D-SLD-<COLLAR_COLOR>`
+
+Example: `KL1014D-SLD-BLK` → collar = black, shorts = black (applied to both meshes from one SKU value).
+
+---
+
+## 5. Full Type-Letter / Variant-Type Legend (for Raj's reference sheet)
+
+| Code | Meaning |
+|---|---|
+| `KS` | Men's |
+| `KL` | Women's (Ladies) |
+| `B` | Top / Tee |
+| `F` | Bottom (Pant or Short) |
+| `D` | Dress |
+| `G` | Skort |
+| `SLD` | Solid color — needs a `COLOR` code (3-letter, e.g. BLK/WHT/PNK/NVY/OLV/KHK) |
+| `PRT` | All-over print — needs a 3-digit sequence matching an uploaded print asset |
+| `PAT` | Pick-a-pattern (zone recolor, tees only currently) — needs a `COLOR`/colorway code |
+
+Recommend giving Raj a fixed dropdown list of the 3-letter color codes (rather than free text) so `COLOR` values can never drift from what the 3D asset folder actually contains — that's usually where these pipelines break in practice.
+
+---
+
+## 6. One open question for you to confirm with the team
+
+Your existing pattern SKUs (`KS1001B-BP`) don't reference the GT pattern-group codes (GT001–GT032) you're using in the pixel-swap engine. Worth confirming with Raj/dev whether the pattern SKU should actually encode the pattern group too:
+
+`KS1001B-PAT-GT014-BLK` (pattern group GT014, black colorway)
+
+If patterns are selected client-side from a separate picker (not tied to admin SKU entry), the simpler `KS1001B-PAT-BLK` above is fine. If Raj needs to pre-associate specific SKUs with specific pattern groups in the admin panel, use the GT-inclusive version instead.
+
+---
+
+## 7. Fixing the hardcoded pattern-color problem (`-BP` doesn't scale)
+
+Right now `KS1001B-BP` almost certainly works because somewhere in the code there's a literal check for the string `"BP"` that resolves to "apply black to zone 1, pink to zone 2." That means every new colorway — Blue+Purple, Blue+Black, a single-color pattern, etc. — requires a **new hardcoded case**. Same class of bug as the mis-priced credit package: fine for the first two SKUs Raj typed in, silently broken for the third.
+
+**The fix:** stop treating the suffix as an opaque code (`BP`) and start treating it as an **ordered, comma-separated list of canonical color tokens**, resolved through the same color lookup table Solid already uses, then applied positionally onto however many recolor zones that pattern group defines.
+
+New SKU shape:
+```
+KS1001B-PAT-BLK,PNK     → 2-zone pattern: zone1=black, zone2=pink
+KS1001B-PAT-BLU,PUR     → 2-zone pattern: zone1=blue,  zone2=purple
+KS1001B-PAT-BLU         → single color supplied: apply to all zones (or zone1 if the pattern is genuinely single-zone)
+```
+Same 3-letter color codes as Solid (`BLK`, `PNK`, `BLU`, `PUR`, `WHT`, `NVY`…) so there's one shared color vocabulary across Solid/Print/Pattern instead of three separate ones.
+
+### Copy-paste prompt for Replit
+
+```
+The pattern-type SKU color resolver is currently hardcoded to specific
+suffix strings (e.g. "BP" -> black+pink). This breaks for any new color
+combination an admin adds - Blue+Purple, Blue+Black, a single color, etc.
+- because each combo currently needs its own hardcoded case.
+
+Refactor this to be generic:
+
+1. Parse the SKU suffix after "-PAT-" as a comma-separated list of color
+   tokens, e.g. "BLK,PNK" -> ["BLK", "PNK"], or "BLU" -> ["BLU"].
+
+2. Resolve each token through the EXISTING color lookup table already
+   used for solid-color SKUs (same hex/texture-asset map) - do not
+   create a second color table.
+
+3. Apply the resolved colors POSITIONALLY onto the pattern group's
+   recolor zones (each GT pattern group already defines how many zones
+   it has, e.g. GT014 = 2 zones). Token[0] -> zone[0], token[1] -> zone[1], etc.
+
+4. If only ONE token is supplied but the pattern has multiple zones,
+   apply that single color to ALL zones rather than throwing an error.
+
+5. If the token count is greater than 1 and doesn't match the zone
+   count, log a clear validation error naming the SKU and expected zone
+   count - don't silently apply wrong colors or crash.
+
+6. This must not require touching any code when a new color combination
+   is added - it should be data-driven off the SKU string and the
+   existing color table, the same way solid-color SKUs already work.
+
+Show me the updated parser function and the specific pattern-application
+call site before wiring it in, since this touches the same recolor
+engine used for GT001-GT032.
+```
