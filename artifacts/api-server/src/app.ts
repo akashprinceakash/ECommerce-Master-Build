@@ -183,8 +183,12 @@ const standardLimiter = rateLimit({
   handler: rateLimitHandler,
 });
 
-// Apply strict limiter to payment, coupon validation, and auth routes
-app.use("/api/payment", strictLimiter);
+// Apply strict limiter to payment, coupon validation, and auth routes.
+// Webhooks are excluded — Razorpay server IPs must not be rate-limited.
+app.use("/api/payment", (req: Request, res: Response, next: NextFunction) => {
+  if (req.path === "/webhook") return next(); // handled by unified webhook router, no limiter
+  return strictLimiter(req, res, next);
+});
 app.use("/api/coupons/validate", strictLimiter);
 app.use("/api/auth", strictLimiter);
 

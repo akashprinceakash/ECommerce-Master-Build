@@ -118,7 +118,7 @@ router.post("/credits/purchase", requireAuth, async (req, res): Promise<void> =>
       amount: pkg.priceInPaise,
       currency: "INR",
       receipt: `cr_${userId.slice(-8)}_${Date.now()}`,
-      notes: { userId, packageId: String(pkg.id), creditsAmount: String(pkg.creditsAmount) },
+      notes: { userId, purpose: "credit_purchase", packageId: String(pkg.id), creditsAmount: String(pkg.creditsAmount) },
     } as any);
   } catch (e: any) {
     logger.error({ e, userId, packageId }, "credits/purchase: Razorpay order creation failed");
@@ -348,109 +348,8 @@ router.post("/credits/check-order", requireAuth, async (req, res): Promise<void>
   res.json({ paid: true, creditsRemaining, source: "check_order" });
 });
 
-/* ─── POST /credits/webhook ───────────────────────────────────────────────── */
-// Razorpay server-to-server callback — the MOST RELIABLE path for UPI/QR payments.
-//
-// Setup required (one-time, in Razorpay dashboard):
-//   URL:    https://<your-domain>/api/credits/webhook
-//   Events: payment.captured
-//   Secret: set RAZORPAY_WEBHOOK_SECRET env var to the secret shown in dashboard
-//
-// This fires regardless of whether the user's browser ever gets the handler callback.
-router.post("/credits/webhook", async (req, res): Promise<void> => {
-  // Always return 200 quickly — Razorpay retries on non-200.
-  if (!webhookSecret) {
-    logger.warn("credits/webhook: received webhook but RAZORPAY_WEBHOOK_SECRET is not set — ignoring");
-    res.status(200).json({}); return;
-  }
+// Webhook routes are handled by the unified razorpayWebhook router (routes/razorpayWebhook.ts).
+// The old /credits/webhook path is aliased there so existing Razorpay dashboard configs keep working.
 
-  const sig     = req.headers["x-razorpay-signature"] as string | undefined;
-  const rawBody = JSON.stringify(req.body);
-
-  if (!sig) {
-    logger.warn("credits/webhook: missing X-Razorpay-Signature header");
-    res.status(200).json({}); return;
-  }
-
-  const expected = crypto
-    .createHmac("sha256", webhookSecret)
-    .update(rawBody)
-    .digest("hex");
-
-  if (sig !== expected) {
-    logger.error({ sig, expected }, "credits/webhook: HMAC signature mismatch — rejecting");
-    res.status(200).json({}); return; // Return 200 so Razorpay doesn't retry a bad request
-  }
-
-  const event = req.body?.event as string;
-  logger.info({ event }, "credits/webhook: received verified event");
-
-  if (event !== "payment.captured") {
-    res.status(200).json({}); return;
-  }
-
-  const payment  = req.body?.payload?.payment?.entity ?? {};
-  const orderId  = String(payment?.order_id ?? "");
-  const paymentId= String(payment?.id ?? "");
-  const notes    = payment?.notes ?? {};
-
-  logger.info({ orderId, paymentId, method: payment?.method, amount: payment?.amount }, "credits/webhook: payment.captured");
-
-  if (!orderId || !paymentId) {
-    logger.warn({ payment }, "credits/webhook: missing order_id or payment id");
-    res.status(200).json({}); return;
-  }
-
-  // Look up our pending purchase record.
-  const [pending] = await db
-    .select()
-    .from(pendingCreditPurchasesTable)
-    .where(eq(pendingCreditPurchasesTable.razorpayOrderId, orderId));
-
-  if (!pending) {
-    // This order wasn't created via our system — ignore.
-    logger.warn({ orderId, paymentId }, "credits/webhook: no pending record found for order — ignoring");
-    res.status(200).json({}); return;
-  }
-
-  if (pending.status === "completed") {
-    logger.info({ orderId, paymentId }, "credits/webhook: already completed — skipping");
-    res.status(200).json({}); return;
-  }
-
-  const userId = pending.userId;
-  const [pkg] = await db
-    .select()
-    .from(creditPackagesTable)
-    .where(eq(creditPackagesTable.id, pending.packageId));
-
-  if (!pkg) {
-    logger.error({ orderId, paymentId, packageId: pending.packageId }, "credits/webhook: package not found");
-    res.status(200).json({}); return;
-  }
-
-  // Sanity check: note userId (if present) should match our record.
-  const noteUserId = String(notes.userId ?? "");
-  if (noteUserId && noteUserId !== userId) {
-    logger.error({ orderId, paymentId, noteUserId, recordUserId: userId }, "credits/webhook: userId mismatch");
-    res.status(200).json({}); return;
-  }
-
-  try {
-    const creditsRemaining = await completePendingPurchase({
-      pendingId: pending.id,
-      userId,
-      creditsAmount: pkg.creditsAmount,
-      bonusCredits: pkg.bonusCredits,
-      razorpayPaymentId: paymentId,
-      orderId,
-    });
-    logger.info({ userId, orderId, paymentId, creditsRemaining }, "credits/webhook: account credited");
-  } catch (e) {
-    logger.error({ e, userId, orderId, paymentId }, "credits/webhook: failed to credit account");
-  }
-
-  res.status(200).json({});
-});
 
 export default router;

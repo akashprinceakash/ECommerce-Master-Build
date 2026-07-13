@@ -18,10 +18,12 @@ import shiprocketWebhookRouter from "./shiprocketWebhook";
 import couponsRouter from "./coupons";
 import creditsRouter from "./credits";
 import adminCreditsRouter from "./adminCredits";
+import razorpayWebhookRouter from "./razorpayWebhook";
 
 const router: IRouter = Router();
 
 router.use(shiprocketWebhookRouter);
+router.use(razorpayWebhookRouter);
 router.use(healthRouter);
 router.use(productsRouter);
 router.use(customizationsRouter);

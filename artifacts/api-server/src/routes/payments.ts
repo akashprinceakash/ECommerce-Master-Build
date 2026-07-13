@@ -352,7 +352,7 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
       currency: "INR",
       receipt: `rcpt_${userId.slice(-8)}_${Date.now()}`,
       payment_capture: 1,
-      notes: { userId },
+      notes: { userId, purpose: "order_payment" },
     } as any);
   } catch (e: any) {
     res.status(500).json({ error: e?.error?.description || e?.message || "Failed to create payment order" });
@@ -483,7 +483,7 @@ router.post("/payment/retry/:orderId", requireAuth, async (req, res): Promise<vo
       currency: "INR",
       receipt: `retry_${orderId}_${Date.now()}`,
       payment_capture: 1,
-      notes: { userId, retryForOrderId: String(orderId) },
+      notes: { userId, purpose: "order_payment", retryForOrderId: String(orderId) },
     } as any);
   } catch (e: any) {
     res.status(500).json({ error: e?.error?.description || e?.message || "Failed to create retry payment order" });
@@ -815,138 +815,13 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
   res.status(201).json(full);
 });
 
-/* ──────────────────────────────────────────────────────
-   Razorpay Webhook
-────────────────────────────────────────────────────── */
-router.post("/payment/webhook", async (req, res): Promise<void> => {
-  res.status(200).json({ ok: true });
-
-  const reqLog = (req as any).log ?? logger;
-  const signature = req.headers["x-razorpay-signature"] as string | undefined;
-  const rawBody   = (req as any).rawBody as Buffer | undefined;
-
-  if (webhookSecret) {
-    if (!signature || !rawBody) {
-      reqLog.warn("Webhook received without signature or raw body — skipped");
-      return;
-    }
-    const expected = crypto
-      .createHmac("sha256", webhookSecret)
-      .update(rawBody)
-      .digest("hex");
-    if (expected !== signature) {
-      reqLog.warn("Webhook signature mismatch — skipped");
-      return;
-    }
-  }
-  reqLog.info({ event: req.body?.event }, "Webhook: received");
-
-  const event = req.body?.event as string | undefined;
-  const paymentEntity = req.body?.payload?.payment?.entity;
-  if (!paymentEntity) return;
-
-  const { id: paymentId, order_id: rzpOrderId, amount } = paymentEntity;
-
-  // ── payment.captured: idempotent order confirmation ──────────────────
-  if (event === "payment.captured") {
-    if (paymentEntity.status !== "captured") return;
-
-    logger.info({ paymentId, rzpOrderId }, "Webhook: payment.captured");
-
-    try {
-      const [dbOrder] = await db.select().from(ordersTable)
-        .where(eq(ordersTable.razorpayOrderId, rzpOrderId));
-
-      if (!dbOrder) {
-        logger.warn({ rzpOrderId }, "Webhook: no DB order found for Razorpay order");
-        return;
-      }
-
-      // Log webhook received event for audit trail
-      void db.insert(orderEventsTable).values({
-        orderId: dbOrder.id,
-        eventType: "webhook_received",
-        title: "Webhook: Payment Captured",
-        description: `Event: payment.captured · Payment ID: ${paymentId}`,
-      });
-
-      if (dbOrder.status === "confirmed" || dbOrder.status === "processing" ||
-          dbOrder.status === "shipped"   || dbOrder.status === "delivered") {
-        logger.info({ orderId: dbOrder.id, status: dbOrder.status }, "Webhook: order already confirmed — skipping");
-        return;
-      }
-      // Recover orders that were race-cancelled (status=cancelled, no paymentId) —
-      // if Razorpay says payment.captured we must confirm them rather than drop the event.
-      // Orders cancelled by admin/user after payment would already have a paymentId set.
-      if (dbOrder.status === "cancelled" && !dbOrder.paymentId) {
-        logger.warn({ orderId: dbOrder.id }, "Webhook: race-cancelled order with no paymentId — recovering via captured event");
-        // fall through to amount check + confirmOrder
-      } else if (!["pending", "payment_failed"].includes(dbOrder.status)) {
-        logger.warn({ orderId: dbOrder.id, status: dbOrder.status }, "Webhook: order cannot be confirmed from current state");
-        return;
-      }
-      if (Number(amount) !== Number(dbOrder.totalInPaise)) {
-        logger.error({ paymentId, got: amount, expected: dbOrder.totalInPaise }, "Webhook: amount mismatch");
-        return;
-      }
-
-      await confirmOrder(dbOrder.id, paymentId, "", dbOrder.userId);
-      logger.info({ orderId: dbOrder.id }, "Webhook: order confirmed via payment.captured");
-    } catch (e) {
-      logger.error({ err: e, paymentId, rzpOrderId }, "Webhook: error confirming order");
-    }
-    return;
-  }
-
-  // ── payment.failed: mark order as payment_failed ─────────────────────
-  if (event === "payment.failed") {
-    logger.info({ paymentId, rzpOrderId }, "Webhook: payment.failed");
-
-    try {
-      const [dbOrder] = await db.select().from(ordersTable)
-        .where(eq(ordersTable.razorpayOrderId, rzpOrderId));
-
-      if (!dbOrder) {
-        logger.warn({ rzpOrderId }, "Webhook payment.failed: no DB order found");
-        return;
-      }
-
-      // Log webhook received for audit trail
-      void db.insert(orderEventsTable).values({
-        orderId: dbOrder.id,
-        eventType: "webhook_received",
-        title: "Webhook: Payment Failed",
-        description: `Event: payment.failed · Payment ID: ${paymentId}`,
-      });
-
-      if (dbOrder.status !== "pending") {
-        logger.info({ orderId: dbOrder.id, status: dbOrder.status }, "Webhook payment.failed: order not in pending state — skipping");
-        return;
-      }
-
-      await db.update(ordersTable)
-        .set({ status: "payment_failed" })
-        .where(and(eq(ordersTable.id, dbOrder.id), eq(ordersTable.status, "pending")));
-
-      await db.insert(orderEventsTable).values({
-        orderId: dbOrder.id,
-        eventType: "payment_failed",
-        title: "Payment Failed",
-        description: `Payment ID: ${paymentId}`,
-      });
-
-      logger.info({ orderId: dbOrder.id }, "Webhook: order marked payment_failed");
-    } catch (e) {
-      logger.error({ err: e, paymentId, rzpOrderId }, "Webhook payment.failed: error");
-    }
-    return;
-  }
-});
+// Webhook routes are handled by the unified razorpayWebhook router (routes/razorpayWebhook.ts).
+// The old /payment/webhook path is aliased there so existing Razorpay dashboard configs keep working.
 
 /* ──────────────────────────────────────────────────────
    Shared: confirm prepaid order + run fulfillment
 ────────────────────────────────────────────────────── */
-async function confirmOrder(
+export async function confirmOrder(
   orderId: number,
   paymentId: string,
   signature: string,

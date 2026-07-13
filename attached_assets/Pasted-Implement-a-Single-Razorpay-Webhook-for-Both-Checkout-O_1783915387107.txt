@@ -1,0 +1,173 @@
+Implement a Single Razorpay Webhook for Both Checkout Orders and AI Credit Purchases**
+
+
+
+Currently, the Razorpay webhook is implemented only for AI credit purchases at:
+
+
+
+```text
+
+https://api.kashaonline.in/api/credits/webhook
+
+```
+
+
+
+I want to change this so that we use a **single Razorpay webhook** to handle **both product checkout payments and AI credit purchases**.
+
+
+
+### Reason
+
+
+
+We previously had a real customer issue where the payment was successfully debited from the customer's account, but our website showed **"Payment Failed"** and the order was not updated but money was successfully bebited and we also got successful email message but in application it showed failed or nothing. 
+
+
+
+Customer message:
+
+
+
+> "I just placed an order for one Men's Polo and one Pants. I tried making the payment; however, the website said the payment failed but the payment did go through from my end."
+
+
+
+This happens because we currently depend mainly on the frontend payment verification. If the frontend callback fails due to a network issue, browser closure, or timeout, the payment succeeds at Razorpay but our application never updates the order.
+
+
+
+### What I want
+
+
+
+Implement a **single webhook endpoint**, for example:
+
+
+
+```text
+
+POST /api/webhooks/razorpay
+
+```
+
+
+
+This webhook should handle all Razorpay payment events for both:
+
+
+
+* Product checkout payments
+
+* AI credit purchases
+
+
+
+### Requirements
+
+
+
+1. Verify the Razorpay webhook signature using `RAZORPAY_WEBHOOK_SECRET`.
+
+
+
+2. Handle at least these events:
+
+
+
+   * `payment.authorized`
+
+   * `payment.captured`
+
+   * `payment.failed`
+
+   * `order.paid`
+
+   * `refund.created`
+
+   * `refund.processed`
+
+   * `refund.failed`
+
+
+
+3. Determine the payment purpose using the Razorpay Order `notes` (or our database), for example:
+
+
+
+   * `purpose: "order_payment"`
+
+   * `purpose: "credit_purchase"`
+
+
+
+4. If the payment is for **AI Credits**:
+
+
+
+   * Verify the payment.
+
+   * Add the purchased credits to the user's wallet.
+
+   * Save the transaction.
+
+   * Prevent duplicate credit additions.
+
+
+
+5. If the payment is for a **Product Order**:
+
+
+
+   * Verify the payment.
+
+   * Mark the order as **Paid**.
+
+   * Update the payment status.
+
+   * Save the Razorpay payment ID, order ID, and other payment details.
+
+   * Continue the existing order processing workflow.
+
+   * Prevent duplicate processing if Razorpay retries the webhook.
+
+
+
+6. Keep the existing frontend Razorpay Checkout verification for instant UI updates, but use the webhook as the **reliable backup and source of truth**. If the frontend callback fails or the user closes the browser before verification completes, the webhook must still complete the payment processing automatically.
+
+
+
+7. Add comprehensive logging for:
+
+
+
+   * Webhook received
+
+   * Event type
+
+   * Payment ID
+
+   * Razorpay Order ID
+
+   * Internal Order ID
+
+   * User ID
+
+   * Signature verification result
+
+   * Processing status
+
+   * Any errors
+
+
+
+8. Make the webhook **idempotent** by checking whether the payment has already been processed before updating an order or adding credits. This prevents duplicate processing if Razorpay retries the webhook.
+
+
+
+9. Migrate the existing credits-only webhook logic into this unified webhook so that we have **one webhook endpoint** handling all Razorpay payment events instead of maintaining separate implementations.
+
+
+
+The objective is to ensure that **any payment successfully captured by Razorpay is always reflected in our system**, even if the frontend verification fails. This will prevent situations where customers are charged but the website incorrectly reports the payment as failed or leaves the order unpaid.
