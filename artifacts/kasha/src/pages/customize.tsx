@@ -393,7 +393,7 @@ export default function CustomizePage() {
   const [colorSubMode, setColorSubMode] = useState<"full"|"parts"|null>(null);
 
   const [showOtherDesigns, setShowOtherDesigns] = useState(false);
-  const [printGalleryLimit, setPrintGalleryLimit] = useState(12);
+  const [printGalleryLimit, setPrintGalleryLimit] = useState(9);
   // User-selected style from Step 1 (overrides SKU-derived type).
   // Seeded from ?style= URL param when arriving via CustomizeEntryModal.
   const [userStyle, setUserStyle] = useState<"solid"|"print"|"pattern"|null>(_entryStyle);
@@ -2170,8 +2170,9 @@ export default function CustomizePage() {
                             borderRadius:10,overflow:"hidden",cursor:"pointer",
                             border:`2px solid ${active?V.ac:V.bd}`,transition:"all .2s",
                             boxShadow:active?`0 2px 12px rgba(201,168,76,.3)`:"none",
+                            background:"rgba(0,0,0,0.06)",
                           }}>
-                            <img src={patternUrl(p.file)} alt={p.label} loading="lazy" decoding="async"
+                            <img src={patternUrl(p.file)} alt={p.label} loading="lazy" decoding="async" fetchPriority="low"
                               style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}
                               onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
                             <div style={{padding:"5px 8px",background:active?V.aclt:V.sf2}}>
@@ -3307,9 +3308,10 @@ export default function CustomizePage() {
                             outline:sel?`2px solid rgba(201,168,76,0.25)`:undefined,
                             outlineOffset:sel?"1px":undefined,
                             transition:"all 0.2s",
+                            background:"rgba(0,0,0,0.06)",
                             boxShadow:sel?`0 0 0 1px ${V.ac},0 2px 8px rgba(201,168,76,0.2)`:"none",
                           }}>
-                          <img src={patternUrl(p.file)} alt={p.label} loading="lazy" decoding="async"
+                          <img src={patternUrl(p.file)} alt={p.label} loading="lazy" decoding="async" fetchPriority="low"
                             style={{width:"100%",height:"100%",objectFit:"cover",display:"block",pointerEvents:"none"}}/>
                           {allApplied&&<span style={{position:"absolute",top:2,right:2,fontSize:6,fontWeight:800,background:V.ac,color:V.tx,padding:"1px 4px",borderRadius:3}}>ALL</span>}
                           {!allApplied&&inZone&&<span style={{position:"absolute",top:2,right:2,fontSize:6,fontWeight:800,background:V.ac,color:V.tx,padding:"1px 4px",borderRadius:3}}>ZONE</span>}
@@ -4399,9 +4401,10 @@ export default function CustomizePage() {
                     cursor:"pointer",borderRadius:10,overflow:"hidden",
                     border:`2px solid ${isActive?V.ac:V.bd}`,
                     transition:"all .2s",
+                    background:"rgba(0,0,0,0.06)",
                     boxShadow:isActive?`0 4px 16px rgba(201,168,76,0.3)`:"none",
                   }}>
-                    <img src={patternUrl(p.file)} alt={p.label} loading="lazy" decoding="async"
+                    <img src={patternUrl(p.file)} alt={p.label} loading="lazy" decoding="async" fetchPriority="low"
                       style={{width:"100%",aspectRatio:"1",objectFit:"cover",display:"block"}}/>
                     <div style={{
                       padding:"5px 6px",background:isActive?V.aclt:V.sf2,

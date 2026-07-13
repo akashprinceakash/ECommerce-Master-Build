@@ -25,7 +25,7 @@ import {
 } from "@workspace/api-client-react";
 import { getAssetUrl, getApiUrl } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, Save, CheckCircle, Heart, Check, X, Wand2, AlertTriangle, ZoomIn, ZoomOut, RotateCcw, Sparkles, Upload, User, Maximize2, Minimize2, Download, ShoppingBag, Zap } from "lucide-react";
+import { Trash2, Save, CheckCircle, Heart, Check, X, Wand2, AlertTriangle, ZoomIn, ZoomOut, RotateCcw, Upload, User, Maximize2, Minimize2, Download, ShoppingBag, Zap } from "lucide-react";
 
 declare global { interface Window { Razorpay?: any } }
 import { useUploadLookbookPhoto } from "@workspace/api-client-react";
@@ -419,20 +419,6 @@ export default function LookbookPage() {
     setGeneration({ status: "idle" });
     setSelection({ top: null, bottom: null, dress: null });
   }, []);
-
-  // "Surprise me" — pulls a random saved dress, or a random top + bottom.
-  const randomizeOutfit = useCallback(() => {
-    setGeneration({ status: "idle" });
-    if (dresses.length > 0 && Math.random() < 0.4) {
-      const pick = dresses[Math.floor(Math.random() * dresses.length)];
-      setSelection({ top: null, bottom: null, dress: pick });
-      return;
-    }
-    const next: Record<Role, WardrobeItem | null> = { top: null, bottom: null, dress: null };
-    if (tops.length > 0) next.top = tops[Math.floor(Math.random() * tops.length)];
-    if (bottoms.length > 0) next.bottom = bottoms[Math.floor(Math.random() * bottoms.length)];
-    setSelection(next);
-  }, [tops, bottoms, dresses]);
 
   const selectedItems = useMemo(
     () => selection.dress ? [selection.dress] : [selection.top, selection.bottom].filter((x): x is WardrobeItem => !!x),
@@ -845,21 +831,6 @@ export default function LookbookPage() {
                       display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center",
                       background: "#fff", border: "1px solid rgba(184,146,90,0.2)", padding: "12px 14px",
                     }}>
-                      <button
-                        onClick={randomizeOutfit}
-                        disabled={!hasAnySaved || isGenerating}
-                        title="Pick random saved pieces"
-                        style={{
-                          display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_UI, fontSize: 10,
-                          letterSpacing: "0.2em", textTransform: "uppercase", padding: "10px 16px",
-                          border: `1px solid ${hasAnySaved ? GOLD : "rgba(0,0,0,0.12)"}`, background: "transparent",
-                          cursor: hasAnySaved && !isGenerating ? "pointer" : "not-allowed",
-                          color: hasAnySaved ? GOLD : "rgba(0,0,0,0.25)",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <Sparkles size={13} /> Surprise Me
-                      </button>
                       <button
                         onClick={clearSelection}
                         disabled={!hasSelection || isGenerating}

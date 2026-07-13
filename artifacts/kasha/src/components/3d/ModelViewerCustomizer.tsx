@@ -581,6 +581,7 @@ const ModelViewerCustomizer = forwardRef<CustomizerHandle, ModelViewerCustomizer
             ref={viewerRef}
             src={effectiveModelUrl!}
             id="kasha-model-viewer"
+            {...(thumbnailUrl ? { poster: thumbnailUrl } : {})}
             camera-controls
             auto-rotate
             rotation-per-second="10deg"
