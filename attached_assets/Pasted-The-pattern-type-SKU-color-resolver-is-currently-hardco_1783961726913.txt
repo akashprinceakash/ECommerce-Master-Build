@@ -1,0 +1,36 @@
+The pattern-type SKU color resolver is currently hardcoded to specific
+suffix strings (e.g. "BP" -> black+pink). This breaks for any new color
+combination an admin adds - Blue+Purple, Blue+Black, a single color, etc.
+- because each combo currently needs its own hardcoded case.
+
+Refactor this to be generic:
+
+1. Parse the SKU suffix after "-PAT-" as a comma-separated list of color
+   tokens, e.g. "BLK,PNK" -> ["BLK", "PNK"], or "BLU" -> ["BLU"].
+
+2. Resolve each token through the EXISTING color lookup table already
+   used for solid-color SKUs (same hex/texture-asset map) - do not
+   create a second color table.
+
+3. Apply the resolved colors POSITIONALLY onto the pattern group's
+   recolor zones (each GT pattern group already defines how many zones
+   it has, e.g. GT014 = 2 zones). Token[0] -> zone[0], token[1] -> zone[1], etc.
+
+4. If only ONE token is supplied but the pattern has multiple zones,
+   apply that single color to ALL zones rather than throwing an error.
+
+5. If the token count is greater than 1 and doesn't match the zone
+   count, log a clear validation error naming the SKU and expected zone
+   count - don't silently apply wrong colors or crash.
+
+6. This must not require touching any code when a new color combination
+   is added - it should be data-driven off the SKU string and the
+   existing color table, the same way solid-color SKUs already work.
+
+## 8. Supporting full color names, not just 3-letter codes
+
+Once Raj is typing SKUs by hand, forcing exact 3-letter codes (`BLK`, `PNK`) is where typos creep in — and you also want to allow full names like `Red`, `Black`, or multi-word names like `Sea Green`, `Dark Grey`. This is a refinement of the same `resolveColorToken()` function Replit just built, not a rewrite.
+
+**Two things need to change:**
+
+1. **The color table needs full names as keys too** (not just 3-letter aliases), so `resolveColorToken()` can match `"Sea Green"` the same way it currently matches `"SGN"` or whatever alias was chosen for it. Cleanest structure: one canonical entry per color, with an array of accepted aliases:

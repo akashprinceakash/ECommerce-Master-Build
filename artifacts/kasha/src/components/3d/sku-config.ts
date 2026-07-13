@@ -215,6 +215,33 @@ export const DESCRIPTIVE_COLOR_HEX: Record<string, string> = {
   ORANGE:       "#ff8c00",
   CLAY:         "#c4603b",
   TERRACOTTA:   "#c4603b",
+  // ── Multi-word names (space-joined form; resolveColorToken also tries space-stripped) ──
+  // Raj can type "Sea Green", "Dark Grey", etc. in admin — spaces are normalised away.
+  SEAGREEN:     "#2e8b57",
+  DARKGREY:     "#404040",
+  DARKGRAY:     "#404040",
+  LIGHTGREY:    "#d3d3d3",
+  LIGHTGRAY:    "#d3d3d3",
+  DARKGREEN:    "#145a30",
+  DARKNAVY:     "#0d1b3e",
+  DARKBLUE:     "#00008b",
+  LIGHTBLUE:    "#87ceeb",
+  HOTPINK:      "#ff69b4",
+  BABYPINK:     "#ffb6c1",
+  BABYBLUE:     "#89cff0",
+  ROSEGOLD:     "#b76e79",
+  OFFWHITE:     "#f8f4e3",
+  // FORESTGREEN, ROYALBLUE, SKYBLUE, POWDERBLUE, OLIVEGREEN, DUSTYROSE
+  // already defined in the full-word section above — not repeated here.
+  MINTGREEN:    "#98ff98",
+  NAVYBLUE:     "#001f5b",
+  COBALTBLUE:   "#0047ab",
+  EMERALDGREEN: "#50c878",
+  DUSTYPINK:    "#d4a5a5",
+  BURNTORANGE:  "#cc5500",
+  DEEPRED:      "#8b0000",
+  WINERED:      "#722f37",
+  BOTTLEGREEN:  "#006a4e",
 };
 
 // ── Print SKU → PatternDef.id mapping ────────────────────────────────────────
@@ -328,7 +355,16 @@ export type SkuResult =
  */
 export function resolveColorToken(token: string): string | null {
   const t = token.trim().toUpperCase();
-  return DESCRIPTIVE_COLOR_HEX[t] ?? SOLID_COLOR_MAP[t] ?? null;
+  // Try exact match first (handles 3-letter codes and single-word names like "NAVY").
+  const exact = DESCRIPTIVE_COLOR_HEX[t] ?? SOLID_COLOR_MAP[t];
+  if (exact) return exact;
+  // Strip internal spaces so Raj can type "Sea Green", "Dark Grey", "Bottle Green"
+  // and have them resolve the same as the joined-word key "SEAGREEN" / "DARKGREY".
+  const joined = t.replace(/\s+/g, "");
+  if (joined !== t) {
+    return DESCRIPTIVE_COLOR_HEX[joined] ?? SOLID_COLOR_MAP[joined] ?? null;
+  }
+  return null;
 }
 
 /**
