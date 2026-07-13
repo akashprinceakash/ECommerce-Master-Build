@@ -6,9 +6,14 @@
 //  PRINT   : KS1000BGP001 … KS1000BGP034
 //            KS = Ka.Sha | 1000 = print collection | BGP = golf print | NNN = design #
 //
-//  PATTERN : KS1001B-BB  … KS1005B-XX
-//            KS = Ka.Sha | 100N = pattern style | B = golfwear base | -XX = colorway
-//            colorway suffix encodes base+accent: e.g. BB = Blue+Black, RB = Red+Black
+//  PATTERN : KS1001B-PAT-BLK,PNK  (new canonical format)
+//            KS/KL = men's/women's | 100N = pattern style (1001-1006) | B = tee
+//            -PAT- = variant type  | BLK,PNK = comma-separated zone color tokens
+//            Token order → zone order: token[0]=colorB (base), token[1]=colorA (accent)
+//            Single token → applied to all zones.
+//
+//            Legacy abbreviated suffix format is still parsed for backward compat:
+//            KS1001B-BB  … KS1005B-XX   (BB = Beige+Brown, RB = Red+Black, …)
 //
 //  SOLID   : KS1000B-WH  … KS1000B-XX
 //            KS = Ka.Sha | 1000 = base collection | B = golfwear | -XX = color code
@@ -122,11 +127,37 @@ export const DEFAULT_PATTERN_COLORS: PatternColors = {
   label: "Blue + Black",
 };
 
-// ── Descriptive colour name → hex (for new SKU format) ───────────────────────
+// ── Descriptive colour name → hex (unified lookup for PAT tokens + descriptive suffixes) ──
 // Keys are UPPERCASE to match the uppercased SKU used inside parseSku().
 // Convention: first SKU part = primary/base colour → colorB (light channel)
 //             second SKU part = accent/dark colour  → colorA (dark channel)
+//
+// 3-letter canonical tokens (used in the new PAT-BLK,PNK format):
+//   BLK=black  WHT=white  GRY=grey   PNK=pink   NVY=navy   BLU=blue
+//   GRN=green  RED=red    GLD=gold   ORN=orange  PRP=purple MRN=maroon
+//   SKB=sky-blue  TLQ=teal  BEG=beige  BRN=brown  CRL=coral
+// Full-word names below already covered for backward compat with descriptive suffix format.
 export const DESCRIPTIVE_COLOR_HEX: Record<string, string> = {
+  // ── 3-letter PAT token aliases ─────────────────────────────────────────────
+  BLK: "#1a1a1a",  // black
+  WHT: "#f5f5f5",  // white
+  GRY: "#808080",  // grey
+  PNK: "#FF69B4",  // pink
+  NVY: "#1a2c5e",  // navy
+  BLU: "#1e5ecd",  // blue
+  GRN: "#1f7a45",  // green
+  // RED already present as a full-word key below — no 3-letter alias needed
+  GLD: "#c9a84c",  // gold
+  ORN: "#ff8c00",  // orange
+  PRP: "#6b2fa0",  // purple
+  MRN: "#7b241c",  // maroon
+  SKB: "#87ceeb",  // sky blue
+  TLQ: "#008080",  // teal
+  BEG: "#dcc8af",  // beige
+  BRN: "#654321",  // brown
+  CRL: "#e87a48",  // coral
+  CRM: "#f0e8d2",  // cream
+  // ── Full-word names (backward compat with descriptive suffix format) ────────
   BLACK:        "#1a1a1a",
   WHITE:        "#f5f5f5",
   GREY:         "#808080",
@@ -239,12 +270,19 @@ export interface PrintSkuResult {
 export interface PatternSkuResult {
   type: "pattern";
   sku: string;
-  designId: string; // KashaDesignDef.id — e.g. "KS1001B"
-  patternNumber: number; // 1001–1005
-  suffix: string; // e.g. "BB"
-  colorA: string;
-  colorB: string;
+  designId: string;    // KashaDesignDef.id — always KS-prefixed, e.g. "KS1001B"
+  patternNumber: number; // 1001–1006
+  suffix: string;      // raw suffix after the first hyphen, e.g. "PAT-BLK,PNK" or "BB"
+  colorA: string;      // dark/accent channel hex (zone 1)
+  colorB: string;      // light/primary channel hex (zone 0)
   colorLabel: string;
+  /**
+   * Positional zone colors resolved from the PAT token list.
+   * Index 0 = colorB (primary/base), index 1 = colorA (accent/dark).
+   * Single-token SKUs set all elements to the same hex.
+   * Always length ≥ 1; use colorA/colorB for 2-zone backward compat.
+   */
+  zoneColors: string[];
 }
 
 export interface SolidSkuResult {
@@ -284,12 +322,24 @@ export type SkuResult =
 // ── SKU parser ───────────────────────────────────────────────────────────────
 
 /**
+ * Resolve a color token (3-letter alias, full name, or 2-letter code) to a hex string.
+ * Returns null when the token is not found in any lookup table.
+ * This is the single authoritative lookup used by both solid-color and PAT parsing.
+ */
+export function resolveColorToken(token: string): string | null {
+  const t = token.trim().toUpperCase();
+  return DESCRIPTIVE_COLOR_HEX[t] ?? SOLID_COLOR_MAP[t] ?? null;
+}
+
+/**
  * Parse a KA.SHA product SKU into its design configuration.
  *
  * Examples:
- *   parseSku("KS1000BGP005") → { type:"print", patternId:"tropical-bloom", … }
- *   parseSku("KS1001B-BB")   → { type:"pattern", designId:"KS1001B", colorA:"#1a1a1a", colorB:"#1e5ecd", … }
- *   parseSku("KS1000B-NV")   → { type:"solid", hex:"#1a2c5e", … }
+ *   parseSku("KS1000BGP005")           → { type:"print", … }
+ *   parseSku("KS1001B-PAT-BLK,PNK")   → { type:"pattern", designId:"KS1001B", colorB:"#1a1a1a", colorA:"#FF69B4", … }
+ *   parseSku("KL1003B-PAT-NVY")        → { type:"pattern", designId:"KS1003B", colorB:"#1a2c5e", colorA:"#1a2c5e", … }
+ *   parseSku("KS1001B-BB")             → { type:"pattern", … }  (legacy abbreviated suffix)
+ *   parseSku("KS1000B-NV")             → { type:"solid", hex:"#1a2c5e", … }
  */
 export function parseSku(sku: string): SkuResult {
   if (!sku) return { type: "unknown", sku };
@@ -334,14 +384,23 @@ export function parseSku(sku: string): SkuResult {
     return { type: "solid", sku: upper, colorCode: code, hex };
   }
 
-  // ── Pattern: KS1001B-XX … KS1005B  ──────────────────────────────────────────
-  // Handles both legacy abbreviated suffixes (GB, BB, RB …) and new descriptive
-  // colour names (artichoke-brown, navy-black, red-white …).
-  const patternMatch = upper.match(/^KS(100[1-5])B(?:-(.+))?$/);
+  // ── Pattern: KS1001B-… / KL1001B-… (men's and women's, styles 1001-1006) ──
+  //
+  // Accepts three suffix formats (resolved in order below):
+  //   1. New canonical:  -PAT-BLK,PNK   (comma-separated 3-letter color tokens)
+  //   2. Legacy short:   -BB / -RB / …  (in PATTERN_SUFFIX_COLORS table)
+  //   3. Descriptive:    -ARTICHOKE-BROWN  (hyphen-separated full color names)
+  //
+  // KL prefix is accepted and mapped to the matching KS design id so that
+  // women's pattern products share the same zone texture artwork as men's.
+  // (The women's 3D model mesh is chosen separately via product.modelUrl.)
+  const patternMatch = upper.match(/^(KS|KL)(100[1-6])B(?:-(.+))?$/);
   if (patternMatch) {
-    const patNum  = parseInt(patternMatch[1], 10);
-    const rawSuffix = (patternMatch[2] ?? "").trim();
-    const designId  = `KS${patternMatch[1]}B`;
+    const styleNum  = patternMatch[2];                 // "1001" … "1006"
+    const patNum    = parseInt(styleNum, 10);
+    const rawSuffix = (patternMatch[3] ?? "").trim();
+    // KL designs use the same zone artwork as their KS equivalents.
+    const designId  = `KS${styleNum}B`;
 
     // ── Suffix contains a print reference (GP\d{3}…) → pattern + body print ──
     // e.g. KS1001B-GP006-Grey: KS1001B design in grey, body print = KS1000BGP006.
@@ -350,7 +409,6 @@ export function parseSku(sku: string): SkuResult {
       const printNum  = parseInt(gpInSuffix[1], 10);
       const padded    = String(printNum).padStart(3, "0");
       const patternId = `KS1000BGP${padded}`;
-      // Parse the colour portion that follows the print ref (e.g. "Grey", "Navy-Black")
       const colorStr  = (gpInSuffix[2] ?? "").toUpperCase();
       const colorParts = colorStr.split("-").filter(Boolean);
       const c1 = colorParts[0] ?? "";
@@ -372,6 +430,66 @@ export function parseSku(sku: string): SkuResult {
       };
     }
 
+    // ── New canonical format: -PAT-TOKEN[,TOKEN…] ─────────────────────────────
+    // e.g. KS1001B-PAT-BLK,PNK  → zone0=black, zone1=pink
+    //      KL1003B-PAT-NVY       → both zones = navy
+    // Zone convention (mirrors PATTERN_SUFFIX_COLORS label order):
+    //   zoneColors[0] = colorB  (primary / base  / light channel)
+    //   zoneColors[1] = colorA  (accent  / dark  / shadow channel)
+    const ZONE_COUNT = 2; // current designs have exactly 2 recolor channels
+    if (rawSuffix.startsWith("PAT-")) {
+      const tokenStr = rawSuffix.slice(4); // everything after "PAT-"
+      const tokens   = tokenStr.split(",").map(t => t.trim()).filter(Boolean);
+
+      let resolvedColors: string[];
+
+      if (tokens.length === 0) {
+        // "PAT-" with nothing after it → fall back to defaults
+        resolvedColors = [DEFAULT_PATTERN_COLORS.colorB, DEFAULT_PATTERN_COLORS.colorA];
+      } else if (tokens.length === 1) {
+        // Single token → broadcast to all zones
+        const hex = resolveColorToken(tokens[0]) ?? DEFAULT_PATTERN_COLORS.colorB;
+        if (!resolveColorToken(tokens[0])) {
+          console.warn(`[SKU] ${upper}: unknown color token "${tokens[0]}" — using default`);
+        }
+        resolvedColors = Array(ZONE_COUNT).fill(hex) as string[];
+      } else {
+        // Multiple tokens — validate count against zone count
+        if (tokens.length !== ZONE_COUNT) {
+          console.warn(
+            `[SKU] ${upper}: PAT token count (${tokens.length}) does not match ` +
+            `zone count (${ZONE_COUNT}). Extra tokens will be ignored.`,
+          );
+        }
+        resolvedColors = tokens.slice(0, ZONE_COUNT).map(tok => {
+          const hex = resolveColorToken(tok);
+          if (!hex) console.warn(`[SKU] ${upper}: unknown color token "${tok}" — using default`);
+          return hex ?? DEFAULT_PATTERN_COLORS.colorB;
+        });
+        // Pad to ZONE_COUNT if fewer tokens than zones
+        while (resolvedColors.length < ZONE_COUNT) {
+          resolvedColors.push(resolvedColors[0] ?? DEFAULT_PATTERN_COLORS.colorA);
+        }
+      }
+
+      const colorB = resolvedColors[0];
+      const colorA = resolvedColors[1] ?? resolvedColors[0];
+      const toTitle = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
+      const colorLabel = tokens.length > 0 ? tokens.map(toTitle).join(" + ") : "Default";
+
+      return {
+        type: "pattern",
+        sku: upper,
+        designId,
+        patternNumber: patNum,
+        suffix: rawSuffix,
+        colorA,
+        colorB,
+        colorLabel,
+        zoneColors: resolvedColors,
+      };
+    }
+
     // ── Legacy abbreviated suffix (in PATTERN_SUFFIX_COLORS) or no suffix ───
     if (!rawSuffix || PATTERN_SUFFIX_COLORS[rawSuffix]) {
       const colors = PATTERN_SUFFIX_COLORS[rawSuffix] ?? DEFAULT_PATTERN_COLORS;
@@ -384,6 +502,7 @@ export function parseSku(sku: string): SkuResult {
         colorA: colors.colorA,
         colorB: colors.colorB,
         colorLabel: colors.label,
+        zoneColors: [colors.colorB, colors.colorA],
       };
     }
 
@@ -413,6 +532,7 @@ export function parseSku(sku: string): SkuResult {
       colorA,
       colorB,
       colorLabel,
+      zoneColors: [colorB, colorA],
     };
   }
 

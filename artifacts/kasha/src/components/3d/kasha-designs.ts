@@ -104,6 +104,14 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
       back: KD_ZONES["B5"],
     },
   },
+  {
+    // KS1006B — zone texture assets not yet embedded.
+    // Embed F6/B6/COL6/LS6/RS6 base64 PNGs into KD_ZONES above and add them here
+    // once the artwork is ready.  Until then this entry resolves but renders no
+    // overlay zones (the 3D recolor engine simply skips absent zone keys).
+    id: "KS1006B", label: "Pattern 1006",
+    zones: {},
+  },
 ];
 
 // ── Engine ───────────────────────────────────────────────────────────────────
@@ -437,4 +445,17 @@ export const SKU_KASHA_DESIGN_MAP: Record<string, string> = {
   "KS1005B-GB": "KS1005B",
   "KS1005B-WB": "KS1005B",
   "KS1005B-NB": "KS1005B",
+  // Pattern 1006 — zone art pending; base SKU registered so the parser can resolve it
+  "KS1006B":    "KS1006B",
+
+  // ── Women's patterns (KL) → same zone artwork as matching KS design ──────────
+  // The 3D model mesh (women's tee) is chosen via product.modelUrl; the pattern
+  // overlay textures are shared with the KS designs.  New colorways in the new
+  // PAT-BLK,PNK format do not need entries here — the parser resolves them directly.
+  "KL1001B":    "KS1001B",
+  "KL1002B":    "KS1002B",
+  "KL1003B":    "KS1003B",
+  "KL1004B":    "KS1004B",
+  "KL1005B":    "KS1005B",
+  "KL1006B":    "KS1006B",
 };
