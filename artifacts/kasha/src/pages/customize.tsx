@@ -1154,6 +1154,18 @@ export default function CustomizePage() {
     const rawDesignParam = entryDesignRef.current; // e.g. "KS1002B-BB" or "KS1002B"
     const entrySkuResult = parseSku(rawDesignParam ?? "");
 
+    // If the product SKU resolves to a pure all-over print (e.g. KS1003B-PRT-001)
+    // and the entry param doesn't override to a pattern, let the print auto-apply
+    // effect handle it. Applying zone artwork here would overwrite the print.
+    if (
+      productSkuResult.type === "print" &&
+      entrySkuResult.type !== "pattern" &&
+      entrySkuResult.type !== "pattern+print"
+    ) {
+      autoAppliedRef.current = true;
+      return;
+    }
+
     // Resolve the design ID and the best available colorway:
     // Priority: 1) full-SKU entry param  2) product SKU  3) defaults
     let designId: string;
@@ -1249,6 +1261,23 @@ export default function CustomizePage() {
     if (!canvasReady) return;
 
     const FALLBACK_WHITE = "#f5f5f5";
+
+    // Don't apply a solid background over "printed" subType products — the print
+    // auto-apply effect owns the canvas background for those.  Applying a solid
+    // colour here would flash the canvas white/default before the print renders.
+    if (product?.subType === "printed") {
+      autoAppliedSolidRef.current = true;
+      return;
+    }
+    // Also bail when the product SKU itself decodes as a pure print so bottom-wear
+    // print SKUs (e.g. KL1002F-PRT-010) don't get a solid background applied.
+    if (product?.sku) {
+      const _quickCheck = parseSku(product.sku);
+      if (_quickCheck.type === "print") {
+        autoAppliedSolidRef.current = true;
+        return;
+      }
+    }
 
     // 1) Try the entry design param (e.g. KS1000BROYELBLUE passed from the modal)
     const entryResult = parseSku(entryDesignRef.current ?? "");

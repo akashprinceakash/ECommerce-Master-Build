@@ -1,3 +1,4 @@
 exports/kasha-customisation.zip filter=lfs diff=lfs merge=lfs -text
 attached_assets/KaSha_Renderings_15_may_26-20260518T082503Z-3-001_1779093172717.zip filter=lfs diff=lfs merge=lfs -text
 attached_assets/Kasha_Products_1779353242700.zip filter=lfs diff=lfs merge=lfs -text
+attached_assets/3dModels_final_without_Optimization_1784004139710.zip filter=lfs diff=lfs merge=lfs -text

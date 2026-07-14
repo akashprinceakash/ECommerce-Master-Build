@@ -382,6 +382,67 @@ export function parseSku(sku: string): SkuResult {
 
   const upper = sku.trim().toUpperCase();
 
+  // ── New general format: [KS|KL][STYLE][TYPE]-[SLD|PRT]-[VALUE] ────────────
+  // Handles T-shirts, all bottom-wear (F=shorts/pants, D=dress, G=skort), and any
+  // top style (B) that does NOT use a bare legacy prefix.
+  // PAT- suffix is intentionally excluded here so it falls through to the existing
+  // pattern handler below which carries full zone-design logic.
+  //
+  // Examples handled:
+  //   KS1003B-SLD-NVY      → solid navy T-shirt
+  //   KS1002F-SLD-BLK      → solid black shorts
+  //   KL1015G-SLD-Sea Green → solid sea-green skort (space-stripped by resolveColorToken)
+  //   KS1003B-PRT-001      → all-over print #001 on T-shirt (Bug 1)
+  //   KL1002F-PRT-010      → all-over print #010 on women's shorts
+  //   KS1001B-PRT-003,BROWN → print #003 body + KS1001B zone design in brown (Bug 2)
+  //   KS1001B-SLD-BLK      → solid black polo (SLD trumps zone-design for simple colourways)
+  const newFmtMatch = upper.match(/^(KS|KL)(\d{4})([BFDG])-(SLD|PRT)-(.+)$/);
+  if (newFmtMatch) {
+    const [, , styleStr, typeCode, variantType, valueStr] = newFmtMatch;
+    const styleNum = parseInt(styleStr, 10);
+    // B-type styles 1001-1006 that include a color after the print number get
+    // routed to "pattern+print" so the zone-design effect can layer artwork on top.
+    const isPatternStyle = typeCode === "B" && styleNum >= 1001 && styleNum <= 1006;
+
+    if (variantType === "SLD") {
+      const hex = resolveColorToken(valueStr.split(",")[0].trim()) ?? "#f5f5f5";
+      return { type: "solid", sku: upper, colorCode: valueStr.split(",")[0].trim(), hex };
+    }
+
+    if (variantType === "PRT") {
+      const parts = valueStr.split(",").map(t => t.trim());
+      const printNum = parseInt(parts[0], 10);
+      if (!isNaN(printNum)) {
+        const padded    = String(printNum).padStart(3, "0");
+        const printKey  = `KS1000BGP${padded}`;
+        const patternId = PRINT_SKU_MAP[printKey] ?? printKey;
+
+        // PRT-NNN,COLOR on a pattern-style B product → pattern+print with colour
+        if (isPatternStyle && parts.length > 1) {
+          const designId  = `KS${styleStr}B`;
+          const colorB    = resolveColorToken(parts[1]) ?? DEFAULT_PATTERN_COLORS.colorB;
+          const colorA    = parts[2]
+            ? resolveColorToken(parts[2]) ?? DEFAULT_PATTERN_COLORS.colorA
+            : DEFAULT_PATTERN_COLORS.colorA;
+          return {
+            type:          "pattern+print" as const,
+            sku:           upper,
+            designId,
+            patternNumber: styleNum,
+            patternId,
+            designNumber:  printNum,
+            colorA,
+            colorB,
+            colorLabel:    parts.slice(1).join("+"),
+          };
+        }
+
+        // PRT-NNN (no colour, or non-pattern style) → pure all-over print
+        return { type: "print", sku: upper, patternId, designNumber: printNum };
+      }
+    }
+  }
+
   // ── Print: KS1000BGP001 … KS1000BGP034
   const printMatch = upper.match(/^KS1000BGP(\d{3})$/);
   if (printMatch) {
@@ -437,6 +498,36 @@ export function parseSku(sku: string): SkuResult {
     const rawSuffix = (patternMatch[3] ?? "").trim();
     // KL designs use the same zone artwork as their KS equivalents.
     const designId  = `KS${styleNum}B`;
+
+    // ── Legacy combo: -KS1000BGP{NNN}-{COLOR}  (backward compatibility) ──────
+    // Old admin format: KS1001B-KS1000BGP003-BROW
+    // New equivalent:   KS1001B-PRT-003,BROWN  (handled by newFmtMatch above)
+    // Both should produce type:"pattern+print" so the zone-design effect layers
+    // the KS1001B artwork on top of the body print in the specified colour.
+    const legacyKsPrint = rawSuffix.match(/^KS1000BGP(\d{3})(?:-(.+))?$/i);
+    if (legacyKsPrint) {
+      const printNum  = parseInt(legacyKsPrint[1], 10);
+      const padded    = String(printNum).padStart(3, "0");
+      const printKey  = `KS1000BGP${padded}`;
+      const patternId = PRINT_SKU_MAP[printKey] ?? printKey;
+      const colorStr  = (legacyKsPrint[2] ?? "").toUpperCase();
+      const colorParts = colorStr.split(/[-,]/).filter(Boolean);
+      const colorB = resolveColorToken(colorParts[0] ?? "") ?? DEFAULT_PATTERN_COLORS.colorB;
+      const colorA = colorParts[1]
+        ? resolveColorToken(colorParts[1]) ?? DEFAULT_PATTERN_COLORS.colorA
+        : DEFAULT_PATTERN_COLORS.colorA;
+      return {
+        type:          "pattern+print" as const,
+        sku:           upper,
+        designId,
+        patternNumber: patNum,
+        patternId,
+        designNumber:  printNum,
+        colorA,
+        colorB,
+        colorLabel:    colorStr || "Default",
+      };
+    }
 
     // ── Suffix contains a print reference (GP\d{3}…) → pattern + body print ──
     // e.g. KS1001B-GP006-Grey: KS1001B design in grey, body print = KS1000BGP006.
