@@ -283,11 +283,6 @@ export const PRINT_SKU_MAP: Record<string, string> = {
   "KS1000BGP032": "KS1000BGP032",
   "KS1000BGP033": "KS1000BGP033",
   "KS1000BGP034": "KS1000BGP034",
-  // ── Standalone print designs — men's (KS) and women's (KL) share same art ──
-  "KS1006B": "KS1006B",
-  "KL1006B": "KS1006B",
-  "KS1007B": "KS1007B",
-  "KL1007B": "KS1007B",
 };
 
 // ── Parsed SKU result types ──────────────────────────────────────────────────
