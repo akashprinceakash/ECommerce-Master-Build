@@ -477,10 +477,21 @@ router.get("/admin/customizations/:id", requireAuth, async (req, res): Promise<v
   res.json({ ...row, userEmail, userName });
 });
 
+// Returns 200 for both admins and non-admins — the caller reads the boolean.
+// Using 403 here caused red console errors for every logged-in customer.
 router.get("/admin/check", requireAuth, async (req, res): Promise<void> => {
-  const adminId = await requireAdmin(req, res);
-  if (!adminId) return;
-  res.json({ isAdmin: true });
+  const userId = (req as any).userId as string | undefined;
+  if (!userId) { res.json({ isAdmin: false }); return; }
+  try {
+    const user        = await clerkClient.users.getUser(userId);
+    const role        = (user.publicMetadata as any)?.role;
+    const adminEmails = process.env["ADMIN_EMAILS"]?.split(",").map(e => e.trim()) ?? [];
+    const primary     = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
+    const isAdmin     = role === "admin" || adminEmails.includes(primary ?? "");
+    res.json({ isAdmin });
+  } catch {
+    res.json({ isAdmin: false });
+  }
 });
 
 router.post("/admin/customizations/backfill-spec", requireAuth, async (req, res): Promise<void> => {

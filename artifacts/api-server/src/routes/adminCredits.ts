@@ -114,7 +114,17 @@ router.post("/admin/credits/topup", requireAuth, async (req, res): Promise<void>
   await logReplicateTopup({ amountUsd, adminId, notes });
 
   const balance = await getEstimatedReplicateBalance();
-  logger.info({ adminId, amountUsd, estimatedBalance: balance.estimatedBalanceUsd.toFixed(4) }, "admin: Replicate topup logged");
+
+  // Immediately re-enable generations when a top-up is logged so admins don't
+  // have to wait up to an hour for the next cron run after funding the account.
+  const { setGenerationsDisabled } = await import("../services/creditService");
+  if (balance.estimatedBalanceUsd >= 5) {
+    setGenerationsDisabled(false);
+    logger.info({ adminId, amountUsd, estimatedBalance: balance.estimatedBalanceUsd.toFixed(4) }, "admin: Replicate topup logged — generations re-enabled");
+  } else {
+    logger.info({ adminId, amountUsd, estimatedBalance: balance.estimatedBalanceUsd.toFixed(4) }, "admin: Replicate topup logged");
+  }
+
   res.json({ success: true, estimatedBalanceUsd: balance.estimatedBalanceUsd.toFixed(4) });
 });
 

@@ -108,11 +108,18 @@ export async function runBalanceCheck(): Promise<void> {
     const summary = `Estimated balance: $${estimatedBalanceUsd.toFixed(2)}\n  Topups logged: $${totalTopupsUsd.toFixed(2)} (${topupCount} entries)\n  Cost to date:  $${totalCostUsd.toFixed(2)}`;
 
     if (topupCount === 0) {
+      // The billing ledger has never been initialised — the admin hasn't logged any
+      // Replicate top-ups yet.  In this state we cannot know the real balance, so we
+      // treat it as "OK" and leave generations ENABLED.  Disabling here would block
+      // every user even when the Replicate account has funds.
+      // The admin should record the current Replicate credit at /admin → Replicate Balance.
       logger.warn(
         { estimatedBalanceUsd, totalTopupsUsd },
-        "creditCron: NO top-ups recorded in DB ledger — if the Replicate account was funded, " +
-        "log the amount at /admin → Replicate Balance. Balance shows $0.00 until then.",
+        "creditCron: NO top-ups recorded in DB ledger — treating balance as OK. " +
+        "Log the current Replicate credit at /admin → Replicate Balance to activate balance tracking.",
       );
+      setGenerationsDisabled(false);
+      return;
     }
 
     let newLevel: AlertLevel;
