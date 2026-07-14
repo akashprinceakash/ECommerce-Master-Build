@@ -113,3 +113,9 @@ id = "YOaCARKvY0W57sPw_CX5-"
 uri = "file://attached_assets/exports/kasha-customization-studio.zip"
 type = "unspecified"
 title = "KA.SHA Customization Studio — source code export"
+
+[[outputs]]
+id = "KGJQgK9qahA0XptUwdxko"
+uri = "file://kasha-sku-guide.pdf"
+type = "pdf"
+title = "KA.SHA SKU Reference Guide"
