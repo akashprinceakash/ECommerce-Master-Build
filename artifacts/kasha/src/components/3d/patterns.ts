@@ -53,6 +53,12 @@ export const PATTERNS: PatternDef[] = [
   { id: "KS1000BGP032", label: "GP 032", customerLabel: "Avocado & Gold",         file: "KS1000BGP032.jpg", swatchColors: ["#4a6b1a", "#c9a84c"] },
   { id: "KS1000BGP033", label: "GP 033", customerLabel: "Royal Blue & Orange",    file: "KS1000BGP033.jpg", swatchColors: ["#1a1a6b", "#e8633c"] },
   { id: "KS1000BGP034", label: "GP 034", customerLabel: "Dusty Mauve & Aqua",     file: "KS1000BGP034.jpg", swatchColors: ["#6b4a4a", "#39b6c7"] },
+  // ── New standalone print designs (KS1006B / KS1007B) ─────────────────────
+  // Zone art: Collar (2220×708) used as the primary tile; sleeve pieces uploaded
+  // alongside as KS100NB-left-sleeve.png / KS100NB-right-sleeve.png.
+  // Upload all files to R2 bucket → patterns/ before going live.
+  { id: "KS1006B", label: "KS1006B — Paisley Blue",  customerLabel: "Paisley Blue",  file: "KS1006B.png",  swatchColors: ["#eef0f8", "#7888c0"] },
+  { id: "KS1007B", label: "KS1007B — Floral Pink",   customerLabel: "Floral Pink",   file: "KS1007B.png",  swatchColors: ["#f0c8b8", "#c08878"] },
 ];
 
 export type PatternZone = "all" | "front" | "back" | "leftSleeve" | "rightSleeve" | "collar";

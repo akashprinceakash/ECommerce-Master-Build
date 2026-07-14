@@ -283,6 +283,11 @@ export const PRINT_SKU_MAP: Record<string, string> = {
   "KS1000BGP032": "KS1000BGP032",
   "KS1000BGP033": "KS1000BGP033",
   "KS1000BGP034": "KS1000BGP034",
+  // ── Standalone print designs — men's (KS) and women's (KL) share same art ──
+  "KS1006B": "KS1006B",
+  "KL1006B": "KS1006B",
+  "KS1007B": "KS1007B",
+  "KL1007B": "KS1007B",
 };
 
 // ── Parsed SKU result types ──────────────────────────────────────────────────
@@ -479,6 +484,15 @@ export function parseSku(sku: string): SkuResult {
     const code = solidLongMatch[1];
     const hex = SOLID_LONGNAME_MAP[code] ?? SOLID_COLOR_MAP[code] ?? "#1a1a1a";
     return { type: "solid", sku: upper, colorCode: code, hex };
+  }
+
+  // ── Standalone print: bare SKUs registered in PRINT_SKU_MAP (e.g. KS1006B, KL1007B) ──
+  // Must run BEFORE the patternMatch block below because styles 1001-1006 would
+  // otherwise be caught as zone-design patterns. Only exact bare-SKU matches fire here
+  // — suffixed variants (KS1006B-PAT-BLK) still fall through to patternMatch.
+  if (PRINT_SKU_MAP[upper]) {
+    const patternId = PRINT_SKU_MAP[upper];
+    return { type: "print", sku: upper, patternId, designNumber: 0 };
   }
 
   // ── Pattern: KS1001B-… / KL1001B-… (men's and women's, styles 1001-1006) ──
