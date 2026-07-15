@@ -11,7 +11,7 @@
 //   clearKashaDesign(fc)           — remove KA.SHA design layer
 // ─────────────────────────────────────────────────────────────────────────────
 import * as fabric from "fabric";
-import { ZONE_PRESETS } from "./patterns";
+import { ZONE_PRESETS, ZonePreset } from "./patterns";
 
 export interface KashaDesignDef {
   id:        string;
@@ -24,6 +24,8 @@ export interface KashaDesignDef {
     leftSleeve?:  string;
     rightSleeve?: string;
   };
+  /** Per-design zone placement overrides — merged on top of global ZONE_PRESETS */
+  zoneOverrides?: Partial<Record<keyof typeof ZONE_PRESETS, ZonePreset>>;
 }
 
 // ── Embedded zone textures (base64 PNG) ──────────────────────────────────────
@@ -113,17 +115,27 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
   {
     id: "KS1006B", label: "Pattern 1006",
     zones: {
-      collar: KD_ZONES["COL6"],
-      leftSleeve: KD_ZONES["LS6"],
+      collar:      KD_ZONES["COL6"],
+      leftSleeve:  KD_ZONES["LS6"],
       rightSleeve: KD_ZONES["RS6"],
+    },
+    zoneOverrides: {
+      collar:      { left:  12, top: 260, w: 507, h:  15 },
+      leftSleeve:  { left: 210, top:  33, w: 398, h:  60 },
+      rightSleeve: { left: 617, top: 113, w: 398, h:  30 },
     },
   },
   {
     id: "KS1007B", label: "Pattern 1007",
     zones: {
-      collar: KD_ZONES["COL7"],
-      leftSleeve: KD_ZONES["LS7"],
+      collar:      KD_ZONES["COL7"],
+      leftSleeve:  KD_ZONES["LS7"],
       rightSleeve: KD_ZONES["RS7"],
+    },
+    zoneOverrides: {
+      collar:      { left:  12, top: 260, w: 507, h:  15 },
+      leftSleeve:  { left: 210, top:  33, w: 398, h:  60 },
+      rightSleeve: { left: 617, top: 113, w: 398, h:  30 },
     },
   },
 ];
@@ -257,7 +269,7 @@ export async function applyKashaDesign(
       } catch { /* fall through — use original dataUrl */ }
     }
 
-    const preset = ZONE_PRESETS[zone];
+    const preset = { ...ZONE_PRESETS[zone], ...(design.zoneOverrides?.[zone] ?? {}) };
     const img = await fabric.FabricImage.fromURL(dataUrl, { crossOrigin: 'anonymous' });
     img.set({
       left:    preset.left,
