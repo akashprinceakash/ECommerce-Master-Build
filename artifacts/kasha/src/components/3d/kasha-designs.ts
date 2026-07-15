@@ -26,6 +26,9 @@ export interface KashaDesignDef {
   };
   /** Per-design zone placement overrides — merged on top of global ZONE_PRESETS */
   zoneOverrides?: Partial<Record<keyof typeof ZONE_PRESETS, ZonePreset>>;
+  /** Override the source colours the recolor engine looks for in this design's PNGs.
+   *  Defaults: srcA="#000000" (black), srcB="#F0CED2" (pink). */
+  recolorSrc?: { srcA: string; srcB: string };
 }
 
 // ── Embedded zone textures (base64 PNG) ──────────────────────────────────────
@@ -121,9 +124,10 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
     },
     zoneOverrides: {
       collar:      { left:  12, top: 180, w: 507, h:  85 },
-      leftSleeve:  { left: 210, top:  33, w: 398, h:  180 },
-      rightSleeve: { left: 617, top: 38, w: 398, h:  102 },
+      leftSleeve:  { left: 210, top:  33, w: 398, h: 180 },
+      rightSleeve: { left: 617, top:  38, w: 398, h: 102 },
     },
+    recolorSrc: { srcA: "#000000", srcB: "#ffffff" },
   },
   {
     id: "KS1007B", label: "Pattern 1007",
@@ -134,9 +138,10 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
     },
     zoneOverrides: {
       collar:      { left:  12, top: 180, w: 507, h:  85 },
-        leftSleeve:  { left: 210, top:  33, w: 398, h:  180 },
-        rightSleeve: { left: 617, top: 38, w: 398, h:  102 },
+      leftSleeve:  { left: 210, top:  33, w: 398, h: 180 },
+      rightSleeve: { left: 617, top:  38, w: 398, h: 102 },
     },
+    recolorSrc: { srcA: "#000000", srcB: "#ffffff" },
   },
 ];
 
@@ -171,8 +176,15 @@ function colorDist(r1: number, g1: number, b1: number, r2: number, g2: number, b
   return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2);
 }
 
-/** Recolor a canvas: near-black → colorA, near-pink → colorB. Returns a new canvas. */
-function recolorCanvas(src: HTMLCanvasElement, cA_hex: string, cB_hex: string): HTMLCanvasElement {
+/** Recolor a canvas: srcA pixels → colorA, srcB pixels → colorB. Returns a new canvas.
+ *  srcA/srcB default to the KA.SHA baked-in colours (#000000 and #F0CED2). */
+function recolorCanvas(
+  src: HTMLCanvasElement,
+  cA_hex: string,
+  cB_hex: string,
+  srcA_hex = "#000000",
+  srcB_hex = "#F0CED2",
+): HTMLCanvasElement {
   const w = src.width, h = src.height;
   const out = document.createElement("canvas");
   out.width = w; out.height = h;
@@ -180,12 +192,14 @@ function recolorCanvas(src: HTMLCanvasElement, cA_hex: string, cB_hex: string): 
   ctx.drawImage(src, 0, 0);
   const imgData = ctx.getImageData(0, 0, w, h);
   const pix = imgData.data;
-  const nA = hexToRgb(cA_hex);
-  const nB = hexToRgb(cB_hex);
+  const nA  = hexToRgb(cA_hex);
+  const nB  = hexToRgb(cB_hex);
+  const sA  = hexToRgb(srcA_hex);
+  const sB  = hexToRgb(srcB_hex);
   for (let i = 0; i < pix.length; i += 4) {
     const r = pix[i], g = pix[i + 1], b = pix[i + 2];
-    const dA = colorDist(r, g, b, SRC_A.r, SRC_A.g, SRC_A.b);
-    const dB = colorDist(r, g, b, SRC_B.r, SRC_B.g, SRC_B.b);
+    const dA = colorDist(r, g, b, sA.r, sA.g, sA.b);
+    const dB = colorDist(r, g, b, sB.r, sB.g, sB.b);
     if (dA <= dB && dA < TOLERANCE) {
       const t = Math.max(0, 1 - dA / TOLERANCE);
       pix[i]     = Math.round(r * (1 - t) + nA.r * t);
@@ -245,7 +259,12 @@ export async function applyKashaDesign(
 ): Promise<void> {
   clearKashaDesign(fc);
 
-  const needsRecolor = recolor && (recolor.colorA !== "#000000" || recolor.colorB !== "#F0CED2");
+  const srcA_hex = design.recolorSrc?.srcA ?? "#000000";
+  const srcB_hex = design.recolorSrc?.srcB ?? "#F0CED2";
+  const needsRecolor = recolor && (
+    recolor.colorA.toUpperCase() !== srcA_hex.toUpperCase() ||
+    recolor.colorB.toUpperCase() !== srcB_hex.toUpperCase()
+  );
 
   const zoneMap: Array<{ key: keyof KashaDesignDef['zones']; zone: keyof typeof ZONE_PRESETS }> = [
     { key: 'front',       zone: 'front'       },
@@ -264,7 +283,7 @@ export async function applyKashaDesign(
     if (needsRecolor) {
       try {
         const srcCanvas  = await dataUrlToCanvas(dataUrl);
-        const recolored  = recolorCanvas(srcCanvas, recolor!.colorA, recolor!.colorB);
+        const recolored  = recolorCanvas(srcCanvas, recolor!.colorA, recolor!.colorB, srcA_hex, srcB_hex);
         dataUrl = recolored.toDataURL("image/png");
       } catch { /* fall through — use original dataUrl */ }
     }
