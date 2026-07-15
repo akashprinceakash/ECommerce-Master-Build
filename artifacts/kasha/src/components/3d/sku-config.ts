@@ -400,9 +400,9 @@ export function parseSku(sku: string): SkuResult {
   if (newFmtMatch) {
     const [, , styleStr, typeCode, variantType, valueStr] = newFmtMatch;
     const styleNum = parseInt(styleStr, 10);
-    // B-type styles 1001-1006 that include a color after the print number get
+    // B-type styles 1001-1007 that include a color after the print number get
     // routed to "pattern+print" so the zone-design effect can layer artwork on top.
-    const isPatternStyle = typeCode === "B" && styleNum >= 1001 && styleNum <= 1006;
+    const isPatternStyle = typeCode === "B" && styleNum >= 1001 && styleNum <= 1007;
 
     if (variantType === "SLD") {
       const hex = resolveColorToken(valueStr.split(",")[0].trim()) ?? "#f5f5f5";
@@ -490,7 +490,7 @@ export function parseSku(sku: string): SkuResult {
     return { type: "print", sku: upper, patternId, designNumber: 0 };
   }
 
-  // ── Pattern: KS1001B-… / KL1001B-… (men's and women's, styles 1001-1006) ──
+  // ── Pattern: KS1001B-… / KL1001B-… (men's and women's, styles 1001-1007) ──
   //
   // Accepts three suffix formats (resolved in order below):
   //   1. New canonical:  -PAT-BLK,PNK   (comma-separated 3-letter color tokens)
@@ -500,9 +500,9 @@ export function parseSku(sku: string): SkuResult {
   // KL prefix is accepted and mapped to the matching KS design id so that
   // women's pattern products share the same zone texture artwork as men's.
   // (The women's 3D model mesh is chosen separately via product.modelUrl.)
-  const patternMatch = upper.match(/^(KS|KL)(100[1-6])B(?:-(.+))?$/);
+  const patternMatch = upper.match(/^(KS|KL)(100[1-7])B(?:-(.+))?$/);
   if (patternMatch) {
-    const styleNum  = patternMatch[2];                 // "1001" … "1006"
+    const styleNum  = patternMatch[2];                 // "1001" … "1007"
     const patNum    = parseInt(styleNum, 10);
     const rawSuffix = (patternMatch[3] ?? "").trim();
     // KL designs use the same zone artwork as their KS equivalents.

@@ -120,9 +120,9 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
       rightSleeve: KD_ZONES["RS6"],
     },
     zoneOverrides: {
-      collar:      { left:  12, top: 260, w: 507, h:  15 },
-      leftSleeve:  { left: 210, top:  33, w: 398, h:  60 },
-      rightSleeve: { left: 617, top: 113, w: 398, h:  30 },
+      collar:      { left:  12, top: 180, w: 507, h:  85 },
+      leftSleeve:  { left: 210, top:  33, w: 398, h:  180 },
+      rightSleeve: { left: 617, top: 38, w: 398, h:  102 },
     },
   },
   {
@@ -133,9 +133,9 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
       rightSleeve: KD_ZONES["RS7"],
     },
     zoneOverrides: {
-      collar:      { left:  12, top: 260, w: 507, h:  15 },
-      leftSleeve:  { left: 210, top:  33, w: 398, h:  60 },
-      rightSleeve: { left: 617, top: 113, w: 398, h:  30 },
+      collar:      { left:  12, top: 180, w: 507, h:  85 },
+        leftSleeve:  { left: 210, top:  33, w: 398, h:  180 },
+        rightSleeve: { left: 617, top: 38, w: 398, h:  102 },
     },
   },
 ];
