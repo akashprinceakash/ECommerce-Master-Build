@@ -123,9 +123,7 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
       rightSleeve: KD_ZONES["RS6"],
     },
     zoneOverrides: {
-      // top: 265 targets the outer (visible) collar face in UV space.
-      // top: 180 was hitting the inner collar lining, causing back-face bleed.
-      collar:      { left:  12, top: 265, w: 507, h:  80 },
+      collar:      { left:  12, top: 180, w: 507, h:  85 },
       leftSleeve:  { left: 210, top:  33, w: 398, h: 180 },
       rightSleeve: { left: 617, top:  38, w: 398, h: 102 },
     },
@@ -139,9 +137,7 @@ export const KASHA_DESIGNS: KashaDesignDef[] = [
       rightSleeve: KD_ZONES["RS7"],
     },
     zoneOverrides: {
-      // top: 265 targets the outer (visible) collar face in UV space.
-      // top: 180 was hitting the inner collar lining, causing back-face bleed.
-      collar:      { left:  12, top: 265, w: 507, h:  80 },
+      collar:      { left:  12, top: 180, w: 507, h:  85 },
       leftSleeve:  { left: 210, top:  33, w: 398, h: 180 },
       rightSleeve: { left: 617, top:  38, w: 398, h: 102 },
     },
@@ -220,19 +216,15 @@ function recolorCanvas(
   return out;
 }
 
-/** Load a base64/data URL into an offscreen HTMLCanvasElement.
- *  When targetW/targetH are supplied the image is drawn scaled to that size,
- *  so callers can work on a smaller canvas (e.g. the zone display size) instead
- *  of the full-resolution source PNG — dramatically faster for getImageData. */
-function dataUrlToCanvas(dataUrl: string, targetW?: number, targetH?: number): Promise<HTMLCanvasElement> {
+/** Load a base64/data URL into an offscreen HTMLCanvasElement */
+function dataUrlToCanvas(dataUrl: string): Promise<HTMLCanvasElement> {
   return new Promise((res, rej) => {
     const img = new Image();
     img.onload = () => {
-      const w = targetW ?? (img.naturalWidth  || img.width);
-      const h = targetH ?? (img.naturalHeight || img.height);
       const c = document.createElement("canvas");
-      c.width = w; c.height = h;
-      c.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      c.width  = img.naturalWidth  || img.width;
+      c.height = img.naturalHeight || img.height;
+      c.getContext("2d")!.drawImage(img, 0, 0);
       res(c);
     };
     img.onerror = rej;
@@ -288,20 +280,15 @@ export async function applyKashaDesign(
     let dataUrl = design.zones[key];
     if (!dataUrl) continue;
 
-    // Compute preset first so we can pre-scale the zone PNG to the display size
-    // before running getImageData — this shrinks the pixel buffer dramatically
-    // (e.g. 2220×708 → 507×85 for the collar) and removes the main performance
-    // bottleneck of the recolor path.
-    const preset = { ...ZONE_PRESETS[zone], ...(design.zoneOverrides?.[zone] ?? {}) };
-
     if (needsRecolor) {
       try {
-        const srcCanvas = await dataUrlToCanvas(dataUrl, preset.w, preset.h);
-        const recolored = recolorCanvas(srcCanvas, recolor!.colorA, recolor!.colorB, srcA_hex, srcB_hex);
+        const srcCanvas  = await dataUrlToCanvas(dataUrl);
+        const recolored  = recolorCanvas(srcCanvas, recolor!.colorA, recolor!.colorB, srcA_hex, srcB_hex);
         dataUrl = recolored.toDataURL("image/png");
-      } catch(e) { console.error("[KD] zone recolor failed:", zone, e); }
+      } catch { /* fall through — use original dataUrl */ }
     }
 
+    const preset = { ...ZONE_PRESETS[zone], ...(design.zoneOverrides?.[zone] ?? {}) };
     const img = await fabric.FabricImage.fromURL(dataUrl, { crossOrigin: 'anonymous' });
     img.set({
       left:    preset.left,

@@ -848,12 +848,6 @@ export default function CustomizePage() {
     if (!activeKashaDesign) return;
     const fc=fcRef.current; if(!fc) return;
     setPatColorA(cA); setPatColorB(cB);
-    // Update the body background so non-zone areas blend with the zone
-    // background colour (cB).  Without this the shirt body stays at the
-    // colour that was set on initial load and never reflects picker changes.
-    baseBgRef.current = cB;
-    setFabricBg(fc, cB);
-    setPrimaryColor(cB);
     setPatRecoloring(true);
     try {
       const recolor: RecolorOptions = { colorA: cA, colorB: cB };
