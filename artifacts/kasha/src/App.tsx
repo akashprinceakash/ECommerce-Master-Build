@@ -10,7 +10,6 @@ import SignUpPage from "@/pages/sign-up";
 import ProductsPage from "@/pages/products";
 import ProductDetailPage from "@/pages/product-detail";
 import CustomizePage from "@/pages/customize";
-import CustomStudioLanding from "@/pages/custom-studio";
 import CartPage from "@/pages/cart";
 import CheckoutPage from "@/pages/checkout";
 import OrdersPage from "@/pages/orders";
@@ -111,7 +110,6 @@ function ClerkProviderWithRoutes() {
           <Route path="/sign-up/*?" component={SignUpPage} />
           <Route path="/products" component={ProductsPage} />
           <Route path="/products/:id" component={ProductDetailPage} />
-          <Route path="/custom-studio" component={CustomStudioLanding} />
           <Route path="/products/:id/customize" component={CustomizePage} />
           <Route path="/customize" component={CustomizePage} />
           <Route path="/heritage" component={HeritagePage} />

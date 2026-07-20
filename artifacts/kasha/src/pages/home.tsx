@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, type CSSProperties } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { SHOW_KIDS, SHOW_CUSTOMIZATION, SHOW_LOOKBOOK } from "@/lib/features";
 import { CustomizeEntryModal } from "@/components/layout/CustomizeEntryModal";
@@ -48,7 +48,7 @@ const SLIDES = [
     title:   (<>Flair on the fairway<br />Ka.Sha Golfwear.</>),
     sub:     SHOW_KIDS ? "Men · Women · Kids · Bespoke" : "Men · Women",
     primary: { label: "All Products", href: "/products" },
-    outline: SHOW_CUSTOMIZATION ? { label: "Custom Studio", href: "/custom-studio" } : undefined,
+    outline: SHOW_CUSTOMIZATION ? { label: "Custom Studio", href: "/products/1/customize" } : undefined,
   },
   {
     img:     "/images/slides/hero2_mens_tshirts.webp",
@@ -71,7 +71,7 @@ const SLIDES = [
     eyebrow: "New Season · Golf Collection 2026",
     title:   (<>Crafted for players<br />Bespoke prints.Try our custom studio.</>),
     sub:     SHOW_KIDS ? "Men · Women · Kids · Custom" : "Men · Women",
-    primary: { label: "CUSTOM STUDIO",    href: "/custom-studio" },
+    primary: { label: "CUSTOM STUDIO",    href: "/products/1/customize" },
     outline: undefined,
   },
 ] as const;
@@ -327,7 +327,6 @@ export default function Home() {
   const [tab,      setTab]      = useState<"men" | "women" | "kids">("men");
   const [chips,    setChips]    = useState<string[]>(["Colour"]);
   const [customizeModalOpen, setCustomizeModalOpen] = useState(false);
-  const [, navigate] = useLocation();
 
   // Fetch hero banner overrides from CMS (set via admin → Site tab)
   const { data: siteSettings } = useQuery<Record<string, unknown>>({
@@ -465,33 +464,54 @@ export default function Home() {
                   transform: i === active ? "translateY(0)" : "translateY(14px)",
                   transition:"opacity 0.7s 0.6s ease, transform 0.7s 0.6s ease",
                 }}>
-                  {/* Primary CTA */}
-                  <Link
-                    href={s.primary.href}
-                    style={{
-                      background:    GOLD,
-                      color:         "#fff",
-                      fontFamily:    "'Josefin Sans', sans-serif",
-                      fontSize:      14,
-                      letterSpacing: "0.22em",
-                      textTransform: "uppercase",
-                      padding:       "14px 32px",
-                      display:       "inline-block",
-                      textDecoration:"none",
-                      transition:    "background 0.2s, transform 0.2s",
-                      boxShadow:     "0 6px 18px rgba(184,146,90,0.4)",
-                    }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = GOLD_LIGHT; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = GOLD;       (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
-                  >
-                    {s.primary.label}
-                  </Link>
+                  {/* Primary CTA — modal for studio links, navigate for all others */}
+                  {s.primary.href.includes("/customize") ? (
+                    <button
+                      onClick={() => setCustomizeModalOpen(true)}
+                      style={{
+                        background:    GOLD,
+                        color:         "#fff",
+                        fontFamily:    "'Josefin Sans', sans-serif",
+                        fontSize:      14,
+                        letterSpacing: "0.22em",
+                        textTransform: "uppercase",
+                        padding:       "14px 32px",
+                        border:        "none",
+                        cursor:        "pointer",
+                        transition:    "background 0.2s, transform 0.2s",
+                        boxShadow:     "0 6px 18px rgba(184,146,90,0.4)",
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = GOLD_LIGHT; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = GOLD;       (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+                    >
+                      {s.primary.label}
+                    </button>
+                  ) : (
+                    <Link
+                      href={s.primary.href}
+                      style={{
+                        background:    GOLD,
+                        color:         "#fff",
+                        fontFamily:    "'Josefin Sans', sans-serif",
+                        fontSize:      14,
+                        letterSpacing: "0.22em",
+                        textTransform: "uppercase",
+                        padding:       "14px 32px",
+                        display:       "inline-block",
+                        transition:    "background 0.2s, transform 0.2s",
+                        boxShadow:     "0 6px 18px rgba(184,146,90,0.4)",
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = GOLD_LIGHT; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = GOLD;       (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+                    >
+                      {s.primary.label}
+                    </Link>
+                  )}
                   {/* Secondary outline CTA */}
                   {s.outline && (
-                    <Link
-                      href={s.outline.href}
+                    <button
+                      onClick={() => setCustomizeModalOpen(true)}
                       style={{
-                        textDecoration: "none",
                         background:    "rgba(255,255,255,0.08)",
                         backdropFilter:"blur(8px)",
                         color:         "rgba(255,255,255,0.72)",
@@ -508,7 +528,7 @@ export default function Home() {
                       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.32)"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.72)"; }}
                     >
                       {s.outline.label}
-                    </Link>
+                    </button>
                   )}
                   {SHOW_LOOKBOOK && (
                     <Link
@@ -623,7 +643,7 @@ export default function Home() {
             style={{ gap: 10, marginTop: 14 }}
           >
             {PANELS[tab].map((c) => (
-              <CategoryCard key={c.title + c.href} c={c} onBespokeClick={() => navigate("/custom-studio")} />
+              <CategoryCard key={c.title + c.href} c={c} onBespokeClick={() => setCustomizeModalOpen(true)} />
             ))}
           </div>
 

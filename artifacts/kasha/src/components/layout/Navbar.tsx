@@ -190,25 +190,23 @@ export function Navbar() {
             />
           </Link>
           {SHOW_CUSTOMIZATION && (
-            <Link
-              href="/custom-studio"
+            <button
+              onClick={() => setCustomizeModalOpen(true)}
               className="text-[10px] uppercase text-white px-5 py-2 transition-colors border-0 cursor-pointer"
               style={{
                 fontFamily: "'Josefin Sans', sans-serif",
                 letterSpacing: "0.2em",
                 background: GOLD,
-                textDecoration: "none",
-                display: "inline-block",
               }}
               onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLElement).style.background = GOLD_LIGHT)
+                ((e.target as HTMLElement).style.background = GOLD_LIGHT)
               }
               onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLElement).style.background = GOLD)
+                ((e.target as HTMLElement).style.background = GOLD)
               }
             >
               Custom Studio
-            </Link>
+            </button>
           )}
         </nav>
 
@@ -403,20 +401,19 @@ export function Navbar() {
               Connect with Us
             </Link>
             {SHOW_CUSTOMIZATION && (
-              <Link
-                href="/custom-studio"
-                onClick={() => setMobileOpen(false)}
+              <button
+                onClick={() => { setMobileOpen(false); setCustomizeModalOpen(true); }}
                 className="mt-3 text-[12px] uppercase text-white text-center py-3"
                 style={{
                   fontFamily: "'Josefin Sans', sans-serif",
                   letterSpacing: "0.2em",
                   background: GOLD,
-                  textDecoration: "none",
-                  display: "block",
+                  border: "none",
+                  cursor: "pointer",
                 }}
               >
                 Custom Studio
-              </Link>
+              </button>
             )}
             <Show when="signed-out">
               <Link
