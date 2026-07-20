@@ -474,6 +474,10 @@ export default function CustomizePage() {
   const [colorTarget, setColorTarget] = useState<"all"|"front"|"back"|"leftSleeve"|"rightSleeve">("all");
   const [samplerActive, setSamplerActive] = useState(false);
   const [samplerPreview, setSamplerPreview] = useState<string|null>(null);
+  // Eyedropper for the "Choose Colour" modal (Full Body / zone modals) — samples the
+  // flat design canvas, same as the sidebar sampler, so it isn't affected by 3D lighting.
+  const [modalSamplerActive, setModalSamplerActive] = useState(false);
+  const [modalSamplerPreview, setModalSamplerPreview] = useState<string|null>(null);
   // ── Pattern colour channels ───────────────────────────────────────────────
   const [patColorA, setPatColorA] = useState(PAT_COLOR_A_DEFAULT);   // Channel A — dark tones
   const [patColorB, setPatColorB] = useState(PAT_COLOR_B_DEFAULT);   // Channel B — light tones
@@ -4362,6 +4366,55 @@ export default function CustomizePage() {
                     }}
                     onFocus={e=>e.target.style.borderColor=V.ac}/>
                 </div>
+                {/* Flat-canvas eyedropper — samples the actual design texture, not the
+                    lit/shaded 3D render, so results match your uploaded artwork's real hex. */}
+                <button
+                  title="Sample a colour directly from your uploaded design (no 3D lighting effects)"
+                  onClick={()=>{
+                    const fc=fcRef.current as any; if(!fc) return;
+                    fc.renderAll();
+                    const rawEl: HTMLCanvasElement|null = typeof fc.getElement==="function"?fc.getElement():null;
+                    if(!rawEl) return;
+                    setModalSamplerPreview(rawEl.toDataURL("image/png"));
+                    setModalSamplerActive(true);
+                  }}
+                  style={{
+                    display:"flex",alignItems:"center",justifyContent:"center",gap:6,cursor:"pointer",
+                    width:"100%",marginTop:8,padding:"8px 12px",borderRadius:8,
+                    border:`1.5px solid ${V.bd}`,background:V.sf2,
+                    fontFamily:"'Jost',sans-serif",fontSize:10,fontWeight:600,
+                    color:V.tx,letterSpacing:".05em",
+                  }}
+                >🔬 Match Body Color to Logo</button>
+                {/* Sampler overlay — click a pixel on the flat design canvas to apply its exact colour */}
+                {modalSamplerActive&&modalSamplerPreview&&(
+                  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.65)",zIndex:9999,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12}} onClick={()=>setModalSamplerActive(false)}>
+                    <div style={{fontFamily:"'Jost',sans-serif",fontSize:12,color:"#fff",letterSpacing:".06em",textTransform:"uppercase",fontWeight:600}}>
+                      Click anywhere on the design to sample that colour
+                    </div>
+                    <div style={{position:"relative",cursor:"crosshair"}} onClick={e=>{
+                      e.stopPropagation();
+                      const rect=(e.currentTarget as HTMLElement).getBoundingClientRect();
+                      const xRatio=(e.clientX-rect.left)/rect.width;
+                      const yRatio=(e.clientY-rect.top)/rect.height;
+                      const fc=fcRef.current as any;
+                      if(!fc) return;
+                      const rawEl: HTMLCanvasElement|null = typeof fc.getElement==="function"?fc.getElement():null;
+                      if(!rawEl) return;
+                      const ctx=rawEl.getContext("2d"); if(!ctx) return;
+                      const px=Math.round(xRatio*rawEl.width);
+                      const py=Math.round(yRatio*rawEl.height);
+                      const d=ctx.getImageData(px,py,1,1).data;
+                      const toHex=(n:number)=>n.toString(16).padStart(2,"0");
+                      const sampledHex=`#${toHex(d[0])}${toHex(d[1])}${toHex(d[2])}`;
+                      applyCol(sampledHex);
+                      setModalSamplerActive(false);
+                    }}>
+                      <img src={modalSamplerPreview ?? undefined} alt="Design canvas" style={{display:"block",maxWidth:"min(80vw,400px)",maxHeight:"min(80vh,400px)",imageRendering:"pixelated",border:"2px solid rgba(255,255,255,0.3)",borderRadius:4}}/>
+                    </div>
+                    <div style={{fontFamily:"'Jost',sans-serif",fontSize:10,color:"rgba(255,255,255,0.5)",letterSpacing:".04em"}}>Click outside to cancel</div>
+                  </div>
+                )}
               </>);
             })()}
           </div>
