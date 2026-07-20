@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custom Studio — Choose Your Category | Ka.Sha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Montserrat:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+:root{
+  --sand:#f5f3ef;
+  --navy:#0f1622;
+  --gold:#B8925A;
+  --warm-grey:#c8c4bc;
+  --mid:#888;
+  --text:#3a3a3a;
+  --white:#ffffff;
+  --cream:#eceae4;
+  --light-gold:#d4a96a;
+}
+
+html{ scroll-behavior:smooth; }
+body{
+  font-family:'Montserrat', sans-serif;
+  background:var(--sand);
+  color:var(--navy);
+  min-height:100vh;
+}
+
+/* ─── TOP BAR ─── */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  background:rgba(245,243,239,0.96);
+  backdrop-filter:blur(12px);
+  border-bottom:0.5px solid var(--warm-grey);
+  height:64px;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 32px;
+}
+.tb-brand{
+  font-family:'Cormorant Garamond', serif;
+  font-size:22px; font-weight:300; letter-spacing:0.28em;
+  color:var(--navy); text-decoration:none;
+}
+.tb-brand span{ color:var(--gold); }
+.tb-back{
+  font-size:10px; letter-spacing:0.16em; text-transform:uppercase;
+  color:var(--navy); opacity:0.65; text-decoration:none;
+  display:flex; align-items:center; gap:6px; cursor:pointer;
+  background:none; border:none; font-family:inherit;
+}
+.tb-back:hover{ opacity:1; }
+.tb-back svg{ width:12px; height:12px; }
+
+/* ─── PROGRESS ─── */
+.progress-wrap{
+  max-width:640px; margin:0 auto; padding:28px 24px 0;
+  display:flex; align-items:center; justify-content:center; gap:10px;
+}
+.p-step{
+  display:flex; align-items:center; gap:8px;
+  font-size:10px; letter-spacing:0.16em; text-transform:uppercase;
+  color:var(--mid); opacity:0.5;
+}
+.p-step.active{ color:var(--navy); opacity:1; }
+.p-step.done{ color:var(--gold); opacity:1; }
+.p-dot{
+  width:20px; height:20px; border-radius:50%;
+  border:1px solid var(--warm-grey);
+  display:flex; align-items:center; justify-content:center;
+  font-size:9px; color:var(--mid);
+}
+.p-step.active .p-dot{ border-color:var(--navy); color:var(--navy); }
+.p-step.done .p-dot{ border-color:var(--gold); background:var(--gold); color:var(--white); }
+.p-line{ width:36px; height:1px; background:var(--warm-grey); }
+
+/* ─── HEADER ─── */
+.section-head{
+  max-width:640px; margin:0 auto; padding:38px 24px 8px; text-align:center;
+}
+.section-eyebrow{
+  font-size:10px; letter-spacing:0.24em; text-transform:uppercase;
+  color:var(--gold); margin-bottom:10px;
+}
+.section-title{
+  font-family:'Cormorant Garamond', serif; font-weight:300;
+  font-size:34px; line-height:1.15; color:var(--navy);
+}
+.section-sub{
+  font-size:13px; color:var(--mid); margin-top:10px; line-height:1.5;
+}
+
+/* ─── GENDER TABS ─── */
+.gender-tabs{
+  max-width:360px; margin:28px auto 0;
+  display:flex; border:1px solid var(--navy); border-radius:2px; overflow:hidden;
+}
+.gender-tab{
+  flex:1; text-align:center; padding:13px 0;
+  font-size:11px; letter-spacing:0.2em; text-transform:uppercase;
+  background:transparent; color:var(--navy); border:none; cursor:pointer;
+  font-family:'Montserrat', sans-serif; transition:all 0.25s ease;
+}
+.gender-tab.active{ background:var(--navy); color:var(--white); }
+.gender-tab:not(.active):hover{ background:rgba(15,22,34,0.06); }
+
+/* ─── CATEGORY GRID (STEP 1) ─── */
+.stage{ max-width:960px; margin:0 auto; padding:36px 24px 120px; }
+.cat-grid{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
+  gap:18px;
+}
+.cat-card{
+  background:var(--white); border:1px solid var(--warm-grey);
+  padding:30px 20px 24px; text-align:center; cursor:pointer;
+  transition:all 0.25s ease; position:relative;
+}
+.cat-card:hover{ border-color:var(--gold); transform:translateY(-3px); box-shadow:0 10px 24px rgba(15,22,34,0.08); }
+.cat-card.selected{ border-color:var(--gold); background:var(--cream); }
+.cat-icon{ width:46px; height:46px; margin:0 auto 16px; color:var(--navy); }
+.cat-card:hover .cat-icon, .cat-card.selected .cat-icon{ color:var(--gold); }
+.cat-name{
+  font-family:'Cormorant Garamond', serif; font-size:20px; color:var(--navy); margin-bottom:6px;
+}
+.cat-count{ font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--mid); }
+
+/* ─── STEP 2 PANEL ─── */
+.step2{ display:none; }
+.step2.visible{ display:block; animation:fadeUp 0.35s ease; }
+@keyframes fadeUp{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+
+.step2-back{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:10px; letter-spacing:0.14em; text-transform:uppercase;
+  color:var(--mid); background:none; border:none; cursor:pointer;
+  font-family:inherit; margin-bottom:22px;
+}
+.step2-back:hover{ color:var(--navy); }
+.step2-back svg{ width:11px; height:11px; }
+
+.model-grid{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+  gap:16px; margin-bottom:8px;
+}
+.model-card{
+  background:var(--white); border:1px solid var(--warm-grey);
+  cursor:pointer; overflow:hidden; transition:all 0.25s ease;
+}
+.model-card:hover{ border-color:var(--gold); }
+.model-card.selected{ border-color:var(--gold); box-shadow:0 0 0 1px var(--gold); }
+.model-visual{
+  height:150px; background:var(--cream);
+  display:flex; align-items:center; justify-content:center; position:relative;
+}
+.model-visual svg{ width:64px; height:110px; color:var(--navy); opacity:0.8; }
+.model-card.selected .model-visual svg{ color:var(--gold); opacity:1; }
+.model-check{
+  position:absolute; top:10px; right:10px;
+  width:20px; height:20px; border-radius:50%;
+  border:1px solid var(--warm-grey); background:var(--white);
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; color:transparent;
+}
+.model-card.selected .model-check{ background:var(--gold); border-color:var(--gold); color:var(--white); }
+.model-info{ padding:14px 16px 16px; }
+.model-name{ font-size:13px; font-weight:500; color:var(--navy); margin-bottom:4px; }
+.model-feat{ font-size:10.5px; color:var(--mid); line-height:1.5; }
+
+/* PATTERN SWATCH GRID (T-Shirts) */
+.pattern-grid{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(108px, 1fr));
+  gap:14px; margin-bottom:8px;
+}
+.pattern-tile{ text-align:center; cursor:pointer; }
+.pt-swatch{
+  width:100%; aspect-ratio:1; border-radius:50%;
+  border:2px solid transparent; margin-bottom:8px;
+  transition:all 0.2s ease; position:relative;
+}
+.pattern-tile.selected .pt-swatch{ border-color:var(--gold); }
+.pattern-tile.selected .pt-swatch::after{
+  content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  color:var(--white); font-size:16px; background:rgba(15,22,34,0.35); border-radius:50%;
+}
+.pt-name{ font-size:10.5px; color:var(--text); letter-spacing:0.02em; }
+.pt-solid-navy{ background:var(--navy); }
+.pt-argyle{ background:repeating-linear-gradient(45deg, #c4a882 0 10px, #8a6b3f 10px 20px), repeating-linear-gradient(-45deg, transparent 0 18px, rgba(255,255,255,0.25) 18px 20px); }
+.pt-houndstooth{ background:conic-gradient(#0f1622 90deg, #eceae4 90deg 180deg, #0f1622 180deg 270deg, #eceae4 270deg); background-size:14px 14px; }
+.pt-stripe{ background:repeating-linear-gradient(90deg, #0f1622 0 8px, #d4a96a 8px 16px); }
+.pt-check{ background:repeating-linear-gradient(0deg, #3a3a3a 0 2px, transparent 2px 16px), repeating-linear-gradient(90deg, #3a3a3a 0 2px, transparent 2px 16px), #c8c4bc; }
+.pt-paisley{ background:radial-gradient(circle at 30% 30%, #8a6b3f 0 20%, transparent 21%), radial-gradient(circle at 70% 70%, #B8925A 0 24%, transparent 25%), #eceae4; }
+.pt-geo{ background:linear-gradient(45deg, #0f1622 25%, transparent 25%, transparent 75%, #0f1622 75%), linear-gradient(45deg, #0f1622 25%, transparent 25%, transparent 75%, #0f1622 75%); background-size:16px 16px; background-position:0 0, 8px 8px; background-color:#d4a96a; }
+.pt-floral{ background:radial-gradient(circle at 25% 30%, #5a8070 0 18%, transparent 19%), radial-gradient(circle at 70% 60%, #c4a882 0 16%, transparent 17%), #f5f3ef; }
+.pt-dot{ background:radial-gradient(#0f1622 22%, transparent 23%) 0 0/12px 12px, #eceae4; }
+
+/* FIT CHECKBOX GROUP */
+.fit-block{ margin-top:32px; padding-top:26px; border-top:1px solid var(--warm-grey); }
+.fit-label{ font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--navy); margin-bottom:4px; }
+.fit-hint{ font-size:11px; color:var(--mid); margin-bottom:16px; }
+.fit-options{ display:flex; flex-wrap:wrap; gap:12px; }
+.fit-check{
+  display:flex; align-items:center; gap:10px;
+  border:1px solid var(--warm-grey); padding:11px 18px;
+  cursor:pointer; font-size:12px; color:var(--text); background:var(--white);
+  transition:all 0.2s ease;
+}
+.fit-check:hover{ border-color:var(--gold); }
+.fit-check.checked{ border-color:var(--gold); background:var(--cream); }
+.fit-box{
+  width:15px; height:15px; border:1px solid var(--mid); flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:10px; color:transparent;
+}
+.fit-check.checked .fit-box{ background:var(--gold); border-color:var(--gold); color:var(--white); }
+
+/* ─── STICKY FOOTER CTA ─── */
+.footer-cta{
+  position:fixed; bottom:0; left:0; right:0; z-index:60;
+  background:var(--navy); color:var(--white);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 32px; transform:translateY(100%); transition:transform 0.3s ease;
+}
+.footer-cta.visible{ transform:translateY(0); }
+.fc-summary{ font-size:11.5px; letter-spacing:0.03em; opacity:0.85; }
+.fc-summary b{ color:var(--gold); font-weight:500; }
+.fc-btn{
+  background:var(--gold); color:var(--white); border:none;
+  padding:13px 28px; font-size:10.5px; letter-spacing:0.18em; text-transform:uppercase;
+  cursor:pointer; font-family:'Montserrat', sans-serif; transition:opacity 0.2s;
+}
+.fc-btn:hover{ opacity:0.88; }
+
+@media (max-width:520px){
+  .topbar{ padding:0 18px; }
+  .section-title{ font-size:27px; }
+  .footer-cta{ flex-direction:column; align-items:flex-start; gap:10px; padding:14px 18px; }
+  .fc-btn{ width:100%; text-align:center; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="#" class="tb-brand">KA<span>·</span>SHA</a>
+  <button class="tb-back" onclick="location.href='#'">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    Exit Custom Studio
+  </button>
+</div>
+
+<div class="progress-wrap">
+  <div class="p-step active" id="prog-1"><span class="p-dot">1</span>Category</div>
+  <div class="p-line"></div>
+  <div class="p-step" id="prog-2"><span class="p-dot">2</span>Model</div>
+  <div class="p-line"></div>
+  <div class="p-step" id="prog-3"><span class="p-dot">3</span>Customise</div>
+</div>
+
+<!-- ═══ STEP 1 — CATEGORY ═══ -->
+<div id="step1">
+  <div class="section-head">
+    <div class="section-eyebrow">Custom Studio</div>
+    <div class="section-title">What are we<br>building today?</div>
+    <div class="section-sub">Choose a gender and a category. Every piece is yours to configure — from one to five hundred.</div>
+  </div>
+
+  <div class="gender-tabs">
+    <button class="gender-tab active" id="tab-men" onclick="setGender('men')">Men</button>
+    <button class="gender-tab" id="tab-women" onclick="setGender('women')">Women</button>
+  </div>
+
+  <div class="stage">
+    <div class="cat-grid" id="catGrid"></div>
+  </div>
+</div>
+
+<!-- ═══ STEP 2 — MODEL / PATTERN ═══ -->
+<div id="step2" class="step2">
+  <div class="stage" style="padding-top:34px;">
+    <button class="step2-back" onclick="backToCategories()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      Back to categories
+    </button>
+    <div class="section-head" style="padding:0 0 26px; text-align:left; max-width:none;">
+      <div class="section-eyebrow" id="s2-eyebrow">Men · T-Shirts</div>
+      <div class="section-title" id="s2-title" style="font-size:28px;">Choose your pattern</div>
+      <div class="section-sub" id="s2-sub" style="text-align:left; margin-top:8px;">Every pattern shown here can be recoloured, printed with your own artwork, or Pantone-matched in the next step.</div>
+    </div>
+    <div id="s2-body"></div>
+  </div>
+</div>
+
+<div class="footer-cta" id="footerCta">
+  <div class="fc-summary">Selected: <b id="fc-text">—</b></div>
+  <button class="fc-btn" onclick="continueToCustomise()">Continue to Customisation →</button>
+</div>
+
+<script>
+/* ─────────────── DATA ─────────────── */
+const CATEGORIES = {
+  men: [
+    { id:'mt', name:'T-Shirts', count:'9 patterns', icon:'tshirt', type:'pattern',
+      title:'Choose your pattern', sub:'Every pattern can be recoloured, printed with your own artwork, or Pantone-matched next.',
+      items:[
+        {n:'Solid', cls:'pt-solid-navy'}, {n:'Argyle', cls:'pt-argyle'}, {n:'Houndstooth', cls:'pt-houndstooth'},
+        {n:'Club Stripe', cls:'pt-stripe'}, {n:'Glen Check', cls:'pt-check'}, {n:'Paisley', cls:'pt-paisley'},
+        {n:'Geometric', cls:'pt-geo'}, {n:'Tropical', cls:'pt-floral'}, {n:'Micro-Dot', cls:'pt-dot'}
+      ]
+    },
+    { id:'mp', name:'Pants', count:'3 models', icon:'pants', type:'model-fit',
+      title:'Choose your pant model', sub:'Pick a model, then select the fit or fits you want us to prepare for review.',
+      items:[
+        {n:'Pro Tour Trouser', f:'Zip-off legs · Gripper waist · 3-slot tee holder'},
+        {n:'Classic Chino Trouser', f:'Fixed leg · Gripper waist · Flat front'},
+        {n:'Tapered Jogger', f:'Elastic cuff · Gripper waist · Zip pocket'}
+      ],
+      fits:['Athletic','Classic','Relaxed']
+    },
+    { id:'ms', name:'Shorts', count:'3 models', icon:'shorts', type:'model',
+      title:'Choose your shorts model', sub:'Pick a silhouette. Fit and length details follow in the next step.',
+      items:[
+        {n:'Tour Short', f:'9" inseam · Ball pocket · 4-way stretch'},
+        {n:'Classic Short', f:'7" inseam · Flat front · Moisture-wicking'},
+        {n:'Performance Short', f:'8" inseam · Zip pocket · UV 40+'}
+      ]
+    }
+  ],
+  women: [
+    { id:'wt', name:'T-Shirts', count:'9 patterns', icon:'tshirt', type:'pattern',
+      title:'Choose your pattern', sub:'Every pattern can be recoloured, printed with your own artwork, or Pantone-matched next.',
+      items:[
+        {n:'Solid', cls:'pt-solid-navy'}, {n:'Argyle', cls:'pt-argyle'}, {n:'Houndstooth', cls:'pt-houndstooth'},
+        {n:'Club Stripe', cls:'pt-stripe'}, {n:'Glen Check', cls:'pt-check'}, {n:'Paisley', cls:'pt-paisley'},
+        {n:'Geometric', cls:'pt-geo'}, {n:'Tropical', cls:'pt-floral'}, {n:'Micro-Dot', cls:'pt-dot'}
+      ]
+    },
+    { id:'ws', name:'Shorts', count:'2 models', icon:'shorts', type:'model',
+      title:'Choose your shorts model', sub:'Pick a silhouette. Fit and length details follow in the next step.',
+      items:[
+        {n:'Tour Short', f:'7" inseam · Ball pocket · 4-way stretch'},
+        {n:'Classic Short', f:'6" inseam · Flat front · Moisture-wicking'}
+      ]
+    },
+    { id:'wk', name:'Skorts', count:'2 models', icon:'skort', type:'model',
+      title:'Choose your skort model', sub:'Pick a silhouette. Fit and length details follow in the next step.',
+      items:[
+        {n:'Pro Tour Skort', f:'Inner shorts panel · Gripper waist · Full swing range'},
+        {n:'Pleated Skort', f:'Inner shorts panel · Box pleat · Clubhouse finish'}
+      ]
+    },
+    { id:'wd', name:'Dress', count:'2 models', icon:'dress', type:'model',
+      title:'Choose your dress model', sub:'Pick a silhouette. Fit and length details follow in the next step.',
+      items:[
+        {n:'Classic Golf Dress', f:'Inner shorts panel · Sleeveless · UV 40+'},
+        {n:'Wrap Golf Dress', f:'Inner shorts panel · Wrap front · 4-way stretch'}
+      ]
+    },
+    { id:'wp', name:'Pants', count:'2 models', icon:'pants', type:'model-fit',
+      title:'Choose your pant model', sub:'Pick a model, then select the fit or fits you want us to prepare for review.',
+      items:[
+        {n:'Pro Tour Trouser', f:'Zip-off legs · Gripper waist · 3-slot tee holder'},
+        {n:'Cropped Trouser', f:'Ankle length · Gripper waist · Flat front'}
+      ],
+      fits:['Athletic','Classic','Relaxed']
+    }
+  ]
+};
+
+const ICONS = {
+  tshirt:`<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="3"><path d="M35 12 L15 28 L8 42 L22 48 L22 90 L78 90 L78 48 L92 42 L85 28 L65 12 L58 20 Q50 26 42 20 Z"/></svg>`,
+  pants:`<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="3"><path d="M28 10 H72 L75 42 L82 90 L64 90 L54 46 L46 90 L28 90 L35 42 Z"/><path d="M28 10 H72" /></svg>`,
+  shorts:`<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="3"><path d="M28 10 H72 L76 55 L88 90 H68 L58 58 L50 58 L40 90 H20 L32 55 Z"/></svg>`,
+  skort:`<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="3"><path d="M22 10 H78 L88 62 H12 Z"/><path d="M35 62 L28 90 M65 62 L72 90 M50 62 L50 90"/></svg>`,
+  dress:`<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="3"><path d="M38 10 L28 26 L18 92 H82 L72 26 L62 10 L54 18 Q50 22 46 18 Z"/></svg>`
+};
+
+let gender = 'men';
+let currentCat = null;
+let selectedModelIdx = null;
+let selectedFits = new Set();
+
+function setGender(g){
+  gender = g;
+  document.getElementById('tab-men').classList.toggle('active', g==='men');
+  document.getElementById('tab-women').classList.toggle('active', g==='women');
+  renderCategories();
+}
+
+function renderCategories(){
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = '';
+  CATEGORIES[gender].forEach(cat=>{
+    const card = document.createElement('div');
+    card.className = 'cat-card';
+    card.onclick = ()=>openCategory(cat.id);
+    card.innerHTML = `
+      <div class="cat-icon">${ICONS[cat.icon]}</div>
+      <div class="cat-name">${cat.name}</div>
+      <div class="cat-count">${cat.count}</div>`;
+    grid.appendChild(card);
+  });
+}
+
+function findCat(id){ return CATEGORIES[gender].find(c=>c.id===id); }
+
+function openCategory(id){
+  currentCat = findCat(id);
+  selectedModelIdx = null;
+  selectedFits = new Set();
+
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').classList.add('visible');
+  document.getElementById('prog-1').classList.add('done');
+  document.getElementById('prog-1').classList.remove('active');
+  document.getElementById('prog-2').classList.add('active');
+
+  document.getElementById('s2-eyebrow').textContent = (gender==='men'?'Men':'Women') + ' · ' + currentCat.name;
+  document.getElementById('s2-title').textContent = currentCat.title;
+  document.getElementById('s2-sub').textContent = currentCat.sub;
+
+  const body = document.getElementById('s2-body');
+  body.innerHTML = '';
+
+  if(currentCat.type === 'pattern'){
+    const grid = document.createElement('div');
+    grid.className = 'pattern-grid';
+    currentCat.items.forEach((p, i)=>{
+      const tile = document.createElement('div');
+      tile.className = 'pattern-tile';
+      tile.onclick = ()=>selectModel(i, tile, p.n);
+      tile.innerHTML = `<div class="pt-swatch ${p.cls}"></div><div class="pt-name">${p.n}</div>`;
+      grid.appendChild(tile);
+    });
+    body.appendChild(grid);
+  } else {
+    const grid = document.createElement('div');
+    grid.className = 'model-grid';
+    currentCat.items.forEach((m, i)=>{
+      const card = document.createElement('div');
+      card.className = 'model-card';
+      card.onclick = ()=>selectModel(i, card, m.n);
+      card.innerHTML = `
+        <div class="model-visual">${ICONS[currentCat.icon]}<div class="model-check">✓</div></div>
+        <div class="model-info">
+          <div class="model-name">${m.n}</div>
+          <div class="model-feat">${m.f}</div>
+        </div>`;
+      grid.appendChild(card);
+    });
+    body.appendChild(grid);
+
+    if(currentCat.type === 'model-fit'){
+      const fitBlock = document.createElement('div');
+      fitBlock.className = 'fit-block';
+      fitBlock.innerHTML = `
+        <div class="fit-label">Fit</div>
+        <div class="fit-hint">Select one or more fits to compare — Athletic, Classic and Relaxed are each a distinct cut, not a size adjustment.</div>
+        <div class="fit-options" id="fitOptions"></div>`;
+      body.appendChild(fitBlock);
+      const opts = fitBlock.querySelector('#fitOptions');
+      currentCat.fits.forEach(f=>{
+        const el = document.createElement('div');
+        el.className = 'fit-check';
+        el.onclick = ()=>toggleFit(f, el);
+        el.innerHTML = `<span class="fit-box">✓</span>${f} Fit`;
+        opts.appendChild(el);
+      });
+    }
+  }
+  window.scrollTo({top:0, behavior:'smooth'});
+  updateFooter();
+}
+
+function selectModel(idx, el, name){
+  document.querySelectorAll('.model-card, .pattern-tile').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedModelIdx = idx;
+  updateFooter();
+}
+
+function toggleFit(f, el){
+  if(selectedFits.has(f)){ selectedFits.delete(f); el.classList.remove('checked'); }
+  else { selectedFits.add(f); el.classList.add('checked'); }
+  updateFooter();
+}
+
+function updateFooter(){
+  const footer = document.getElementById('footerCta');
+  const fcText = document.getElementById('fc-text');
+  if(selectedModelIdx === null){
+    footer.classList.remove('visible');
+    return;
+  }
+  const label = currentCat.type === 'pattern' ? currentCat.items[selectedModelIdx].n : currentCat.items[selectedModelIdx].n;
+  let text = `${gender==='men'?'Men':'Women'} · ${currentCat.name} · ${label}`;
+  if(currentCat.type === 'model-fit'){
+    text += selectedFits.size ? ` · ${[...selectedFits].join(', ')}` : ' · select a fit';
+  }
+  fcText.textContent = text;
+  footer.classList.add('visible');
+}
+
+function backToCategories(){
+  document.getElementById('step2').classList.remove('visible');
+  document.getElementById('step1').style.display = 'block';
+  document.getElementById('prog-1').classList.add('active');
+  document.getElementById('prog-1').classList.remove('done');
+  document.getElementById('prog-2').classList.remove('active');
+  document.getElementById('footerCta').classList.remove('visible');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function continueToCustomise(){
+  if(currentCat.type === 'model-fit' && selectedFits.size === 0){
+    alert('Please select at least one fit before continuing.');
+    return;
+  }
+  document.getElementById('prog-2').classList.add('done');
+  document.getElementById('prog-2').classList.remove('active');
+  document.getElementById('prog-3').classList.add('active');
+  alert('Next: the 6-step Customisation Studio (Colour → Print & Pattern → Logo → Fit & Size → Text → Trim & Collar) opens here, pre-loaded with your selection.');
+}
+
+renderCategories();
+</script>
+
+</body>
+</html>
