@@ -1,4 +1,5 @@
 import { logger } from "../../lib/logger";
+import { VTON_CATEGORY_TUNING } from "./types";
 
 const REPLICATE_MODEL = "cuuupid/idm-vton";
 const API_BASE = "https://api.replicate.com/v1";
@@ -58,19 +59,29 @@ export interface StartPredictionParams {
   garmentImageUrl: string;
   garmentDescription: string;
   vtonCategory: "upper_body" | "lower_body" | "dresses";
-  /** Crop to the relevant body region before processing. Improves lower-body accuracy. */
+  /** Override the per-category default crop setting from VTON_CATEGORY_TUNING. */
   crop?: boolean;
+  /** Override the per-category default step count from VTON_CATEGORY_TUNING. */
+  steps?: number;
 }
 
 /**
  * POST a new IDM-VTON prediction to Replicate and return its prediction ID.
  * Does NOT poll — call `pollPrediction` to wait for the result.
  * Throws if Replicate rejects the request (4xx/5xx / network error).
+ *
+ * Steps and crop default to the per-category tuning in VTON_CATEGORY_TUNING —
+ * lower_body uses higher step count + crop=true to prevent shorts/skorts being
+ * rendered as full-length trousers.
  */
 export async function startIdmVtonPrediction(
   params: StartPredictionParams,
 ): Promise<string> {
   const { humanImageUrl, garmentImageUrl, garmentDescription, vtonCategory } = params;
+  const tuning = VTON_CATEGORY_TUNING[vtonCategory];
+  const crop  = params.crop  ?? tuning.crop;
+  const steps = params.steps ?? tuning.steps;
+
   const version = await getModelVersionId();
   const prediction = await replicateFetch<ReplicatePrediction>("/predictions", {
     method: "POST",
@@ -81,14 +92,14 @@ export async function startIdmVtonPrediction(
         garm_img: garmentImageUrl,
         garment_des: garmentDescription,
         category: vtonCategory,
-        crop: crop ?? false,
+        crop,
         force_dc: vtonCategory === "dresses",
-        steps: 20,
+        steps,
         seed: Math.floor(Math.random() * 1_000_000),
       },
     }),
   });
-  logger.info({ predictionId: prediction.id, vtonCategory }, "vton: prediction started");
+  logger.info({ predictionId: prediction.id, vtonCategory, steps, crop }, "vton: prediction started");
   return prediction.id;
 }
 

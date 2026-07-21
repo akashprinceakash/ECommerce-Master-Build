@@ -1,0 +1,355 @@
+backend/src/services/vton/types.ts (full file)
+ts
+export type GarmentRole = "top" | "bottom" | "dress";
+
+export const ROLE_TO_VTON_CATEGORY: Record<GarmentRole, "upper_body" | "lower_body" | "dresses"> = {
+  top: "upper_body",
+  bottom: "lower_body",
+  dress: "dresses",
+};
+
+/**
+ * Per-category IDM-VTON tuning. Left at low step counts with crop off, the
+ * model defaults to "safe" full-length garments (e.g. rendering shorts as
+ * full trousers), since it was trained mostly on full-length lower-body
+ * references. Higher steps + crop=true for lower_body meaningfully improves
+ * garment-length fidelity (shorts/skorts staying short instead of extending).
+ */
+export const VTON_CATEGORY_TUNING: Record<"upper_body" | "lower_body" | "dresses", { steps: number; crop: boolean }> = {
+  upper_body: { steps: 30, crop: false },
+  lower_body: { steps: 35, crop: true },
+  dresses: { steps: 30, crop: false },
+};
+
+/**
+ * Maps raw catalog categories to an explicit length/style hint appended to
+ * the garment description sent to IDM-VTON. This is the main lever for
+ * getting shorts/skorts to render short instead of as full trousers, and
+ * for keeping dresses/skirts distinct from pants. Keys must match the
+ * category strings used by classifyProductRole / the frontend's
+ * TOP_CATEGORIES / BOTTOM_CATEGORIES / DRESS_CATEGORIES sets.
+ */
+const CATEGORY_LENGTH_HINTS: Record<string, string> = {
+  // Tops
+  "t-shirt": "a short-sleeve t-shirt",
+  "polo": "a short-sleeve polo shirt with a collar",
+  "fabric-tshirt": "a short-sleeve t-shirt",
+  "pattern": "a patterned short-sleeve shirt",
+  "shirts": "a shirt",
+  // Bottoms
+  "pants": "full-length trousers reaching the ankle",
+  "trousers": "full-length tailored trousers reaching the ankle",
+  "shorts": "short shorts ending above the knee — NOT full-length trousers",
+  "skort": "a short skort (skirt-shorts hybrid) ending above the knee — NOT full-length trousers",
+  "skorts": "a short skort (skirt-shorts hybrid) ending above the knee — NOT full-length trousers",
+  "skirts": "a skirt — NOT trousers or pants",
+  // Dresses
+  "dress": "a full dress",
+  "dresses": "a full dress",
+  "golf dress": "a golf dress",
+  "golf dresses": "a golf dress",
+};
+
+/**
+ * Build the `garment_des` text prompt sent to IDM-VTON. Combines the
+ * product's display name with an explicit length/style hint derived from
+ * its raw catalog category — IDM-VTON leans on this text to decide garment
+ * length/silhouette, and otherwise defaults toward trousers.
+ */
+export function buildGarmentDescription(name: string, category: string): string {
+  const hint = CATEGORY_LENGTH_HINTS[category.trim().toLowerCase()];
+  return hint ? `${name}, ${hint}` : name;
+}
+
+export interface TryOnGarment {
+  productId: number;
+  role: GarmentRole;
+  name: string;
+  imageUrl: string;
+  /** Raw catalog category (e.g. "shorts", "skort", "pants") — used to build
+   *  a length/style-aware garment_des so IDM-VTON doesn't default to
+   *  full-length trousers for short garments. */
+  category: string;
+}
+
+export type TryOnJobStatus = "pending" | "processing" | "succeeded" | "failed";
+
+export interface TryOnJob {
+  id: string;
+  userId: string;
+  status: TryOnJobStatus;
+  garments: TryOnGarment[];
+  garmentCount: number;
+  processedCount: number;
+  resultImageUrl: string | null;
+  error: string | null;
+  createdAt: number;
+  updatedAt: number;
+  generationLogId: number | null;
+}
+backend/src/services/vton/replicate.ts (changed parts)
+ts
+import { logger } from "../../lib/logger";
+import { VTON_CATEGORY_TUNING } from "./types";
+
+// ...unchanged code above...
+
+export interface StartPredictionParams {
+  humanImageUrl: string;
+  garmentImageUrl: string;
+  garmentDescription: string;
+  vtonCategory: "upper_body" | "lower_body" | "dresses";
+  /** Optional overrides — default to the per-category tuning in types.ts. */
+  steps?: number;
+  crop?: boolean;
+}
+
+export async function startIdmVtonPrediction(
+  params: StartPredictionParams,
+): Promise<string> {
+  const { humanImageUrl, garmentImageUrl, garmentDescription, vtonCategory } = params;
+  const tuning = VTON_CATEGORY_TUNING[vtonCategory];
+  const steps = params.steps ?? tuning.steps;
+  const crop = params.crop ?? tuning.crop;
+
+  const version = await getModelVersionId();
+  const prediction = await replicateFetch<ReplicatePrediction>("/predictions", {
+    method: "POST",
+    body: JSON.stringify({
+      version,
+      input: {
+        human_img: humanImageUrl,
+        garm_img: garmentImageUrl,
+        garment_des: garmentDescription,
+        category: vtonCategory,
+        crop,
+        force_dc: vtonCategory === "dresses",
+        steps,
+        seed: Math.floor(Math.random() * 1_000_000),
+      },
+    }),
+  });
+  logger.info({ predictionId: prediction.id, vtonCategory, steps, crop }, "vton: prediction started");
+  return prediction.id;
+}
+
+(pollPrediction and runIdmVton are unchanged.)
+
+backend/src/services/vton/jobQueue.ts (changed part inside processTryOnJob)
+ts
+import { ROLE_TO_VTON_CATEGORY, buildGarmentDescription, type TryOnGarment, type TryOnJob } from "./types";
+
+// ...
+
+    for (let i = 0; i < job.garments.length; i++) {
+      const garment = job.garments[i]!;
+      const vtonCategory = ROLE_TO_VTON_CATEGORY[garment.role];
+      const garmentDescription = buildGarmentDescription(garment.name, garment.category);
+
+      let predictionId: string;
+      if (i === 0 && firstPredictionId) {
+        predictionId = firstPredictionId;
+      } else {
+        predictionId = await startIdmVtonPrediction({
+          humanImageUrl: currentHumanImage,
+          garmentImageUrl: garment.imageUrl,
+          garmentDescription,
+          vtonCategory,
+        });
+      }
+
+      const { resultUrl, predictTimeSecs } = await pollPrediction(predictionId);
+      totalPredictTimeSecs += predictTimeSecs;
+      currentHumanImage = resultUrl;
+      job.processedCount += 1;
+      job.updatedAt = Date.now();
+    }
+backend/src/routes/lookbook.ts (two small edits)
+Add category when building each TryOnGarment:
+ts
+    const rawUrl = product.thumbnailUrl || "";
+    if (!rawUrl) {
+      res.status(400).json({ error: `"${product.name}" has no image available for try-on` });
+      return;
+    }
+    const imageUrl = toAbsoluteUrl(rawUrl, req.hostname);
+    garments.push({ productId: product.id, role, name: product.name, imageUrl, category: product.category });
+Use the same rich description for the synchronous first-garment call (previously used the raw name only):
+ts
+import { buildGarmentDescription, ROLE_TO_VTON_CATEGORY } from "../services/vton/types";
+
+// ...
+
+  const firstGarment = garments[0]!;
+  let firstPredictionId: string;
+  try {
+    firstPredictionId = await startIdmVtonPrediction({
+      humanImageUrl: personImageUrl,
+      garmentImageUrl: firstGarment.imageUrl,
+      garmentDescription: buildGarmentDescription(firstGarment.name, firstGarment.category),
+      vtonCategory: ROLE_TO_VTON_CATEGORY[firstGarment.role],
+    });
+What this does and doesn't guarantee
+Applies to every combination you asked about — t-shirt/polo + pants, + shorts, + skort, or a standalone full dress — since buildGarmentDescription covers all those categories and the tuning map applies per VTON category (upper_body/lower_body/dresses), not per specific product.
+Works the same for a client's own uploaded photo or the AI avatar — the fix is in how the garment is described and processed, not in which human image is used, so it applies uniformly to humanImageUrl from /api/lookbook-photo or the stock avatar.
+What it fixes: the model previously had almost no signal that "Women - Golf - Skorts" ≠ full trousers, and ran the second-step inference at lower step count without crop. This directly targets the "shorts became long pink pants" failure.
+What it doesn't fully eliminate: for two-item outfits (top+bottom), step 2 still runs IDM-VTON against the synthetic output of step 1 rather than the original photo (the currentHumanImage = resultUrl chaining). That remains a real, if reduced, risk of color bleed or misparsing on some photos/poses. If you still see occasional issues after this deploy, the next-level fix is running both garments independently against the original photo and compositing the two results at the waistline — that's a bigger change (needs image compositing with sharp, and reliable waist-position handling across arbitrary user photos) and I'd want to test the above first before investing in it.
+
+Want me to also add basic logging/alerting so you can see how often 2-garment jobs still misbehave after this ships, so we know if the composite approach is actually needed?
+
+Identified missing product category causing frontend visibility issue
+Identified missing product category causing frontend visibility issue
+
+Good — this clarifies most of it. Comparing your actual data against the hint map:
+
+category	count	in CATEGORY_LENGTH_HINTS?	in frontend TOP/BOTTOM/DRESS_CATEGORIES?
+dress	8	✅	✅ (DRESS_CATEGORIES)
+polo	41	✅	✅ (TOP_CATEGORIES)
+shorts	15	✅	✅ (BOTTOM_CATEGORIES)
+skorts	1	✅	✅ (BOTTOM_CATEGORIES)
+t-shirt	21	✅	✅ (TOP_CATEGORIES)
+trousers	9	✅	✅ (BOTTOM_CATEGORIES)
+q_club	4	❌ missing	❌ missing
+
+6 of 7 already line up cleanly — no changes needed there. But q_club isn't in either list, and that's actually a bigger issue than just missing a length hint:
+
+Looking back at the frontend code you shared:
+
+ts
+const TOP_CATEGORIES = new Set(["t-shirt", "polo", "fabric-tshirt", "pattern", "shirts"]);
+const BOTTOM_CATEGORIES = new Set(["pants", "trousers", "shorts", "skort", "skorts", "skirts"]);
+const DRESS_CATEGORIES = new Set(["dress", "dresses", "golf dress", "golf dresses"]);
+
+categoryRole() returns null for anything not in these sets — which means those 4 q_club products currently don't even appear in the Tops/Bottoms/Dresses rails in the Lookbook Style Studio at all. Users can't select them today, regardless of my backend fix. (Backend-side, classifyProductRole in classifier.ts — which I still haven't seen — presumably has the same gap, since lookbook.ts returns a 400 "not yet supported for virtual try-on" for any role it can't classify.)
+
+Before I add a hint for it, I need to know what q_club actually is — the name suggests something like a "Quarter-Zip" or a branded "Q Club" line, but I don't want to guess wrong since it changes:
+
+which Role bucket it belongs to (top vs. bottom vs. dress) in both the frontend sets and classifyProductRole
+what length/style hint to give IDM-VTON (e.g. a quarter-zip pullover needs a very different description than a polo)
+
+Could you tell me:
+
+What q_club products actually are (e.g. product names/examples), and
+Share backend/src/services/vton/classifier.ts so I can see how (or whether) it's currently classified server-side?
+
+Once I have that, I'll add it consistently to TOP_CATEGORIES/BOTTOM_CATEGORIES/DRESS_CATEGORIES (frontend), classifyProductRole (backend), and CATEGORY_LENGTH_HINTS (backend) in one pass — otherwise fixing only one place will leave a mismatch between what the UI shows and what the API accepts.
+
+qclub is clients separate customers where they need bulk orders of t-shirts and pants without customization so that's why created separate way for qclub 
+
+import type { GarmentRole } from "./types";
+// Mirrors the category groupings used on the storefront (see
+// artifacts/kasha/src/pages/products.tsx) so a product's DB category
+// deterministically maps to a VTON garment role.
+const TOP_CATEGORIES = new Set(["t-shirt", "polo", "fabric-tshirt", "pattern", "shirts"]);
+const BOTTOM_CATEGORIES = new Set(["pants", "trousers", "shorts", "skort", "skorts", "skirts"]);
+const DRESS_CATEGORIES = new Set(["dress", "dresses", "golf dress", "golf dresses"]);
+/**
+ * Classify a product's DB category into a try-on garment role.
+ * Returns null for categories not yet supported by the try-on pipeline
+ * (e.g. outerwear like "jacket", accessories, shoes, bags).
+ */
+export function classifyProductRole(category: string | null | undefined): GarmentRole | null {
+  const c = (category ?? "").toLowerCase().trim();
+  if (TOP_CATEGORIES.has(c)) return "top";
+  if (BOTTOM_CATEGORIES.has(c)) return "bottom";
+  if (DRESS_CATEGORIES.has(c)) return "dress";
+  return null;
+}
+
+Show more
+Identified ambiguity in bulk category, recommended supplementary fields for classification
+Identified ambiguity in bulk category, recommended supplementary fields for classification
+
+That explains the count (4 items) but creates a real classification problem: category = "q_club" conflates both t-shirts and pants under one tag, with no way to tell which is which from category alone. If I just add "q_club" to one of TOP_CATEGORIES/BOTTOM_CATEGORIES, I'll misclassify roughly half of them — e.g. a q_club pant sent to Replicate as role: "top" → vtonCategory: "upper_body". That's the exact same failure shape as your original bug report (wrong garment forced into the wrong body region), just introduced from a different angle.
+
+Since category can't disambiguate these, I need a different column to key off. Looking at your schema, the candidates are:
+
+product_type — likely something like "t-shirt" / "pants" even when category = "q_club"
+sub_type — possibly a finer distinction
+Product name — least reliable (free text), only worth using as a last-resort fallback
+
+Could you run this and share the output for just the 4 q_club rows:
+
+sql
+SELECT id, name, category, product_type, sub_type, gender
+FROM products
+WHERE category = 'q_club';
+
+Once I see whether product_type/sub_type reliably distinguishes "t-shirt" from "pants" for these 4 rows, I'll update classifyProductRole to:
+
+Check category first for the normal catalog (unchanged — no risk to your existing 94 non-q_club products), and
+For category === "q_club", fall back to classifying via product_type/sub_type instead, so each item still lands in the correct top/bottom role.
+
+I'll mirror the same logic in the frontend's categoryRole() so the Tops/Bottoms panels in the Style Studio also show these correctly (right now, as you can see, q_club items don't show up in either rail since category alone returns null) — and extend CATEGORY_LENGTH_HINTS/buildGarmentDescription accordingly so the IDM-VTON prompt still gets the right length/style hint for whichever underlying type each q_club item actually is.
+
+#    id    name    category    product_type    sub_type    gender
+1    90    Men - Golf - Polo    q_club        printed    
+2    94    Men - Golf - Polo    q_club        printed    men
+3    93    Men - Golf - Polo    q_club        printed    men
+4    95    Men - Golf - Polo    q_club        printed    men
+
+Identified data limitation and devised keyword-matching workaround solution
+Identified data limitation and devised keyword-matching workaround solution
+
+This changes the picture: product_type is empty and sub_type is "printed" for all 4 — that's a print style, not a garment type, so it can't disambiguate top vs. bottom either. The only place the garment type actually appears is in name — "Men - Golf - Polo" — for every single one of these rows. So right now, all 4 existing q_club products are polos (tops), and there are no q_club pants in the database yet, despite your bulk-order use case eventually including them.
+
+That means I can't build a reliable structural rule today — there's no clean column to key off for future q_club pants, only free-text name. Two honest options:
+
+Option A — Fix the data going forward (recommended):
+Have whoever uploads q_club bulk orders also set product_type (e.g. "t-shirt" or "pants") even though category stays "q_club" for the bulk/no-customization flag. Then classifyProductRole can safely branch on product_type for q_club rows. This is a one-time process change on your product-upload side, not code — but it's the only fix that won't break the next time someone uploads q_club trousers.
+
+Option B — Fragile stopgap using name keyword matching, so the 4 existing polos work today and it degrades gracefully (returns null → "not yet supported" — same as now) if a future q_club pant doesn't match a known keyword, rather than silently misclassifying it:
+
+ts
+import type { GarmentRole } from "./types";
+
+const TOP_CATEGORIES = new Set(["t-shirt", "polo", "fabric-tshirt", "pattern", "shirts"]);
+const BOTTOM_CATEGORIES = new Set(["pants", "trousers", "shorts", "skort", "skorts", "skirts"]);
+const DRESS_CATEGORIES = new Set(["dress", "dresses", "golf dress", "golf dresses"]);
+
+/**
+ * "q_club" is a bulk-order/no-customization catalog flag, not a garment
+ * type — it can hold t-shirts, polos, or pants, and neither `product_type`
+ * nor `sub_type` reliably distinguishes them (as of writing, sub_type is
+ * just a print style like "printed"). Until product_type is populated for
+ * q_club uploads, we fall back to keyword-matching the product name.
+ * This is intentionally conservative: an unmatched name returns null
+ * (same "not yet supported" behavior as before) rather than guessing.
+ */
+const QCLUB_TOP_KEYWORDS = ["polo", "t-shirt", "tshirt", "shirt"];
+const QCLUB_BOTTOM_KEYWORDS = ["trouser", "pant", "short", "skort"];
+
+function classifyQClubByName(name: string | null | undefined): GarmentRole | null {
+  const n = (name ?? "").toLowerCase();
+  if (QCLUB_TOP_KEYWORDS.some(k => n.includes(k))) return "top";
+  if (QCLUB_BOTTOM_KEYWORDS.some(k => n.includes(k))) return "bottom";
+  return null;
+}
+
+/**
+ * Classify a product's DB `category` into a try-on garment role.
+ * Returns null for categories not yet supported by the try-on pipeline
+ * (e.g. outerwear like "jacket", accessories, shoes, bags).
+ */
+export function classifyProductRole(
+  category: string | null | undefined,
+  name?: string | null,
+): GarmentRole | null {
+  const c = (category ?? "").toLowerCase().trim();
+  if (TOP_CATEGORIES.has(c)) return "top";
+  if (BOTTOM_CATEGORIES.has(c)) return "bottom";
+  if (DRESS_CATEGORIES.has(c)) return "dress";
+  if (c === "q_club") return classifyQClubByName(name);
+  return null;
+}
+
+This requires one small call-site change in lookbook.ts — pass product.name through:
+
+ts
+const role = classifyProductRole(product.category, product.name);
+
+And the frontend's categoryRole() in the Lookbook page needs the same q_club branch (it currently only checks category, so q_club polos still won't show up in the Tops rail otherwise) — plus buildGarmentDescription needs a "q_club" fallback that also reads the name, since category alone gives it nothing to key a length hint off of.
+
+Given the fragility of B, which do you want to do — push for the product_type fix on the upload side (cleaner, no code fragility), or ship the name-matching stopgap now and revisit once uploads are fixed? I can implement either, but I'd lean toward B only as a temporary bridge, not the permanent answer, since it'll silently stop working the moment someone names a product without "polo/pant/short/trouser" in the name.
+
+

@@ -14,6 +14,23 @@ export const ROLE_TO_VTON_CATEGORY: Record<GarmentRole, "upper_body" | "lower_bo
   dress: "dresses",
 };
 
+/**
+ * Per-category IDM-VTON inference tuning.
+ *
+ * lower_body uses more steps + crop=true because the model was trained mostly
+ * on full-length lower-body references and defaults to "safe" trousers. Higher
+ * step count + crop gives it a tighter look at the garment region and
+ * meaningfully improves shorts/skort length fidelity.
+ */
+export const VTON_CATEGORY_TUNING: Record<
+  "upper_body" | "lower_body" | "dresses",
+  { steps: number; crop: boolean }
+> = {
+  upper_body: { steps: 30, crop: false },
+  lower_body: { steps: 35, crop: true  },
+  dresses:    { steps: 30, crop: false },
+};
+
 export interface TryOnGarment {
   productId: number;
   role: GarmentRole;
