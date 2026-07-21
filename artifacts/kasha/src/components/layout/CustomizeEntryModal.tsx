@@ -95,6 +95,15 @@ function buildHref(productId: number, sku: string): string {
   return `/products/${productId}/customize?entry=1&style=solid${designParam}`;
 }
 
+// ── Modal category key → product.category values ─────────────────────────────
+const MODAL_CAT_TO_PRODUCT_CAT: Record<string, string[]> = {
+  tshirts: ["polo", "t-shirt", "jacket", "hoodie"],
+  pants:   ["trousers"],
+  shorts:  ["shorts"],
+  skorts:  ["skorts"],
+  dresses: ["dress"],
+};
+
 // ── Product type ──────────────────────────────────────────────────────────────
 type AnyProduct = {
   id: number;
@@ -104,22 +113,40 @@ type AnyProduct = {
   thumbnailUrl?: string | null;
   available: boolean;
   gender?: string | null;
+  category?: string | null;
 };
 
 // ── Resolver helpers ──────────────────────────────────────────────────────────
-function findFirstByType(products: AnyProduct[], gender: Gender, skuType: "solid" | "print"): AnyProduct | null {
-  // Prefer gender-specific product; fall back to ungendered
+function matchesModalCategory(p: AnyProduct, modalCategory: string): boolean {
+  const allowed = MODAL_CAT_TO_PRODUCT_CAT[modalCategory];
+  if (!allowed) return true; // unknown category — no filter
+  return allowed.includes((p.category ?? "").toLowerCase());
+}
+
+function findFirstByType(
+  products: AnyProduct[],
+  gender: Gender,
+  skuType: "solid" | "print",
+  modalCategory: string,
+): AnyProduct | null {
+  const inCat = (p: AnyProduct) => matchesModalCategory(p, modalCategory);
+  const bySkuType = (p: AnyProduct) => parseSku(p.sku ?? "").type === skuType;
+  // Prefer gender-specific product in category; fall back to same category ungendered; then any gender/category
   return (
-    products.find(p => p.available && p.gender === gender && parseSku(p.sku ?? "").type === skuType) ??
-    products.find(p => p.available && !p.gender      && parseSku(p.sku ?? "").type === skuType) ??
+    products.find(p => p.available && p.gender === gender && inCat(p) && bySkuType(p)) ??
+    products.find(p => p.available && !p.gender            && inCat(p) && bySkuType(p)) ??
     null
   );
 }
 
-function findPatterns(products: AnyProduct[], gender: Gender): AnyProduct[] {
-  const byGender = products.filter(p => p.available && p.gender === gender && parseSku(p.sku ?? "").type === "pattern");
+function findPatterns(products: AnyProduct[], gender: Gender, modalCategory: string): AnyProduct[] {
+  const inCat = (p: AnyProduct) => matchesModalCategory(p, modalCategory);
+  const byGender = products.filter(p => p.available && p.gender === gender && inCat(p) && parseSku(p.sku ?? "").type === "pattern");
   if (byGender.length > 0) return byGender;
-  // Fall back to all patterns if none are gender-tagged (legacy data)
+  // Fall back to all patterns in the same category if none are gender-tagged
+  const inCatAny = products.filter(p => p.available && inCat(p) && parseSku(p.sku ?? "").type === "pattern");
+  if (inCatAny.length > 0) return inCatAny;
+  // Final fallback: all patterns (legacy data with no category)
   return products.filter(p => p.available && parseSku(p.sku ?? "").type === "pattern");
 }
 
@@ -368,7 +395,7 @@ function StyleStep({ category, gender, allProducts, onSelect, scrollRef, scroll 
 
   for (const def of defs) {
     if (def.resolver.kind === "patternsAll") {
-      const patterns = findPatterns(allProducts, gender);
+      const patterns = findPatterns(allProducts, gender, category);
       if (patterns.length > 0) {
         for (const p of patterns) {
           tiles.push({
@@ -385,7 +412,7 @@ function StyleStep({ category, gender, allProducts, onSelect, scrollRef, scroll 
         tiles.push({ key: "pattern-ph", label: "Pattern", desc: def.desc, accent: def.accent, icon: def.icon, disabled: true, productName: "Pattern", thumbnail: "" });
       }
     } else if (def.resolver.kind === "firstByType") {
-      const product = findFirstByType(allProducts, gender, def.resolver.skuType);
+      const product = findFirstByType(allProducts, gender, def.resolver.skuType, category);
       tiles.push({
         key:         def.key,
         label:       def.label,
