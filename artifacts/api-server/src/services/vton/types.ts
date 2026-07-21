@@ -27,7 +27,7 @@ export const VTON_CATEGORY_TUNING: Record<
   { steps: number; crop: boolean }
 > = {
   upper_body: { steps: 30, crop: false },
-  lower_body: { steps: 35, crop: true  },
+  lower_body: { steps: 40, crop: true  },
   dresses:    { steps: 30, crop: false },
 };
 
@@ -48,12 +48,14 @@ export const CATEGORY_LENGTH_HINTS: Record<string, string> = {
   "pattern":        "a patterned short-sleeve polo shirt",
   "shirts":         "a short-sleeve button-up shirt",
 
-  // Bottoms — explicit negation is critical; model biases toward full trousers
-  "shorts":   "golf shorts ending well above the knee — short garment, NOT full-length trousers or pants",
-  "skort":    "a golf skort (skirt-shorts hybrid) ending above the knee — short garment, NOT full-length trousers",
-  "skorts":   "a golf skort (skirt-shorts hybrid) ending above the knee — short garment, NOT full-length trousers",
-  "skirt":    "a golf skirt ending above or at the knee — NOT trousers or pants",
-  "skirts":   "a golf skirt ending above or at the knee — NOT trousers or pants",
+  // Bottoms — explicit negation is critical; model biases toward full trousers.
+  // "shorts" uses extra-strong guidance: naming the exposed leg region forces
+  // the model to leave the lower leg bare rather than filling it with fabric.
+  "shorts":   "above-the-knee golf shorts — SHORTS, legs bare below the hem — NOT trousers, NOT pants, NOT full-length",
+  "skort":    "a golf skort (skirt-shorts hybrid) ending above the knee — short garment, legs visible below hem — NOT full-length trousers",
+  "skorts":   "a golf skort (skirt-shorts hybrid) ending above the knee — short garment, legs visible below hem — NOT full-length trousers",
+  "skirt":    "a golf skirt ending above or at the knee — legs bare below hem — NOT trousers or pants",
+  "skirts":   "a golf skirt ending above or at the knee — legs bare below hem — NOT trousers or pants",
   "pants":    "full-length golf trousers reaching the ankle — long garment, NOT shorts",
   "trousers": "full-length tailored golf trousers reaching the ankle — long garment, NOT shorts",
 
