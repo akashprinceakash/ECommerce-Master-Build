@@ -37,6 +37,21 @@ async function requireAdmin(req: Request, res: Response): Promise<string | null>
   }
 }
 
+/* ── POST /admin/credits/force-enable ──────────────────────────────────── */
+/**
+ * Emergency override: immediately re-enable AI generations without requiring
+ * a new top-up. Use when the DB ledger is miscalibrated or after manually
+ * verifying the Replicate account still has funds.
+ */
+router.post("/admin/credits/force-enable", requireAuth, async (req, res): Promise<void> => {
+  const adminId = await requireAdmin(req, res);
+  if (!adminId) return;
+  const { setGenerationsDisabled } = await import("../services/creditService");
+  setGenerationsDisabled(false);
+  logger.warn({ adminId }, "admin: AI generations FORCE-ENABLED by admin (bypasses balance check)");
+  res.json({ success: true, message: "AI generations re-enabled" });
+});
+
 /* ── GET /admin/credits/packages ────────────────────────────────────────── */
 router.get("/admin/credits/packages", requireAuth, async (req, res): Promise<void> => {
   const adminId = await requireAdmin(req, res);

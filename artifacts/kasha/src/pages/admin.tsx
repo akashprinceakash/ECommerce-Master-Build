@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Plus, Pencil, Trash2, Upload, X, Check,
   ShieldCheck, Package, Users, Eye, ArrowLeft, BarChart3, ShoppingBag, UserCog, Download, ImageIcon, Mail, Tag, Zap,
+  AlertTriangle, Power, RefreshCw,
 } from "lucide-react";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { AdminOrders } from "@/components/admin/AdminOrders";
@@ -1881,6 +1882,7 @@ function AdminCreditPackages() {
       </p>
 
       <AdminGrantCredits />
+      <AdminReplicateBalance />
     </div>
   );
 }
@@ -1951,6 +1953,219 @@ function AdminGrantCredits() {
           Grant
         </Button>
       </div>
+    </div>
+  );
+}
+
+/* ── Replicate Balance Panel ─────────────────────────────────────────────── */
+interface ReplicateBalanceData {
+  estimatedBalanceUsd: string;
+  totalTopupsUsd: string;
+  totalCostUsd: string;
+  alertLevel: "ok" | "warning" | "danger" | "critical";
+  thresholds: { warn: number; red: number; pause: number };
+  generationStats: { total: number; succeeded: number; failed: number };
+  recentTopups: { id: number; amountUsd: string; toppedUpAt: string; addedByAdminId: string; notes: string | null }[];
+}
+
+async function adminPost(path: string, body?: unknown): Promise<Response> {
+  const { getToken } = (window as any).Clerk?.session ?? {};
+  const token = typeof getToken === "function" ? await getToken() : null;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return fetch(`${getApiUrl()}${path}`, { method: "POST", headers, body: body != null ? JSON.stringify(body) : undefined });
+}
+
+function AdminReplicateBalance() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [topupAmount, setTopupAmount] = useState("");
+  const [topupNotes, setTopupNotes] = useState("");
+  const [forceEnabling, setForceEnabling] = useState(false);
+
+  const { data, isLoading, refetch, isFetching } = useQuery<ReplicateBalanceData>({
+    queryKey: ["admin-replicate-balance"],
+    queryFn: async () => {
+      const { getToken } = (window as any).Clerk?.session ?? {};
+      const token = typeof getToken === "function" ? await getToken() : null;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`${getApiUrl()}/api/admin/credits/replicate-balance`, { headers });
+      if (!res.ok) throw new Error("Failed to load balance");
+      return res.json() as Promise<ReplicateBalanceData>;
+    },
+    staleTime: 30_000,
+  });
+
+  const logTopup = useMutation({
+    mutationFn: async () => {
+      const amt = parseFloat(topupAmount);
+      if (!amt || amt <= 0) throw new Error("Enter a valid amount");
+      const res = await adminPost("/api/admin/credits/topup", { amountUsd: amt, notes: topupNotes.trim() || undefined });
+      const json = await res.json() as { success?: boolean; estimatedBalanceUsd?: string; error?: string };
+      if (!res.ok) throw new Error(json.error ?? "Failed");
+      return json;
+    },
+    onSuccess: (json) => {
+      toast({ title: `✓ Top-up logged — estimated balance now $${json.estimatedBalanceUsd}` });
+      setTopupAmount("");
+      setTopupNotes("");
+      void queryClient.invalidateQueries({ queryKey: ["admin-replicate-balance"] });
+    },
+    onError: (e: any) => toast({ title: "Top-up failed", description: String(e?.message ?? e), variant: "destructive" }),
+  });
+
+  const forceEnable = async () => {
+    setForceEnabling(true);
+    try {
+      const res = await adminPost("/api/admin/credits/force-enable");
+      const json = await res.json() as { success?: boolean; message?: string; error?: string };
+      if (!res.ok) throw new Error(json.error ?? "Failed");
+      toast({ title: "✓ AI generations re-enabled", description: json.message });
+      void refetch();
+    } catch (e: any) {
+      toast({ title: "Failed", description: String(e?.message ?? e), variant: "destructive" });
+    }
+    setForceEnabling(false);
+  };
+
+  const levelColors: Record<string, string> = {
+    ok:       "text-emerald-600 bg-emerald-50 border-emerald-200",
+    warning:  "text-amber-600  bg-amber-50  border-amber-200",
+    danger:   "text-orange-600 bg-orange-50 border-orange-200",
+    critical: "text-red-600    bg-red-50    border-red-200",
+  };
+  const levelLabels: Record<string, string> = {
+    ok: "OK", warning: "Low", danger: "Critical", critical: "DISABLED",
+  };
+
+  return (
+    <div className="mt-8 border border-border p-5">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-sm font-semibold">Replicate Balance</h3>
+        <button
+          onClick={() => void refetch()}
+          disabled={isFetching}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <RefreshCw className={`w-3 h-3 ${isFetching ? "animate-spin" : ""}`} /> Refresh
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">
+        Tracks your Replicate.com account balance using the internal ledger. Top up Replicate first, then log it here.
+        Balance below ${data?.thresholds.pause ?? 5} auto-disables AI generation.
+      </p>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground py-4"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
+      ) : data ? (
+        <>
+          {/* Status row */}
+          <div className="flex flex-wrap gap-4 mb-4">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">Est. Balance</span>
+              <span className="text-xl font-semibold">${parseFloat(data.estimatedBalanceUsd).toFixed(2)}</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">Total Topped Up</span>
+              <span className="text-sm font-medium">${parseFloat(data.totalTopupsUsd).toFixed(2)}</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">Total Spent</span>
+              <span className="text-sm font-medium">${parseFloat(data.totalCostUsd).toFixed(4)}</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">Status</span>
+              <span className={`text-xs font-semibold px-2 py-0.5 border rounded-sm w-fit ${levelColors[data.alertLevel] ?? ""}`}>
+                {levelLabels[data.alertLevel] ?? data.alertLevel}
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">Generations</span>
+              <span className="text-sm font-medium">{data.generationStats.succeeded} ok / {data.generationStats.failed} failed</span>
+            </div>
+          </div>
+
+          {/* Critical banner + force-enable */}
+          {data.alertLevel === "critical" && (
+            <div className="flex items-start gap-3 bg-red-50 border border-red-200 p-3 mb-4">
+              <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 text-xs text-red-700">
+                <p className="font-semibold mb-1">AI generation is currently DISABLED</p>
+                <p>Balance is below the ${data.thresholds.pause} pause threshold. Top up Replicate and log it below, or use the override button if the ledger is miscalibrated.</p>
+              </div>
+              <button
+                onClick={() => void forceEnable()}
+                disabled={forceEnabling}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors flex-shrink-0"
+              >
+                {forceEnabling ? <Loader2 className="w-3 h-3 animate-spin" /> : <Power className="w-3 h-3" />}
+                Force Re-enable
+              </button>
+            </div>
+          )}
+
+          {/* Log top-up form */}
+          <div className="border-t border-border pt-4">
+            <h4 className="text-xs font-semibold mb-3 uppercase tracking-wider text-muted-foreground">Log a Replicate Top-up</h4>
+            <div className="flex gap-3 flex-wrap items-end">
+              <div className="w-36">
+                <label className="text-xs text-muted-foreground mb-1 block">Amount (USD)</label>
+                <Input
+                  type="number" min={1} step={1} placeholder="e.g. 25"
+                  value={topupAmount}
+                  onChange={e => setTopupAmount(e.target.value)}
+                  className="h-9 rounded-none"
+                />
+              </div>
+              <div className="flex-1 min-w-48">
+                <label className="text-xs text-muted-foreground mb-1 block">Notes (optional)</label>
+                <Input
+                  placeholder="e.g. Recharged via Razorpay on Jul 21"
+                  value={topupNotes}
+                  onChange={e => setTopupNotes(e.target.value)}
+                  className="h-9 rounded-none"
+                />
+              </div>
+              <Button
+                onClick={() => logTopup.mutate()}
+                disabled={logTopup.isPending || !topupAmount}
+                className="h-9 rounded-none px-5"
+              >
+                {logTopup.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Zap className="w-4 h-4 mr-1" />}
+                Log Top-up
+              </Button>
+            </div>
+          </div>
+
+          {/* Recent top-ups */}
+          {data.recentTopups.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-xs font-semibold mb-2 uppercase tracking-wider text-muted-foreground">Recent Top-ups</h4>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-1.5 pr-4 text-muted-foreground font-medium">Date</th>
+                    <th className="text-left py-1.5 pr-4 text-muted-foreground font-medium">Amount</th>
+                    <th className="text-left py-1.5 text-muted-foreground font-medium">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.recentTopups.map(t => (
+                    <tr key={t.id} className="border-b border-border/50">
+                      <td className="py-1.5 pr-4 text-muted-foreground">{new Date(t.toppedUpAt).toLocaleDateString("en-IN")}</td>
+                      <td className="py-1.5 pr-4 font-medium">${parseFloat(t.amountUsd).toFixed(2)}</td>
+                      <td className="py-1.5 text-muted-foreground">{t.notes ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="text-xs text-muted-foreground">Failed to load balance data.</p>
+      )}
     </div>
   );
 }

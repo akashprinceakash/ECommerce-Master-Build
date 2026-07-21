@@ -1,0 +1,119 @@
+Request URL
+https://www.kashaonline.in/api/lookbook-tryon
+Request Method
+POST
+Status Code
+503 Service Unavailable
+Remote Address
+64.29.17.1:443
+Referrer Policy
+strict-origin-when-cross-origin
+access-control-allow-credentials
+true
+access-control-allow-origin
+https://www.kashaonline.in
+cache-control
+public, max-age=0, must-revalidate
+cf-cache-status
+DYNAMIC
+cf-ray
+a1e9eb033b1f117e-BOM
+content-encoding
+br
+content-length
+132
+content-security-policy
+default-src 'none';frame-ancestors 'none';base-uri 'self';font-src 'self' https: data:;form-action 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+content-type
+application/json; charset=utf-8
+cross-origin-opener-policy
+same-origin
+cross-origin-resource-policy
+cross-origin
+date
+Tue, 21 Jul 2026 11:38:13 GMT
+etag
+W/"c2-v4rvd4CHYbmb1nteodT4A67aVEM"
+origin-agent-cluster
+?1
+ratelimit-limit
+100
+ratelimit-policy
+100;w=60
+ratelimit-remaining
+94
+ratelimit-reset
+15
+referrer-policy
+no-referrer
+rndr-id
+2ec481e4-959a-41b6
+server
+Vercel
+strict-transport-security
+max-age=31536000; includeSubDomains
+vary
+Origin
+vary
+Accept-Encoding
+x-content-type-options
+nosniff
+x-dns-prefetch-control
+off
+x-download-options
+noopen
+x-frame-options
+SAMEORIGIN
+x-permitted-cross-domain-policies
+none
+x-render-origin-server
+Render
+x-vercel-cache
+MISS
+x-vercel-id
+bom1::rnnxt-1784633892348-cc5956f910cc
+x-xss-protection
+0
+:authority
+www.kashaonline.in
+:method
+POST
+:path
+/api/lookbook-tryon
+:scheme
+https
+accept
+*/*
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-IN,en-GB;q=0.9,en-US;q=0.8,en;q=0.7,kn;q=0.6
+cache-control
+no-cache
+content-length
+160
+content-type
+application/json
+cookie
+_tccl_visitor=89448cc9-3172-4b04-b103-b23341b5d9cd; __clerk_db_jwt_O1G8t5X3=dvb_3DtXsKy6to2bGXtHAt1dyy7Mkyl; __client_uat_O1G8t5X3=0; __client_uat_t3bNUF0P=1784537687; __refresh_t3bNUF0P=3DvkyE4w61UJ4nuGQcxGoxZ9F3d:qFQZMMy7lkrxcBQQ8atv; __client_uat=1784537687; clerk_active_context=sess_3GlEJqWGtNZZYNDowhG5IecDNSf:; rzp_unified_session_id=TG8dnR9rZeGKnW; __session=eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18zRHZXeXVxbmZpZ3RlaUtmMkhzcXZRNzA4ZTQiLCJtIjoibyIsIm9pYXQiOjE3ODQ2MzM4ODgsInR5cCI6IkpXVCJ9.eyJhenAiOiJodHRwczovL3d3dy5rYXNoYW9ubGluZS5pbiIsImV4cCI6MTc4NDYzMzk0OCwiZnZhIjpbMTYwMywtMV0sImlhdCI6MTc4NDYzMzg4OCwiaXNzIjoiaHR0cHM6Ly9jbGVyay5rYXNoYW9ubGluZS5pbiIsIm5iZiI6MTc4NDYzMzg3OCwic2lkIjoic2Vzc18zR2xFSnFXR3ROWlpZTkRvd2hHNUllY0ROU2YiLCJzdHMiOiJhY3RpdmUiLCJzdWIiOiJ1c2VyXzNEdmxHbzBtTEJwS1pZR0lEVmpqWHBMY0YyRSIsInYiOjJ9.m1pM9oiLfPpYwj-EftxkrOmrKO2l6jdfQNQSsHZrRIvAuewg9CGb_t8Ml5jSs2mL2ZoZttNPLGfdCyfFBTsg7HibrxiustP0Dy3d98KyDR_v7VMXg-LYy4o0Q0E3WjxGB7zDWBOzSmUDATaojVQdeSgikYzERN6CGDjgUr4t-9pXb8NheJfHTIl4J6NKFQsqnKQYBQzKp0l0XQq9vjKiZEsUuouZNmDffA6dH0BKMTFRSRVQ83FVRla2nKuAOnbv-sf14U63CoUAPJlopyjXN6xN-gUIQ_DRNmt89KhLGH37nkhIcnE6K95TUsH71sv-zAS9bWDmApY0KPtNCp2Pdw; __session_t3bNUF0P=eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18zRHZXeXVxbmZpZ3RlaUtmMkhzcXZRNzA4ZTQiLCJtIjoibyIsIm9pYXQiOjE3ODQ2MzM4ODgsInR5cCI6IkpXVCJ9.eyJhenAiOiJodHRwczovL3d3dy5rYXNoYW9ubGluZS5pbiIsImV4cCI6MTc4NDYzMzk0OCwiZnZhIjpbMTYwMywtMV0sImlhdCI6MTc4NDYzMzg4OCwiaXNzIjoiaHR0cHM6Ly9jbGVyay5rYXNoYW9ubGluZS5pbiIsIm5iZiI6MTc4NDYzMzg3OCwic2lkIjoic2Vzc18zR2xFSnFXR3ROWlpZTkRvd2hHNUllY0ROU2YiLCJzdHMiOiJhY3RpdmUiLCJzdWIiOiJ1c2VyXzNEdmxHbzBtTEJwS1pZR0lEVmpqWHBMY0YyRSIsInYiOjJ9.m1pM9oiLfPpYwj-EftxkrOmrKO2l6jdfQNQSsHZrRIvAuewg9CGb_t8Ml5jSs2mL2ZoZttNPLGfdCyfFBTsg7HibrxiustP0Dy3d98KyDR_v7VMXg-LYy4o0Q0E3WjxGB7zDWBOzSmUDATaojVQdeSgikYzERN6CGDjgUr4t-9pXb8NheJfHTIl4J6NKFQsqnKQYBQzKp0l0XQq9vjKiZEsUuouZNmDffA6dH0BKMTFRSRVQ83FVRla2nKuAOnbv-sf14U63CoUAPJlopyjXN6xN-gUIQ_DRNmt89KhLGH37nkhIcnE6K95TUsH71sv-zAS9bWDmApY0KPtNCp2Pdw
+origin
+https://www.kashaonline.in
+pragma
+no-cache
+priority
+u=1, i
+referer
+https://www.kashaonline.in/lookbook
+sec-ch-ua
+"Not;A=Brand";v="8", "Chromium";v="150", "Google Chrome";v="150"
+sec-ch-ua-mobile
+?1
+sec-ch-ua-platform
+"Android"
+sec-fetch-dest
+empty
+sec-fetch-mode
+cors
+sec-fetch-site
+same-origin
+user-agent
