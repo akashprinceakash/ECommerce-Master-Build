@@ -292,8 +292,13 @@ router.post("/lookbook-tryon", requireAuth, async (req, res): Promise<void> => {
     garments.push({ productId: product.id, role, name: product.name, description, crop, imageUrl });
   }
 
-  // Process top before bottom for a stable chaining order (dress is alone).
-  garments.sort((a, b2) => (a.role === "top" ? 0 : a.role === "bottom" ? 1 : 2) - (b2.role === "top" ? 0 : b2.role === "bottom" ? 1 : 2));
+  // Process bottom before top for two-garment jobs.
+  // Running shorts/skorts/pants on the clean original photo first prevents
+  // color bleed from the top garment contaminating the lower body — the most
+  // common cause of shorts being rendered as full-length pink/coloured trousers
+  // when paired with a coloured polo. The top (upper_body) is applied second
+  // and only affects the region above the waist, so the bottom length is preserved.
+  garments.sort((a, b2) => (a.role === "bottom" ? 0 : a.role === "top" ? 1 : 2) - (b2.role === "bottom" ? 0 : b2.role === "top" ? 1 : 2));
 
   const personImageUrl = humanImageUrl
     ? toAbsoluteUrl(humanImageUrl, req.hostname)
