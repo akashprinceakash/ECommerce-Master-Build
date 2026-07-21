@@ -58,6 +58,8 @@ export interface StartPredictionParams {
   garmentImageUrl: string;
   garmentDescription: string;
   vtonCategory: "upper_body" | "lower_body" | "dresses";
+  /** Crop to the relevant body region before processing. Improves lower-body accuracy. */
+  crop?: boolean;
 }
 
 /**
@@ -79,7 +81,7 @@ export async function startIdmVtonPrediction(
         garm_img: garmentImageUrl,
         garment_des: garmentDescription,
         category: vtonCategory,
-        crop: false,
+        crop: crop ?? false,
         force_dc: vtonCategory === "dresses",
         steps: 20,
         seed: Math.floor(Math.random() * 1_000_000),

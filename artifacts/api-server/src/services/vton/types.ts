@@ -17,8 +17,13 @@ export const ROLE_TO_VTON_CATEGORY: Record<GarmentRole, "upper_body" | "lower_bo
 export interface TryOnGarment {
   productId: number;
   role: GarmentRole;
+  /** Human-readable display name (product name). */
   name: string;
+  /** IDM-VTON garment_des — category-derived description for better model guidance. */
+  description: string;
   imageUrl: string;
+  /** Whether to crop to the relevant body region before processing (helps lower-body accuracy). */
+  crop: boolean;
 }
 
 export type TryOnJobStatus = "pending" | "processing" | "succeeded" | "failed";

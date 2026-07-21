@@ -116,6 +116,27 @@ function parseOutfitBody(body: unknown): { name: string; items: LookbookLookItem
   return { name: b.name.trim(), items, gender, resultImageUrl: b.resultImageUrl.trim() };
 }
 
+/**
+ * Build a clear garment description for IDM-VTON's `garment_des` parameter.
+ * Using the raw product name (e.g. "Men - Golf - Shorts - S") gives the model
+ * too little signal and it tends to generate full-length pants for shorts.
+ * Category-derived descriptions like "golf shorts, short pants above knee"
+ * steer the model to the correct garment shape.
+ */
+function buildVtonDescription(category: string | null | undefined, name: string): string {
+  const cat = (category ?? "").toLowerCase().trim();
+  if (cat === "shorts")                                        return "golf shorts, short pants above the knee";
+  if (cat === "skort" || cat === "skorts")                    return "golf skort, skirt with built-in shorts";
+  if (cat === "skirts" || cat === "skirt")                    return "golf skirt";
+  if (cat === "polo")                                         return "polo shirt, golf polo";
+  if (cat === "t-shirt" || cat === "fabric-tshirt")           return "t-shirt, casual shirt";
+  if (cat === "shirts")                                       return "button-up shirt";
+  if (cat === "pattern")                                      return "patterned polo shirt";
+  if (cat === "pants" || cat === "trousers")                  return "golf trousers, full-length pants";
+  if (cat === "dress" || cat === "dresses" || cat.includes("golf dress")) return "golf dress";
+  return name;
+}
+
 /** Convert a potentially relative URL (e.g. /api/public/thumbnails/...) to an
  *  absolute URL that external services like Replicate can reach.
  *  Uses the first domain from REPLIT_DOMAINS, falling back to the request host. */
@@ -286,7 +307,9 @@ router.post("/lookbook-tryon", requireAuth, async (req, res): Promise<void> => {
       return;
     }
     const imageUrl = toAbsoluteUrl(rawUrl, req.hostname);
-    garments.push({ productId: product.id, role, name: product.name, imageUrl });
+    const description = buildVtonDescription(product.category, product.name);
+    const crop = role === "bottom";
+    garments.push({ productId: product.id, role, name: product.name, description, crop, imageUrl });
   }
 
   // Process top before bottom for a stable chaining order (dress is alone).
@@ -327,8 +350,9 @@ router.post("/lookbook-tryon", requireAuth, async (req, res): Promise<void> => {
     firstPredictionId = await startIdmVtonPrediction({
       humanImageUrl: personImageUrl,
       garmentImageUrl: firstGarment.imageUrl,
-      garmentDescription: firstGarment.name,
+      garmentDescription: firstGarment.description,
       vtonCategory: ROLE_TO_VTON_CATEGORY[firstGarment.role],
+      crop: firstGarment.crop,
     });
   } catch (replicateErr: any) {
     // Replicate rejected or unreachable — do NOT deduct a credit.

@@ -94,8 +94,9 @@ async function processTryOnJob(
         predictionId = await startIdmVtonPrediction({
           humanImageUrl: currentHumanImage,
           garmentImageUrl: garment.imageUrl,
-          garmentDescription: garment.name,
+          garmentDescription: garment.description,
           vtonCategory,
+          crop: garment.crop,
         });
       }
 
