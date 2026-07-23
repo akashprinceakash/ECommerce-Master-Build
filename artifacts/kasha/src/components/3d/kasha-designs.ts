@@ -153,11 +153,35 @@ const KD_TAG = "__kashaKdBg__";
 // Channel A replaces dark / near-black pixels (#000000).
 // Channel B replaces light / near-pink pixels  (#F0CED2).
 
+/**
+ * Describes what fills a single recolor channel — either a solid hex colour
+ * (existing behaviour) or a tiled GP print (new).
+ *
+ * kind:"print" — printUrl is the proxied URL of the pattern image.
+ *   Channel A print: dark-channel pixels are replaced by the tiled print texture.
+ *   Channel B print: dark-channel pixels become transparent so the canvas
+ *   background (which the caller must set to the print) shows through.
+ */
+export type ChannelFill =
+  | { kind: "color"; hex: string }
+  | { kind: "print"; printUrl: string };
+
 export interface RecolorOptions {
   /** Hex colour that replaces Channel A — dark/black pixels (default #000000) */
   colorA: string;
   /** Hex colour that replaces Channel B — light/pink pixels (default #F0CED2) */
   colorB: string;
+  /**
+   * Optional print fill for Channel A (dark/accent pixels).
+   * When present, dark pixels are composited with the tiled print instead of colorA.
+   */
+  fillA?: ChannelFill;
+  /**
+   * Optional print fill for Channel B (light/base pixels).
+   * When present, light pixels become alpha=0 (transparent) so the caller's
+   * canvas background (expected to be the body print) shows through.
+   */
+  fillB?: ChannelFill;
 }
 
 /** Source colours baked into the KA.SHA design PNGs */
@@ -174,6 +198,133 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 }
 function colorDist(r1: number, g1: number, b1: number, r2: number, g2: number, b2: number): number {
   return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2);
+}
+
+// ── Per-channel compositing helpers ──────────────────────────────────────────
+// Used when one or both channels carry a print fill instead of a solid colour.
+
+/** Tile a print image element across `w×h`, then clip to `mask` using destination-in. */
+function renderPrintToMask(
+  outCtx: CanvasRenderingContext2D,
+  printEl: HTMLImageElement,
+  mask:    HTMLCanvasElement,
+  w:       number,
+  h:       number,
+  TILE = 192,
+): void {
+  const tmp = document.createElement("canvas"); tmp.width = w; tmp.height = h;
+  const tCtx = tmp.getContext("2d")!;
+  for (let row = 0; row * TILE < h; row++) {
+    for (let col = 0; col * TILE < w; col++) {
+      tCtx.drawImage(printEl, col * TILE, row * TILE, TILE, TILE);
+    }
+  }
+  tCtx.globalCompositeOperation = "destination-in";
+  tCtx.drawImage(mask, 0, 0);
+  tCtx.globalCompositeOperation = "source-over";
+  outCtx.drawImage(tmp, 0, 0);
+}
+
+/** Fill `w×h` with a solid hex, then clip to `mask`. */
+function renderSolidToMask(
+  outCtx: CanvasRenderingContext2D,
+  hex:    string,
+  mask:   HTMLCanvasElement,
+  w:      number,
+  h:      number,
+): void {
+  const tmp = document.createElement("canvas"); tmp.width = w; tmp.height = h;
+  const tCtx = tmp.getContext("2d")!;
+  tCtx.fillStyle = hex;
+  tCtx.fillRect(0, 0, w, h);
+  tCtx.globalCompositeOperation = "destination-in";
+  tCtx.drawImage(mask, 0, 0);
+  tCtx.globalCompositeOperation = "source-over";
+  outCtx.drawImage(tmp, 0, 0);
+}
+
+/**
+ * Advanced recolor: at least one channel uses a print fill.
+ *
+ * Channel A (dark/near-black pixels):
+ *   fill.kind="color"  → solid hex
+ *   fill.kind="print"  → tiled print image composited over the A mask
+ *
+ * Channel B (light/near-pink pixels):
+ *   fill.kind="color"  → solid hex
+ *   fill.kind="print"  → pixels become transparent (caller sets canvas bg to the body print)
+ */
+async function recolorCanvasAdvanced(
+  src:   HTMLCanvasElement,
+  fillA: ChannelFill,
+  fillB: ChannelFill,
+): Promise<HTMLCanvasElement> {
+  const w = src.width, h = src.height;
+
+  // Read pixel data from source
+  const readC = document.createElement("canvas"); readC.width = w; readC.height = h;
+  const readCtx = readC.getContext("2d")!;
+  readCtx.drawImage(src, 0, 0);
+  const srcData = readCtx.getImageData(0, 0, w, h);
+  const pix = srcData.data;
+
+  // Build binary masks for each channel
+  const maskACanvas = document.createElement("canvas"); maskACanvas.width = w; maskACanvas.height = h;
+  const maskBCanvas = document.createElement("canvas"); maskBCanvas.width = w; maskBCanvas.height = h;
+  const imgA = maskACanvas.getContext("2d")!.createImageData(w, h);
+  const imgB = maskBCanvas.getContext("2d")!.createImageData(w, h);
+
+  for (let i = 0; i < pix.length; i += 4) {
+    const r = pix[i], g = pix[i+1], b = pix[i+2], a = pix[i+3];
+    if (a < 10) continue;
+    const dA = colorDist(r, g, b, SRC_A.r, SRC_A.g, SRC_A.b);
+    const dB = colorDist(r, g, b, SRC_B.r, SRC_B.g, SRC_B.b);
+    if (dA <= dB && dA < TOLERANCE) {
+      const t = Math.max(0, 1 - dA / TOLERANCE);
+      imgA.data[i] = imgA.data[i+1] = imgA.data[i+2] = 255;
+      imgA.data[i+3] = Math.round(a * t);
+    } else if (dB < TOLERANCE) {
+      const t = Math.max(0, 1 - dB / TOLERANCE);
+      imgB.data[i] = imgB.data[i+1] = imgB.data[i+2] = 255;
+      imgB.data[i+3] = Math.round(a * t);
+    }
+  }
+  maskACanvas.getContext("2d")!.putImageData(imgA, 0, 0);
+  maskBCanvas.getContext("2d")!.putImageData(imgB, 0, 0);
+
+  // Output canvas
+  const out = document.createElement("canvas"); out.width = w; out.height = h;
+  const outCtx = out.getContext("2d")!;
+
+  // Render Channel B first (it's behind Channel A)
+  if (fillB.kind === "color") {
+    renderSolidToMask(outCtx, fillB.hex, maskBCanvas, w, h);
+  }
+  // kind:"print" → leave B pixels transparent; background print shows through
+
+  // Render Channel A on top
+  if (fillA.kind === "color") {
+    renderSolidToMask(outCtx, fillA.hex, maskACanvas, w, h);
+  } else {
+    // Load print image for channel A via fetch → blob (no CORS taint)
+    let printEl: HTMLImageElement | null = null;
+    let blobUrl: string | null = null;
+    try {
+      const resp = await fetch(fillA.printUrl);
+      const blob = await resp.blob();
+      blobUrl = URL.createObjectURL(blob);
+      printEl = await new Promise<HTMLImageElement>((res, rej) => {
+        const img = new Image();
+        img.onload  = () => res(img);
+        img.onerror = () => rej(new Error("fillA print load failed"));
+        img.src = blobUrl!;
+      });
+      renderPrintToMask(outCtx, printEl, maskACanvas, w, h);
+    } catch { /* ignore: channel A print failed — nothing drawn */ }
+    finally { if (blobUrl) URL.revokeObjectURL(blobUrl); }
+  }
+
+  return out;
 }
 
 /** Recolor a canvas: near-black → colorA, near-pink → colorB. Returns a new canvas. */
@@ -242,7 +393,9 @@ export function clearKashaDesign(fc: fabric.Canvas): void {
 }
 
 /** Place zone textures at their UV positions on the fabric canvas.
- *  Pass `recolor` to channel-replace colours in the design PNGs before placing. */
+ *  Pass `recolor` to channel-replace colours in the design PNGs before placing.
+ *  When `recolor.fillA` or `recolor.fillB` carry a print fill, the advanced
+ *  compositing path is used instead of the simple pixel-swap. */
 export async function applyKashaDesign(
   fc:      fabric.Canvas,
   design:  KashaDesignDef,
@@ -250,7 +403,12 @@ export async function applyKashaDesign(
 ): Promise<void> {
   clearKashaDesign(fc);
 
-  const needsRecolor = recolor && (recolor.colorA !== "#000000" || recolor.colorB !== "#F0CED2");
+  const hasPrintFill = recolor && (recolor.fillA !== undefined || recolor.fillB !== undefined);
+  const needsRecolor = recolor && (
+    hasPrintFill ||
+    recolor.colorA !== "#000000" ||
+    recolor.colorB !== "#F0CED2"
+  );
 
   const zoneMap: Array<{ key: keyof KashaDesignDef['zones']; zone: keyof typeof ZONE_PRESETS }> = [
     { key: 'front',       zone: 'front'       },
@@ -268,9 +426,18 @@ export async function applyKashaDesign(
 
     if (needsRecolor) {
       try {
-        const srcCanvas  = await dataUrlToCanvas(dataUrl);
-        const recolored  = recolorCanvas(srcCanvas, recolor!.colorA, recolor!.colorB);
-        dataUrl = recolored.toDataURL("image/png");
+        const srcCanvas = await dataUrlToCanvas(dataUrl);
+        if (hasPrintFill) {
+          // Advanced path: at least one channel uses a print fill
+          const effectiveFillA: ChannelFill = recolor!.fillA ?? { kind: "color", hex: recolor!.colorA };
+          const effectiveFillB: ChannelFill = recolor!.fillB ?? { kind: "color", hex: recolor!.colorB };
+          const advanced = await recolorCanvasAdvanced(srcCanvas, effectiveFillA, effectiveFillB);
+          dataUrl = advanced.toDataURL("image/png");
+        } else {
+          // Simple path: solid-colour pixel swap
+          const recolored = recolorCanvas(srcCanvas, recolor!.colorA, recolor!.colorB);
+          dataUrl = recolored.toDataURL("image/png");
+        }
       } catch { /* fall through — use original dataUrl */ }
     }
 

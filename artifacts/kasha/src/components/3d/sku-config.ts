@@ -285,6 +285,23 @@ export const PRINT_SKU_MAP: Record<string, string> = {
   "KS1000BGP034": "KS1000BGP034",
 };
 
+// ── Zone fill types ───────────────────────────────────────────────────────────
+// A zone fill describes what fills a single recolor channel in a PAT-format SKU.
+// kind:"color" is the existing behavior; kind:"print" replaces that channel
+// with a tiled GP print texture.
+//
+// Convention: zoneFills[0] = colorB slot (base/light channel)
+//             zoneFills[1] = colorA slot (dark/accent channel)
+//
+// SKU token syntax inside PAT-…:
+//   BLK        → { kind:"color", hex:"#1a1a1a" }
+//   PRT-006    → { kind:"print", patternId:"KS1000BGP006", printNum:6 }
+//   PRT006     → same (hyphen is optional)
+
+export type ZoneFill =
+  | { kind: "color"; hex: string }
+  | { kind: "print"; patternId: string; printNum: number };
+
 // ── Parsed SKU result types ──────────────────────────────────────────────────
 
 export interface PrintSkuResult {
@@ -300,8 +317,8 @@ export interface PatternSkuResult {
   designId: string;    // KashaDesignDef.id — always KS-prefixed, e.g. "KS1001B"
   patternNumber: number; // 1001–1006
   suffix: string;      // raw suffix after the first hyphen, e.g. "PAT-BLK,PNK" or "BB"
-  colorA: string;      // dark/accent channel hex (zone 1)
-  colorB: string;      // light/primary channel hex (zone 0)
+  colorA: string;      // dark/accent channel hex (zone 1); "#808080" placeholder when fillA is a print
+  colorB: string;      // light/primary channel hex (zone 0); "#808080" placeholder when fillB is a print
   colorLabel: string;
   /**
    * Positional zone colors resolved from the PAT token list.
@@ -310,6 +327,18 @@ export interface PatternSkuResult {
    * Always length ≥ 1; use colorA/colorB for 2-zone backward compat.
    */
   zoneColors: string[];
+  /**
+   * Per-slot fill descriptors for the new mixed color+print PAT format.
+   * Index 0 = colorB slot (base/light channel).
+   * Index 1 = colorA slot (dark/accent channel).
+   * Both slots are always populated; kind:"color" is the existing behavior.
+   *
+   * Examples:
+   *   KS1007B-PAT-BLK,PRT-006  → [{ kind:"color", hex:"#1a1a1a" }, { kind:"print", patternId:"KS1000BGP006", printNum:6 }]
+   *   KS1007B-PAT-PRT-003,PRT-006 → [{ kind:"print",… }, { kind:"print",… }]
+   *   KS1007B-PAT-BLK,CRM      → [{ kind:"color",… }, { kind:"color",… }] (existing)
+   */
+  zoneFills: ZoneFill[];
 }
 
 export interface SolidSkuResult {
@@ -567,51 +596,79 @@ export function parseSku(sku: string): SkuResult {
     }
 
     // ── New canonical format: -PAT-TOKEN[,TOKEN…] ─────────────────────────────
-    // e.g. KS1001B-PAT-BLK,PNK  → zone0=black, zone1=pink
-    //      KL1003B-PAT-NVY       → both zones = navy
-    // Zone convention (mirrors PATTERN_SUFFIX_COLORS label order):
+    // e.g. KS1001B-PAT-BLK,PNK      → zone0=black solid, zone1=pink solid
+    //      KL1003B-PAT-NVY           → both zones = navy solid
+    //      KS1007B-PAT-BLK,PRT-006   → zone0=black solid, zone1=GP006 print
+    //      KS1007B-PAT-PRT-003,PRT-006 → both zones = prints
+    //
+    // Token format:
+    //   Color token:  "BLK", "CRM", "NAVY", "Sea Green", …  (any resolveColorToken input)
+    //   Print token:  "PRT-006" or "PRT006"  (PRT- prefix followed by 1-3 digit print number)
+    //
+    // Zone convention:
     //   zoneColors[0] = colorB  (primary / base  / light channel)
     //   zoneColors[1] = colorA  (accent  / dark  / shadow channel)
     const ZONE_COUNT = 2; // current designs have exactly 2 recolor channels
+
+    /** Resolve a single PAT token to a ZoneFill. */
+    const resolvePATToken = (tok: string): ZoneFill => {
+      // Print token: PRT-NNN or PRTNNN (1-3 digit number)
+      const prtMatch = tok.match(/^PRT-?(\d{1,3})$/i);
+      if (prtMatch) {
+        const num = parseInt(prtMatch[1], 10);
+        const padded = String(num).padStart(3, "0");
+        const key = `KS1000BGP${padded}`;
+        const patternId = PRINT_SKU_MAP[key] ?? key;
+        return { kind: "print", patternId, printNum: num };
+      }
+      // Color token
+      const hex = resolveColorToken(tok);
+      if (!hex) console.warn(`[SKU] ${upper}: unknown color token "${tok}" — using default`);
+      return { kind: "color", hex: hex ?? DEFAULT_PATTERN_COLORS.colorB };
+    };
+
     if (rawSuffix.startsWith("PAT-")) {
       const tokenStr = rawSuffix.slice(4); // everything after "PAT-"
       const tokens   = tokenStr.split(",").map(t => t.trim()).filter(Boolean);
 
-      let resolvedColors: string[];
+      let fills: ZoneFill[];
 
       if (tokens.length === 0) {
         // "PAT-" with nothing after it → fall back to defaults
-        resolvedColors = [DEFAULT_PATTERN_COLORS.colorB, DEFAULT_PATTERN_COLORS.colorA];
+        fills = [
+          { kind: "color", hex: DEFAULT_PATTERN_COLORS.colorB },
+          { kind: "color", hex: DEFAULT_PATTERN_COLORS.colorA },
+        ];
       } else if (tokens.length === 1) {
         // Single token → broadcast to all zones
-        const hex = resolveColorToken(tokens[0]) ?? DEFAULT_PATTERN_COLORS.colorB;
-        if (!resolveColorToken(tokens[0])) {
-          console.warn(`[SKU] ${upper}: unknown color token "${tokens[0]}" — using default`);
-        }
-        resolvedColors = Array(ZONE_COUNT).fill(hex) as string[];
+        const fill = resolvePATToken(tokens[0]);
+        fills = Array(ZONE_COUNT).fill(fill) as ZoneFill[];
       } else {
-        // Multiple tokens — validate count against zone count
         if (tokens.length !== ZONE_COUNT) {
           console.warn(
             `[SKU] ${upper}: PAT token count (${tokens.length}) does not match ` +
             `zone count (${ZONE_COUNT}). Extra tokens will be ignored.`,
           );
         }
-        resolvedColors = tokens.slice(0, ZONE_COUNT).map(tok => {
-          const hex = resolveColorToken(tok);
-          if (!hex) console.warn(`[SKU] ${upper}: unknown color token "${tok}" — using default`);
-          return hex ?? DEFAULT_PATTERN_COLORS.colorB;
-        });
+        fills = tokens.slice(0, ZONE_COUNT).map(resolvePATToken);
         // Pad to ZONE_COUNT if fewer tokens than zones
-        while (resolvedColors.length < ZONE_COUNT) {
-          resolvedColors.push(resolvedColors[0] ?? DEFAULT_PATTERN_COLORS.colorA);
+        while (fills.length < ZONE_COUNT) {
+          fills.push(fills[0] ?? { kind: "color", hex: DEFAULT_PATTERN_COLORS.colorA });
         }
       }
 
-      const colorB = resolvedColors[0];
-      const colorA = resolvedColors[1] ?? resolvedColors[0];
+      // Backward-compat hex values: use neutral grey placeholder for print slots
+      // so any code that reads colorA/colorB without checking zoneFills still compiles.
+      const PRINT_PLACEHOLDER = "#808080";
+      const fill0 = fills[0];
+      const fill1 = fills[1] ?? fills[0];
+      const colorB = fill0.kind === "color" ? fill0.hex : PRINT_PLACEHOLDER;
+      const colorA = fill1.kind === "color" ? fill1.hex : PRINT_PLACEHOLDER;
+
       const toTitle = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
-      const colorLabel = tokens.length > 0 ? tokens.map(toTitle).join(" + ") : "Default";
+      const colorLabel = tokens.length > 0
+        ? tokens.map(t => t.toUpperCase().startsWith("PRT") ? t.toUpperCase() : toTitle(t)).join(" + ")
+        : "Default";
 
       return {
         type: "pattern",
@@ -622,7 +679,8 @@ export function parseSku(sku: string): SkuResult {
         colorA,
         colorB,
         colorLabel,
-        zoneColors: resolvedColors,
+        zoneColors: fills.map(f => f.kind === "color" ? f.hex : PRINT_PLACEHOLDER),
+        zoneFills: fills,
       };
     }
 
@@ -639,6 +697,10 @@ export function parseSku(sku: string): SkuResult {
         colorB: colors.colorB,
         colorLabel: colors.label,
         zoneColors: [colors.colorB, colors.colorA],
+        zoneFills: [
+          { kind: "color", hex: colors.colorB },
+          { kind: "color", hex: colors.colorA },
+        ],
       };
     }
 
@@ -669,6 +731,10 @@ export function parseSku(sku: string): SkuResult {
       colorB,
       colorLabel,
       zoneColors: [colorB, colorA],
+      zoneFills: [
+        { kind: "color", hex: colorB },
+        { kind: "color", hex: colorA },
+      ],
     };
   }
 

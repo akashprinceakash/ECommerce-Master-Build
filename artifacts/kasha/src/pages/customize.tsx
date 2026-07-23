@@ -30,7 +30,7 @@ import {
 } from "@/components/3d/patterns";
 import {
   KASHA_DESIGNS, applyKashaDesign, applyKashaDesignWithPrint, clearKashaDesign, SKU_KASHA_DESIGN_MAP,
-  type KashaDesignDef, type RecolorOptions,
+  type KashaDesignDef, type RecolorOptions, type ChannelFill,
 } from "@/components/3d/kasha-designs";
 import { parseSku } from "@/components/3d/sku-config";
 
@@ -833,13 +833,15 @@ export default function CustomizePage() {
   // ── KA.SHA Bespoke Design handler ────────────────────────────────────────
   // colorOverride: optional colors to apply in the same call; avoids stale-closure
   // issues when calling from effects where activeKashaDesign state hasn't updated yet.
-  const handleSelectKashaDesign = useCallback(async (design: KashaDesignDef, colorOverride?: {colorA:string;colorB:string}) => {
+  const handleSelectKashaDesign = useCallback(async (design: KashaDesignDef, colorOverride?: {colorA:string;colorB:string;fillA?:ChannelFill;fillB?:ChannelFill}) => {
     const fc=fcRef.current; if(!fc) return;
     const myReq=++kdRequestIdRef.current;
     setActiveKashaDesign(design);
     // When a print is active it acts as the base colour — keep it; design renders on top
     try{mats[0]?.mat?.pbrMetallicRoughness?.setBaseColorFactor?.([1,1,1,1]);}catch{}
-    const recolor: RecolorOptions = colorOverride ?? { colorA: patColorA, colorB: patColorB };
+    const recolor: RecolorOptions = colorOverride
+      ? { colorA: colorOverride.colorA, colorB: colorOverride.colorB, fillA: colorOverride.fillA, fillB: colorOverride.fillB }
+      : { colorA: patColorA, colorB: patColorB };
     if (colorOverride) { setPatColorA(colorOverride.colorA); setPatColorB(colorOverride.colorB); }
     await applyKashaDesign(fc, design, recolor);
     if (myReq!==kdRequestIdRef.current) return;
@@ -1173,7 +1175,7 @@ export default function CustomizePage() {
     // Resolve the design ID and the best available colorway:
     // Priority: 1) full-SKU entry param  2) product SKU  3) defaults
     let designId: string;
-    let colorOverride: {colorA:string;colorB:string} | undefined;
+    let colorOverride: {colorA:string;colorB:string;fillA?:ChannelFill;fillB?:ChannelFill} | undefined;
 
     if (entrySkuResult.type === "pattern" || entrySkuResult.type === "pattern+print") {
       // Full SKU passed in URL — use its design + colors
@@ -1194,10 +1196,46 @@ export default function CustomizePage() {
       designId = SKU_KASHA_DESIGN_MAP[product.sku ?? ""] ?? "KS1001B";
     }
 
+    // ── Resolve print fills from zoneFills (new PAT-BLK,PRT-006 format) ──────
+    // zoneFills[0] = colorB slot (base/light), zoneFills[1] = colorA slot (dark/accent).
+    // When a slot is kind:"print", resolve the pattern URL and attach as fillA/fillB.
+    const activePatternSku =
+      entrySkuResult.type === "pattern" ? entrySkuResult :
+      productSkuResult.type === "pattern" ? productSkuResult : null;
+
+    if (activePatternSku && colorOverride) {
+      const [fillBSpec, fillASpec] = activePatternSku.zoneFills ?? [];
+      if (fillASpec?.kind === "print") {
+        const patt = PATTERNS.find((p: PatternDef) => p.id === fillASpec.patternId);
+        if (patt) colorOverride.fillA = { kind: "print", printUrl: toProxiedUrl(patternUrl(patt.file)) };
+      }
+      if (fillBSpec?.kind === "print") {
+        const patt = PATTERNS.find((p: PatternDef) => p.id === fillBSpec.patternId);
+        if (patt) colorOverride.fillB = { kind: "print", printUrl: toProxiedUrl(patternUrl(patt.file)) };
+      }
+    }
+
     const design = KASHA_DESIGNS.find(d => d.id === designId) ?? KASHA_DESIGNS[0];
-    // Apply colorB as the body/primary garment colour *before* zone textures are placed
-    // on top, so any UV area not covered by a zone still shows the correct body colour.
-    if (colorOverride) {
+
+    // When fillB is a print, apply it as the canvas background first so transparent
+    // Channel-B zone pixels show the body print beneath them.
+    // When fillB is a solid color, set it as the body background as before.
+    if (colorOverride?.fillB?.kind === "print") {
+      // Find the body print pattern and apply it as background
+      const activeBSpec = activePatternSku?.zoneFills?.[0];
+      const bodyPrint = activeBSpec?.kind === "print"
+        ? PATTERNS.find((p: PatternDef) => p.id === activeBSpec.patternId)
+        : null;
+      if (bodyPrint) {
+        // applyAllOverPrint sets background, then design zones (with transparent B) go on top
+        applyAllOverPrint(bodyPrint).then(() => {
+          handleSelectKashaDesign(design, colorOverride);
+        });
+        return;
+      }
+    } else if (colorOverride) {
+      // Apply colorB as the body/primary garment colour *before* zone textures are placed
+      // on top, so any UV area not covered by a zone still shows the correct body colour.
       baseBgRef.current = colorOverride.colorB;
       const fc = fcRef.current;
       if (fc) setFabricBg(fc, colorOverride.colorB);
