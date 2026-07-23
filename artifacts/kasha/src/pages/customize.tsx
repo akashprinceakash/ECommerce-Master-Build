@@ -194,6 +194,65 @@ const PLACEMENT_GROUPS = [
 const COLOUR_ZONES = PART_ZONES.filter(z => z.id !== "leftSleeve" && z.id !== "rightSleeve");
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Resolve any CSS colour string (named colour, hex, rgb(), etc.) to a "#RRGGBB"
+ * hex string using the browser's own colour parser.
+ *
+ * Handles:
+ *  • #RGB / #RRGGBB / RRGGBB (no hash) — all accepted
+ *  • Single-word CSS named colours: "navy", "crimson", "goldenrod", …
+ *  • Multi-word attempts: "dark brown" → tries "darkbrown" as a fallback
+ *
+ * Returns null when the string cannot be resolved to a valid opaque colour.
+ */
+function cssColorToHex(raw: string): string | null {
+  const s = raw.trim();
+  if (!s) return null;
+
+  // Bare 3- or 6-char hex without the hash
+  if (/^[0-9a-fA-F]{6}$/.test(s)) return `#${s}`;
+  if (/^[0-9a-fA-F]{3}$/.test(s)) {
+    const [a,b,c] = s;
+    return `#${a}${a}${b}${b}${c}${c}`;
+  }
+
+  // Use a throwaway canvas to let the browser parse any CSS colour string
+  const resolve = (str: string): string | null => {
+    try {
+      const cv = document.createElement("canvas");
+      cv.width = cv.height = 1;
+      const ctx = cv.getContext("2d")!;
+      ctx.fillStyle = "#000"; // sentinel
+      ctx.fillStyle = str;
+      const parsed = ctx.fillStyle as string;
+      // Browser returns empty string or "#000000" if input was invalid/black-sentinel;
+      // we distinguish by checking both sentinel and real black
+      if (parsed === "" || parsed === "rgba(0, 0, 0, 0)") return null;
+      // fillStyle is normalised to #rrggbb or rgb()/rgba() by the browser
+      if (/^#[0-9a-fA-F]{6}$/.test(parsed)) return parsed;
+      // rgb(r, g, b) → convert
+      const m = parsed.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      if (m) {
+        return "#" + [m[1],m[2],m[3]].map(n=>parseInt(n).toString(16).padStart(2,"0")).join("");
+      }
+    } catch { /* ignore */ }
+    return null;
+  };
+
+  // Direct attempt
+  const direct = resolve(s);
+  if (direct) return direct;
+
+  // Multi-word fallback: collapse spaces ("dark brown" → "darkbrown")
+  if (s.includes(" ")) {
+    const collapsed = resolve(s.replace(/\s+/g,""));
+    if (collapsed) return collapsed;
+  }
+
+  return null;
+}
+
 function hexToRgba(hex: string): [number,number,number,number] {
   const h = hex.replace("#","");
   const r = parseInt(h.substring(0,2),16)/255;
@@ -482,6 +541,11 @@ export default function CustomizePage() {
   const [patColorA, setPatColorA] = useState(PAT_COLOR_A_DEFAULT);   // Channel A — dark tones
   const [patColorB, setPatColorB] = useState(PAT_COLOR_B_DEFAULT);   // Channel B — light tones
   const [patRecoloring, setPatRecoloring] = useState(false);         // spinner while recoloring
+  // Draft text + error state for the Channel A/B text inputs in the pattern panel
+  const [draftColorA, setDraftColorA] = useState(PAT_COLOR_A_DEFAULT);
+  const [draftColorB, setDraftColorB] = useState(PAT_COLOR_B_DEFAULT);
+  const [errColorA,   setErrColorA]   = useState(false);
+  const [errColorB,   setErrColorB]   = useState(false);
   // ── Sizing matrix + modal state ───────────────────────────────────────────
   const [sizeMode, setSizeMode] = useState<"standard"|"custom">("standard");
   const [sizeQty, setSizeQty] = useState<Record<string,number>>({S:0,M:0,L:0,XL:0,XXL:0});
@@ -854,6 +918,9 @@ export default function CustomizePage() {
     if (!activeKashaDesign) return;
     const fc=fcRef.current; if(!fc) return;
     setPatColorA(cA); setPatColorB(cB);
+    // Keep text-input drafts in sync whenever colours change via swatch/picker/preset
+    setDraftColorA(cA); setErrColorA(false);
+    setDraftColorB(cB); setErrColorB(false);
     setPatRecoloring(true);
     try {
       const recolor: RecolorOptions = { colorA: cA, colorB: cB };
@@ -3228,7 +3295,7 @@ export default function CustomizePage() {
                             spellCheck={false}
                             onChange={e=>{
                               const v=e.target.value.trim();
-                              const hex=/^#[0-9a-fA-F]{6}$/.test(v)?v:/^[0-9a-fA-F]{6}$/.test(v)?`#${v}`:null;
+                              const hex=cssColorToHex(v);
                               if(!hex) return;
                               if(activeKashaDesign||colorTarget==="all") applyPrimary(hex);
                               else applyZoneColor(colorTarget as Exclude<typeof colorTarget,"all">,hex);
@@ -3558,13 +3625,32 @@ export default function CustomizePage() {
                       {/* Channel A — Dark tones */}
                       <div>
                         <div style={{fontSize:9,fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",color:"#555540",fontFamily:"'Jost',sans-serif",marginBottom:6}}>Channel A — Dark tones</div>
-                        {/* Current preview */}
-                        <div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:V.bg,borderRadius:8,border:`1px solid ${V.bd}`,marginBottom:8}}>
+                        {/* Editable colour entry */}
+                        <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:V.bg,borderRadius:8,border:`1px solid ${errColorA?"#c45c5c":V.bd}`,marginBottom:8,transition:"border-color .2s"}}>
                           <div style={{width:28,height:28,borderRadius:6,background:patColorA,border:`1px solid ${V.bd2}`,flexShrink:0,transition:"background .2s"}}/>
                           <div style={{flex:1}}>
-                            <div style={{fontSize:10,color:V.mu,fontFamily:"'Jost',sans-serif",fontWeight:500}}>Color A</div>
-                            <div style={{fontSize:10,color:"#888",fontFamily:"monospace",letterSpacing:".08em"}}>{patColorA.toUpperCase()}</div>
+                            <div style={{fontSize:9,color:V.mu,fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:2}}>Color A</div>
+                            <input
+                              type="text"
+                              value={draftColorA}
+                              onChange={e=>{ setDraftColorA(e.target.value); setErrColorA(false); }}
+                              onBlur={e=>{
+                                const hex=cssColorToHex(e.target.value.trim());
+                                if(hex){ setErrColorA(false); applyPatternColors(hex,patColorB); saveHistory(); }
+                                else setErrColorA(true);
+                              }}
+                              onKeyDown={e=>{ if(e.key==="Enter"){ e.preventDefault(); const hex=cssColorToHex((e.target as HTMLInputElement).value.trim()); if(hex){setErrColorA(false);applyPatternColors(hex,patColorB);saveHistory();}else setErrColorA(true); } }}
+                              placeholder="hex or colour name"
+                              spellCheck={false}
+                              style={{
+                                width:"100%",background:"transparent",border:"none",outline:"none",
+                                fontFamily:"'Jost',monospace",fontSize:11,fontWeight:600,
+                                letterSpacing:".07em",color:errColorA?"#c45c5c":V.tx,
+                                textTransform:"uppercase",padding:0,
+                              }}
+                            />
                           </div>
+                          {errColorA&&<div style={{fontSize:9,color:"#c45c5c",fontFamily:"'Jost',sans-serif",whiteSpace:"nowrap"}}>Unknown colour</div>}
                         </div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center"}}>
                           {DARK_SWATCHES.map(hex=>(
@@ -3586,13 +3672,32 @@ export default function CustomizePage() {
                       {/* Channel B — Light tones */}
                       <div>
                         <div style={{fontSize:9,fontWeight:700,letterSpacing:".12em",textTransform:"uppercase",color:"#555540",fontFamily:"'Jost',sans-serif",marginBottom:6}}>Channel B — Light tones</div>
-                        {/* Current preview */}
-                        <div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:V.bg,borderRadius:8,border:`1px solid ${V.bd}`,marginBottom:8}}>
+                        {/* Editable colour entry */}
+                        <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:V.bg,borderRadius:8,border:`1px solid ${errColorB?"#c45c5c":V.bd}`,marginBottom:8,transition:"border-color .2s"}}>
                           <div style={{width:28,height:28,borderRadius:6,background:patColorB,border:`1px solid ${V.bd2}`,flexShrink:0,transition:"background .2s"}}/>
                           <div style={{flex:1}}>
-                            <div style={{fontSize:10,color:V.mu,fontFamily:"'Jost',sans-serif",fontWeight:500}}>Color B</div>
-                            <div style={{fontSize:10,color:"#888",fontFamily:"monospace",letterSpacing:".08em"}}>{patColorB.toUpperCase()}</div>
+                            <div style={{fontSize:9,color:V.mu,fontFamily:"'Jost',sans-serif",fontWeight:600,letterSpacing:".06em",textTransform:"uppercase",marginBottom:2}}>Color B</div>
+                            <input
+                              type="text"
+                              value={draftColorB}
+                              onChange={e=>{ setDraftColorB(e.target.value); setErrColorB(false); }}
+                              onBlur={e=>{
+                                const hex=cssColorToHex(e.target.value.trim());
+                                if(hex){ setErrColorB(false); applyPatternColors(patColorA,hex); saveHistory(); }
+                                else setErrColorB(true);
+                              }}
+                              onKeyDown={e=>{ if(e.key==="Enter"){ e.preventDefault(); const hex=cssColorToHex((e.target as HTMLInputElement).value.trim()); if(hex){setErrColorB(false);applyPatternColors(patColorA,hex);saveHistory();}else setErrColorB(true); } }}
+                              placeholder="hex or colour name"
+                              spellCheck={false}
+                              style={{
+                                width:"100%",background:"transparent",border:"none",outline:"none",
+                                fontFamily:"'Jost',monospace",fontSize:11,fontWeight:600,
+                                letterSpacing:".07em",color:errColorB?"#c45c5c":V.tx,
+                                textTransform:"uppercase",padding:0,
+                              }}
+                            />
                           </div>
+                          {errColorB&&<div style={{fontSize:9,color:"#c45c5c",fontFamily:"'Jost',sans-serif",whiteSpace:"nowrap"}}>Unknown colour</div>}
                         </div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center"}}>
                           {LIGHT_SWATCHES.map(hex=>(
@@ -4392,10 +4497,11 @@ export default function CustomizePage() {
                   <input type="text" defaultValue={displayCol}
                     onBlur={e=>{
                       e.target.style.borderColor=V.bd;
-                      const v=e.target.value.trim();
-                      if(/^#[0-9A-Fa-f]{6}$/.test(v)) applyCol(v);
+                      const hex=cssColorToHex(e.target.value.trim());
+                      if(hex) applyCol(hex);
                     }}
-                    placeholder="#c9a84c"
+                    onKeyDown={e=>{ if(e.key==="Enter"){ const hex=cssColorToHex((e.target as HTMLInputElement).value.trim()); if(hex) applyCol(hex); } }}
+                    placeholder="#c9a84c or colour name"
                     style={{
                       flex:1,padding:"8px 10px",borderRadius:8,
                       border:`1.5px solid ${V.bd}`,background:V.sf2,
