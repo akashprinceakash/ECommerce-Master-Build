@@ -300,7 +300,13 @@ export const PRINT_SKU_MAP: Record<string, string> = {
 
 export type ZoneFill =
   | { kind: "color"; hex: string }
-  | { kind: "print"; patternId: string; printNum: number };
+  | { kind: "print"; patternId: string; printNum: number }
+  /**
+   * Token was not a valid hex code, not a known name/abbreviation, and not a
+   * print reference.  The token is preserved verbatim so the UI can surface
+   * an actionable error instead of silently rendering a fallback colour.
+   */
+  | { kind: "unresolved"; token: string };
 
 // ── Parsed SKU result types ──────────────────────────────────────────────────
 
@@ -621,10 +627,20 @@ export function parseSku(sku: string): SkuResult {
         const patternId = PRINT_SKU_MAP[key] ?? key;
         return { kind: "print", patternId, printNum: num };
       }
-      // Color token
+      // Bare 6-character hex (no leading #) — applied directly, no name lookup needed
+      if (/^[0-9A-Fa-f]{6}$/.test(tok)) {
+        return { kind: "color", hex: `#${tok.toUpperCase()}` };
+      }
+      // Named colour token (3-letter code, full name, multi-word…)
       const hex = resolveColorToken(tok);
-      if (!hex) console.warn(`[SKU] ${upper}: unknown color token "${tok}" — using default`);
-      return { kind: "color", hex: hex ?? DEFAULT_PATTERN_COLORS.colorB };
+      if (hex) return { kind: "color", hex };
+      // Nothing matched — surface a typed error; do NOT silently fall back to a default colour
+      console.error(
+        `[SKU] parseSku("${upper}"): token "${tok}" could not be resolved — ` +
+        `not a 6-char hex, not in SOLID_COLOR_MAP, not in DESCRIPTIVE_COLOR_HEX. ` +
+        `No colour will be applied for this slot.`,
+      );
+      return { kind: "unresolved", token: tok };
     };
 
     if (rawSuffix.startsWith("PAT-")) {
@@ -657,13 +673,16 @@ export function parseSku(sku: string): SkuResult {
         }
       }
 
-      // Backward-compat hex values: use neutral grey placeholder for print slots
+      // Backward-compat hex values: use a neutral placeholder for print / unresolved slots
       // so any code that reads colorA/colorB without checking zoneFills still compiles.
+      // "unresolved" slots get the same placeholder — the UI surfaces the error separately.
       const PRINT_PLACEHOLDER = "#808080";
+      const fillHex = (f: ZoneFill): string =>
+        f.kind === "color" ? f.hex : PRINT_PLACEHOLDER;
       const fill0 = fills[0];
       const fill1 = fills[1] ?? fills[0];
-      const colorB = fill0.kind === "color" ? fill0.hex : PRINT_PLACEHOLDER;
-      const colorA = fill1.kind === "color" ? fill1.hex : PRINT_PLACEHOLDER;
+      const colorB = fillHex(fill0);
+      const colorA = fillHex(fill1);
 
       const toTitle = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
       const colorLabel = tokens.length > 0

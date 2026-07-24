@@ -546,6 +546,8 @@ export default function CustomizePage() {
   const [draftColorB, setDraftColorB] = useState(PAT_COLOR_B_DEFAULT);
   const [errColorA,   setErrColorA]   = useState(false);
   const [errColorB,   setErrColorB]   = useState(false);
+  // SKU color tokens that could not be resolved (shown as error banners in the colour panel)
+  const [skuColorErrors, setSkuColorErrors] = useState<string[]>([]);
   // ── Sizing matrix + modal state ───────────────────────────────────────────
   const [sizeMode, setSizeMode] = useState<"standard"|"custom">("standard");
   const [sizeQty, setSizeQty] = useState<Record<string,number>>({S:0,M:0,L:0,XL:0,XXL:0});
@@ -1272,6 +1274,12 @@ export default function CustomizePage() {
 
     if (activePatternSku && colorOverride) {
       const [fillBSpec, fillASpec] = activePatternSku.zoneFills ?? [];
+      // Surface any unresolved tokens as visible errors in the colour panel
+      const unresolved = (activePatternSku.zoneFills ?? [])
+        .filter(f => f.kind === "unresolved")
+        .map(f => (f as { kind: "unresolved"; token: string }).token);
+      if (unresolved.length > 0) setSkuColorErrors(unresolved);
+      // Only resolve fills for recognised kinds
       if (fillASpec?.kind === "print") {
         const patt = PATTERNS.find((p: PatternDef) => p.id === fillASpec.patternId);
         if (patt) colorOverride.fillA = { kind: "print", printUrl: toProxiedUrl(patternUrl(patt.file)) };
@@ -3621,6 +3629,23 @@ export default function CustomizePage() {
                         </div>
                         {patRecoloring&&<div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${V.bd}`,borderTopColor:V.ac,animation:"spin .8s linear infinite",flexShrink:0}}/>}
                       </div>
+
+                      {/* SKU colour-resolution errors */}
+                      {skuColorErrors.length>0&&(
+                        <div style={{display:"flex",flexDirection:"column",gap:4,padding:"8px 10px",background:"rgba(196,92,92,.08)",border:"1px solid rgba(196,92,92,.3)",borderRadius:8}}>
+                          <div style={{fontSize:9,fontWeight:700,letterSpacing:".10em",textTransform:"uppercase",color:"#c45c5c",fontFamily:"'Jost',sans-serif"}}>Colour not recognised</div>
+                          {skuColorErrors.map(tok=>(
+                            <div key={tok} style={{fontSize:10,color:"#c45c5c",fontFamily:"'Jost',sans-serif"}}>
+                              <span style={{fontFamily:"monospace",fontWeight:700}}>{tok}</span>
+                              {" "}— not a valid hex or colour name. Use a 6-digit hex (e.g. <span style={{fontFamily:"monospace"}}>3D1C02</span>) or a CSS colour name.
+                            </div>
+                          ))}
+                          <button
+                            onClick={()=>setSkuColorErrors([])}
+                            style={{alignSelf:"flex-start",marginTop:2,fontSize:9,color:"#c45c5c",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"'Jost',sans-serif",textDecoration:"underline"}}
+                          >Dismiss</button>
+                        </div>
+                      )}
 
                       {/* Channel A — Dark tones */}
                       <div>
