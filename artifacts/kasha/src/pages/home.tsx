@@ -722,7 +722,7 @@ export default function Home() {
                 num: "02",
                 glyph: "⊞",
                 title: "Generate Outfit",
-                desc: "Drag, resize and layer saved pieces freely on your style canvas to build the complete outfit.",
+                desc: "Select your saved garments and let AI generate a realistic complete outfit with your chosen pieces.",
                 cta: "Try now →", href: "/lookbook",
               },
               {
