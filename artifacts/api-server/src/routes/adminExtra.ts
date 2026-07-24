@@ -163,12 +163,15 @@ async function triggerFulfillment(order: typeof ordersTable.$inferSelect, orderI
     }),
   );
 
-  // Resolve customer email from Clerk
+  // Resolve customer email — always use Clerk as the source of truth.
+  // Primary: the verified primary address; fallback: first available address.
   let customerEmail = "";
   try {
     const clerkUser = await clerkClient.users.getUser(order.userId);
     customerEmail =
-      clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ?? "";
+      clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress
+      ?? clerkUser.emailAddresses[0]?.emailAddress
+      ?? "";
   } catch (err) {
     logger.warn({ userId: order.userId, err }, "Admin fulfillment: could not fetch Clerk user email");
   }

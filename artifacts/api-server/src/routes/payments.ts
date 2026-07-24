@@ -112,12 +112,15 @@ async function runFulfillment(
     }),
   );
 
-  // Resolve customer email
+  // Resolve customer email — always use Clerk as the source of truth.
+  // Primary: the verified primary address; fallback: first available address.
   let customerEmail = "";
   try {
     const clerkUser = await clerkClient.users.getUser(userId);
     customerEmail =
-      clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ?? "";
+      clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress
+      ?? clerkUser.emailAddresses[0]?.emailAddress
+      ?? "";
   } catch (e) {
     logger.warn({ userId, e }, "Could not fetch Clerk user email");
   }

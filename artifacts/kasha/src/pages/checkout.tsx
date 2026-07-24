@@ -16,7 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import { Loader2, ArrowLeft, Truck, X, MapPin, Tag } from "lucide-react";
 import { getApiUrl, getAssetUrl } from "@/lib/api";
-import { useAuth } from "@clerk/react";
+import { useAuth, useUser } from "@clerk/react";
 
 import { useCart } from "@/contexts/CartContext";
 
@@ -59,6 +59,7 @@ export default function CheckoutPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { getToken, isSignedIn } = useAuth();
+  const { user } = useUser();
   const { guestCart, clearGuestCart } = useCart();
 
   const { data: cart, isLoading: isLoadingCart } = useGetCart({
@@ -388,7 +389,9 @@ export default function CheckoutPage() {
           description: "Luxury bespoke order",
           prefill: {
             name: formData.shippingName,
-            email: profile?.email ?? "",
+            // Always use the Clerk-verified primary email — never the DB profile email
+            // which can be stale or set to a different address by the user.
+            email: user?.primaryEmailAddress?.emailAddress ?? "",
             contact: formData.shippingPhone,
           },
           notes: { shipping_city: formData.shippingCity },

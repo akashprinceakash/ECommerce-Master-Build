@@ -268,6 +268,11 @@ export default function LookbookPage() {
         name: "KA.SHA",
         description: `${order.package.creditsAmount} AI Credit${order.package.creditsAmount > 1 ? "s" : ""}`,
         order_id: order.razorpayOrderId,
+        prefill: {
+          // Always use the Clerk-verified email so Razorpay notifies the right person.
+          email: user?.primaryEmailAddress?.emailAddress ?? "",
+          name: user?.fullName ?? user?.firstName ?? "",
+        },
         handler: async (resp: any) => {
           try {
             await verifyPayment.mutateAsync({

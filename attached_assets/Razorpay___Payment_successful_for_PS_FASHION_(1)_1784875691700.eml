@@ -1,0 +1,531 @@
+Delivered-To: pranaysomaia715@gmail.com
+Received: by 2002:a05:6022:6119:b0:109:65b4:1c7f with SMTP id y25csp1862770lay;
+        Thu, 23 Jul 2026 22:42:17 -0700 (PDT)
+X-Received: by 2002:a05:6300:614e:b0:3c3:8651:b317 with SMTP id adf61e73a8af0-3c44afaac10mr6750857637.10.1784871737072;
+        Thu, 23 Jul 2026 22:42:17 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1784871737; cv=none;
+        d=google.com; s=arc-20260327;
+        b=EnK83WBQ6QuHdYIIenqhnyNtNqiWhA+fOD+0bak4EpZ4p5P9JNsbtlIae1zT/+v3LM
+         D2FWLs602qZxlSZiqffy1c/7UI2aJctgb9dCoNjU+0cdbK37aiclyIWh4mP0HOXL4usr
+         9AWcXrY5MP5MX0axxMPHywvE85iSkmebde+Ke3dKx8MHfebloDC7QaN4gfXRLJQuC5iI
+         a7kHzq6uVMsj0kGhsJd6C9Q6Q8l+V9JgeB92DTYiuOdr9QWbF3rht8DVOXy/9zEuOSO3
+         2/vTrYOx09I2uYp2yHQ9+Ww3c1GuHf6RkDnahw6lkWHWHgTnSh3QkoOXcg5ZdnwTFSOa
+         aLlg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
+        h=feedback-id:message-id:content-transfer-encoding:to:reply-to:cc
+         :from:subject:date:mime-version:dkim-signature:dkim-signature;
+        bh=M5HH1UZ2q8ugmPA9bB4wd2hZIo6FVR2jESQYSo5STWY=;
+        fh=j4Rn1NP5sGYiUxCz5t8sa1pkAnT0M82xeF8jTAv2NiQ=;
+        b=lB0mYlf/W00lCEi86SuvmUtTLfCt98w+dNA7/aO4C7fN4jrCY/2PxN11yZdAEvyGnE
+         uow0MVMOQLzjrIx6HmfipoS3w3mAtVdz+nn5/j9odYX0Llk0OFBUEqyx+Mgh+E+L5V5H
+         5AWj6Dj1lV1rJO6KpHdVVvsaWJ0ALtRA0fTncHGCgVypp3wMO01U1u3jy47xo24qU/zP
+         IF53UL+W+flXvyw91fTkZbWJpY9YvF4q2jD44B4F5xNC5NDTkbEAQmmzR1oVhvq9JHvQ
+         wrMWMSfk8HebaYi2MVWaKiFTOfLcZ3M0wqcJIvxQpu3dgGWDOi27TWlTZ/d7njWtnBSE
+         0GQw==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@razorpay.com header.s=2xyqtuu4pn5maelmmzbu5fasl5nb4oju header.b="L/pva29c";
+       dkim=pass header.i=@amazonses.com header.s=rlntogby6xsxlfnvyxwnvvhttakdsqto header.b=NKZ+wWOF;
+       spf=pass (google.com: domain of 0109019f92a553bc-b94404f4-9005-4609-930c-1b9156d0fb74-000000@sesmail.razorpay.com designates 76.223.181.94 as permitted sender) smtp.mailfrom=0109019f92a553bc-b94404f4-9005-4609-930c-1b9156d0fb74-000000@sesmail.razorpay.com;
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=razorpay.com
+Return-Path: <0109019f92a553bc-b94404f4-9005-4609-930c-1b9156d0fb74-000000@sesmail.razorpay.com>
+Received: from c181-94.smtp-out.ap-south-1.amazonses.com (c181-94.smtp-out.ap-south-1.amazonses.com. [76.223.181.94])
+        by mx.google.com with ESMTPS id 5a478bee46e88-314a992b4d4si5500049eec.59.2026.07.23.22.42.16
+        for <pranaysomaia715@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
+        Thu, 23 Jul 2026 22:42:17 -0700 (PDT)
+Received-SPF: pass (google.com: domain of 0109019f92a553bc-b94404f4-9005-4609-930c-1b9156d0fb74-000000@sesmail.razorpay.com designates 76.223.181.94 as permitted sender) client-ip=76.223.181.94;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@razorpay.com header.s=2xyqtuu4pn5maelmmzbu5fasl5nb4oju header.b="L/pva29c";
+       dkim=pass header.i=@amazonses.com header.s=rlntogby6xsxlfnvyxwnvvhttakdsqto header.b=NKZ+wWOF;
+       spf=pass (google.com: domain of 0109019f92a553bc-b94404f4-9005-4609-930c-1b9156d0fb74-000000@sesmail.razorpay.com designates 76.223.181.94 as permitted sender) smtp.mailfrom=0109019f92a553bc-b94404f4-9005-4609-930c-1b9156d0fb74-000000@sesmail.razorpay.com;
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=razorpay.com
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/simple;
+	s=2xyqtuu4pn5maelmmzbu5fasl5nb4oju; d=razorpay.com; t=1784871736;
+	h=Mime-Version:Date:Subject:From:Cc:Reply-To:To:Content-Type:Content-Transfer-Encoding:Message-ID;
+	bh=3hWB2abb61EB04ElDjhEvAS6AmVbpOL6ygL7+b7mHns=;
+	b=L/pva29cnRE9xTdKNtOdJ526R2eSKVGbD3JaCDERsVnO04odaRFINlNn7dKaWEeg
+	NOue1YZ8HTIeR1xLYT9XxrGjXsYdx4Xh1f04soctahsOtMenYg/lB53HMO5mRqNPVty
+	LAnS1vtUZXQWs199l3i2eR408PsZe4hg/DC0+ILA=
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/simple;
+	s=rlntogby6xsxlfnvyxwnvvhttakdsqto; d=amazonses.com; t=1784871736;
+	h=Mime-Version:Date:Subject:From:Cc:Reply-To:To:Content-Type:Content-Transfer-Encoding:Message-ID:Feedback-ID;
+	bh=3hWB2abb61EB04ElDjhEvAS6AmVbpOL6ygL7+b7mHns=;
+	b=NKZ+wWOFOus4/kgtkrdsj+w4eoWnzvTS0wJOW0uKmi1z3pT0e4y7lrlxIPXLxKdt
+	E8GPEBXigjPiBWUQEHZbQsGkyBMtfA0uTIQ2WRWmEXNMBEEBFxcQGlyGD472MpVcAv8
+	y0N9MLNpOjcSVqgfQcjavOKStmK3or7PcYJbRg8c=
+Mime-Version: 1.0
+Date: Fri, 24 Jul 2026 05:42:16 +0000
+Subject: Razorpay | Payment successful for PS FASHION
+From: Payments <no-reply@razorpay.com>
+Cc:
+Reply-To: no-reply@razorpay.com
+To: pranaysomaia715@gmail.com
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Message-ID: <0109019f92a553bc-b94404f4-9005-4609-930c-1b9156d0fb74-000000@ap-south-1.amazonses.com>
+Feedback-ID: ::1.ap-south-1.oaOovAh3R7iuE7Qb6Yakmg9UPJ0UMTKm+0yvCRVYUUU=:AmazonSES
+X-SES-Outgoing: 2026.07.24-76.223.181.94
+
+
+    <!doctype html>
+    <html xmlns=3D"http://www.w3.org/1999/xhtml" xmlns:v=3D"urn:schemas-mic=
+rosoft-com:vml" xmlns:o=3D"urn:schemas-microsoft-com:office:office">
+      <head>
+        <title>
+         =20
+        </title>
+        <!--[if !mso]><!-- -->
+        <meta http-equiv=3D"X-UA-Compatible" content=3D"IE=3Dedge">
+        <!--<![endif]-->
+        <meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3DU=
+TF-8">
+        <meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-sc=
+ale=3D1">
+        <style type=3D"text/css">
+          #outlook a { padding:0; }
+          body { margin:0;padding:0;-webkit-text-size-adjust:100%;-ms-text-=
+size-adjust:100%; }
+          table, td { border-collapse:collapse;mso-table-lspace:0pt;mso-tab=
+le-rspace:0pt; }
+          img { border:0;height:auto;line-height:100%; outline:none;text-de=
+coration:none;-ms-interpolation-mode:bicubic; }
+          p { display:block;margin:13px 0; }
+        </style>
+        <!--[if mso]>
+        <xml>
+        <o:OfficeDocumentSettings>
+          <o:AllowPNG/>
+          <o:PixelsPerInch>96</o:PixelsPerInch>
+        </o:OfficeDocumentSettings>
+        </xml>
+        <![endif]-->
+        <!--[if lte mso 11]>
+        <style type=3D"text/css">
+          .mj-outlook-group-fix { width:100% !important; }
+        </style>
+        <![endif]-->
+       =20
+       =20
+    <style type=3D"text/css">
+      @media only screen and (min-width:480px) {
+        .mj-column-per-100 { width:100% !important; max-width: 100%; }
+      }
+    </style>
+   =20
+ =20
+        <style type=3D"text/css">
+       =20
+       =20
+        </style>
+       =20
+       =20
+      </head>
+      <body style=3D"background-color:#F0F0F0;">
+       =20
+       =20
+      <div style=3D"background-color:#F0F0F0;">
+       =20
+     =20
+      <!--[if mso | IE]>
+      <table
+         align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" =
+class=3D"" style=3D"width:100%;" width=3D"100"
+      >
+        <tr>
+          <td style=3D"line-height:0px;font-size:0px;mso-line-height-rule:e=
+xactly;">
+      <![endif]-->
+   =20
+     =20
+      <div style=3D"margin:0px auto;max-width:100%;">
+       =20
+        <table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=
+=3D"0" role=3D"presentation" style=3D"width:100%;">
+          <tbody>
+            <tr>
+              <td style=3D"direction:ltr;font-size:0px;padding:0;text-align=
+:center;">
+                <!--[if mso | IE]>
+                  <table role=3D"presentation" border=3D"0" cellpadding=3D"=
+0" cellspacing=3D"0">
+               =20
+        <tr>
+     =20
+            <td
+               class=3D"" style=3D"vertical-align:top;width:100px;"
+            >
+          <![endif]-->
+           =20
+      <div class=3D"mj-column-per-100 mj-outlook-group-fix" style=3D"font-s=
+ize:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:t=
+op;width:100%;">
+       =20
+      <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"prese=
+ntation" width=3D"100%">
+        <tbody>
+          <tr>
+            <td style=3D"vertical-align:top;padding:0;">
+             =20
+      <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"prese=
+ntation" style width=3D"100%">
+       =20
+            <tr>
+              <td align=3D"left" style=3D"font-size:0px;padding:0;word-brea=
+k:break-word;">
+               =20
+      <div style=3D"font-family:Trebuchet MS;font-size:13px;line-height:1;t=
+ext-align:left;color:#000000;"><div class=3D"header" style=3D"box-sizing: b=
+order-box;"><div class=3D"rzp-header" style=3D"background-color: #0d2366; w=
+idth: 100%; padding-top: 16px;"><div class=3D"rzp-logo" style=3D"height: 18=
+px; width: 85px; margin-left: auto; margin-right: auto;"><img class=3D"imag=
+e" src=3D"https://cdn.razorpay.com/logo_invert.png" alt=3D"https://cdn.razo=
+rpay.com/logo_invert.png" style=3D"height: 100%; width: 100%;"></div><div c=
+lass=3D"TitleCard TitleCard__top" style=3D"width: calc(46000% - 211600px); =
+max-width: 460px; min-width: 308px; margin: 0 auto; padding-top: 12px; padd=
+ing-bottom: 12px; background-color: #fff; text-align: center; margin-top: 1=
+6px;"><div class=3D"Icon" style=3D"height: 32px; width: 32px; margin-left: =
+auto; margin-right: auto;"><img class=3D"image" src=3D"https://cdn.razorpay=
+.com/static/assets/email/check-success-green.png" alt=3D"https://cdn.razorp=
+ay.com/static/assets/email/check-success-green.png" style=3D"height: 100%; =
+width: 100%;"></div></div></div></div></div>
+   =20
+              </td>
+            </tr>
+         =20
+      </table>
+   =20
+            </td>
+          </tr>
+        </tbody>
+      </table>
+   =20
+      </div>
+   =20
+          <!--[if mso | IE]>
+            </td>
+         =20
+        </tr>
+     =20
+                  </table>
+                <![endif]-->
+              </td>
+            </tr>
+          </tbody>
+        </table>
+       =20
+      </div>
+   =20
+     =20
+      <!--[if mso | IE]>
+          </td>
+        </tr>
+      </table>
+     =20
+      <table
+         align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" =
+class=3D"" style=3D"width:100%;" width=3D"100"
+      >
+        <tr>
+          <td style=3D"line-height:0px;font-size:0px;mso-line-height-rule:e=
+xactly;">
+      <![endif]-->
+   =20
+     =20
+      <div style=3D"margin:0px auto;max-width:100%;">
+       =20
+        <table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=
+=3D"0" role=3D"presentation" style=3D"width:100%;">
+          <tbody>
+            <tr>
+              <td style=3D"direction:ltr;font-size:0px;padding:0;text-align=
+:center;">
+                <!--[if mso | IE]>
+                  <table role=3D"presentation" border=3D"0" cellpadding=3D"=
+0" cellspacing=3D"0">
+               =20
+        <tr>
+     =20
+            <td
+               class=3D"" style=3D"vertical-align:top;width:100px;"
+            >
+          <![endif]-->
+           =20
+      <div class=3D"mj-column-per-100 mj-outlook-group-fix" style=3D"font-s=
+ize:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:t=
+op;width:100%;">
+       =20
+      <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"prese=
+ntation" width=3D"100%">
+        <tbody>
+          <tr>
+            <td style=3D"vertical-align:top;padding:0;">
+             =20
+      <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"prese=
+ntation" style width=3D"100%">
+       =20
+            <tr>
+              <td align=3D"left" style=3D"font-size:0px;padding:0;word-brea=
+k:break-word;">
+               =20
+      <div style=3D"font-family:Trebuchet MS;font-size:13px;line-height:1;t=
+ext-align:left;color:#000000;"><div class=3D"TitleCard TitleCard__bottom Ti=
+tleText" style=3D"width: calc(46000% - 211600px); max-width: 460px; min-wid=
+th: 308px; margin: 0 auto; padding-top: 12px; padding-bottom: 12px; backgro=
+und-color: #fff; text-align: center; color: #0d2366; font-weight: 900;"><di=
+v class=3D"h1" style=3D"font-size: 24px; line-height: 1.5; margin-left: aut=
+o; margin-right: auto;"><span class=3D"Amount"><span class=3D"Amount__Symbo=
+l" style=3D"font-size: inherit; font-weight: 900;">=E2=82=B9</span><span cl=
+ass=3D"Amount__Unit">1</span><span class=3D"Amount__Subunit" style=3D"font-=
+size: 86%;">.00</span></span><div class=3D"h4 SubTitle" style=3D"color: #7b=
+8199; font-weight: 200; font-size: 16px; line-height: 1.5;">Payment Success=
+ful</div></div></div></div>
+   =20
+              </td>
+            </tr>
+         =20
+      </table>
+   =20
+            </td>
+          </tr>
+        </tbody>
+      </table>
+   =20
+      </div>
+   =20
+          <!--[if mso | IE]>
+            </td>
+         =20
+        </tr>
+     =20
+                  </table>
+                <![endif]-->
+              </td>
+            </tr>
+          </tbody>
+        </table>
+       =20
+      </div>
+   =20
+     =20
+      <!--[if mso | IE]>
+          </td>
+        </tr>
+      </table>
+     =20
+      <table
+         align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" =
+class=3D"" style=3D"width:100%;" width=3D"100"
+      >
+        <tr>
+          <td style=3D"line-height:0px;font-size:0px;mso-line-height-rule:e=
+xactly;">
+      <![endif]-->
+   =20
+     =20
+      <div style=3D"margin:0px auto;max-width:100%;">
+       =20
+        <table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=
+=3D"0" role=3D"presentation" style=3D"width:100%;">
+          <tbody>
+            <tr>
+              <td style=3D"direction:ltr;font-size:0px;padding:0;text-align=
+:center;">
+                <!--[if mso | IE]>
+                  <table role=3D"presentation" border=3D"0" cellpadding=3D"=
+0" cellspacing=3D"0">
+               =20
+        <tr>
+     =20
+            <td
+               class=3D"" style=3D"vertical-align:top;width:100px;"
+            >
+          <![endif]-->
+           =20
+      <div class=3D"mj-column-per-100 mj-outlook-group-fix" style=3D"font-s=
+ize:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:t=
+op;width:100%;">
+       =20
+      <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"prese=
+ntation" width=3D"100%">
+        <tbody>
+          <tr>
+            <td style=3D"vertical-align:top;padding:0;">
+             =20
+      <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"prese=
+ntation" style width=3D"100%">
+       =20
+            <tr>
+              <td align=3D"left" style=3D"font-size:0px;padding:0;word-brea=
+k:break-word;">
+               =20
+      <div style=3D"font-family:Trebuchet MS;font-size:13px;line-height:1;t=
+ext-align:left;color:#000000;"><div class=3D"Card highlighted" style=3D"wid=
+th: calc(46000% - 211600px); max-width: 460px; min-width: 308px; margin: 0 =
+auto; background-color: #fff; padding: 16px 20px; margin-top: 8px; box-sizi=
+ng: border-box; border-top: 2px solid #528ff0;"><div class=3D"Informative__=
+Row" style=3D"font-size: 14px; line-height: 1.5; width: 100%; box-sizing: b=
+order-box; padding-left: 5.3%; margin-bottom: 20px; clear: both;"><div clas=
+s=3D"Informative__Label" style=3D"width: 50%; width: calc(150701.569px - 38=
+820.3%); max-width: 100%; min-width: 50%; display: inline-block; color: #7b=
+8199; vertical-align: top; font-weight: 700;">Payment Id</div><div class=3D=
+"Informative__Value" style=3D"display: inline-block; float: right; color: #=
+515978;">pay_THECzRKbJk1XCs</div></div><div class=3D"Informative__Row" styl=
+e=3D"font-size: 14px; line-height: 1.5; width: 100%; box-sizing: border-box=
+; padding-left: 5.3%; margin-bottom: 20px; clear: both;"><div class=3D"Info=
+rmative__Label" style=3D"width: 50%; width: calc(150701.569px - 38820.3%); =
+max-width: 100%; min-width: 50%; display: inline-block; color: #7b8199; ver=
+tical-align: top; font-weight: 700;">Amount</div><div class=3D"Informative_=
+_Value" style=3D"display: inline-block; float: right; color: #515978;"><spa=
+n class=3D"Amount"><span class=3D"Amount__Symbol" style=3D"font-size: inher=
+it; font-weight: 900;">=E2=82=B9</span><span class=3D"Amount__Unit">1</span=
+><span class=3D"Amount__Subunit" style=3D"font-size: 86%;">.00</span></span=
+></div></div><div class=3D"Informative__Row" style=3D"font-size: 14px; line=
+-height: 1.5; width: 100%; box-sizing: border-box; padding-left: 5.3%; marg=
+in-bottom: 20px; clear: both;"><div class=3D"Informative__Label" style=3D"w=
+idth: 50%; width: calc(150701.569px - 38820.3%); max-width: 100%; min-width=
+: 50%; display: inline-block; color: #7b8199; vertical-align: top; font-wei=
+ght: 700;">Customer Details</div><div class=3D"Informative__Value" style=3D=
+"display: inline-block; float: right; color: #515978;"><div>subramanyarao14=
+3@gmail.com</div></div><div class=3D"Informative__Label" style=3D"width: 50=
+%; width: calc(150701.569px - 38820.3%); max-width: 100%; min-width: 50%; d=
+isplay: inline-block; color: #7b8199; vertical-align: top; font-weight: 700=
+;">&nbsp;</div><div class=3D"Informative__Value" style=3D"display: inline-b=
+lock; float: right; color: #515978;">+917483589897</div></div></div></div>
+   =20
+              </td>
+            </tr>
+         =20
+      </table>
+   =20
+            </td>
+          </tr>
+        </tbody>
+      </table>
+   =20
+      </div>
+   =20
+          <!--[if mso | IE]>
+            </td>
+         =20
+        </tr>
+     =20
+                  </table>
+                <![endif]-->
+              </td>
+            </tr>
+          </tbody>
+        </table>
+       =20
+      </div>
+   =20
+     =20
+      <!--[if mso | IE]>
+          </td>
+        </tr>
+      </table>
+     =20
+      <table
+         align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" =
+class=3D"" style=3D"width:100%;" width=3D"100"
+      >
+        <tr>
+          <td style=3D"line-height:0px;font-size:0px;mso-line-height-rule:e=
+xactly;">
+      <![endif]-->
+   =20
+     =20
+      <div style=3D"margin:0px auto;max-width:100%;">
+       =20
+        <table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=
+=3D"0" role=3D"presentation" style=3D"width:100%;">
+          <tbody>
+            <tr>
+              <td style=3D"direction:ltr;font-size:0px;padding:0;text-align=
+:center;">
+                <!--[if mso | IE]>
+                  <table role=3D"presentation" border=3D"0" cellpadding=3D"=
+0" cellspacing=3D"0">
+               =20
+        <tr>
+     =20
+            <td
+               class=3D"" style=3D"vertical-align:top;width:100px;"
+            >
+          <![endif]-->
+           =20
+      <div class=3D"mj-column-per-100 mj-outlook-group-fix" style=3D"font-s=
+ize:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:t=
+op;width:100%;">
+       =20
+      <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"prese=
+ntation" width=3D"100%">
+        <tbody>
+          <tr>
+            <td style=3D"vertical-align:top;padding:0;">
+             =20
+      <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"prese=
+ntation" style width=3D"100%">
+       =20
+            <tr>
+              <td align=3D"left" style=3D"font-size:0px;padding:0;word-brea=
+k:break-word;">
+               =20
+      <div style=3D"font-family:Trebuchet MS;font-size:13px;line-height:1;t=
+ext-align:left;color:#000000;"><div class=3D"Footer" style=3D"width: calc(4=
+6000% - 211600px); max-width: 460px; min-width: 308px; box-sizing: border-b=
+ox; font-size: 12px; padding: 10px 12px; text-align: center; margin: 0 auto=
+; text-align: center; color: #7b8199;"><div class=3D"footer-line" style=3D"=
+margin-top: 16px; margin-bottom: 16px;">You can view the payment details on=
+ the&nbsp;<a class=3D"link" href=3D"https://6y5ejqtl.r.ap-south-1.awstrack.=
+me/L0/https:%2F%2Fdashboard.razorpay.com/1/0109019f92a553bc-b94404f4-9005-4=
+609-930c-1b9156d0fb74-000000/fUf31-V-b5cWGyC-YI18LTCZFGg=3D258" target=3D"_=
+blank" style=3D"text-decoration: none; color: #528ff0;">Merchant Dashboard.=
+</a></div><div class=3D"footer-line" style=3D"margin-top: 16px; margin-bott=
+om: 16px;">For further assistance, you can reach out to us&nbsp;<a class=3D=
+"link" href=3D"https://dashboard.razorpay.com/#/app/dashboard#request" targ=
+et=3D"_blank" style=3D"text-decoration: none; color: #528ff0;">here</a></di=
+v></div></div>
+   =20
+              </td>
+            </tr>
+         =20
+      </table>
+   =20
+            </td>
+          </tr>
+        </tbody>
+      </table>
+   =20
+      </div>
+   =20
+          <!--[if mso | IE]>
+            </td>
+         =20
+        </tr>
+     =20
+                  </table>
+                <![endif]-->
+              </td>
+            </tr>
+          </tbody>
+        </table>
+       =20
+      </div>
+   =20
+     =20
+      <!--[if mso | IE]>
+          </td>
+        </tr>
+      </table>
+      <![endif]-->
+   =20
+   =20
+      </div>
+   =20
+      <img alt=3D"" src=3D"https://6y5ejqtl.r.ap-south-1.awstrack.me/I0/010=
+9019f92a553bc-b94404f4-9005-4609-930c-1b9156d0fb74-000000/bMNqMpVMR5aTIXEOT=
+ZVGDBhmKQ4=3D258" style=3D"display: none; width: 1px; height: 1px;">
+</body>
+    </html>
+ =20
