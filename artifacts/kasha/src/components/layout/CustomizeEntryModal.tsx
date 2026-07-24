@@ -119,11 +119,11 @@ function matchesCategory(p: AnyProduct, dbCategory: string): boolean {
 
 /**
  * Find the first product that matches gender + garment category + SKU type.
+ * Gender is NEVER crossed — a men's product will never appear in a women's tile.
  * Priority:
  *   1. gender + category + skuType  (ideal)
- *   2. gender + category            (right garment, any style — still shows as the tile)
- *   3. category + skuType           (right garment + style, ungendered)
- *   4. null                         (tile renders as disabled / Coming Soon)
+ *   2. gender + category            (right garment + gender, any SKU style — link to it anyway)
+ *   3. null                         (tile renders as disabled / Coming Soon)
  */
 function findFirstByType(
   products:    AnyProduct[],
@@ -134,22 +134,20 @@ function findFirstByType(
   return (
     products.find(p => p.available && p.gender === gender && matchesCategory(p, dbCategory) && parseSku(p.sku ?? "").type === skuType) ??
     products.find(p => p.available && p.gender === gender && matchesCategory(p, dbCategory)) ??
-    products.find(p => p.available && matchesCategory(p, dbCategory) && parseSku(p.sku ?? "").type === skuType) ??
     null
   );
 }
 
 /**
  * Find all pattern products for a gender + garment category.
- * Falls back progressively if the preferred filter returns nothing.
+ * Gender is NEVER crossed.
+ * Falls back to gender-only if no gender+category match exists yet.
  */
 function findPatterns(products: AnyProduct[], gender: Gender, dbCategory: string): AnyProduct[] {
   const byBoth = products.filter(p => p.available && p.gender === gender && matchesCategory(p, dbCategory) && parseSku(p.sku ?? "").type === "pattern");
   if (byBoth.length > 0) return byBoth;
-  const byCat  = products.filter(p => p.available && matchesCategory(p, dbCategory) && parseSku(p.sku ?? "").type === "pattern");
-  if (byCat.length  > 0) return byCat;
-  // Final fallback: all gender-matched patterns (legacy — for categories that have none yet)
-  return products.filter(p => p.available && p.gender === gender && parseSku(p.sku ?? "").type === "pattern");
+  // No patterns in this garment category yet — return empty so tile shows disabled
+  return [];
 }
 
 // ── Main modal ────────────────────────────────────────────────────────────────
