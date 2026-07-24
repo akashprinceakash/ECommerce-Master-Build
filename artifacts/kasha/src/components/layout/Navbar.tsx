@@ -59,7 +59,8 @@ export function Navbar() {
         const headers: Record<string, string> = {};
         if (token) headers["Authorization"] = `Bearer ${token}`;
         const res = await fetch(`${getApiUrl()}/api/admin/check`, { headers });
-        setIsAdmin(res.ok);
+        const data = res.ok ? await res.json() : { isAdmin: false };
+        setIsAdmin(data.isAdmin === true);
       } catch {
         setIsAdmin(false);
       }
