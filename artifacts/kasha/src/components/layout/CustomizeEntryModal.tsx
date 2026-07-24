@@ -44,9 +44,14 @@ const GENDER_CATEGORIES: Record<Gender, CatDef[]> = {
 };
 
 // ── Style definitions per category ───────────────────────────────────────────
+
+/**
+ * dbCategory: the exact value stored in the `category` column (compared
+ * case-insensitively so "Dresses" and "dresses" both match).
+ */
 type StyleResolver =
-  | { kind: "firstByType"; skuType: "solid" | "print" }
-  | { kind: "patternsAll" }
+  | { kind: "firstByType"; skuType: "solid" | "print"; dbCategory: string }
+  | { kind: "patternsAll"; dbCategory: string }
   | { kind: "comingSoon" };
 
 type StyleDef = {
@@ -60,29 +65,27 @@ type StyleDef = {
 
 const CATEGORY_STYLES: Record<string, StyleDef[]> = {
   tshirts: [
-    { key: "solid",   label: "Solid",   desc: "Clean base colours, ready to personalise", accent: "#6b8fa3", icon: "◼", resolver: { kind: "firstByType", skuType: "solid" } },
-    { key: "printed", label: "Printed", desc: "All-over prints from the KA.SHA library",  accent: "#a36b6b", icon: "✦", resolver: { kind: "firstByType", skuType: "print" } },
-    { key: "pattern", label: "Pattern", desc: "Bespoke geometric & signature pattern",     accent: "#6ba37a", icon: "◈", resolver: { kind: "patternsAll" }                   },
+    { key: "solid",   label: "Solid",   desc: "Clean base colours, ready to personalise", accent: "#6b8fa3", icon: "◼", resolver: { kind: "firstByType", skuType: "solid",   dbCategory: "t-shirt" } },
+    { key: "printed", label: "Printed", desc: "All-over prints from the KA.SHA library",  accent: "#a36b6b", icon: "✦", resolver: { kind: "firstByType", skuType: "print",   dbCategory: "t-shirt" } },
+    { key: "pattern", label: "Pattern", desc: "Bespoke geometric & signature pattern",     accent: "#6ba37a", icon: "◈", resolver: { kind: "patternsAll",                     dbCategory: "t-shirt" } },
   ],
   pants: [
-    { key: "solid",   label: "Solid Pant",   desc: "Tailored base colour, ready to personalise", accent: "#6b8fa3", icon: "◼", resolver: { kind: "comingSoon" } },
-    { key: "printed", label: "Printed Pant", desc: "All-over prints from the KA.SHA library",    accent: "#a36b6b", icon: "✦", resolver: { kind: "comingSoon" } },
+    { key: "solid",   label: "Solid Pant",   desc: "Tailored base colour, ready to personalise", accent: "#6b8fa3", icon: "◼", resolver: { kind: "firstByType", skuType: "solid", dbCategory: "trousers" } },
+    { key: "printed", label: "Printed Pant", desc: "All-over prints from the KA.SHA library",    accent: "#a36b6b", icon: "✦", resolver: { kind: "firstByType", skuType: "print", dbCategory: "trousers" } },
   ],
   shorts: [
-    { key: "solid",   label: "Solid Short",   desc: "Clean base colour, ready to personalise",  accent: "#6b8fa3", icon: "◼", resolver: { kind: "comingSoon" } },
-    { key: "printed", label: "Printed Short", desc: "All-over prints from the KA.SHA library",  accent: "#a36b6b", icon: "✦", resolver: { kind: "comingSoon" } },
+    { key: "solid",   label: "Solid Short",   desc: "Clean base colour, ready to personalise", accent: "#6b8fa3", icon: "◼", resolver: { kind: "firstByType", skuType: "solid", dbCategory: "shorts" } },
+    { key: "printed", label: "Printed Short", desc: "All-over prints from the KA.SHA library", accent: "#a36b6b", icon: "✦", resolver: { kind: "firstByType", skuType: "print", dbCategory: "shorts" } },
   ],
   skorts: [
-    { key: "solid",          label: "Solid Skort",        desc: "Clean base colour, ready to personalise",   accent: "#6b8fa3", icon: "◼", resolver: { kind: "firstByType", skuType: "solid" } },
-    { key: "printed",        label: "Printed Skort",      desc: "All-over prints from the KA.SHA library",   accent: "#a36b6b", icon: "✦", resolver: { kind: "firstByType", skuType: "print" } },
-    { key: "diff_waistband", label: "Diff. Waistband",    desc: "Contrast waistband design studio",           accent: "#a38b6b", icon: "▣", resolver: { kind: "comingSoon" }                    },
-    { key: "diff_body",      label: "Diff. Body",         desc: "Customise the skort body independently",     accent: "#8b6ba3", icon: "◫", resolver: { kind: "comingSoon" }                    },
+    { key: "solid",     label: "Solid Skort",   desc: "Clean base colour, ready to personalise",              accent: "#6b8fa3", icon: "◼", resolver: { kind: "firstByType", skuType: "solid", dbCategory: "skorts" } },
+    { key: "printed",   label: "Printed Skort", desc: "All-over prints from the KA.SHA library",              accent: "#a36b6b", icon: "✦", resolver: { kind: "firstByType", skuType: "print", dbCategory: "skorts" } },
+    { key: "customise", label: "Customise",     desc: "Contrast waistband or bespoke body — design your own", accent: "#a38b6b", icon: "▣", resolver: { kind: "comingSoon" }                                        },
   ],
   dresses: [
-    { key: "solid",       label: "Solid Dress",      desc: "Clean base colour, ready to personalise",  accent: "#6b8fa3", icon: "◼", resolver: { kind: "firstByType", skuType: "solid" } },
-    { key: "printed",     label: "Printed Dress",    desc: "All-over prints from the KA.SHA library",  accent: "#a36b6b", icon: "✦", resolver: { kind: "firstByType", skuType: "print" } },
-    { key: "diff_collar", label: "Diff. Collar",     desc: "Contrast collar design studio",             accent: "#a38b6b", icon: "▣", resolver: { kind: "comingSoon" }                    },
-    { key: "diff_body",   label: "Diff. Body",       desc: "Customise the dress body independently",    accent: "#8b6ba3", icon: "◫", resolver: { kind: "comingSoon" }                    },
+    { key: "solid",     label: "Solid Dress",   desc: "Clean base colour, ready to personalise",               accent: "#6b8fa3", icon: "◼", resolver: { kind: "firstByType", skuType: "solid", dbCategory: "dresses" } },
+    { key: "printed",   label: "Printed Dress", desc: "All-over prints from the KA.SHA library",               accent: "#a36b6b", icon: "✦", resolver: { kind: "firstByType", skuType: "print", dbCategory: "dresses" } },
+    { key: "customise", label: "Customise",     desc: "Contrast collar or bespoke body — design your own",     accent: "#a38b6b", icon: "▣", resolver: { kind: "comingSoon" }                                         },
   ],
 };
 
@@ -104,23 +107,49 @@ type AnyProduct = {
   thumbnailUrl?: string | null;
   available: boolean;
   gender?: string | null;
+  category?: string | null;
 };
 
 // ── Resolver helpers ──────────────────────────────────────────────────────────
-function findFirstByType(products: AnyProduct[], gender: Gender, skuType: "solid" | "print"): AnyProduct | null {
-  // Prefer gender-specific product; fall back to ungendered
+
+/** Case-insensitive match against the product's DB category column. */
+function matchesCategory(p: AnyProduct, dbCategory: string): boolean {
+  return (p.category ?? "").toLowerCase() === dbCategory.toLowerCase();
+}
+
+/**
+ * Find the first product that matches gender + garment category + SKU type.
+ * Priority:
+ *   1. gender + category + skuType  (ideal)
+ *   2. gender + category            (right garment, any style — still shows as the tile)
+ *   3. category + skuType           (right garment + style, ungendered)
+ *   4. null                         (tile renders as disabled / Coming Soon)
+ */
+function findFirstByType(
+  products:    AnyProduct[],
+  gender:      Gender,
+  skuType:     "solid" | "print",
+  dbCategory:  string,
+): AnyProduct | null {
   return (
-    products.find(p => p.available && p.gender === gender && parseSku(p.sku ?? "").type === skuType) ??
-    products.find(p => p.available && !p.gender      && parseSku(p.sku ?? "").type === skuType) ??
+    products.find(p => p.available && p.gender === gender && matchesCategory(p, dbCategory) && parseSku(p.sku ?? "").type === skuType) ??
+    products.find(p => p.available && p.gender === gender && matchesCategory(p, dbCategory)) ??
+    products.find(p => p.available && matchesCategory(p, dbCategory) && parseSku(p.sku ?? "").type === skuType) ??
     null
   );
 }
 
-function findPatterns(products: AnyProduct[], gender: Gender): AnyProduct[] {
-  const byGender = products.filter(p => p.available && p.gender === gender && parseSku(p.sku ?? "").type === "pattern");
-  if (byGender.length > 0) return byGender;
-  // Fall back to all patterns if none are gender-tagged (legacy data)
-  return products.filter(p => p.available && parseSku(p.sku ?? "").type === "pattern");
+/**
+ * Find all pattern products for a gender + garment category.
+ * Falls back progressively if the preferred filter returns nothing.
+ */
+function findPatterns(products: AnyProduct[], gender: Gender, dbCategory: string): AnyProduct[] {
+  const byBoth = products.filter(p => p.available && p.gender === gender && matchesCategory(p, dbCategory) && parseSku(p.sku ?? "").type === "pattern");
+  if (byBoth.length > 0) return byBoth;
+  const byCat  = products.filter(p => p.available && matchesCategory(p, dbCategory) && parseSku(p.sku ?? "").type === "pattern");
+  if (byCat.length  > 0) return byCat;
+  // Final fallback: all gender-matched patterns (legacy — for categories that have none yet)
+  return products.filter(p => p.available && p.gender === gender && parseSku(p.sku ?? "").type === "pattern");
 }
 
 // ── Main modal ────────────────────────────────────────────────────────────────
@@ -368,7 +397,7 @@ function StyleStep({ category, gender, allProducts, onSelect, scrollRef, scroll 
 
   for (const def of defs) {
     if (def.resolver.kind === "patternsAll") {
-      const patterns = findPatterns(allProducts, gender);
+      const patterns = findPatterns(allProducts, gender, def.resolver.dbCategory);
       if (patterns.length > 0) {
         for (const p of patterns) {
           tiles.push({
@@ -385,7 +414,7 @@ function StyleStep({ category, gender, allProducts, onSelect, scrollRef, scroll 
         tiles.push({ key: "pattern-ph", label: "Pattern", desc: def.desc, accent: def.accent, icon: def.icon, disabled: true, productName: "Pattern", thumbnail: "" });
       }
     } else if (def.resolver.kind === "firstByType") {
-      const product = findFirstByType(allProducts, gender, def.resolver.skuType);
+      const product = findFirstByType(allProducts, gender, def.resolver.skuType, def.resolver.dbCategory);
       tiles.push({
         key:         def.key,
         label:       def.label,

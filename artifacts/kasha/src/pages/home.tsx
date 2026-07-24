@@ -721,7 +721,7 @@ export default function Home() {
               {
                 num: "02",
                 glyph: "⊞",
-                title: "Arrange on canvas",
+                title: "Generate Outfit",
                 desc: "Drag, resize and layer saved pieces freely on your style canvas to build the complete outfit.",
                 cta: "Try now →", href: "/lookbook",
               },
