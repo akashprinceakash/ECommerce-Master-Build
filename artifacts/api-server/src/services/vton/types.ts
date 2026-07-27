@@ -6,8 +6,8 @@ export const ROLE_TO_FASHN_CATEGORY: Record<GarmentRole, "tops" | "bottoms" | "o
   dress: "one-pieces",
 };
 
-export const FASHN_MODEL = "tryon-v1.6" as const;
-export const FASHN_CREDITS_PER_GENERATION = 1; // verify against FASHN dashboard pricing
+export const FASHN_MODEL = "tryon-max" as const;
+export const FASHN_CREDITS_PER_GENERATION = 4; // Try-On Max costs 4 credits per generated image (confirmed in FASHN docs)
 
 export interface TryOnGarment {
   productId: number;
