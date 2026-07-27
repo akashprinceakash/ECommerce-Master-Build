@@ -1,5 +1,5 @@
 import { logger } from "../../lib/logger";
-import { VTON_CATEGORY_TUNING } from "./types";
+// replicate.ts is kept as a fallback reference — not active. FASHN is the live provider.
 
 const REPLICATE_MODEL = "cuuupid/idm-vton";
 const API_BASE = "https://api.replicate.com/v1";
@@ -78,9 +78,11 @@ export async function startIdmVtonPrediction(
   params: StartPredictionParams,
 ): Promise<string> {
   const { humanImageUrl, garmentImageUrl, garmentDescription, vtonCategory } = params;
-  const tuning = VTON_CATEGORY_TUNING[vtonCategory];
-  const crop  = params.crop  ?? tuning.crop;
-  const steps = params.steps ?? tuning.steps;
+  // Inlined defaults (VTON_CATEGORY_TUNING removed from types.ts — replicate.ts is unused/fallback only)
+  const defaultCrop  = vtonCategory === "lower_body";
+  const defaultSteps = vtonCategory === "lower_body" ? 30 : 20;
+  const crop  = params.crop  ?? defaultCrop;
+  const steps = params.steps ?? defaultSteps;
 
   const version = await getModelVersionId();
   const prediction = await replicateFetch<ReplicatePrediction>("/predictions", {

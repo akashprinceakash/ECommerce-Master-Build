@@ -19,11 +19,8 @@ import { submitTryOnJob, getTryOnJob } from "../services/vton/jobQueue";
 import { AVATAR_IMAGE_PATHS } from "../services/vton/humanImages";
 import { uploadToR2, r2Enabled } from "../lib/r2";
 import type { GarmentRole, TryOnGarment } from "../services/vton/types";
-import { buildGarmentDescription } from "../services/vton/types";
-import { getActiveProvider } from "../services/vton/provider";
+import { ROLE_TO_FASHN_CATEGORY } from "../services/vton/types";
 import { startFashnPrediction } from "../services/vton/fashn";
-import { startIdmVtonPrediction } from "../services/vton/replicate";
-import { ROLE_TO_VTON_CATEGORY } from "../services/vton/types";
 import {
   areGenerationsDisabled,
   getUserCredits,
@@ -291,9 +288,7 @@ router.post("/lookbook-tryon", requireAuth, async (req, res): Promise<void> => {
       return;
     }
     const imageUrl = toAbsoluteUrl(rawUrl, req.hostname);
-    const description = buildGarmentDescription(product.name, product.category);
-    const crop = role === "bottom";
-    garments.push({ productId: product.id, role, name: product.name, description, crop, imageUrl });
+    garments.push({ productId: product.id, role, name: product.name, imageUrl, category: product.category });
   }
 
   // Process bottom before top for two-garment jobs.
@@ -331,49 +326,36 @@ router.post("/lookbook-tryon", requireAuth, async (req, res): Promise<void> => {
   const hasDress  = garments.some(g => g.role === "dress");
   const generationType = hasDress ? "dress" : (hasTop && hasBottom) ? "full_lookbook" : hasTop ? "topwear" : "bottomwear";
 
-  // ── Start garment[0]'s prediction synchronously (provider-aware) ──────────
-  // We only deduct the credit once we know the provider accepted the request.
-  // This prevents billing users for API errors, network failures, or quota issues.
+  // ── Start garment[0]'s FASHN prediction synchronously ────────────────────
+  // We only deduct the credit once we know FASHN accepted the request.
   const firstGarment = garments[0]!;
-  const activeProvider = getActiveProvider();
   let firstPredictionId: string;
   try {
-    if (activeProvider === "fashn") {
-      firstPredictionId = await startFashnPrediction({
-        humanImageUrl: personImageUrl,
-        garmentImageUrl: firstGarment.imageUrl,
-        garmentRole: firstGarment.role,
-      });
-    } else {
-      firstPredictionId = await startIdmVtonPrediction({
-        humanImageUrl: personImageUrl,
-        garmentImageUrl: firstGarment.imageUrl,
-        garmentDescription: firstGarment.description,
-        vtonCategory: ROLE_TO_VTON_CATEGORY[firstGarment.role],
-        crop: firstGarment.crop,
-      });
-    }
-  } catch (providerErr: any) {
-    // Provider rejected or unreachable — do NOT deduct a credit.
+    firstPredictionId = await startFashnPrediction({
+      modelImageUrl: personImageUrl,
+      garmentImageUrl: firstGarment.imageUrl,
+      category: ROLE_TO_FASHN_CATEGORY[firstGarment.role],
+    });
+  } catch (fashnErr: any) {
+    // FASHN rejected or unreachable — do NOT deduct a credit.
     logger.warn(
-      { provider: activeProvider, err: providerErr?.message },
-      "lookbook: provider rejected first prediction — credit NOT deducted",
+      { err: fashnErr?.message },
+      "lookbook: FASHN rejected first prediction — credit NOT deducted",
     );
     await insertFailedGenerationLog({
       userId,
       generationType,
-      errorMessage: providerErr?.message ?? `${activeProvider} unavailable`,
+      errorMessage: fashnErr?.message ?? "FASHN unavailable",
     });
     res.status(503).json({ error: UNAVAILABLE_MSG });
     return;
   }
 
-  // ── Provider accepted — atomically deduct credit + log ────────────────────
-  // replicatePredictionId column stores the prediction ID regardless of provider.
+  // ── FASHN accepted — atomically deduct credit + log ───────────────────────
   const generationLogId = await insertGenerationLog({
     userId,
     generationType,
-    replicatePredictionId: `${activeProvider}:${firstPredictionId}`,
+    replicatePredictionId: firstPredictionId,
   });
   await deductCreditForGeneration({ userId, generationLogId });
 

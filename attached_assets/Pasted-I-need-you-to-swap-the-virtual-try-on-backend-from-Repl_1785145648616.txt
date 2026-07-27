@@ -1,0 +1,290 @@
+I need you to swap the virtual try-on backend from Replicate's IDM-VTON model to the FASHN API. Please make these exact changes and don't modify anything else in these files beyond what's shown below.
+
+STEP 1: Add a new Secret
+Add FASHN_API_KEY as a Replit Secret (I will paste the actual key value into the Secrets panel myself — do not ask me to paste it in chat).
+
+STEP 2: Replace backend/src/services/vton/types.ts entirely with:
+
+export type GarmentRole = "top" | "bottom" | "dress";
+
+export const ROLE_TO_FASHN_CATEGORY: Record<GarmentRole, "tops" | "bottoms" | "one-pieces"> = {
+  top: "tops",
+  bottom: "bottoms",
+  dress: "one-pieces",
+};
+
+export const FASHN_MODEL = "tryon-v1.6" as const;
+export const FASHN_CREDITS_PER_GENERATION = 1; // verify against FASHN dashboard pricing
+
+export interface TryOnGarment {
+  productId: number;
+  role: GarmentRole;
+  name: string;
+  imageUrl: string;
+  category: string;
+}
+
+export type TryOnJobStatus = "pending" | "processing" | "succeeded" | "failed";
+
+export interface TryOnJob {
+  id: string;
+  userId: string;
+  status: TryOnJobStatus;
+  garments: TryOnGarment[];
+  garmentCount: number;
+  processedCount: number;
+  resultImageUrl: string | null;
+  error: string | null;
+  createdAt: number;
+  updatedAt: number;
+  generationLogId: number | null;
+}
+
+
+STEP 3: Create a new file backend/src/services/vton/fashn.ts with:
+
+import { logger } from "../../lib/logger";
+import { FASHN_MODEL, FASHN_CREDITS_PER_GENERATION } from "./types";
+
+const API_BASE = "https://api.fashn.ai/v1";
+
+function getApiKey(): string {
+  const key = process.env["FASHN_API_KEY"];
+  if (!key) throw new Error("FASHN_API_KEY is not set");
+  return key;
+}
+
+async function fashnFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${getApiKey()}`,
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+  });
+  const body = await res.json();
+  if (!res.ok) {
+    const err: any = new Error(`FASHN API error (${res.status}): ${JSON.stringify(body)}`);
+    err.statusCode = res.status;
+    err.fashnBody = body;
+    throw err;
+  }
+  return body as T;
+}
+
+export interface StartFashnPredictionParams {
+  modelImageUrl: string;
+  garmentImageUrl: string;
+  category: "tops" | "bottoms" | "one-pieces";
+}
+
+export async function startFashnPrediction(params: StartFashnPredictionParams): Promise<string> {
+  const { modelImageUrl, garmentImageUrl, category } = params;
+  const body = await fashnFetch<{ id: string }>("/run", {
+    method: "POST",
+    body: JSON.stringify({
+      model_name: FASHN_MODEL,
+      inputs: {
+        model_image: modelImageUrl,
+        product_image: garmentImageUrl,
+        category,
+        garment_photo_type: "auto",
+      },
+    }),
+  });
+  logger.info({ predictionId: body.id, category }, "fashn: prediction started");
+  return body.id;
+}
+
+interface FashnStatusResponse {
+  id: string;
+  status: "starting" | "in_queue" | "processing" | "completed" | "failed";
+  output?: string[] | null;
+  error?: { name: string; message: string } | null;
+}
+
+export async function pollFashnPrediction(
+  predictionId: string,
+): Promise<{ resultUrl: string; elapsedSecs: number }> {
+  const TIMEOUT_MS = 5 * 60 * 1000;
+  const start = Date.now();
+
+  let prediction = await fashnFetch<FashnStatusResponse>(`/status/${predictionId}`);
+
+  while (prediction.status !== "completed" && prediction.status !== "failed") {
+    if (Date.now() - start > TIMEOUT_MS) throw new Error("Try-on generation timed out");
+    await new Promise((r) => setTimeout(r, 2000));
+    prediction = await fashnFetch<FashnStatusResponse>(`/status/${predictionId}`);
+  }
+
+  const elapsedSecs = (Date.now() - start) / 1000;
+
+  if (prediction.status === "failed") {
+    logger.error({ prediction, elapsedSecs }, "fashn: prediction failed");
+    throw new Error(prediction.error?.message ?? "Try-on generation failed");
+  }
+
+  const output = prediction.output?.[0];
+  if (!output) throw new Error("Try-on generation returned no output image");
+
+  logger.info({ predictionId, elapsedSecs: elapsedSecs.toFixed(1) }, "fashn: prediction succeeded");
+  return { resultUrl: output, elapsedSecs };
+}
+
+export function estimateGenerationCredits(garmentCount: number): number {
+  return FASHN_CREDITS_PER_GENERATION * garmentCount;
+}
+
+
+STEP 4: Replace backend/src/services/vton/jobQueue.ts entirely with:
+
+import { randomUUID } from "crypto";
+import { logger } from "../../lib/logger";
+import { uploadToR2 } from "../../lib/r2";
+import { startFashnPrediction, pollFashnPrediction } from "./fashn";
+import { ROLE_TO_FASHN_CATEGORY, type TryOnGarment, type TryOnJob } from "./types";
+import { updateGenerationLog } from "../creditService";
+
+const jobs = new Map<string, TryOnJob>();
+const MAX_JOB_AGE_MS = 30 * 60 * 1000;
+
+function pruneOldJobs(): void {
+  const cutoff = Date.now() - MAX_JOB_AGE_MS;
+  for (const [id, job] of jobs) {
+    if (job.updatedAt < cutoff) jobs.delete(id);
+  }
+}
+
+export function getTryOnJob(id: string, userId: string): TryOnJob | null {
+  const job = jobs.get(id);
+  if (!job || job.userId !== userId) return null;
+  return job;
+}
+
+export function submitTryOnJob(
+  userId: string,
+  humanImageUrl: string,
+  garments: TryOnGarment[],
+  opts?: { firstPredictionId?: string; generationLogId?: number | null },
+): TryOnJob {
+  pruneOldJobs();
+
+  const id = randomUUID();
+  const now = Date.now();
+  const job: TryOnJob = {
+    id,
+    userId,
+    status: "pending",
+    garments,
+    garmentCount: garments.length,
+    processedCount: 0,
+    resultImageUrl: null,
+    error: null,
+    createdAt: now,
+    updatedAt: now,
+    generationLogId: opts?.generationLogId ?? null,
+  };
+  jobs.set(id, job);
+
+  void processTryOnJob(job, humanImageUrl, opts?.firstPredictionId).catch((err) => {
+    logger.error({ err, jobId: id }, "vton: unhandled job processing error");
+    job.status = "failed";
+    job.error = "Unexpected error while generating your look";
+    job.updatedAt = Date.now();
+  });
+
+  return job;
+}
+
+async function processTryOnJob(
+  job: TryOnJob,
+  humanImageUrl: string,
+  firstPredictionId?: string,
+): Promise<void> {
+  job.status = "processing";
+  job.updatedAt = Date.now();
+
+  const jobStart = Date.now();
+  let totalElapsedSecs = 0;
+
+  try {
+    let currentHumanImage = humanImageUrl;
+
+    for (let i = 0; i < job.garments.length; i++) {
+      const garment = job.garments[i]!;
+      const category = ROLE_TO_FASHN_CATEGORY[garment.role];
+
+      let predictionId: string;
+      if (i === 0 && firstPredictionId) {
+        predictionId = firstPredictionId;
+      } else {
+        predictionId = await startFashnPrediction({
+          modelImageUrl: currentHumanImage,
+          garmentImageUrl: garment.imageUrl,
+          category,
+        });
+      }
+
+      const { resultUrl, elapsedSecs } = await pollFashnPrediction(predictionId);
+      totalElapsedSecs += elapsedSecs;
+      currentHumanImage = resultUrl;
+      job.processedCount += 1;
+      job.updatedAt = Date.now();
+    }
+
+    const imgRes = await fetch(currentHumanImage);
+    if (!imgRes.ok) throw new Error("Failed to download generated try-on image");
+    const buffer = Buffer.from(await imgRes.arrayBuffer());
+    const key = `lookbook/tryon-${job.id}.png`;
+    const permanentUrl = await uploadToR2(key, buffer, "image/png");
+
+    const totalSecs = ((Date.now() - jobStart) / 1000).toFixed(1);
+    logger.info({ jobId: job.id, garmentCount: job.garmentCount, totalSecs }, "vton: job succeeded");
+
+    if (job.generationLogId != null) {
+      await updateGenerationLog(job.generationLogId, {
+        replicateStatus: "succeeded",
+        predictTimeSeconds: totalElapsedSecs,
+      });
+    }
+
+    job.resultImageUrl = permanentUrl;
+    job.status = "succeeded";
+    job.updatedAt = Date.now();
+  } catch (err) {
+    logger.error({ err, jobId: job.id }, "vton: job failed");
+    job.status = "failed";
+    job.error = err instanceof Error ? err.message : "Try-on generation failed";
+    job.updatedAt = Date.now();
+
+    if (job.generationLogId != null) {
+      await updateGenerationLog(job.generationLogId, {
+        replicateStatus: "failed",
+        errorMessage: job.error,
+      });
+    }
+  }
+}
+
+
+STEP 5: In backend/src/routes/lookbook.ts:
+- Replace the import of startIdmVtonPrediction from "../services/vton/replicate" with:
+  import { startFashnPrediction } from "../services/vton/fashn";
+- Replace the import "ROLE_TO_VTON_CATEGORY" from "../services/vton/types" with:
+  import { ROLE_TO_FASHN_CATEGORY } from "../services/vton/types";
+- Find the block that calls startIdmVtonPrediction (inside the /lookbook-tryon route, right before "Replicate accepted") and replace ONLY that function call with:
+
+    firstPredictionId = await startFashnPrediction({
+      modelImageUrl: personImageUrl,
+      garmentImageUrl: firstGarment.imageUrl,
+      category: ROLE_TO_FASHN_CATEGORY[firstGarment.role],
+    });
+
+  Change the surrounding catch block's error message reference from "Replicate unavailable" to "FASHN unavailable", and rename the catch variable from replicateErr to fashnErr if present. Do NOT change any other logic in this route — validation, credit checks, garment sorting, and everything else stays exactly as is.
+
+STEP 6: Leave backend/src/services/vton/replicate.ts in place but unused (don't delete it yet, in case we need to compare/roll back).
+
+STEP 7: After all changes, run the TypeScript build/typecheck and show me any errors before considering this done. Do not guess at fixing unrelated files.
+
+IMPORTANT: Two fields in fashn.ts are marked as unverified against FASHN's live docs — the exact `category` enum spelling ("tops"/"bottoms"/"one-pieces") and the `output` field name in the /status response. After this is deployed, I will run one real test generation and paste you the actual raw JSON response from the API. If the field names don't match what's coded, update fashn.ts to match the real response — do not silently assume it works without me confirming a live test first.
