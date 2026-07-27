@@ -134,14 +134,7 @@ export default function CartPage() {
               {cart?.items.map((item) => (
                 <div key={item.id} className="flex gap-5 border-b border-gray-100 pb-6">
                   <div className="w-28 aspect-[3/4] bg-gray-100 flex-shrink-0 overflow-hidden relative">
-                    {item.customization?.previewImageUrl ? (
-                      /* Prefer the customer's own design snapshot over the generic product image */
-                      <img
-                        src={item.customization.previewImageUrl}
-                        alt={item.customization.name ?? item.product.name}
-                        className="w-full h-full object-contain object-center"
-                      />
-                    ) : item.product.thumbnailUrl ? (
+                    {item.product.thumbnailUrl ? (
                       <img
                         src={getAssetUrl(item.product.thumbnailUrl)}
                         alt={item.product.name}
@@ -153,7 +146,7 @@ export default function CartPage() {
                       </div>
                     )}
                     {item.customization?.previewImageUrl && (
-                      <span className="absolute bottom-0 left-0 bg-black/70 text-white text-[9px] px-1.5 py-0.5 tracking-wider">CUSTOM</span>
+                      <span className="absolute top-1 left-1 bg-black/70 text-white text-[9px] px-1.5 py-0.5 tracking-wider rounded-sm">CUSTOM</span>
                     )}
                   </div>
 
