@@ -64,6 +64,8 @@ interface UserDesign {
   frontImageUrl: string | null;
   backImageUrl: string | null;
   sideImageUrl: string | null;
+  customizationChargeInPaise: number | null;
+  designSpec: Record<string, any> | null;
   updatedAt: string;
 }
 
@@ -99,14 +101,19 @@ function isLightHex(hex: string): boolean {
 
 async function exportDesignImages(design: UserDesign): Promise<{ count: number; errors: string[] }> {
   const slug = (design.name ?? "design").replace(/\s+/g, "-");
+
+  // Include the original uploaded logo so the factory gets the source file.
+  const logoUrl = (design.designSpec as any)?.logoUrl ?? "";
+
   const views: Array<{ url: string; label: string }> = [
-    { url: design.frontImageUrl   ?? "", label: "front"   },
-    { url: design.backImageUrl    ?? "", label: "back"    },
-    { url: design.sideImageUrl    ?? "", label: "side"    },
-    { url: design.previewImageUrl ?? "", label: "preview" },
+    { url: design.frontImageUrl   ?? "", label: "front-print-ready" },
+    { url: design.backImageUrl    ?? "", label: "back-3d-ref"       },
+    { url: design.sideImageUrl    ?? "", label: "side-3d-ref"       },
+    { url: design.previewImageUrl ?? "", label: "preview"           },
+    { url: logoUrl,                      label: "logo-original"     },
   ].filter(v => !!v.url);
 
-  // Deduplicate identical URLs (e.g. side == preview in some designs)
+  // Deduplicate identical URLs
   const seen = new Set<string>();
   const unique = views.filter(v => { if (seen.has(v.url)) return false; seen.add(v.url); return true; });
 
@@ -254,16 +261,22 @@ function DesignLeftPanel({ design, mvReady, viewerRef, textureReady, canvasDataL
 function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: () => void }) {
   const [mvReady, setMvReady] = useState(false);
   const viewerRef = useRef<any>(null);
-  // Lazy-fetch canvasData for this single design (not returned by the list endpoint)
+  // Lazy-fetch canvasData + designSpec (not returned by the list endpoint to keep it fast)
   const [fullCanvasData, setFullCanvasData] = useState<string | null | undefined>(undefined);
+  const [fullDesignSpec, setFullDesignSpec] = useState<Record<string, any> | null | undefined>(undefined);
+  const [fullCharge, setFullCharge] = useState<number | null | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const data = await apiFetch(`/api/admin/customizations/${design.id}`);
-        if (!cancelled) setFullCanvasData(data?.canvasData ?? null);
-      } catch { if (!cancelled) setFullCanvasData(null); }
+        if (!cancelled) {
+          setFullCanvasData(data?.canvasData ?? null);
+          setFullDesignSpec(data?.designSpec ?? null);
+          setFullCharge(data?.customizationChargeInPaise ?? null);
+        }
+      } catch { if (!cancelled) { setFullCanvasData(null); setFullDesignSpec(null); setFullCharge(null); } }
     })();
     return () => { cancelled = true; };
   }, [design.id]);
@@ -280,6 +293,12 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
       setMvReady(true);
     }
   }, []);
+
+  // Merge list-level and lazily-fetched detail data — detail wins when available.
+  const effectiveDesignSpec: Record<string, any> | null =
+    fullDesignSpec !== undefined ? fullDesignSpec : design.designSpec ?? null;
+  const effectiveCharge: number | null =
+    fullCharge !== undefined ? fullCharge : design.customizationChargeInPaise ?? null;
 
   // Parse all the rich design data we now persist alongside each customization.
   // Use lazily-fetched canvasData so the list endpoint stays fast (no OOM).
@@ -461,29 +480,97 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
             </div>
           )}
 
-          {/* Design Elements summary */}
-          {parsedDesign.objectCount > 0 && (
+          {/* Customization charge */}
+          {effectiveCharge != null && effectiveCharge > 0 && (
+            <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Customization Charge</p>
+              <p className="text-amber-400 font-semibold text-sm">
+                ₹{(effectiveCharge / 100).toFixed(2)}
+              </p>
+            </div>
+          )}
+
+          {/* Design Spec — text, font, logo, colors */}
+          {effectiveDesignSpec && (effectiveDesignSpec.textContent || effectiveDesignSpec.hasLogo || effectiveDesignSpec.logoUrl) && (
             <div className="mt-4">
-              <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Design Elements ({parsedDesign.objectCount})</p>
-              <div className="space-y-1 text-xs">
-                {parsedDesign.texts?.length > 0 && (
-                  <div className="bg-white/5 rounded px-2 py-1.5">
-                    <span className="text-white/40">Text: </span>
-                    <span className="text-white">{parsedDesign.texts.map((t: string) => `"${t}"`).join(", ")}</span>
-                  </div>
+              <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Customization Details</p>
+              <div className="space-y-1.5 text-xs">
+                {effectiveDesignSpec.textContent && (
+                  <>
+                    <div className="bg-white/5 rounded px-2 py-1.5">
+                      <span className="text-white/40">Text: </span>
+                      <span className="text-white font-medium">"{effectiveDesignSpec.textContent}"</span>
+                    </div>
+                    {effectiveDesignSpec.textPlacement && (
+                      <div className="bg-white/5 rounded px-2 py-1">
+                        <span className="text-white/40">Text Placement: </span>
+                        <span className="text-white">{effectiveDesignSpec.textPlacement}</span>
+                      </div>
+                    )}
+                    {effectiveDesignSpec.fontFamily && (
+                      <div className="bg-white/5 rounded px-2 py-1">
+                        <span className="text-white/40">Font: </span>
+                        <span className="text-white">{effectiveDesignSpec.fontFamily}
+                          {effectiveDesignSpec.fontSize ? ` · ${effectiveDesignSpec.fontSize}px` : ""}
+                          {effectiveDesignSpec.textBold ? " · Bold" : ""}
+                          {effectiveDesignSpec.textItalic ? " · Italic" : ""}
+                        </span>
+                      </div>
+                    )}
+                    {effectiveDesignSpec.textColor && (
+                      <div className="bg-white/5 rounded px-2 py-1 flex items-center gap-2">
+                        <span className="text-white/40">Text Color: </span>
+                        <div className="w-3 h-3 rounded-full border border-white/20" style={{ background: effectiveDesignSpec.textColor }} />
+                        <span className="text-white font-mono">{effectiveDesignSpec.textColor}</span>
+                      </div>
+                    )}
+                  </>
                 )}
-                {parsedDesign.logoCount > 0 && (
-                  <div className="bg-white/5 rounded px-2 py-1">
-                    <span className="text-white/40">Logos / Images: </span>
-                    <span className="text-white">{parsedDesign.logoCount}</span>
-                  </div>
+                {(effectiveDesignSpec.hasLogo || effectiveDesignSpec.logoUrl) && (
+                  <>
+                    {effectiveDesignSpec.logoPosition && (
+                      <div className="bg-white/5 rounded px-2 py-1">
+                        <span className="text-white/40">Logo Placement: </span>
+                        <span className="text-white">{effectiveDesignSpec.logoPosition}</span>
+                      </div>
+                    )}
+                    {effectiveDesignSpec.logoUrl && (
+                      <div className="bg-white/5 rounded px-2 py-2 flex items-center gap-2">
+                        <img
+                          src={effectiveDesignSpec.logoUrl}
+                          alt="Customer logo"
+                          className="w-8 h-8 object-contain rounded bg-white/10"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white/40 text-[10px]">Logo / Image</p>
+                          <button
+                            className="text-amber-400 hover:text-amber-300 text-[10px] underline transition-colors"
+                            onClick={() => {
+                              const a = document.createElement("a");
+                              a.href = effectiveDesignSpec!.logoUrl;
+                              a.download = `${design.name}-logo.png`;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                            }}
+                          >
+                            ↓ Download original
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
-                {parsedDesign.shapeCount > 0 && (
-                  <div className="bg-white/5 rounded px-2 py-1">
-                    <span className="text-white/40">Shapes: </span>
-                    <span className="text-white">{parsedDesign.shapeCount}</span>
-                  </div>
-                )}
+              </div>
+            </div>
+          )}
+
+          {/* Design Elements summary (canvas object counts) */}
+          {parsedDesign.objectCount > 0 && !effectiveDesignSpec?.textContent && parsedDesign.texts?.length > 0 && (
+            <div className="mt-4">
+              <p className="text-white/40 text-xs uppercase tracking-wider mb-2">Canvas Text</p>
+              <div className="bg-white/5 rounded px-2 py-1.5 text-xs">
+                <span className="text-white">{parsedDesign.texts.map((t: string) => `"${t}"`).join(", ")}</span>
               </div>
             </div>
           )}
@@ -1266,9 +1353,24 @@ export default function AdminPage() {
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-muted-foreground/30 text-xs font-bold">NO PREVIEW</div>
                       )}
-                      {(d.frontImageUrl || d.previewImageUrl) && (
-                        <span className="absolute top-2 left-2 bg-emerald-600 text-white text-[9px] px-2 py-0.5 tracking-wider font-semibold">CUSTOMIZED</span>
-                      )}
+                      {/* Customization status badge */}
+                      {(() => {
+                        const spec = d.designSpec as any;
+                        const hasLogoOrText = spec?.hasLogo || spec?.textContent || spec?.logoUrl;
+                        const hasPrint = spec?.printId || spec?.kashaDesignId;
+                        if (hasLogoOrText) return (
+                          <span className="absolute top-2 left-2 bg-emerald-600 text-white text-[9px] px-2 py-0.5 tracking-wider font-semibold">CUSTOMIZED</span>
+                        );
+                        if (hasPrint) return (
+                          <span className="absolute top-2 left-2 bg-sky-600 text-white text-[9px] px-2 py-0.5 tracking-wider font-semibold">PRINT</span>
+                        );
+                        if (d.frontImageUrl || d.previewImageUrl) return (
+                          <span className="absolute top-2 left-2 bg-white/20 text-white text-[9px] px-2 py-0.5 tracking-wider">COLOUR ONLY</span>
+                        );
+                        return (
+                          <span className="absolute top-2 left-2 bg-black/40 text-white/40 text-[9px] px-2 py-0.5 tracking-wider">NO CUSTOMIZATION</span>
+                        );
+                      })()}
                       {/* 3-view indicator badge */}
                       {d.frontImageUrl && d.backImageUrl && d.sideImageUrl && (
                         <span className="absolute top-2 right-2 bg-black/60 text-white/70 text-[8px] px-1.5 py-0.5 rounded tracking-wider">3-VIEW</span>

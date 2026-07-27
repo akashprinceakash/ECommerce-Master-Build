@@ -416,6 +416,8 @@ router.get("/admin/customizations", requireAuth, async (req, res): Promise<void>
       frontImageUrl: customizationsTable.frontImageUrl,
       backImageUrl: customizationsTable.backImageUrl,
       sideImageUrl: customizationsTable.sideImageUrl,
+      customizationChargeInPaise: customizationsTable.customizationChargeInPaise,
+      designSpec: customizationsTable.designSpec,
       createdAt: customizationsTable.createdAt,
       updatedAt: customizationsTable.updatedAt,
       productName: productsTable.name,
@@ -458,6 +460,8 @@ router.get("/admin/customizations/:id", requireAuth, async (req, res): Promise<v
       id: customizationsTable.id,
       userId: customizationsTable.userId,
       canvasData: customizationsTable.canvasData,
+      designSpec: customizationsTable.designSpec,
+      customizationChargeInPaise: customizationsTable.customizationChargeInPaise,
     })
     .from(customizationsTable)
     .where(eq(customizationsTable.id, id))

@@ -1543,34 +1543,47 @@ export default function CustomizePage() {
     throw new Error("Nothing to snapshot");
   }, [syncTexture]);
 
-  /** Capture front, back and side snapshots by briefly rotating the model-viewer */
+  /** Capture front, back and side snapshots.
+   *
+   * Front  → high-res flat Fabric.js canvas export (4× multiplier ≈ 4096 px).
+   *          This is the actual print-ready texture file, not a 3-D screenshot.
+   *          Text is sharp, logos are pixel-perfect, and there are no 3-D
+   *          rendering artefacts (mirrored collar text, specular glare, etc.).
+   *
+   * Back / Side → model-viewer 3-D renders for reference only.
+   */
   const snapshotViews = useCallback(async (): Promise<{front:string;back:string;side:string}> => {
     const mv: any = mvRef.current;
     const fc = fcRef.current;
     try { await syncTexture(); } catch {}
 
-    const captureAngle = async (orbit: string): Promise<string> => {
+    // Print-ready flat front — deselect any active object first so selection
+    // handles are not baked into the exported image.
+    const flatFront: string = (() => {
+      if (!fc) return "";
+      try { if (typeof fc.discardActiveObject === "function") fc.discardActiveObject(); } catch {}
+      fc.renderAll();
+      return fc.toDataURL({ format: "png", quality: 1.0, multiplier: 4 });
+    })();
+
+    // 3-D reference views for back and side
+    const capture3D = async (orbit: string): Promise<string> => {
       if (mv && typeof mv.toDataURL === "function") {
         mv.cameraOrbit = orbit;
-        // Wait several animation frames + a generous settle time so the GPU
-        // finishes uploading and rendering the new texture (especially important
-        // for complex pattern recolours on slower devices / integrated GPUs).
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
         await new Promise(r => setTimeout(r, 350));
         try { return mv.toDataURL("image/png", 1.0); } catch {}
       }
-      if (fc) return fc.toDataURL({ format: "png", quality: 0.95, multiplier: 1 });
-      return "";
+      return flatFront; // fallback when no 3-D viewer
     };
 
-    const front = await captureAngle("0deg 75deg 2.5m");
-    const back  = await captureAngle("180deg 75deg 2.5m");
-    const side  = await captureAngle("90deg 75deg 2.5m");
+    const back = await capture3D("180deg 75deg 2.5m");
+    const side = await capture3D("90deg 75deg 2.5m");
 
     // Restore default front view
     if (mv) mv.cameraOrbit = "0deg 75deg 2.5m";
 
-    return { front, back, side };
+    return { front: flatFront, back, side };
   }, [syncTexture]);
 
   // ── Save / Cart mutations ────────────────────────────────────────────────
@@ -1591,7 +1604,8 @@ export default function CustomizePage() {
       patColorA: activeKashaDesign ? patColorA : null,
       patColorB: activeKashaDesign ? patColorB : null,
       hasLogo: logoPlaced,
-      logoUrl: logoPlaced && logoPreview && !logoPreview.startsWith("data:") ? logoPreview : null,
+      // Include data-URL logos too so admins can download the original uploaded file.
+      logoUrl: logoPlaced && logoPreview ? logoPreview : null,
       logoPosition: logoPlaced ? logoPosition : null,
       logoSize: logoPlaced ? logoSize : null,
       textContent: textPlaced ? textInput : null,
@@ -1605,6 +1619,16 @@ export default function CustomizePage() {
         .filter(a => selectedAddOns[a.id])
         .map(a => ({ id: a.id, label: a.label })),
     };
+    // Customization charge — calculated here so BOTH the save and cart paths
+    // store the same value. ₹20 base + ₹1 per sq-inch of logo/text area.
+    const logoW = logoSize * 0.376;
+    const logoAreaSqIn = logoPlaced && logoPreview ? Math.ceil(logoW * logoW * 0.75) : 0;
+    const textH = textFontSize * (22 / 1024);
+    const textW = Math.max(1, textInput.length) * textFontSize * 0.55 * (22 / 1024);
+    const textAreaSqIn = textPlaced ? Math.ceil(textH * textW) : 0;
+    const hasLogoOrText = !!(logoPreview || textPlaced);
+    const customizationCharge = hasLogoOrText ? (20 + logoAreaSqIn + textAreaSqIn) : 0;
+
     return {
       productId:id, name:designName||`${product?.name} Custom`,
       color:primaryColor, size:effectiveSize,
@@ -1615,6 +1639,7 @@ export default function CustomizePage() {
       backImageUrl:    views.back,
       sideImageUrl:    views.side,
       designSpec,
+      customizationCharge,
     };
   };
   const saveMut=useMutation({
@@ -1634,23 +1659,17 @@ export default function CustomizePage() {
   const [cartAdded, setCartAdded] = useState(false);
   const cartMut=useMutation({
     mutationFn:async()=>{
+      // buildPayload now computes and includes customizationCharge so both save
+      // and cart paths always store the correct fee.
       const payload=await buildPayload();
       const effectiveQty=Object.values(sizeQty).reduce((a,b)=>a+b,0)||qty;
       const effectiveSize=Object.entries(sizeQty).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])[0]?.[0]||size;
-      // Compute customisation charge: ₹20 base (once) + ₹1 per sq inch for logo & text
-      const logoW = logoSize * 0.376;
-      const logoAreaSqIn = logoPreview ? Math.ceil(logoW * logoW * 0.75) : 0;
-      const textH = textFontSize * (22/1024);
-      const textW = Math.max(1, textInput.length) * textFontSize * 0.55 * (22/1024);
-      const textAreaSqIn = textPlaced ? Math.ceil(textH * textW) : 0;
-      const hasLogoOrText = !!(logoPreview || textPlaced);
-      const customizationCharge = hasLogoOrText ? (20 + logoAreaSqIn + textAreaSqIn) : 0;
       // Always create a FRESH customization record for each cart addition — never
       // reuse an existing ID. This ensures every cart item has its own independent,
       // immutable thumbnail snapshot and is never overwritten by later changes.
       let customizationId: number|null = null;
       try {
-        const cust=await apiFetch("/api/customizations",{method:"POST",body:JSON.stringify({...payload,customizationCharge})});
+        const cust=await apiFetch("/api/customizations",{method:"POST",body:JSON.stringify(payload)});
         customizationId=cust.id??null;
       } catch { /* non-blocking — cart add will still proceed */ }
       return apiFetch("/api/cart/items",{method:"POST",body:JSON.stringify({productId:id,customizationId,quantity:effectiveQty,size:effectiveSize})});
