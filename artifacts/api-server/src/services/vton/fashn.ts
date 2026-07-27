@@ -99,20 +99,24 @@ export async function startFashnPrediction(params: StartFashnParams): Promise<st
   const { humanImageUrl, garmentImageUrl, garmentRole } = params;
   const category = ROLE_TO_FASHN_CATEGORY[garmentRole];
 
+  // FASHN /run expects { model_name, inputs: { ... } }
   const body: Record<string, unknown> = {
-    model_image:        humanImageUrl,
-    garment_image:      garmentImageUrl,
-    category,
-    mode:               "quality",         // best results; balanced if cost becomes a concern
-    garment_photo_type: "auto",            // FASHN auto-detects flat-lay vs model photo
-    nsfw_filter:        true,
-    cover_feet:         false,
-    adjust_hands:       garmentRole === "top", // reduces hand artifacts for upper-body
-    restore_background: false,
-    restore_clothes:    true,              // preserves garment print / pattern / colour
-    long_top:           false,
-    num_samples:        1,
-    seed:               Math.floor(Math.random() * 2_147_483_647),
+    model_name: "fashn/tryon",
+    inputs: {
+      model_image:        humanImageUrl,
+      garment_image:      garmentImageUrl,
+      category,
+      mode:               "quality",         // best results; balanced if cost becomes a concern
+      garment_photo_type: "auto",            // FASHN auto-detects flat-lay vs model photo
+      nsfw_filter:        true,
+      cover_feet:         false,
+      adjust_hands:       garmentRole === "top", // reduces hand artifacts for upper-body
+      restore_background: false,
+      restore_clothes:    true,              // preserves garment print / pattern / colour
+      long_top:           false,
+      num_samples:        1,
+      seed:               Math.floor(Math.random() * 2_147_483_647),
+    },
   };
 
   const prediction = await fashnFetch<FashnRunResponse>("/run", {
