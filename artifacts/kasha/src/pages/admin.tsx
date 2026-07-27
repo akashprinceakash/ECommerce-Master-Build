@@ -1344,10 +1344,11 @@ export default function AdminPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {designs.map(d => (
                   <div key={d.id} className="border border-border bg-card flex flex-col overflow-hidden hover:border-primary transition-colors group">
-                    {/* Preview — prefer front-view snapshot, fall back to legacy preview, then product thumb */}
+                    {/* Preview — prefer 3-D render (previewImageUrl) so the card looks like a shirt,
+                         fall back to the flat print-ready canvas, then the product thumbnail */}
                     <div className="aspect-square bg-muted relative overflow-hidden">
-                      {(d.frontImageUrl || d.previewImageUrl) ? (
-                        <img src={d.frontImageUrl ?? d.previewImageUrl!} alt={d.name} className="w-full h-full object-contain p-2" />
+                      {(d.previewImageUrl || d.frontImageUrl) ? (
+                        <img src={d.previewImageUrl ?? d.frontImageUrl!} alt={d.name} className="w-full h-full object-contain p-2" />
                       ) : d.productThumbnailUrl ? (
                         <img src={d.productThumbnailUrl} alt={d.name} className="w-full h-full object-cover opacity-50" />
                       ) : (

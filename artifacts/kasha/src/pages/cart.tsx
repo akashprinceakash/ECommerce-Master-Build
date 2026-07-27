@@ -134,7 +134,14 @@ export default function CartPage() {
               {cart?.items.map((item) => (
                 <div key={item.id} className="flex gap-5 border-b border-gray-100 pb-6">
                   <div className="w-28 aspect-[3/4] bg-gray-100 flex-shrink-0 overflow-hidden relative">
-                    {item.product.thumbnailUrl ? (
+                    {item.customization?.previewImageUrl ? (
+                      /* Prefer the customer's design snapshot over the generic product image */
+                      <img
+                        src={item.customization.previewImageUrl}
+                        alt={item.customization.name ?? item.product.name}
+                        className="w-full h-full object-contain object-center"
+                      />
+                    ) : item.product.thumbnailUrl ? (
                       <img
                         src={getAssetUrl(item.product.thumbnailUrl)}
                         alt={item.product.name}
