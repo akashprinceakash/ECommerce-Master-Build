@@ -1621,20 +1621,26 @@ export default function CustomizePage() {
         // Freeze smooth interpolation so each orbit change is instantaneous.
         (mv as any).interpolationDecay = Infinity;
 
+        // IMPORTANT: use origSetAttr("camera-orbit", ...) — NOT mv.cameraOrbit = ...
+        // model-viewer's cameraOrbit property setter calls setAttribute("camera-orbit")
+        // internally, which would be blocked by the intercept above. origSetAttr bypasses
+        // the intercept so the camera actually moves, while the intercept still prevents
+        // any stray calls from React from resetting the orbit mid-capture.
+
         // — Front (0°) —
-        mv.cameraOrbit = "0deg 75deg 2.5m";
+        origSetAttr("camera-orbit", "0deg 75deg 2.5m");
         await waitForCameraChange();
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
         preview3d = mv.toDataURL("image/png", 1.0);
 
         // — Back (180°) —
-        mv.cameraOrbit = "180deg 75deg 2.5m";
+        origSetAttr("camera-orbit", "180deg 75deg 2.5m");
         await waitForCameraChange();
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
         back = mv.toDataURL("image/png", 1.0);
 
         // — Side (90°) —
-        mv.cameraOrbit = "90deg 75deg 2.5m";
+        origSetAttr("camera-orbit", "90deg 75deg 2.5m");
         await waitForCameraChange();
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
         side = mv.toDataURL("image/png", 1.0);
