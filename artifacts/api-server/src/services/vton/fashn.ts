@@ -35,20 +35,18 @@ export interface StartFashnPredictionParams {
 }
 
 export async function startFashnPrediction(params: StartFashnPredictionParams): Promise<string> {
-  const { modelImageUrl, garmentImageUrl, category } = params;
+  const { modelImageUrl, garmentImageUrl } = params;
   const body = await fashnFetch<{ id: string }>("/run", {
     method: "POST",
     body: JSON.stringify({
       model_name: FASHN_MODEL,
       inputs: {
         model_image: modelImageUrl,
-        garment_image: garmentImageUrl,
-        category,
-        garment_photo_type: "auto",
+        product_image: garmentImageUrl,
       },
     }),
   });
-  logger.info({ predictionId: body.id, category }, "fashn: prediction started");
+  logger.info({ predictionId: body.id }, "fashn: prediction started");
   return body.id;
 }
 
