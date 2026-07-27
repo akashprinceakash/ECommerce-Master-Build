@@ -728,6 +728,9 @@ export default function CustomizePage() {
     const reveal = () => { setModelDisplayed(true); };
 
     const onLoad = async () => {
+      // Set initial camera orbit imperatively so React's JSX never needs to own
+      // this attribute (and thus can never reset it mid-snapshot on re-render).
+      mv.cameraOrbit = "0deg 75deg 2.5m";
       const model = mv.model;
       if (model?.materials?.length) {
         const entries: MatEntry[] = model.materials.map((m:any,i:number)=>({idx:i,name:m.name||`Part ${i+1}`,mat:m,color:"#ffffff"}));
@@ -1558,31 +1561,37 @@ export default function CustomizePage() {
     const fc = fcRef.current;
     try { await syncTexture(); } catch {}
 
-    // ── 3-D renders (thumbnail + back/side reference) ────────────────────────
+    // ── 3-D renders ──────────────────────────────────────────────────────────
     //
-    // BUG FIX: The previous implementation called capture3D() three times, each
-    // of which resized the element to 800 px and then restored it in `finally`.
-    // The size-bounce between calls (800 → original → 800) caused model-viewer to
-    // resize its WebGL canvas each time.  By the time the next capture started,
-    // the GPU hadn't drawn a new frame at the requested orbit, so all three
-    // captures read the same stale frame (the front view).
+    // ROOT CAUSE OF PREVIOUS FAILURES:
+    //   1. camera-orbit="0deg..." was a JSX attribute, so React's re-render
+    //      (triggered by isPending flipping to true when Save is clicked) called
+    //      setAttribute("camera-orbit","0deg...") mid-snapshot, resetting the
+    //      camera to front view before back/side could be captured.
+    //   2. The `render` event does not exist in model-viewer 3.4.0 — the
+    //      waitForRender helper always fell back to its 1.5s timeout, during
+    //      which React had time to reset the orbit.
     //
-    // Fix: resize ONCE before all captures, freeze interpolationDecay ONCE, then
-    // use model-viewer's native `render` event to confirm a new GPU frame was
-    // actually drawn at each orbit before calling toDataURL.  Restore everything
-    // in a single `finally` after all three captures are done.
-    //
-    // waitForRender(n) – resolves after model-viewer fires `render` at least n
-    // times, or after a 1.5 s safety timeout, whichever comes first.
-    const waitForRender = (n = 3): Promise<void> =>
+    // FIXES:
+    //   a. camera-orbit removed from JSX entirely; set imperatively in onLoad
+    //      so React never owns that attribute and can never reset it.
+    //   b. setAttribute intercepted on the element for the duration of the
+    //      snapshot sequence — any stray setAttribute("camera-orbit") call
+    //      (from React or anywhere else) is silently blocked.
+    //   c. camera-change event (which model-viewer 3.4.0 DOES fire) gates each
+    //      capture so we wait for a confirmed orbit change, not a fixed timer.
+    //   d. Single resize to 800×800 px for all three captures; interpolationDecay
+    //      frozen to Infinity across the whole sequence.
+
+    // Waits for model-viewer to fire `camera-change` (orbit settled) with a
+    // generous fallback so we never hang if the event is skipped for any reason.
+    const waitForCameraChange = (): Promise<void> =>
       new Promise(resolve => {
         if (!mv) { resolve(); return; }
-        let count = 0;
-        let settled = false;
-        const done = () => { if (!settled) { settled = true; mv.removeEventListener("render", onRender); resolve(); } };
-        const onRender = () => { count++; if (count >= n) done(); };
-        mv.addEventListener("render", onRender);
-        setTimeout(done, 1500); // fallback so we never hang
+        let done = false;
+        const finish = () => { if (!done) { done = true; mv.removeEventListener("camera-change", finish); resolve(); } };
+        mv.addEventListener("camera-change", finish);
+        setTimeout(finish, 800); // fallback
       });
 
     let preview3d = "";
@@ -1593,35 +1602,48 @@ export default function CustomizePage() {
       const origW     = mv.style.width;
       const origH     = mv.style.height;
       const origDecay = (mv as any).interpolationDecay ?? 40;
+
+      // ── setAttribute intercept ──────────────────────────────────────────────
+      // Block any call to setAttribute("camera-orbit", ...) for the duration of
+      // the snapshot sequence.  React may call this during re-renders triggered
+      // by isPending state changes.  Without this guard the orbit resets to the
+      // front view between captures.
+      const origSetAttr = mv.setAttribute.bind(mv);
+      mv.setAttribute = (name: string, value: string) => {
+        if (name === "camera-orbit") return; // blocked during snapshot
+        origSetAttr(name, value);
+      };
+
       try {
-        // Expand to 800 × 800 px for ONE resize — kept for all three captures.
+        // One resize for all three captures.
         mv.style.width  = "800px";
         mv.style.height = "800px";
-        // Freeze smooth interpolation for the whole capture sequence so each
-        // orbit change is instantaneous (one GPU tick, not a smooth animation).
+        // Freeze smooth interpolation so each orbit change is instantaneous.
         (mv as any).interpolationDecay = Infinity;
 
-        // — Front (0 °) —
+        // — Front (0°) —
         mv.cameraOrbit = "0deg 75deg 2.5m";
-        await waitForRender(3);
-        await new Promise(r => setTimeout(r, 200)); // extra settle
+        await waitForCameraChange();
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
         preview3d = mv.toDataURL("image/png", 1.0);
 
-        // — Back (180 °) — must rotate AFTER front is captured
+        // — Back (180°) —
         mv.cameraOrbit = "180deg 75deg 2.5m";
-        await waitForRender(3);
-        await new Promise(r => setTimeout(r, 200));
+        await waitForCameraChange();
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
         back = mv.toDataURL("image/png", 1.0);
 
-        // — Side (90 °) —
+        // — Side (90°) —
         mv.cameraOrbit = "90deg 75deg 2.5m";
-        await waitForRender(3);
-        await new Promise(r => setTimeout(r, 200));
+        await waitForCameraChange();
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
         side = mv.toDataURL("image/png", 1.0);
+
       } catch {
-        // partial results are better than nothing — leave whatever was captured
+        // Partial results are better than nothing — leave whatever was captured.
       } finally {
-        // Single restore after all three captures are complete.
+        // Restore setAttribute, size, interpolation, and orbit.
+        mv.setAttribute = origSetAttr;
         mv.style.width  = origW;
         mv.style.height = origH;
         (mv as any).interpolationDecay = origDecay;
@@ -4326,7 +4348,7 @@ export default function CustomizePage() {
             <model-viewer ref={mvRef} src={toProxiedUrl(displayProduct.modelUrl)}
               camera-controls {...(step===3||modelPaused?{}:{"auto-rotate":true,"rotation-per-second":"8deg"})}
               shadow-intensity="1" environment-image="neutral" exposure="1.0" tone-mapping="commerce"
-              camera-orbit="0deg 75deg 2.5m" min-camera-orbit="auto auto 1.5m" max-camera-orbit="auto auto 5m"
+              min-camera-orbit="auto auto 1.5m" max-camera-orbit="auto auto 5m"
               interaction-prompt="none" {...{"loading":"eager"}}
               style={{width:"100%",height:"100%","--poster-color":"transparent",opacity:modelDisplayed?1:0,transition:"opacity .4s"} as any}/>
           )}

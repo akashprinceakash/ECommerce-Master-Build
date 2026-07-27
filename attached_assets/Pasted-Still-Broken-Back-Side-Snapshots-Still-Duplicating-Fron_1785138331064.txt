@@ -1,0 +1,21 @@
+Still Broken — Back & Side Snapshots Still Duplicating Front Image
+
+Tested again after the last fix request. Result is unchanged:
+
+Clicking download only produces 2 unique files: the Logo (correct ✅) and the Front render (correct ✅).
+The Back and Side thumbnails in the admin panel visually still show the exact same Front-facing pose as each other and as Front — confirmed by re-downloading all three: all 3 files are identical to the Front image.
+
+This tells me the previous fix instructions were likely not implemented yet, or the fix was applied somewhere that didn't take effect. Please don't just reduce blur/increase resolution — the actual root cause is that Back and Side are never being captured as separate camera angles at all.
+
+Please specifically check and confirm these points in the code:
+
+Is the camera/model actually being rotated before capturing Back and Side?
+Search the snapshot function — is there a rotation step (e.g., camera.rotateY(180) for back, 90° for side) happening before each capture call? If this step is missing, all three captures will obviously be identical.
+Is there a shared image variable being reused?
+Check if backSnapshot and sideSnapshot variables are accidentally both being assigned the same captured frontSnapshot result (e.g., a copy-paste bug where the same canvas.toDataURL() output is saved three times instead of capturing three separate times).
+Is the capture happening before the rotation renders?
+If rotation code exists but capture fires immediately (same frame/tick), the render may not have updated yet, so it captures the old (front) frame. Add a proper wait for next repaint (requestAnimationFrame twice, or a small setTimeout) before capturing each angle.
+
+Please debug this specifically — actually rotate the model, log/print the rotation value being used for each of the 3 captures, and verify in a test that Back and Side visually differ from Front before marking this as fixed.
+
+This is still blocking production handoff — please confirm with an actual screenshot showing 3 different angles before closing this out.
