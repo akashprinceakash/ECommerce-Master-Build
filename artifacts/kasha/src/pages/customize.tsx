@@ -1559,47 +1559,75 @@ export default function CustomizePage() {
     try { await syncTexture(); } catch {}
 
     // ── 3-D renders (thumbnail + back/side reference) ────────────────────────
-    // Temporarily expand model-viewer to 800 × 800 px so toDataURL() captures
-    // a high-resolution frame instead of whatever the layout size happens to be.
     //
-    // ORBIT: model-viewer smooth-animates camera transitions by default, so
-    // setting cameraOrbit to 180 ° doesn't instantly move the camera — it starts
-    // an animation.  We freeze that by setting interpolationDecay to Infinity
-    // before each orbit change so the camera jumps to the target in one tick.
-    // We restore the original decay value in `finally` so normal operation is
-    // unaffected.
-    const capture3D = async (orbit: string): Promise<string> => {
-      if (!mv || typeof mv.toDataURL !== "function") return "";
+    // BUG FIX: The previous implementation called capture3D() three times, each
+    // of which resized the element to 800 px and then restored it in `finally`.
+    // The size-bounce between calls (800 → original → 800) caused model-viewer to
+    // resize its WebGL canvas each time.  By the time the next capture started,
+    // the GPU hadn't drawn a new frame at the requested orbit, so all three
+    // captures read the same stale frame (the front view).
+    //
+    // Fix: resize ONCE before all captures, freeze interpolationDecay ONCE, then
+    // use model-viewer's native `render` event to confirm a new GPU frame was
+    // actually drawn at each orbit before calling toDataURL.  Restore everything
+    // in a single `finally` after all three captures are done.
+    //
+    // waitForRender(n) – resolves after model-viewer fires `render` at least n
+    // times, or after a 1.5 s safety timeout, whichever comes first.
+    const waitForRender = (n = 3): Promise<void> =>
+      new Promise(resolve => {
+        if (!mv) { resolve(); return; }
+        let count = 0;
+        let settled = false;
+        const done = () => { if (!settled) { settled = true; mv.removeEventListener("render", onRender); resolve(); } };
+        const onRender = () => { count++; if (count >= n) done(); };
+        mv.addEventListener("render", onRender);
+        setTimeout(done, 1500); // fallback so we never hang
+      });
+
+    let preview3d = "";
+    let back      = "";
+    let side      = "";
+
+    if (mv && typeof mv.toDataURL === "function") {
       const origW     = mv.style.width;
       const origH     = mv.style.height;
       const origDecay = (mv as any).interpolationDecay ?? 40;
       try {
+        // Expand to 800 × 800 px for ONE resize — kept for all three captures.
         mv.style.width  = "800px";
         mv.style.height = "800px";
-        // Disable smooth camera interpolation so the orbit change is instant.
+        // Freeze smooth interpolation for the whole capture sequence so each
+        // orbit change is instantaneous (one GPU tick, not a smooth animation).
         (mv as any).interpolationDecay = Infinity;
-        mv.cameraOrbit  = orbit;
-        // Two rAF ticks for the DOM to process the new orbit, then a GPU settle.
-        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
-        await new Promise(r => setTimeout(r, 500));
-        try { (mv as any).requestUpdate?.(); } catch {}
-        await new Promise(r => requestAnimationFrame(() => r(null)));
-        return mv.toDataURL("image/png", 1.0);
+
+        // — Front (0 °) —
+        mv.cameraOrbit = "0deg 75deg 2.5m";
+        await waitForRender(3);
+        await new Promise(r => setTimeout(r, 200)); // extra settle
+        preview3d = mv.toDataURL("image/png", 1.0);
+
+        // — Back (180 °) — must rotate AFTER front is captured
+        mv.cameraOrbit = "180deg 75deg 2.5m";
+        await waitForRender(3);
+        await new Promise(r => setTimeout(r, 200));
+        back = mv.toDataURL("image/png", 1.0);
+
+        // — Side (90 °) —
+        mv.cameraOrbit = "90deg 75deg 2.5m";
+        await waitForRender(3);
+        await new Promise(r => setTimeout(r, 200));
+        side = mv.toDataURL("image/png", 1.0);
       } catch {
-        return "";
+        // partial results are better than nothing — leave whatever was captured
       } finally {
+        // Single restore after all three captures are complete.
         mv.style.width  = origW;
         mv.style.height = origH;
         (mv as any).interpolationDecay = origDecay;
+        mv.cameraOrbit = "0deg 75deg 2.5m";
       }
-    };
-
-    const preview3d = await capture3D("0deg 75deg 2.5m");   // front — thumbnail
-    const back      = await capture3D("180deg 75deg 2.5m");
-    const side      = await capture3D("90deg 75deg 2.5m");
-
-    // Restore default orbit
-    if (mv) mv.cameraOrbit = "0deg 75deg 2.5m";
+    }
 
     // ── Print-ready flat canvas ───────────────────────────────────────────────
     // Deselect any active object so handles are not baked in.

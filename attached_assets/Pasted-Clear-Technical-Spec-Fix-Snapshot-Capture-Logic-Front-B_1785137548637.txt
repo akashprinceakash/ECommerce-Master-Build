@@ -1,0 +1,35 @@
+Clear Technical Spec — Fix Snapshot Capture Logic (Front / Back / Side, High Resolution)
+
+The core issue: snapshots are not being captured independently per camera angle — Back and Side are reusing the Front image. Please rebuild this logic as follows:
+
+1. Capture must happen from the actual 3D scene, per angle, at save time
+
+When the customer/admin saves the design, the system must rotate the 3D model camera to 3 fixed, distinct angles and take a separate render/screenshot at each one:
+Front: camera facing 0° (default front-facing view)
+Back: camera rotated 180° from front
+Side: camera rotated 90° from front
+Each angle must be captured as its own independent image file — do NOT reuse or duplicate the same canvas/image reference across the three. This is likely the current bug: all three buttons/slots are probably pointing to one cached image variable instead of three separate captures.
+
+2. Wait for render to fully update before capturing
+
+After rotating the camera/model to each angle, add a short delay (or use an onRender / requestAnimationFrame callback) to ensure the 3D scene has fully redrawn at the new angle before taking the snapshot. Capturing too early (before the rotation/render completes) can cause a stale or blurry frame.
+
+3. Capture at high resolution, not screen resolution
+
+Do not just screenshot the visible canvas at its on-screen display size (which may be small/low-res).
+Instead, render each snapshot to an offscreen canvas at a fixed high resolution (e.g., 2000×2000px or 300 DPI equivalent), independent of the user's screen/viewport size, then export that as PNG.
+This ensures Front/Back/Side are always sharp and print-ready, regardless of the device/browser window size used during customization.
+
+4. Verify each snapshot before saving
+
+Before saving the 3 images, do a basic sanity check (e.g., compare image hashes/pixel data) to confirm Front, Back, and Side are actually different from each other. If any two are identical, that's a signal the camera didn't rotate correctly — log an error instead of silently saving duplicate images.
+
+5. Store all 3 as separate files linked to that order/design
+
+Save as 3 distinct files (e.g., design_front.png, design_back.png, design_side.png) tied to that specific customization/order ID, alongside the 4th file (original uploaded logo, which is already working).
+
+Summary of what must be true when testing:
+
+Downloading Front, Back, and Side must give 3 visually different images, each showing the correct corresponding view of the shirt.
+All 3 must be sharp/high-resolution — no blur, no small/compressed size.
+This must work consistently across different customers' orders/designs, not just this one test case.
