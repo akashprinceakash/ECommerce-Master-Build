@@ -101,7 +101,7 @@ export async function startFashnPrediction(params: StartFashnParams): Promise<st
 
   // FASHN /run expects { model_name, inputs: { ... } }
   const body: Record<string, unknown> = {
-    model_name: "fashn/tryon",
+    model_name: "tryon-v1.6",
     inputs: {
       model_image:        humanImageUrl,
       garment_image:      garmentImageUrl,
