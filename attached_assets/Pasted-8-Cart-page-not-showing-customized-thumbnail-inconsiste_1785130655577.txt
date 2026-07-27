@@ -1,0 +1,14 @@
+8. Cart page not showing customized thumbnail (inconsistent with Checkout)
+
+On the Cart page, a customized product ("Men - Golf - Polo - Solid", labeled CUSTOM) is showing a plain blue placeholder image instead of the actual customized design (brown/olive shirt with "8K" logo, as designed in the customization studio).
+Oddly, the Checkout page correctly shows the customized thumbnail for similar items (as confirmed in earlier testing).
+Fix: This confirms the Cart page and Checkout page are still pulling thumbnails from two different sources. Both should read from the same saved customization snapshot (the fix should be applied uniformly — Cart, Checkout, Order Confirmation, and Admin should all reference one single source of truth for the customized image, not separate/duplicate logic per page).
+
+9. Custom measurement entry not accepted — forces predefined size selection
+
+In the Sizing & Quantity step of the Customization Studio, when a user enters their own custom measurements (chest, waist, hip, shoulder width, garment length, sleeve length) instead of selecting a predefined size (S/M/L/XL), clicking "Add to Cart" throws an error: "Select a size – Please choose at least one size and quantity before adding to cart."
+This means custom measurements are currently not treated as a valid size input — the system only accepts predefined sizes, which defeats the purpose of offering custom measurements at all.
+Fix (correct expected behavior):
+If a user fills in custom measurements, the system should validate that all required measurement fields are filled correctly (e.g., reasonable numeric ranges, no missing fields) instead of requiring a predefined size.
+Once validated, treat the custom measurement entry itself as the "size" for that item.
+This custom size (not a predefined S/M/L/XL) should then be what carries through and displays consistently across Cart, Checkout, Order Confirmation, and Admin Order View — e.g., instead of showing "Size: M", it should show something like "Size: Custom (Chest 48, Waist 50, Hip 25...)" or a short reference tag like "Size: Custom Fit" with full measurement details visible on click/expand.

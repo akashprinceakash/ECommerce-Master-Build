@@ -520,7 +520,7 @@ export default function CustomizePage() {
 
   // ── Size step state ──────────────────────────────────────────────────────
   const [size, setSize] = useState("M");
-  const [customMeasurements, setCustomMeasurements] = useState({ chest:"", shoulder:"", length:"", sleeve:"" });
+  const [customMeasurements, setCustomMeasurements] = useState({ chest:"", waist:"", hip:"", shoulder:"", length:"", sleeve:"" });
   const [designName, setDesignName] = useState("");
   const [qty, setQty] = useState(1);
   const [showMobileSaveSheet, setShowMobileSaveSheet] = useState(false);
@@ -1561,18 +1561,27 @@ export default function CustomizePage() {
     // ── 3-D renders (thumbnail + back/side reference) ────────────────────────
     // Temporarily expand model-viewer to 800 × 800 px so toDataURL() captures
     // a high-resolution frame instead of whatever the layout size happens to be.
-    // A 700 ms settle time gives the GPU enough time to finish uploading the
-    // texture — shorter delays cause the wrong material colour to be baked in.
+    //
+    // ORBIT: model-viewer smooth-animates camera transitions by default, so
+    // setting cameraOrbit to 180 ° doesn't instantly move the camera — it starts
+    // an animation.  We freeze that by setting interpolationDecay to Infinity
+    // before each orbit change so the camera jumps to the target in one tick.
+    // We restore the original decay value in `finally` so normal operation is
+    // unaffected.
     const capture3D = async (orbit: string): Promise<string> => {
       if (!mv || typeof mv.toDataURL !== "function") return "";
-      const origW = mv.style.width;
-      const origH = mv.style.height;
+      const origW     = mv.style.width;
+      const origH     = mv.style.height;
+      const origDecay = (mv as any).interpolationDecay ?? 40;
       try {
         mv.style.width  = "800px";
         mv.style.height = "800px";
+        // Disable smooth camera interpolation so the orbit change is instant.
+        (mv as any).interpolationDecay = Infinity;
         mv.cameraOrbit  = orbit;
+        // Two rAF ticks for the DOM to process the new orbit, then a GPU settle.
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
-        await new Promise(r => setTimeout(r, 700));
+        await new Promise(r => setTimeout(r, 500));
         try { (mv as any).requestUpdate?.(); } catch {}
         await new Promise(r => requestAnimationFrame(() => r(null)));
         return mv.toDataURL("image/png", 1.0);
@@ -1581,6 +1590,7 @@ export default function CustomizePage() {
       } finally {
         mv.style.width  = origW;
         mv.style.height = origH;
+        (mv as any).interpolationDecay = origDecay;
       }
     };
 
@@ -1679,8 +1689,18 @@ export default function CustomizePage() {
       // buildPayload now computes and includes customizationCharge so both save
       // and cart paths always store the correct fee.
       const payload=await buildPayload();
-      const effectiveQty=Object.values(sizeQty).reduce((a,b)=>a+b,0)||qty;
-      const effectiveSize=Object.entries(sizeQty).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])[0]?.[0]||size;
+      const totalQty=Object.values(sizeQty).reduce((a,b)=>a+b,0);
+      const hasCustomMeasurements=Object.values(customMeasurements).some(v=>v.trim()!=="");
+      // When the customer used custom measurements (no standard size selected),
+      // qty defaults to 1 and size is "Custom Fit".
+      const effectiveQty=totalQty>0 ? totalQty : (hasCustomMeasurements ? 1 : qty);
+      const effectiveSize=hasCustomMeasurements && totalQty===0
+        ? "Custom Fit"
+        : (Object.entries(sizeQty).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])[0]?.[0]||size);
+      // Build the measurements payload — only include filled-in fields.
+      const measurementsPayload=hasCustomMeasurements
+        ? Object.fromEntries(Object.entries(customMeasurements).filter(([,v])=>v.trim()!==""))
+        : undefined;
       // Always create a FRESH customization record for each cart addition — never
       // reuse an existing ID. This ensures every cart item has its own independent,
       // immutable thumbnail snapshot and is never overwritten by later changes.
@@ -1689,7 +1709,13 @@ export default function CustomizePage() {
         const cust=await apiFetch("/api/customizations",{method:"POST",body:JSON.stringify(payload)});
         customizationId=cust.id??null;
       } catch { /* non-blocking — cart add will still proceed */ }
-      return apiFetch("/api/cart/items",{method:"POST",body:JSON.stringify({productId:id,customizationId,quantity:effectiveQty,size:effectiveSize})});
+      return apiFetch("/api/cart/items",{method:"POST",body:JSON.stringify({
+        productId:id,
+        customizationId,
+        quantity:effectiveQty,
+        size:effectiveSize,
+        ...(measurementsPayload ? {measurements:measurementsPayload} : {}),
+      })});
     },
     onSuccess:()=>{
       setCartAdded(true);
@@ -1703,8 +1729,9 @@ export default function CustomizePage() {
   const handleAddToCart=()=>{
     if(!user){setLocation("/sign-in?redirect_url="+encodeURIComponent(window.location.pathname+window.location.search));return;}
     const totalQty=Object.values(sizeQty).reduce((a,b)=>a+b,0);
-    if(totalQty===0){
-      toast({title:"Select a size",description:"Please choose at least one size and quantity before adding to cart.",variant:"destructive"});
+    const hasCustomMeasurements=Object.values(customMeasurements).some(v=>v.trim()!=="");
+    if(totalQty===0&&!hasCustomMeasurements){
+      toast({title:"Select a size",description:"Please choose at least one size and quantity before adding to cart, or fill in your custom measurements.",variant:"destructive"});
       setStep(4);
       return;
     }
@@ -2076,7 +2103,7 @@ export default function CustomizePage() {
                     setTextInput(""); setTextPlaced(false);
                   } else if(step===4){
                     setSizeQty({S:0,M:0,L:0,XL:0,XXL:0});
-                    setCustomMeasurements({chest:"",shoulder:"",length:"",sleeve:""});
+                    setCustomMeasurements({chest:"",waist:"",hip:"",shoulder:"",length:"",sleeve:""});
                   }
                 }}
                 style={{
@@ -2951,6 +2978,7 @@ export default function CustomizePage() {
                             min={0}
                             step={0.5}
                             placeholder="—"
+                            value={customMeasurements[key as keyof typeof customMeasurements] ?? ""}
                             style={{
                               width:"100%",padding:"8px 10px",borderRadius:8,
                               border:`1px solid ${V.bd}`,background:V.sf2,
@@ -2976,6 +3004,7 @@ export default function CustomizePage() {
                               }
                             }}
                             onChange={e=>{
+                              setCustomMeasurements(prev=>({...prev,[key]:e.target.value}));
                               const warn=e.target.nextElementSibling as HTMLElement|null;
                               if(warn){warn.style.display="none";}
                             }}
@@ -4101,7 +4130,7 @@ export default function CustomizePage() {
                       fontFamily:"'Jost',sans-serif",letterSpacing:".06em",textTransform:"uppercase",fontWeight:500,
                     }}>Custom measurements (optional)</summary>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:10}}>
-                      {(["chest","shoulder","length","sleeve"] as const).map(key=>(
+                      {(["chest","waist","hip","shoulder","length","sleeve"] as const).map(key=>(
                         <div key={key}>
                           <label style={{fontSize:9,color:V.mu,display:"block",marginBottom:4,textTransform:"capitalize",letterSpacing:".08em",fontWeight:500}}>{key}</label>
                           <input value={customMeasurements[key]} onChange={e=>setCustomMeasurements(p=>({...p,[key]:e.target.value}))}

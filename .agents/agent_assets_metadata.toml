@@ -119,3 +119,9 @@ id = "KGJQgK9qahA0XptUwdxko"
 uri = "file://kasha-sku-guide.pdf"
 type = "pdf"
 title = "KA.SHA SKU Reference Guide"
+
+[[outputs]]
+id = "1wTHQPwKlx_c39H_EYcMx"
+uri = "file://attached_assets/customer_sword_logo_siddarth.jpg"
+type = "image"
+title = "Sword Logo — Siddarth (original upload, 79 KB JPEG)"
