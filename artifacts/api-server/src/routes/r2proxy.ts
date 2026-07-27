@@ -37,7 +37,10 @@ function isAllowedR2Url(url: string): boolean {
  *      This works for public R2 buckets and avoids browser CORS problems.
  */
 router.get("/r2-proxy", async (req, res): Promise<void> => {
-  const url = req.query["url"] as string | undefined;
+  const url      = req.query["url"]      as string | undefined;
+  const download = req.query["download"] as string | undefined;
+  const filename = req.query["filename"] as string | undefined;
+
   if (!url) {
     res.status(400).json({ error: "url query param required" });
     return;
@@ -46,6 +49,13 @@ router.get("/r2-proxy", async (req, res): Promise<void> => {
   if (!isAllowedR2Url(url)) {
     res.status(403).json({ error: "URL is not a recognised R2 asset" });
     return;
+  }
+
+  // When ?download=1 is present, add Content-Disposition: attachment so the
+  // browser saves the file instead of opening it in a new tab.
+  if (download === "1") {
+    const name = filename ?? `kasha-look-${Date.now()}.jpg`;
+    res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
   }
 
   // ── Path 1: full S3 SDK access ────────────────────────────────────────────

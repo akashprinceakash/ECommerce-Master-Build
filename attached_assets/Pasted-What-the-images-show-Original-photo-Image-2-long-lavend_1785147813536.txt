@@ -1,0 +1,26 @@
+What the images show:
+
+Original photo (Image 2): long lavender shirt + black trousers.
+Products selected: pink polo (Image 3) + white shorts (Image 4, clearly short — ends mid-thigh in the product photo).
+Result (Image 1): polo is correct. But the bottom came out as full-length white trousers, reaching the ankle — not the shorts you selected.
+
+This is the same failure shape as IDM-VTON, but now happening on FASHN, through your real integrated pipeline. That's an important data point, not a step backward — here's what it tells us.
+
+Likely cause: this is the chaining problem again, just surfacing differently.
+
+Your job processes top first, then bottom second — which we set up deliberately based on last week's testing. Here's the sequence that actually ran:
+
+Step 1: polo applied to your original, real photo → correct (this part matches what we saw in manual testing — single-garment swaps on a real photo work well).
+Step 2: shorts applied to step 1's AI-generated output (polo-wearing synthetic image), not the original photo.
+
+So the garment that goes second in the chain is the one that degrades — first with IDM-VTON, and now, apparently, with FASHN too, just in a different way (there, it was color bleed + capri-length weirdness; here it's full elongation). The common thread across both models: whichever garment is processed against an already-synthetic image, rather than the real photo, is the one that loses fidelity. Reordering top-vs-bottom doesn't eliminate this — it just decides which garment eats the risk.
+
+FASHN's own team has acknowledged this exact category of problem still needs work: Supporting the simultaneous fitting of two clothing items (e.g., a top and a bottom) isn't in our immediate plans. However, feature (4) of the virtual try-on model roadmap will greatly improve the ability to fit items consecutively while preserving the details of the first item. — meaning even FASHN doesn't currently claim consecutive-garment chaining is fully solved.
+
+Two paths forward, from here:
+
+A — Quick test, no code change (do this first): Manually reverse it once — run shorts first against your original photo, then polo second against that result. If the polo then comes out wrong instead of the shorts, that confirms definitively it's a "whatever's second degrades" problem, not something specific to bottoms. Cheap to test (2 API credits), and tells us for certain whether reordering-per-outfit is a viable permanent strategy (e.g., always process whichever garment is historically more failure-prone — bottoms — first, so it gets the clean photo).
+
+B — The structural fix, if A confirms the pattern: Stop chaining entirely. Run both garments as independent single-garment generations against the same original photo, then composite the two results together programmatically (crop the top half from result A, the bottom half from result B, blend at the waistline using sharp). Neither generation ever sees a synthetic image — both get the real photo — so this class of bug can't occur at all. This is real, additional engineering work (image compositing, finding a reliable waist-crop line across arbitrary photos/poses), but it's the only approach that structurally eliminates the problem rather than working around it.
+
+Given this has now happened on two different models, I'd lean toward B being worth building rather than continuing to chase ordering tricks — but let's confirm with the cheap test in A first, since it directly tells us whether this is even still an ordering problem or something else. Want me to have you run that reversed test, or should I start scoping the compositing approach now in parallel?

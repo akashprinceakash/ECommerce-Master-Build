@@ -311,21 +311,20 @@ export default function LookbookPage() {
     }
   }, [purchaseCredits, openRazorpayForCredits]);
 
-  const handleDownload = useCallback(async () => {
+  const handleDownload = useCallback(() => {
     if (generation.status !== "succeeded") return;
     const url = generation.resultImageUrl;
-    try {
-      const res = await fetch(url, { mode: "cors" });
-      const blob = await res.blob();
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `kasha-look-${Date.now()}.jpg`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    } catch {
-      // CORS blocked — fall back to opening in a new tab
-      window.open(url, "_blank");
-    }
+    // Route through our server-side proxy with ?download=1 so the server sets
+    // Content-Disposition: attachment — this always triggers a save dialog
+    // regardless of the browser's CORS cache state for the raw R2 URL.
+    const filename = `kasha-look-${Date.now()}.jpg`;
+    const proxyUrl = `${getApiUrl()}/api/r2-proxy?url=${encodeURIComponent(url)}&download=1&filename=${encodeURIComponent(filename)}`;
+    const a = document.createElement("a");
+    a.href = proxyUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }, [generation]);
 
   // Close fullscreen on Escape
