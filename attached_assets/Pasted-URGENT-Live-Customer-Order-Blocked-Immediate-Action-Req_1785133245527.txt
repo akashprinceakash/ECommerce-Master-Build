@@ -1,0 +1,54 @@
+URGENT — Live Customer Order Blocked — Immediate Action Required
+
+Akash, this is now a real customer order (not friends/family), and the customer is actively complaining. I cannot delay this any further. Please treat as top priority and revert today.
+
+What I need immediately:
+
+1. Original artwork file of the sword logo
+
+The customer uploaded this during customization (should have been saved at upload — ideally 300 DPI, print-ready).
+Please pull the original uploaded file from the database/storage (not a screenshot of the 3D render) and send it to me directly so I can forward it to development for printing.
+
+2. Exact font and size of the name text ("SIDDARTH") placed on the back
+
+I need the exact font name and font size used, as fixed by the customer in the customization tool.
+Please pull this from the saved customization data (not visually estimated) and send it to me.
+
+3. Fix the snapshot generation bug — this is blocking the order
+
+Currently, when a snapshot is generated for an order, all three views (Front, Back, Side) are showing the same front-facing image, and that image itself is blurry, with the sword logo not even visible.
+Expected behavior: system should capture three distinct, correctly-angled snapshots — actual Front, actual Back, and actual Side — each in high resolution, with all customization details (logo, text) clearly visible.
+This snapshot is what gets sent to print, so if it's wrong, we cannot produce the order correctly.
+
+Please confirm:
+
+Once you locate the sword artwork file and font/size details, send them to me right away so I can forward to development without further delay.
+Let me know your ETA on the snapshot fix since this is directly blocking a live customer order.
+
+This needs to be resolved today — please prioritize accordingly.
+
+when i save front, back, side from admin the image is comming like this
+
+Identified texture map export bug instead of rendered image
+Identified texture map export bug instead of rendered image
+
+Here's the update to send to Replit — this is a new/different bug from before:
+
+🚨 Update — Front Snapshot Export is Broken (Raw Texture Map, Not Rendered Image)
+
+Good progress — the Side and Back snapshots (attached: Polo Tee - Beige & Brown Custom - side.png, -back.png) are now exporting correctly as proper rendered images, with the sword logo and "Siddarth" text clearly visible.
+
+However, the "Front" snapshot export is completely broken:
+
+Instead of a rendered front-facing image of the shirt (like the side/back ones), the front file is exporting the raw flat UV texture map — the underlying 2D artwork sheet used to wrap onto the 3D model — not an actual camera snapshot of the shirt.
+As a result:
+The sword logo appears small, mirrored, and rotated in the wrong position.
+The "Siddarth" text is flipped/mirrored (appears backwards) and positioned incorrectly.
+The colors show as disconnected flat color blocks (this is the texture/UV layout, not the actual garment render).
+
+Fix needed:
+
+The Front snapshot must be generated the exact same way as the Back and Side snapshots — i.e., render the actual 3D model from the front camera angle and export that as a flat image, not export the raw UV/texture map.
+Please check the export/snapshot function — it seems the Front view specifically is pointed at the wrong render target (texture map instead of rendered camera view), while Back and Side are correctly configured.
+
+This is blocking the print-ready front artwork for the live customer order — please prioritize.

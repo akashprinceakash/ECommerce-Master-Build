@@ -105,11 +105,16 @@ async function exportDesignImages(design: UserDesign): Promise<{ count: number; 
   // Include the original uploaded logo so the factory gets the source file.
   const logoUrl = (design.designSpec as any)?.logoUrl ?? "";
 
+  // Front / back / side are all 3-D renders so they are consistent and
+  // show the shirt in the correct camera-facing orientation.
+  // The raw UV texture (frontImageUrl) is included separately, clearly
+  // labelled, for factories that do direct UV printing — it is NOT the
+  // design reference image.
   const views: Array<{ url: string; label: string }> = [
-    { url: design.frontImageUrl   ?? "", label: "front-print-ready" },
-    { url: design.backImageUrl    ?? "", label: "back-3d-ref"       },
-    { url: design.sideImageUrl    ?? "", label: "side-3d-ref"       },
-    { url: design.previewImageUrl ?? "", label: "preview"           },
+    { url: design.previewImageUrl ?? "", label: "front-3d-render"   },
+    { url: design.backImageUrl    ?? "", label: "back-3d-render"    },
+    { url: design.sideImageUrl    ?? "", label: "side-3d-render"    },
+    { url: design.frontImageUrl   ?? "", label: "uv-texture-raw"    },
     { url: logoUrl,                      label: "logo-original"     },
   ].filter(v => !!v.url);
 
@@ -177,8 +182,12 @@ function DesignLeftPanel({ design, mvReady, viewerRef, textureReady, canvasDataL
   canvasDataLoading: boolean;
 }) {
   const [activeView, setActiveView] = useState<"front" | "back" | "side">("front");
+  // Use previewImageUrl (3-D front render) for the FRONT tab so the
+  // admin sees the same correctly-oriented shirt view as the customer.
+  // frontImageUrl is the raw UV texture — mirrored and contains colour
+  // patches — so it is not suitable as a human-readable front reference.
   const snapshots = [
-    { key: "front" as const, label: "FRONT", url: design.frontImageUrl },
+    { key: "front" as const, label: "FRONT", url: design.previewImageUrl ?? design.frontImageUrl },
     { key: "back"  as const, label: "BACK",  url: design.backImageUrl  },
     { key: "side"  as const, label: "SIDE",  url: design.sideImageUrl  },
   ].filter(s => !!s.url);
@@ -576,12 +585,12 @@ function DesignViewerModal({ design, onClose }: { design: UserDesign; onClose: (
           )}
 
           {/* 3-view snapshot strip */}
-          {(design.frontImageUrl || design.backImageUrl || design.sideImageUrl) && (
+          {(design.previewImageUrl || design.frontImageUrl || design.backImageUrl || design.sideImageUrl) && (
             <div className="mt-5">
               <p className="text-white/40 text-[10px] uppercase tracking-wider mb-2">Design Snapshots</p>
               <div className="grid grid-cols-3 gap-1.5">
                 {[
-                  { label: "Front", url: design.frontImageUrl },
+                  { label: "Front", url: design.previewImageUrl ?? design.frontImageUrl },
                   { label: "Back",  url: design.backImageUrl  },
                   { label: "Side",  url: design.sideImageUrl  },
                 ].map(({ label, url }) => (
