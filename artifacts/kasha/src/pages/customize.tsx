@@ -1545,28 +1545,20 @@ export default function CustomizePage() {
 
   /** Capture front, back and side snapshots.
    *
-   * Front  → high-res flat Fabric.js canvas export (4× multiplier ≈ 4096 px).
-   *          This is the actual print-ready texture file, not a 3-D screenshot.
-   *          Text is sharp, logos are pixel-perfect, and there are no 3-D
-   *          rendering artefacts (mirrored collar text, specular glare, etc.).
-   *
-   * Back / Side → model-viewer 3-D renders for reference only.
+   * Returns four images:
+   *   preview → 3-D model-viewer front render.  Used as the cart/checkout
+   *             thumbnail so customers see a recognisable shirt, not a texture.
+   *   front   → high-res flat Fabric.js canvas (4× ≈ 4096 px).  Print-ready:
+   *             sharp text, crisp logos, no 3-D artefacts.
+   *   back    → 3-D model-viewer back render (reference).
+   *   side    → 3-D model-viewer side render (reference).
    */
-  const snapshotViews = useCallback(async (): Promise<{front:string;back:string;side:string}> => {
+  const snapshotViews = useCallback(async (): Promise<{preview:string;front:string;back:string;side:string}> => {
     const mv: any = mvRef.current;
     const fc = fcRef.current;
     try { await syncTexture(); } catch {}
 
-    // Print-ready flat front — deselect any active object first so selection
-    // handles are not baked into the exported image.
-    const flatFront: string = (() => {
-      if (!fc) return "";
-      try { if (typeof fc.discardActiveObject === "function") fc.discardActiveObject(); } catch {}
-      fc.renderAll();
-      return fc.toDataURL({ format: "png", quality: 1.0, multiplier: 4 });
-    })();
-
-    // 3-D reference views for back and side
+    // ── 3-D renders (thumbnail + back/side reference) ────────────────────────
     const capture3D = async (orbit: string): Promise<string> => {
       if (mv && typeof mv.toDataURL === "function") {
         mv.cameraOrbit = orbit;
@@ -1574,16 +1566,26 @@ export default function CustomizePage() {
         await new Promise(r => setTimeout(r, 350));
         try { return mv.toDataURL("image/png", 1.0); } catch {}
       }
-      return flatFront; // fallback when no 3-D viewer
+      return "";
     };
 
-    const back = await capture3D("180deg 75deg 2.5m");
-    const side = await capture3D("90deg 75deg 2.5m");
+    const preview3d = await capture3D("0deg 75deg 2.5m");   // front — thumbnail
+    const back      = await capture3D("180deg 75deg 2.5m");
+    const side      = await capture3D("90deg 75deg 2.5m");
 
-    // Restore default front view
+    // Restore default orbit
     if (mv) mv.cameraOrbit = "0deg 75deg 2.5m";
 
-    return { front: flatFront, back, side };
+    // ── Print-ready flat canvas ───────────────────────────────────────────────
+    // Deselect any active object so handles are not baked in.
+    const flatFront: string = (() => {
+      if (!fc) return preview3d; // fallback to 3-D render if no canvas
+      try { if (typeof fc.discardActiveObject === "function") fc.discardActiveObject(); } catch {}
+      fc.renderAll();
+      return fc.toDataURL({ format: "png", quality: 1.0, multiplier: 4 });
+    })();
+
+    return { preview: preview3d, front: flatFront, back, side };
   }, [syncTexture]);
 
   // ── Save / Cart mutations ────────────────────────────────────────────────
@@ -1634,8 +1636,8 @@ export default function CustomizePage() {
       color:primaryColor, size:effectiveSize,
       partsEnabled:{qty:effectiveQty,zoneColors,primaryColor,kdDesignId:activeKashaDesign?.id||"",activePrintId,sleeveLength},
       canvasData:JSON.stringify({canvasJSON:JSON.stringify((fc as any).toJSON(["data"])),textureUrl:lastTextureUrlRef.current,primaryColor,kdDesignId:activeKashaDesign?.id||"",zoneColors,activePrintId,allOverPrintId,sleeveLength,productSku:product?.sku||"",skuProductType,customizationType:customizationType||(skuProductType==="print"?"print":skuProductType==="pattern"?"pattern":"color"),patternSubMode:patternSubMode||"",colorSubMode:colorSubMode||"",patColorA,patColorB}),
-      previewImageUrl: views.front,
-      frontImageUrl:   views.front,
+      previewImageUrl: views.preview, // 3-D render — used as cart/checkout/order thumbnail
+      frontImageUrl:   views.front,   // flat canvas 4× — print-ready for production
       backImageUrl:    views.back,
       sideImageUrl:    views.side,
       designSpec,
