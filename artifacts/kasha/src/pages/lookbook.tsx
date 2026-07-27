@@ -82,6 +82,22 @@ type GenerationState =
   | { status: "succeeded"; resultImageUrl: string }
   | { status: "failed"; error: string };
 
+interface AiModel {
+  id: string;
+  gender: Gender;
+  label: string;
+  bottomType: "pants" | "shorts";
+  src: string; // relative path served via /api/public/avatars/
+}
+
+const AI_MODELS: AiModel[] = [
+  { id: "female-pants-1", gender: "female", label: "Model 1", bottomType: "pants",  src: "/api/public/avatars/avatar-female.png" },
+  { id: "female-shorts-1", gender: "female", label: "Model 2", bottomType: "shorts", src: "/api/public/avatars/model-female-shorts-1.jpeg" },
+  { id: "male-pants-1",   gender: "male",   label: "Model 1", bottomType: "pants",  src: "/api/public/avatars/model-male-pants-1.webp" },
+  { id: "male-pants-2",   gender: "male",   label: "Model 2", bottomType: "pants",  src: "/api/public/avatars/avatar-male.png" },
+  { id: "male-shorts-1",  gender: "male",   label: "Model 3", bottomType: "shorts", src: "/api/public/avatars/model-male-shorts-1.webp" },
+];
+
 export default function LookbookPage() {
   useEffect(() => { document.title = "Lookbook — Ka.Sha"; }, []);
   const { user } = useUser();
@@ -99,6 +115,7 @@ export default function LookbookPage() {
 
   // ── Model choice: default AI avatar, or the customer's own photo ──────────
   const [modelSource, setModelSource] = useState<"avatar" | "photo">("avatar");
+  const [selectedAvatarId, setSelectedAvatarId] = useState<string>("female-pants-1");
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
@@ -444,7 +461,9 @@ export default function LookbookPage() {
         data: {
           gender,
           productIds: selectedItems.map(i => i.productId),
-          humanImageUrl: modelSource === "photo" ? uploadedPhotoUrl : null,
+          humanImageUrl: modelSource === "photo"
+            ? uploadedPhotoUrl
+            : (AI_MODELS.find(m => m.id === selectedAvatarId)?.src ?? null),
         },
       });
       setGeneration({ status: "generating", jobId: res.jobId });
@@ -600,7 +619,12 @@ export default function LookbookPage() {
                         {(["female", "male"] as const).map(g => (
                           <button
                             key={g}
-                            onClick={() => { setGender(g); setGeneration({ status: "idle" }); }}
+                            onClick={() => {
+                              setGender(g);
+                              setGeneration({ status: "idle" });
+                              const first = AI_MODELS.find(m => m.gender === g);
+                              if (first) setSelectedAvatarId(first.id);
+                            }}
                             style={{
                               fontFamily: FONT_UI, fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase",
                               padding: "9px 20px", border: "none", cursor: "pointer",
@@ -638,8 +662,8 @@ export default function LookbookPage() {
                           >
                             {opt.key === "avatar" ? (
                               <img
-                                src={`/api/public/avatars/avatar-${gender}.png`}
-                                alt={`${gender} avatar`}
+                                src={AI_MODELS.find(m => m.id === selectedAvatarId)?.src ?? `/api/public/avatars/avatar-${gender}.png`}
+                                alt="Selected AI model"
                                 style={{ width: 36, height: 48, objectFit: "cover", objectPosition: "top", flexShrink: 0, border: `1px solid rgba(184,146,90,0.2)` }}
                               />
                             ) : (
@@ -655,18 +679,85 @@ export default function LookbookPage() {
                         ))}
                       </div>
 
+                      {/* ── Outfit-type tip — shown for both modes ── */}
+                      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 2 }}>
+                        {[
+                          { icon: "👖", bold: "Generating pants?", text: "Use a model / photo wearing pants." },
+                          { icon: "🩳", bold: "Generating shorts?", text: "Use a model / photo wearing shorts." },
+                        ].map(({ icon, bold, text }) => (
+                          <div key={bold} style={{
+                            flex: "1 1 200px", display: "flex", gap: 8, alignItems: "flex-start",
+                            background: "#FAFAF7", border: "1px dashed rgba(184,146,90,0.3)", padding: "8px 12px",
+                          }}>
+                            <span style={{ fontSize: 14, lineHeight: 1.4 }}>{icon}</span>
+                            <span style={{ fontFamily: FONT_UI, fontSize: 10.5, color: "rgba(0,0,0,0.65)", lineHeight: 1.6, letterSpacing: "0.02em" }}>
+                              <strong style={{ color: "#0A0A0A" }}>{bold}</strong>{" "}{text}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* ── AI Model grid ── */}
+                      {modelSource === "avatar" && (
+                        <div style={{ marginTop: 14 }}>
+                          <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.25em", textTransform: "uppercase", color: "rgba(0,0,0,0.4)", marginBottom: 10 }}>
+                            Select a model
+                          </p>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(88px, 1fr))", gap: 8 }}>
+                            {AI_MODELS.filter(m => m.gender === gender).map(model => {
+                              const active = selectedAvatarId === model.id;
+                              return (
+                                <button
+                                  key={model.id}
+                                  onClick={() => setSelectedAvatarId(model.id)}
+                                  style={{
+                                    padding: 0, cursor: "pointer", background: "transparent",
+                                    border: `2px solid ${active ? GOLD : "rgba(0,0,0,0.1)"}`,
+                                    outline: "none", position: "relative", textAlign: "center",
+                                  }}
+                                >
+                                  <img
+                                    src={model.src}
+                                    alt={model.label}
+                                    style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", objectPosition: "top", display: "block" }}
+                                  />
+                                  <div style={{
+                                    padding: "5px 4px 6px",
+                                    background: active ? "rgba(184,146,90,0.1)" : "transparent",
+                                  }}>
+                                    <span style={{ display: "block", fontFamily: FONT_UI, fontSize: 9.5, letterSpacing: "0.08em", color: active ? GOLD : "rgba(0,0,0,0.55)" }}>
+                                      {model.label}
+                                    </span>
+                                    <span style={{ display: "block", fontFamily: FONT_UI, fontSize: 8.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(0,0,0,0.38)", marginTop: 1 }}>
+                                      {model.bottomType}
+                                    </span>
+                                  </div>
+                                  {active && (
+                                    <div style={{ position: "absolute", top: 4, right: 4, background: GOLD, borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                      <Check size={9} color="#fff" strokeWidth={3} />
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ── Upload Your Own Photo ── */}
                       {modelSource === "photo" && (
-                        <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 16 }}>
+                        <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 16, marginTop: 14 }}>
                           {/* Guidelines */}
                           <div style={{ flex: 1, minWidth: 220, background: "#FAFAF7", border: "1px dashed rgba(184,146,90,0.35)", padding: "12px 14px" }}>
                             <p style={{ fontFamily: FONT_UI, fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(0,0,0,0.5)", marginBottom: 8 }}>
-                              For the best result
+                              For best results
                             </p>
                             {[
                               ["✅", "Full body visible, facing forward"],
                               ["✅", "Arms slightly away from your body"],
-                              ["✅", "Plain background, good lighting"],
-                              ["❌", "No oversized jackets"],
+                              ["✅", "Plain, uncluttered background"],
+                              ["✅", "Good lighting, no harsh shadows"],
+                              ["❌", "No oversized jackets or heavy layers"],
                               ["❌", "Don't crop your feet"],
                               ["❌", "No mirror selfies"],
                             ].map(([mark, text], i) => (
