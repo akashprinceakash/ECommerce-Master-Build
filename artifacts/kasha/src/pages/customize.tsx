@@ -1559,14 +1559,29 @@ export default function CustomizePage() {
     try { await syncTexture(); } catch {}
 
     // ── 3-D renders (thumbnail + back/side reference) ────────────────────────
+    // Temporarily expand model-viewer to 800 × 800 px so toDataURL() captures
+    // a high-resolution frame instead of whatever the layout size happens to be.
+    // A 700 ms settle time gives the GPU enough time to finish uploading the
+    // texture — shorter delays cause the wrong material colour to be baked in.
     const capture3D = async (orbit: string): Promise<string> => {
-      if (mv && typeof mv.toDataURL === "function") {
-        mv.cameraOrbit = orbit;
+      if (!mv || typeof mv.toDataURL !== "function") return "";
+      const origW = mv.style.width;
+      const origH = mv.style.height;
+      try {
+        mv.style.width  = "800px";
+        mv.style.height = "800px";
+        mv.cameraOrbit  = orbit;
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
-        await new Promise(r => setTimeout(r, 350));
-        try { return mv.toDataURL("image/png", 1.0); } catch {}
+        await new Promise(r => setTimeout(r, 700));
+        try { (mv as any).requestUpdate?.(); } catch {}
+        await new Promise(r => requestAnimationFrame(() => r(null)));
+        return mv.toDataURL("image/png", 1.0);
+      } catch {
+        return "";
+      } finally {
+        mv.style.width  = origW;
+        mv.style.height = origH;
       }
-      return "";
     };
 
     const preview3d = await capture3D("0deg 75deg 2.5m");   // front — thumbnail
