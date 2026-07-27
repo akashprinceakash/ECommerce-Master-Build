@@ -1,0 +1,156 @@
+Bug Report & Feature Request – T-Shirt Customization Store
+
+1. Customization charges not added to order total
+
+
+
+
+
+When a customer customizes a product (adds text, logo, changes color, etc.) and places an order, the final order amount still shows the base price (e.g., ₹2000) — the customization charge is not being added.
+
+
+
+This happens both on the customer's order confirmation and in the Admin → Orders view.
+
+
+
+Fix: Ensure the customization fee is calculated and added to the base price 
+
+
+
+Order #41 is currently in production. The customer customized a Men's Golf Polo as follows:
+
+
+
+
+
+Logo/Image: Sword uploaded by the customer
+
+
+
+Logo placement: Front – Chest Left
+
+
+
+Text: SIDDARTH
+
+
+
+Text placement: Back – Top
+
+
+
+Customer completed the customization and confirmed the order.
+
+1. Customization charges are missing from the order total
+
+The order total is showing only ₹2,000, even though the customer has customized the product.
+
+The customization charges that we discussed are not being added to the final order amount.
+
+This issue is visible in:
+
+
+
+
+
+Customer's order/checkout amount
+
+
+
+Admin Order #41
+
+
+
+Admin order details
+
+Please check the pricing logic and ensure customization charges are correctly calculated and added to the final order total wherever applicable..
+
+2. Saved customization design is low quality / text not visible
+
+
+
+
+
+When a customer's customized design is saved and later downloaded (for printing), the image quality is poor.
+
+
+
+Custom text added by the customer (e.g., "SIDDARTH") is not clearly visible/legible in the downloaded design.
+
+
+
+Fix: Increase the export/render resolution of the saved customization image so all text and logos are sharp and print-ready (high-DPI export, not a low-res screenshot).
+
+3. Admin – Designs section should indicate customization status
+
+
+
+
+
+In Admin → Orders/Designs, for each order, add a clear label:
+
+
+
+
+
+If the customer customized the product → show something like "View Customization Details" (clickable, opens the full customization info).
+
+
+
+If no customization was done → show "No Customization".
+
+4. Uploaded logos/images must be attached and downloadable by admin
+
+
+
+
+
+When a customer uploads a logo or image during customization, it should be attached to that product/order.
+
+
+
+Admin should be able to go to Designs → View → Download Logo/Image and get the original uploaded file (not just see it embedded in a 3D render).
+
+5. Full customization metadata must be saved and visible to admin
+
+
+
+
+
+Every customization should save and expose (in Admin → Designs → View):
+
+
+
+
+
+Color code(s) used
+
+
+
+Font used for any text
+
+
+
+Exact text content entered
+
+
+
+Uploaded logo/image (downloadable, as above)
+
+
+
+All of this should be viewable and downloadable per order, not just visually implied in a 3D preview.
+
+6. Correct flat snapshots instead of 3D model screenshots
+
+
+
+
+
+Currently, when admin downloads a customer's design, it downloads a screenshot of the 3D model/t-shirt (see attached images) instead of a clean, correctly cropped front, back, and side view of just the design/print area.
+
+
+
+Fix: Generate and save proper flat snapshot images (front/back/side) of the actual customization at high resolution, suitable for sending directly to print — not a render of the whole 3D product mockup.
+
