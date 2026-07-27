@@ -1,0 +1,245 @@
+I want to completely migrate the AI Virtual Try-On / Lookbook generation system from **Replicate + IDM-VTON** to the **FASHN API**.
+
+I have already:
+
+* Created my FASHN API account
+* Generated the FASHN API key
+* Added **$7.50 in API credits**
+* I will provide the FASHN API key securely through environment variables
+
+Do NOT hardcode the API key anywhere in the codebase.
+
+### Main objective
+
+Replace the current Replicate/IDM-VTON implementation with FASHN API while keeping the existing Lookbook user experience and credit/payment system working.
+
+The most important requirement is **high-quality and accurate virtual try-on results**. Do not make a simple one-to-one API replacement. Review the entire current IDM-VTON integration and redesign the image-generation pipeline properly for FASHN.
+
+### Supported user scenarios
+
+The system must correctly handle all of these cases:
+
+1. User uploads a person image + T-shirt
+   → Generate the person wearing the T-shirt.
+
+2. User uploads a person image + pants
+   → Generate the person wearing the pants.
+   → Do not accidentally generate shorts or change the garment type.
+
+3. User uploads a person image + shorts
+   → Generate the person wearing the shorts.
+   → Do not convert shorts into pants.
+
+4. User uploads a person image + T-shirt + pants
+   → Generate a complete outfit with the correct T-shirt and pants.
+
+5. User uploads a person image + T-shirt + shorts
+   → Generate a complete outfit with the correct T-shirt and shorts.
+
+6. User uploads a person image + women's golf dress
+   → Generate the person wearing the complete golf dress.
+   → Treat the dress as a one-piece garment, not as a top.
+
+7. Support future combinations such as:
+
+   * Top + bottom
+   * Shirt + pants
+   * Shirt + shorts
+   * T-shirt + pants
+   * T-shirt + shorts
+   * One-piece dress
+   * Other supported golfwear categories
+
+### Garment classification
+
+Before calling FASHN, correctly identify the garment type/category from the product metadata or existing product database whenever possible.
+
+Use the product's existing category/SKU data as the primary source instead of relying only on AI image classification.
+
+The system should distinguish at minimum:
+
+* TOP
+* BOTTOM_PANTS
+* BOTTOM_SHORTS
+* ONE_PIECE_DRESS
+
+If the existing product database already contains reliable category information, reuse it.
+
+Do not blindly send multiple garments to the API without understanding whether they are compatible.
+
+### Multi-garment logic
+
+Build a proper garment composition pipeline.
+
+If the user selects:
+
+* Only a top → process as a top
+* Only pants → process as pants
+* Only shorts → process as shorts
+* Top + pants → process as a complete outfit
+* Top + shorts → process as a complete outfit
+* One-piece dress → process as a one-piece garment
+
+The generated image must preserve:
+
+* Original garment type
+* Original garment color
+* Original print/pattern
+* Logo placement
+* Text placement
+* Major garment details
+* Fit and shape
+* Golfwear styling
+
+Do not allow the model to hallucinate a different garment category.
+
+For example:
+
+* A white golf short must remain a white golf short.
+* Pants must not become shorts.
+* Shorts must not become pants.
+* A printed T-shirt must preserve the print as accurately as possible.
+* A golf dress must remain a one-piece dress.
+
+### FASHN integration
+
+Use the official FASHN API documentation and the correct current API endpoint/model for virtual try-on.
+
+Keep the FASHN API key in an environment variable such as:
+
+FASHN_API_KEY
+
+Do not expose the API key to the frontend/browser.
+
+The frontend should call our backend.
+The backend should call FASHN.
+
+Implement:
+
+* Secure API key handling
+* Request validation
+* Image upload handling
+* FASHN API request
+* Prediction/job status handling if asynchronous
+* Result retrieval
+* Timeout handling
+* Retry handling where appropriate
+* API error handling
+* User-friendly error messages
+* Logging without exposing secrets
+
+### Existing credit system
+
+DO NOT break the existing Lookbook credit system.
+
+Before generation:
+
+* Verify the logged-in user
+* Verify that the user has sufficient Lookbook credits
+
+Only consume/deduct the user's Lookbook credit when a generation is successfully accepted/processed according to the existing billing logic.
+
+If the FASHN request fails because of:
+
+* API error
+* Invalid input
+* Server error
+* Timeout
+* Failed prediction
+
+Do not incorrectly charge the user.
+
+Make sure the existing admin credit pricing and user credit balance system continue to work.
+
+### Quality priority
+
+The output quality is the highest priority.
+
+Compared with the current IDM-VTON implementation, improve:
+
+* Garment fidelity
+* Garment color accuracy
+* Print/pattern preservation
+* Logo/text preservation
+* Correct pants vs shorts appearance
+* Correct top vs bottom placement
+* Natural body/garment alignment
+* Realistic fabric appearance
+* Natural shadows and lighting
+* Correct garment proportions
+* Minimal distortion
+* Minimal artifacts around arms, hands, legs, and garment edges
+
+Do not add unnecessary image processing that reduces the original garment quality.
+
+Use the highest-quality FASHN configuration that is appropriate for production while keeping API costs reasonable.
+
+### Important testing requirement
+
+Before considering this migration complete, test the implementation using representative KA.SHA products.
+
+Create a test matrix covering at least:
+
+A. T-shirt only
+B. Pants only
+C. Shorts only
+D. T-shirt + pants
+E. T-shirt + shorts
+F. Women's golf dress
+G. Printed T-shirt
+H. Patterned T-shirt
+I. Different body poses
+J. Different person images
+
+Compare the results with the existing IDM-VTON implementation.
+
+The migration should not be considered complete until the FASHN results are consistently better and the garment categories are handled correctly.
+
+### Existing architecture
+
+First inspect the existing codebase and identify:
+
+* Current Replicate integration
+* IDM-VTON API calls
+* Lookbook generation flow
+* Frontend upload/selection flow
+* Backend API routes
+* Credit deduction logic
+* Database models
+* Image storage
+* Existing generated-image storage
+* Error handling
+* Admin controls
+
+Then replace only the necessary AI-generation layer while preserving existing business logic.
+
+Do not create duplicate credit systems or duplicate Lookbook generation flows.
+
+### Important
+
+Do not remove the existing Replicate integration immediately.
+
+First:
+
+1. Build the FASHN integration.
+2. Test it.
+3. Add a feature flag/configuration to switch between FASHN and Replicate if possible.
+4. Verify FASHN works correctly.
+5. Only then make FASHN the default production provider.
+
+The final architecture should be clean enough that we can switch providers in the future without rewriting the entire Lookbook system.
+
+After implementation, give me a clear summary of:
+
+1. Files changed
+2. New environment variables required
+3. FASHN API endpoint/model used
+4. How top-only generation works
+5. How bottom-only generation works
+6. How top + bottom generation works
+7. How dress/one-piece generation works
+8. How credits are deducted
+9. How failed generations are handled
+10. How to test the implementation
+
+Most importantly: **Do not simply replace the Replicate API URL with FASHN. Analyze the current architecture and implement a production-quality FASHN virtual try-on pipeline designed specifically for KA.SHA's golfwear catalog.**

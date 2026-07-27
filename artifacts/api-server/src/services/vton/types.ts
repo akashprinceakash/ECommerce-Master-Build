@@ -15,6 +15,17 @@ export const ROLE_TO_VTON_CATEGORY: Record<GarmentRole, "upper_body" | "lower_bo
 };
 
 /**
+ * The category value FASHN API expects for a given garment role.
+ * Also exported from fashn.ts (ROLE_TO_FASHN_CATEGORY) — this copy lives here
+ * for use by types-only imports that must not pull in the FASHN client.
+ */
+export const ROLE_TO_FASHN_CATEGORY: Record<GarmentRole, "tops" | "bottoms" | "one-pieces"> = {
+  top:    "tops",
+  bottom: "bottoms",
+  dress:  "one-pieces",
+};
+
+/**
  * Per-category IDM-VTON inference tuning.
  *
  * lower_body uses more steps + crop=true because the model was trained mostly

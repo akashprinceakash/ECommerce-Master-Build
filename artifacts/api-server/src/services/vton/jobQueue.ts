@@ -2,6 +2,8 @@ import { randomUUID } from "crypto";
 import { logger } from "../../lib/logger";
 import { uploadToR2 } from "../../lib/r2";
 import { startIdmVtonPrediction, pollPrediction, IDM_VTON_COST_PER_SECOND_USD } from "./replicate";
+import { startFashnPrediction, pollFashnPrediction, FASHN_COST_PER_GENERATION_USD } from "./fashn";
+import { getActiveProvider } from "./provider";
 import { ROLE_TO_VTON_CATEGORY, type TryOnGarment, type TryOnJob } from "./types";
 import { updateGenerationLog } from "../creditService";
 
@@ -28,7 +30,7 @@ export function getTryOnJob(id: string, userId: string): TryOnJob | null {
 /**
  * Enqueue a try-on generation job for a single human photo and 1-2 garments.
  *
- * @param firstPredictionId  If provided, garment[0]'s Replicate prediction has
+ * @param firstPredictionId  If provided, garment[0]'s provider prediction has
  *   already been started (for atomic credit deduction in the route handler).
  *   The queue will skip the start step and jump straight to polling.
  * @param generationLogId    DB row to update with final status and cost.
@@ -76,38 +78,63 @@ async function processTryOnJob(
   job.status = "processing";
   job.updatedAt = Date.now();
 
+  const provider = getActiveProvider();
   const jobStart = Date.now();
   let totalPredictTimeSecs = 0;
+  let totalCostUsd = 0;
 
   try {
     let currentHumanImage = humanImageUrl;
 
     for (let i = 0; i < job.garments.length; i++) {
       const garment = job.garments[i]!;
-      const vtonCategory = ROLE_TO_VTON_CATEGORY[garment.role];
 
-      let predictionId: string;
-      if (i === 0 && firstPredictionId) {
-        // Garment 0 was already started in the route handler for atomic credit deduction.
-        predictionId = firstPredictionId;
+      if (provider === "fashn") {
+        // ── FASHN provider ──────────────────────────────────────────────────
+        let predictionId: string;
+        if (i === 0 && firstPredictionId) {
+          // Garment 0 was already started in the route handler.
+          predictionId = firstPredictionId;
+        } else {
+          predictionId = await startFashnPrediction({
+            humanImageUrl: currentHumanImage,
+            garmentImageUrl: garment.imageUrl,
+            garmentRole: garment.role,
+          });
+        }
+
+        const { resultUrl, costUsd } = await pollFashnPrediction(predictionId);
+        totalCostUsd += costUsd;
+        currentHumanImage = resultUrl;
+
       } else {
-        predictionId = await startIdmVtonPrediction({
-          humanImageUrl: currentHumanImage,
-          garmentImageUrl: garment.imageUrl,
-          garmentDescription: garment.description,
-          vtonCategory,
-          crop: garment.crop,
-        });
+        // ── Replicate / IDM-VTON provider (fallback) ────────────────────────
+        const vtonCategory = ROLE_TO_VTON_CATEGORY[garment.role];
+
+        let predictionId: string;
+        if (i === 0 && firstPredictionId) {
+          predictionId = firstPredictionId;
+        } else {
+          predictionId = await startIdmVtonPrediction({
+            humanImageUrl: currentHumanImage,
+            garmentImageUrl: garment.imageUrl,
+            garmentDescription: garment.description,
+            vtonCategory,
+            crop: garment.crop,
+          });
+        }
+
+        const { resultUrl, predictTimeSecs } = await pollPrediction(predictionId);
+        totalPredictTimeSecs += predictTimeSecs;
+        totalCostUsd += predictTimeSecs * IDM_VTON_COST_PER_SECOND_USD;
+        currentHumanImage = resultUrl;
       }
 
-      const { resultUrl, predictTimeSecs } = await pollPrediction(predictionId);
-      totalPredictTimeSecs += predictTimeSecs;
-      currentHumanImage = resultUrl;
       job.processedCount += 1;
       job.updatedAt = Date.now();
     }
 
-    // Persist the final result in R2 so it doesn't expire on Replicate's CDN.
+    // Persist the final result in R2 so it doesn't expire on the provider CDN.
     const imgRes = await fetch(currentHumanImage);
     if (!imgRes.ok) throw new Error("Failed to download generated try-on image");
     const buffer = Buffer.from(await imgRes.arrayBuffer());
@@ -116,17 +143,20 @@ async function processTryOnJob(
 
     const totalSecs = ((Date.now() - jobStart) / 1000).toFixed(1);
     logger.info(
-      { jobId: job.id, garmentCount: job.garmentCount, totalSecs },
+      { jobId: job.id, garmentCount: job.garmentCount, totalSecs, provider, totalCostUsd: totalCostUsd.toFixed(4) },
       "vton: job succeeded",
     );
 
     // Update generation_logs with final cost + status.
     if (job.generationLogId != null) {
-      const costUsd = totalPredictTimeSecs * IDM_VTON_COST_PER_SECOND_USD;
       await updateGenerationLog(job.generationLogId, {
         replicateStatus: "succeeded",
-        predictTimeSeconds: totalPredictTimeSecs,
-        replicateCostUsd: costUsd,
+        // For FASHN: predictTimeSeconds stores wall-clock seconds, costUsd stores flat per-generation cost.
+        // For Replicate: predictTimeSeconds stores compute seconds, costUsd is time-based.
+        predictTimeSeconds: provider === "fashn"
+          ? parseFloat(totalSecs)
+          : totalPredictTimeSecs,
+        replicateCostUsd: totalCostUsd,
       });
     }
 
@@ -134,13 +164,14 @@ async function processTryOnJob(
     job.status = "succeeded";
     job.updatedAt = Date.now();
   } catch (err) {
-    logger.error({ err, jobId: job.id }, "vton: job failed");
+    logger.error({ err, jobId: job.id, provider }, "vton: job failed");
     job.status = "failed";
     job.error = err instanceof Error ? err.message : "Try-on generation failed";
     job.updatedAt = Date.now();
 
-    // Record failure in generation_logs. Do NOT auto-refund the credit —
-    // Replicate may have consumed compute even if the result was unusable.
+    // Record failure in generation_logs.
+    // Do NOT auto-refund the credit — FASHN/Replicate may have consumed compute
+    // even if the result was unusable.
     if (job.generationLogId != null) {
       await updateGenerationLog(job.generationLogId, {
         replicateStatus: "failed",
