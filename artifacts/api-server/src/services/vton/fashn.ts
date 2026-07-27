@@ -42,7 +42,7 @@ export async function startFashnPrediction(params: StartFashnPredictionParams): 
       model_name: FASHN_MODEL,
       inputs: {
         model_image: modelImageUrl,
-        product_image: garmentImageUrl,
+        garment_image: garmentImageUrl,
         category,
         garment_photo_type: "auto",
       },
