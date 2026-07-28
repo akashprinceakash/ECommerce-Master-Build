@@ -13,16 +13,9 @@ import { createShiprocketOrder, getShippingRates } from "../lib/shiprocket";
 import { sendOrderConfirmation } from "../lib/email";
 import { generateInvoicePdf } from "../lib/invoice";
 import { logger } from "../lib/logger";
+import { itemUnitPriceInPaise } from "../lib/pricing";
 
 const router: IRouter = Router();
-
-/** Volume-discount multiplier matching the product-page tier table. */
-function tierMultiplier(qty: number): number {
-  if (qty >= 4) return 0.80;
-  if (qty === 3) return 0.85;
-  if (qty === 2) return 0.90;
-  return 1.0;
-}
 
 const keyId     = process.env["RAZORPAY_KEY_ID"]        ?? "";
 const keySecret = process.env["RAZORPAY_KEY_SECRET"]    ?? "";
@@ -88,12 +81,16 @@ async function validateCheckoutCart(userId: string) {
   }
 
   // Per-unit price = discounted product price + customization service charge.
-  // This must match cart.ts exactly so the amount shown to the customer equals
-  // the amount charged.  Any divergence here is a payment integrity bug.
+  // Uses shared pricing.ts — identical formula to cart.ts so amount shown
+  // to customer always equals amount charged.  Any divergence is a payment
+  // integrity bug.
   const itemsTotalInPaise = cartItemsWithProducts.reduce((sum, item) => {
-    const discountedProductPrice = Math.round((item.product?.priceInPaise ?? 0) * tierMultiplier(item.quantity));
-    const customizationCharge   = (item.customization as any)?.customizationChargeInPaise ?? 0;
-    return sum + (discountedProductPrice + customizationCharge) * item.quantity;
+    const unitPrice = itemUnitPriceInPaise(
+      item.product?.priceInPaise ?? 0,
+      item.quantity,
+      (item.customization as any)?.customizationChargeInPaise ?? 0,
+    );
+    return sum + unitPrice * item.quantity;
   }, 0);
   if (itemsTotalInPaise <= 0) return { error: "Invalid cart total" };
 
@@ -423,11 +420,14 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
         customizationId: item.customizationId ?? null,
         quantity: item.quantity,
         size: item.size,
-        // priceInPaise is the combined per-unit price: discounted product price
-        // + customization service charge.  Must mirror validateCheckoutCart()
-        // exactly so the stored line total always reconciles with order.totalInPaise.
-        priceInPaise: Math.round((item.product?.priceInPaise ?? 0) * tierMultiplier(item.quantity))
-                      + ((item.customization as any)?.customizationChargeInPaise ?? 0),
+        // priceInPaise = combined per-unit price from pricing.ts.
+        // Must equal itemUnitPriceInPaise() used in validateCheckoutCart()
+        // so stored line totals always reconcile with order.totalInPaise.
+        priceInPaise: itemUnitPriceInPaise(
+          item.product?.priceInPaise ?? 0,
+          item.quantity,
+          (item.customization as any)?.customizationChargeInPaise ?? 0,
+        ),
         measurements: (item as any).measurements ?? null,
       }),
     ),
@@ -789,10 +789,13 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
             customizationId: item.customizationId ?? null,
             quantity: item.quantity,
             size: item.size,
-            // priceInPaise = discounted product price + customization charge per unit.
-            // Must mirror validateCheckoutCart() exactly.
-            priceInPaise: Math.round((item.product?.priceInPaise ?? 0) * tierMultiplier(item.quantity))
-                          + ((item.customization as any)?.customizationChargeInPaise ?? 0),
+            // priceInPaise = combined per-unit price from pricing.ts.
+            // Must equal itemUnitPriceInPaise() used in validateCheckoutCart().
+            priceInPaise: itemUnitPriceInPaise(
+              item.product?.priceInPaise ?? 0,
+              item.quantity,
+              (item.customization as any)?.customizationChargeInPaise ?? 0,
+            ),
             measurements: (item as any).measurements ?? null,
           }),
         ),
