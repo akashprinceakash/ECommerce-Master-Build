@@ -1604,56 +1604,55 @@ export default function CustomizePage() {
       const origDecay = (mv as any).interpolationDecay ?? 40;
 
       // ── setAttribute intercept ──────────────────────────────────────────────
-      // Block any call to setAttribute("camera-orbit", ...) for the duration of
-      // the snapshot sequence.  React may call this during re-renders triggered
-      // by isPending state changes.  Without this guard the orbit resets to the
-      // front view between captures.
+      // Blocks any stray setAttribute("camera-orbit") call from React during
+      // re-renders.  We use origSetAttr directly for our own orbit changes so
+      // the intercept never fires on intentional moves.
       const origSetAttr = mv.setAttribute.bind(mv);
       mv.setAttribute = (name: string, value: string) => {
-        if (name === "camera-orbit") return; // blocked during snapshot
+        if (name === "camera-orbit") return;
         origSetAttr(name, value);
       };
 
+      // Whether auto-rotate was running when we started.  Must be stopped for
+      // the duration — auto-rotate fires camera-change on every animation frame,
+      // which caused previous event-based waits to resolve before the camera
+      // had actually reached the target orbit, producing three identical front
+      // captures.
+      const wasAutoRotating = mv.hasAttribute("auto-rotate");
+
+      // Reliable settle helper: set orbit via origSetAttr, then wait a fixed
+      // minimum time so the camera reaches the target regardless of whether
+      // interpolationDecay is honoured, then drain two animation frames so the
+      // GPU has rendered the new frame before toDataURL reads the pixel buffer.
+      const setOrbitAndCapture = async (orbit: string): Promise<string> => {
+        origSetAttr("camera-orbit", orbit);
+        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
+        return mv.toDataURL("image/png", 1.0);
+      };
+
       try {
-        // One resize for all three captures.
         mv.style.width  = "800px";
         mv.style.height = "800px";
-        // Freeze smooth interpolation so each orbit change is instantaneous.
         (mv as any).interpolationDecay = Infinity;
 
-        // IMPORTANT: use origSetAttr("camera-orbit", ...) — NOT mv.cameraOrbit = ...
-        // model-viewer's cameraOrbit property setter calls setAttribute("camera-orbit")
-        // internally, which would be blocked by the intercept above. origSetAttr bypasses
-        // the intercept so the camera actually moves, while the intercept still prevents
-        // any stray calls from React from resetting the orbit mid-capture.
+        // Stop auto-rotate so it no longer overrides our orbit changes.
+        if (wasAutoRotating) mv.removeAttribute("auto-rotate");
 
-        // — Front (0°) —
-        origSetAttr("camera-orbit", "0deg 75deg 2.5m");
-        await waitForCameraChange();
-        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
-        preview3d = mv.toDataURL("image/png", 1.0);
-
-        // — Back (180°) —
-        origSetAttr("camera-orbit", "180deg 75deg 2.5m");
-        await waitForCameraChange();
-        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
-        back = mv.toDataURL("image/png", 1.0);
-
-        // — Side (90°) —
-        origSetAttr("camera-orbit", "90deg 75deg 2.5m");
-        await waitForCameraChange();
-        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
-        side = mv.toDataURL("image/png", 1.0);
+        preview3d = await setOrbitAndCapture("0deg 75deg 2.5m");   // Front
+        back      = await setOrbitAndCapture("180deg 75deg 2.5m"); // Back
+        side      = await setOrbitAndCapture("90deg 75deg 2.5m");  // Side
 
       } catch {
-        // Partial results are better than nothing — leave whatever was captured.
+        // Partial results are better than nothing.
       } finally {
-        // Restore setAttribute, size, interpolation, and orbit.
         mv.setAttribute = origSetAttr;
         mv.style.width  = origW;
         mv.style.height = origH;
         (mv as any).interpolationDecay = origDecay;
-        mv.cameraOrbit = "0deg 75deg 2.5m";
+        // Restore orbit to front and resume auto-rotate if it was running.
+        origSetAttr("camera-orbit", "0deg 75deg 2.5m");
+        if (wasAutoRotating) origSetAttr("auto-rotate", "");
       }
     }
 
