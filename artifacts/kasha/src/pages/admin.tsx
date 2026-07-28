@@ -209,6 +209,70 @@ async function trimToSquare(dataUrl: string, outSize = 1024, paddingRatio = 0.08
   return out.toDataURL("image/png", 1.0);
 }
 
+/** Compute CRC32 over a byte array (standard PNG polynomial). */
+function crc32(data: Uint8Array): number {
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    table[n] = c;
+  }
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < data.length; i++) crc = table[(crc ^ data[i]) & 0xFF] ^ (crc >>> 8);
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+/**
+ * Inserts a pHYs chunk into a PNG data-URL so the file opens at the correct
+ * physical DPI in Photoshop / Illustrator / any standards-compliant editor.
+ *
+ * PNG pHYs encodes resolution in pixels-per-metre:
+ *   300 DPI  →  11811 px/m   (300 / 0.0254)
+ *
+ * The chunk (21 bytes) is always inserted immediately after IHDR (offset 33).
+ */
+function patchPngDpi(dataUrl: string, dpi = 300): string {
+  const base64 = dataUrl.split(",")[1];
+  const bin = atob(base64);
+  const src = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) src[i] = bin.charCodeAt(i);
+
+  const ppm = Math.round(dpi / 0.0254); // pixels per metre
+
+  // pHYs chunk data: X ppm (4 bytes BE) + Y ppm (4 bytes BE) + unit=1 (metre)
+  const physData = new Uint8Array(9);
+  const dv = new DataView(physData.buffer);
+  dv.setUint32(0, ppm, false);
+  dv.setUint32(4, ppm, false);
+  physData[8] = 1;
+
+  // CRC covers chunk type + data
+  const crcInput = new Uint8Array(13);
+  crcInput.set([0x70, 0x48, 0x59, 0x73]); // "pHYs"
+  crcInput.set(physData, 4);
+  const checksum = crc32(crcInput);
+
+  // Full chunk: length(4) + "pHYs"(4) + data(9) + crc(4) = 21 bytes
+  const chunk = new Uint8Array(21);
+  const cv = new DataView(chunk.buffer);
+  cv.setUint32(0, 9, false);             // data length
+  chunk.set([0x70, 0x48, 0x59, 0x73], 4); // "pHYs"
+  chunk.set(physData, 8);
+  cv.setUint32(17, checksum, false);
+
+  // Insert after PNG signature (8 bytes) + IHDR chunk (4+4+13+4 = 25 bytes) = offset 33
+  const insertAt = 33;
+  const out = new Uint8Array(src.length + 21);
+  out.set(src.subarray(0, insertAt));
+  out.set(chunk, insertAt);
+  out.set(src.subarray(insertAt), insertAt + 21);
+
+  // Re-encode to data URL
+  let binary = "";
+  for (let i = 0; i < out.length; i++) binary += String.fromCharCode(out[i]);
+  return "data:image/png;base64," + btoa(binary);
+}
+
 function DesignLeftPanel({ design, mvReady, viewerRef, textureReady, canvasDataLoading }: {
   design: UserDesign;
   mvReady: boolean;
@@ -238,11 +302,12 @@ function DesignLeftPanel({ design, mvReady, viewerRef, textureReady, canvasDataL
     if (!mv || typeof mv.toDataURL !== "function") return;
     setIsSaving(true);
     try {
-      const raw = mv.toDataURL("image/png", 1.0);
+      const raw     = mv.toDataURL("image/png", 1.0);
       const trimmed = await trimToSquare(raw, 2048);
+      const patched = patchPngDpi(trimmed, 300); // embed 300 DPI pHYs chunk
       const a = document.createElement("a");
-      a.href = trimmed;
-      a.download = `${design.name ?? "design"}-angle-2048px.png`;
+      a.href = patched;
+      a.download = `${design.name ?? "design"}-300dpi-2048px.png`;
       a.click();
     } catch (e) {
       console.warn("[admin:saveAngle] failed", e);
