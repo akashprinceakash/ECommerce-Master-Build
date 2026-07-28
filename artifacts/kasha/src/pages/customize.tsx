@@ -1556,116 +1556,84 @@ export default function CustomizePage() {
    *   back    → 3-D model-viewer back render (reference).
    *   side    → 3-D model-viewer side render (reference).
    */
-  const snapshotViews = useCallback(async (): Promise<{preview:string;front:string;back:string;side:string}> => {
+  const snapshotViews = useCallback(async (): Promise<{front:string;back:string;side:string}> => {
+
     const mv: any = mvRef.current;
+
     const fc = fcRef.current;
+
     try { await syncTexture(); } catch {}
 
-    // ── 3-D renders ──────────────────────────────────────────────────────────
-    //
-    // ROOT CAUSE OF PREVIOUS FAILURES:
-    //   1. camera-orbit="0deg..." was a JSX attribute, so React's re-render
-    //      (triggered by isPending flipping to true when Save is clicked) called
-    //      setAttribute("camera-orbit","0deg...") mid-snapshot, resetting the
-    //      camera to front view before back/side could be captured.
-    //   2. The `render` event does not exist in model-viewer 3.4.0 — the
-    //      waitForRender helper always fell back to its 1.5s timeout, during
-    //      which React had time to reset the orbit.
-    //
-    // FIXES:
-    //   a. camera-orbit removed from JSX entirely; set imperatively in onLoad
-    //      so React never owns that attribute and can never reset it.
-    //   b. setAttribute intercepted on the element for the duration of the
-    //      snapshot sequence — any stray setAttribute("camera-orbit") call
-    //      (from React or anywhere else) is silently blocked.
-    //   c. camera-change event (which model-viewer 3.4.0 DOES fire) gates each
-    //      capture so we wait for a confirmed orbit change, not a fixed timer.
-    //   d. Single resize to 800×800 px for all three captures; interpolationDecay
-    //      frozen to Infinity across the whole sequence.
+    // Auto-rotate overrides camera-orbit on every frame — must be fully
 
-    // Waits for model-viewer to fire `camera-change` (orbit settled) with a
-    // generous fallback so we never hang if the event is skipped for any reason.
-    const waitForCameraChange = (): Promise<void> =>
-      new Promise(resolve => {
-        if (!mv) { resolve(); return; }
-        let done = false;
-        const finish = () => { if (!done) { done = true; mv.removeEventListener("camera-change", finish); resolve(); } };
-        mv.addEventListener("camera-change", finish);
-        setTimeout(finish, 800); // fallback
-      });
+    // disabled before we start setting orbits, or each capture just lands
 
-    let preview3d = "";
-    let back      = "";
-    let side      = "";
+    // wherever the spin happens to be.
 
-    if (mv && typeof mv.toDataURL === "function") {
-      const origW     = mv.style.width;
-      const origH     = mv.style.height;
-      const origDecay = (mv as any).interpolationDecay ?? 40;
+    const wasAutoRotating = !!mv?.hasAttribute?.("auto-rotate");
 
-      // ── setAttribute intercept ──────────────────────────────────────────────
-      // Blocks any stray setAttribute("camera-orbit") call from React during
-      // re-renders.  We use origSetAttr directly for our own orbit changes so
-      // the intercept never fires on intentional moves.
-      const origSetAttr = mv.setAttribute.bind(mv);
-      mv.setAttribute = (name: string, value: string) => {
-        if (name === "camera-orbit") return;
-        origSetAttr(name, value);
-      };
+    if (mv) {
 
-      // Whether auto-rotate was running when we started.  Must be stopped for
-      // the duration — auto-rotate fires camera-change on every animation frame,
-      // which caused previous event-based waits to resolve before the camera
-      // had actually reached the target orbit, producing three identical front
-      // captures.
-      const wasAutoRotating = mv.hasAttribute("auto-rotate");
+      mv.removeAttribute("auto-rotate");
 
-      // Reliable settle helper: set orbit via origSetAttr, then wait a fixed
-      // minimum time so the camera reaches the target regardless of whether
-      // interpolationDecay is honoured, then drain two animation frames so the
-      // GPU has rendered the new frame before toDataURL reads the pixel buffer.
-      const setOrbitAndCapture = async (orbit: string): Promise<string> => {
-        origSetAttr("camera-orbit", orbit);
-        await new Promise(r => setTimeout(r, 400));
-        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
-        return mv.toDataURL("image/png", 1.0);
-      };
+      mv.removeAttribute("auto-rotate-delay");
 
-      try {
-        mv.style.width  = "800px";
-        mv.style.height = "800px";
-        (mv as any).interpolationDecay = Infinity;
+      // Let one frame pass so the viewer actually stops before we set orbits.
 
-        // Stop auto-rotate so it no longer overrides our orbit changes.
-        if (wasAutoRotating) mv.removeAttribute("auto-rotate");
+      await new Promise(r => requestAnimationFrame(() => r(null)));
 
-        preview3d = await setOrbitAndCapture("0deg 75deg 2.5m");   // Front
-        back      = await setOrbitAndCapture("180deg 75deg 2.5m"); // Back
-        side      = await setOrbitAndCapture("90deg 75deg 2.5m");  // Side
-
-      } catch {
-        // Partial results are better than nothing.
-      } finally {
-        mv.setAttribute = origSetAttr;
-        mv.style.width  = origW;
-        mv.style.height = origH;
-        (mv as any).interpolationDecay = origDecay;
-        // Restore orbit to front and resume auto-rotate if it was running.
-        origSetAttr("camera-orbit", "0deg 75deg 2.5m");
-        if (wasAutoRotating) origSetAttr("auto-rotate", "");
-      }
     }
 
-    // ── Print-ready flat canvas ───────────────────────────────────────────────
-    // Deselect any active object so handles are not baked in.
-    const flatFront: string = (() => {
-      if (!fc) return preview3d; // fallback to 3-D render if no canvas
-      try { if (typeof fc.discardActiveObject === "function") fc.discardActiveObject(); } catch {}
-      fc.renderAll();
-      return fc.toDataURL({ format: "png", quality: 1.0, multiplier: 4 });
-    })();
+    const captureAngle = async (orbit: string): Promise<string> => {
 
-    return { preview: preview3d, front: flatFront, back, side };
+      if (mv && typeof mv.toDataURL === "function") {
+
+        mv.cameraOrbit = orbit;
+
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
+
+        await new Promise(r => setTimeout(r, 350));
+
+        try { return mv.toDataURL("image/png", 1.0); } catch {}
+
+      }
+
+      if (fc) return fc.toDataURL({ format: "png", quality: 0.95, multiplier: 1 });
+
+      return "";
+
+    };
+
+    try {
+
+      const front = await captureAngle("0deg 75deg 2.5m");
+
+      const back  = await captureAngle("180deg 75deg 2.5m");
+
+      const side  = await captureAngle("90deg 75deg 2.5m");
+
+      return { front, back, side };
+
+    } finally {
+
+      if (mv) {
+
+        mv.cameraOrbit = "0deg 75deg 2.5m";
+
+        // Only restore auto-rotate if it was actually on before we touched it.
+
+        if (wasAutoRotating) {
+
+          mv.setAttribute("auto-rotate", "");
+
+          mv.setAttribute("rotation-per-second", "8deg");
+
+        }
+
+      }
+
+    }
+
   }, [syncTexture]);
 
   // ── Save / Cart mutations ────────────────────────────────────────────────
@@ -1716,8 +1684,8 @@ export default function CustomizePage() {
       color:primaryColor, size:effectiveSize,
       partsEnabled:{qty:effectiveQty,zoneColors,primaryColor,kdDesignId:activeKashaDesign?.id||"",activePrintId,sleeveLength},
       canvasData:JSON.stringify({canvasJSON:JSON.stringify((fc as any).toJSON(["data"])),textureUrl:lastTextureUrlRef.current,primaryColor,kdDesignId:activeKashaDesign?.id||"",zoneColors,activePrintId,allOverPrintId,sleeveLength,productSku:product?.sku||"",skuProductType,customizationType:customizationType||(skuProductType==="print"?"print":skuProductType==="pattern"?"pattern":"color"),patternSubMode:patternSubMode||"",colorSubMode:colorSubMode||"",patColorA,patColorB}),
-      previewImageUrl: views.preview, // 3-D render — used as cart/checkout/order thumbnail
-      frontImageUrl:   views.front,   // flat canvas 4× — print-ready for production
+      previewImageUrl: views.front, // 3-D front render — used as cart/checkout/order thumbnail
+      frontImageUrl:   views.front, // 3-D front render — print-ready for production
       backImageUrl:    views.back,
       sideImageUrl:    views.side,
       designSpec,
