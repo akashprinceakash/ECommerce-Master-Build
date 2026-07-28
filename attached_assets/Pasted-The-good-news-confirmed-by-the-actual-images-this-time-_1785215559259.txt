@@ -1,0 +1,92 @@
+The good news, confirmed by the actual images this time: cutoms02-front, cutoms02-back, cutoms02-side are now genuinely three different angles — front (logo visible, facing camera), back (the "Akash" text, from behind), and side (3/4 profile). The auto-rotate fix actually solved the original bug. That part is done.
+
+The remaining bug, and it's a different one now: all three images are enormous, mostly-blank white canvases with a tiny shirt stuck off-center in the middle. That's exactly the thumbnail-framing issue I flagged as a risk last time — and it's now clearly affecting all three views, not just the cart thumbnail.
+
+Why my last fix (mv.style.width = "800px") likely didn't work: looking at the render code, the live <model-viewer> element has its size controlled by React via JSX: style={{width:"100%",height:"100%",...}}. That style object gets re-applied by React on every re-render. If any state update fires during the capture sequence (very likely — syncTexture and other effects run constantly), React re-renders and resets our imperative mv.style.width right back to "100%" before toDataURL fires — the exact same "our change gets silently overwritten" pattern as the original setAttribute bug, just hitting style instead of camera-orbit this time. That explains the huge, wrongly-shaped export: the capture resolution followed whatever wide/short size the on-screen 3-column studio layout happened to be, not our intended 800×800.
+
+Rather than fight React's re-renders again, here's a more robust fix: don't rely on resizing the live viewer at all — trim and square-crop the image after capture instead. This sidesteps the whole "can I make this imperative style change stick" problem entirely, since it works on the already-exported image data, which nothing else can interfere with.
+
+ts
+/** Crops away surrounding blank/white space and returns a clean, centered
+ *  square PNG at the given output size. Runs entirely on the captured
+ *  dataURL — doesn't depend on model-viewer's on-screen size, so it can't
+ *  be undone by a React re-render or a ResizeObserver race the way
+ *  resizing the live viewer element was. */
+async function trimToSquare(dataUrl: string, outSize = 1024, paddingRatio = 0.08): Promise<string> {
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = dataUrl;
+  });
+
+  const src = document.createElement("canvas");
+  src.width = img.naturalWidth;
+  src.height = img.naturalHeight;
+  const sctx = src.getContext("2d")!;
+  sctx.drawImage(img, 0, 0);
+
+  const { data, width, height } = sctx.getImageData(0, 0, src.width, src.height);
+  let minX = width, minY = height, maxX = 0, maxY = 0;
+  const isBg = (r: number, g: number, b: number, a: number) => a < 10 || (r > 248 && g > 248 && b > 248);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      if (!isBg(data[i], data[i + 1], data[i + 2], data[i + 3])) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  // Nothing found (fully blank capture) — bail out and return the original.
+  if (maxX <= minX || maxY <= minY) return dataUrl;
+
+  const boxW = maxX - minX, boxH = maxY - minY;
+  const pad = Math.round(Math.max(boxW, boxH) * paddingRatio);
+  const cropX = Math.max(0, minX - pad), cropY = Math.max(0, minY - pad);
+  const cropW = Math.min(width - cropX, boxW + pad * 2);
+  const cropH = Math.min(height - cropY, boxH + pad * 2);
+  const side = Math.max(cropW, cropH); // square bounding box around the garment
+
+  const out = document.createElement("canvas");
+  out.width = outSize;
+  out.height = outSize;
+  const octx = out.getContext("2d")!;
+  octx.fillStyle = "#ffffff";
+  octx.fillRect(0, 0, outSize, outSize);
+  const scale = outSize / side;
+  const dx = (outSize - cropW * scale) / 2;
+  const dy = (outSize - cropH * scale) / 2;
+  octx.drawImage(src, cropX, cropY, cropW, cropH, dx, dy, cropW * scale, cropH * scale);
+
+  return out.toDataURL("image/png", 1.0);
+}
+
+Then in captureAngle, wrap the result before returning:
+
+ts
+const captureAngle = async (orbit: string, label: string): Promise<string> => {
+  if (mv && typeof mv.toDataURL === "function") {
+    mv.cameraOrbit = orbit;
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
+    await new Promise(r => setTimeout(r, 350));
+    try {
+      const raw = mv.toDataURL("image/png", 1.0);
+      return await trimToSquare(raw);
+    } catch (e) {
+      console.warn(`[snapshot:${label}] capture/trim failed`, e);
+    }
+  }
+  if (fc) return fc.toDataURL({ format: "png", quality: 0.95, multiplier: 1 });
+  return "";
+};
+
+You can drop the mv.style.width/height and interpolationDecay lines from my previous version entirely — this replaces that approach rather than adding to it.
+
+One thing I do still want to see: none of the [snapshot:front/back/side] diagnostic logs I asked for last time appear anywhere in the console output you pasted — only [ST] (syncTexture) lines from color changes. That tells me the log dump you shared was from browsing/testing colors, not from actually clicking Save. Not a problem now that we have direct image evidence instead, but going forward, if anything looks off again, make sure to trigger Save itself while the console is open, since that's the only action that runs snapshotViews.
+
+Have Replit apply the trimToSquare addition, then re-run the same Save test — the three images should come back as clean, centered, appropriately-sized garment shots instead of tiny shirts in giant blank canvases.

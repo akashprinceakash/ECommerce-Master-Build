@@ -299,6 +299,65 @@ function toProxiedUrl(url: string | null | undefined): string {
   return url;
 }
 
+/** Crops away surrounding blank/white space and returns a clean, centered
+ *  square PNG at the given output size. Runs entirely on the captured
+ *  dataURL — doesn't depend on model-viewer's on-screen size, so it can't
+ *  be undone by a React re-render or a ResizeObserver race the way
+ *  resizing the live viewer element was. */
+async function trimToSquare(dataUrl: string, outSize = 1024, paddingRatio = 0.08): Promise<string> {
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = dataUrl;
+  });
+
+  const src = document.createElement("canvas");
+  src.width = img.naturalWidth;
+  src.height = img.naturalHeight;
+  const sctx = src.getContext("2d")!;
+  sctx.drawImage(img, 0, 0);
+
+  const { data, width, height } = sctx.getImageData(0, 0, src.width, src.height);
+  let minX = width, minY = height, maxX = 0, maxY = 0;
+  const isBg = (r: number, g: number, b: number, a: number) => a < 10 || (r > 248 && g > 248 && b > 248);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      if (!isBg(data[i], data[i + 1], data[i + 2], data[i + 3])) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  // Nothing found (fully blank capture) — bail out and return the original.
+  if (maxX <= minX || maxY <= minY) return dataUrl;
+
+  const boxW = maxX - minX, boxH = maxY - minY;
+  const pad = Math.round(Math.max(boxW, boxH) * paddingRatio);
+  const cropX = Math.max(0, minX - pad), cropY = Math.max(0, minY - pad);
+  const cropW = Math.min(width - cropX, boxW + pad * 2);
+  const cropH = Math.min(height - cropY, boxH + pad * 2);
+  const side = Math.max(cropW, cropH); // square bounding box around the garment
+
+  const out = document.createElement("canvas");
+  out.width = outSize;
+  out.height = outSize;
+  const octx = out.getContext("2d")!;
+  octx.fillStyle = "#ffffff";
+  octx.fillRect(0, 0, outSize, outSize);
+  const scale = outSize / side;
+  const dx = (outSize - cropW * scale) / 2;
+  const dy = (outSize - cropH * scale) / 2;
+  octx.drawImage(src, cropX, cropY, cropW, cropH, dx, dy, cropW * scale, cropH * scale);
+
+  return out.toDataURL("image/png", 1.0);
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface ProductAddOn { id: string; label: string; imageUrl?: string | null; }
 interface Product {
@@ -1584,7 +1643,7 @@ export default function CustomizePage() {
 
     }
 
-    const captureAngle = async (orbit: string): Promise<string> => {
+    const captureAngle = async (orbit: string, label: string): Promise<string> => {
 
       if (mv && typeof mv.toDataURL === "function") {
 
@@ -1594,7 +1653,12 @@ export default function CustomizePage() {
 
         await new Promise(r => setTimeout(r, 350));
 
-        try { return mv.toDataURL("image/png", 1.0); } catch {}
+        try {
+          const raw = mv.toDataURL("image/png", 1.0);
+          return await trimToSquare(raw);
+        } catch (e) {
+          console.warn(`[snapshot:${label}] capture/trim failed`, e);
+        }
 
       }
 
@@ -1606,11 +1670,11 @@ export default function CustomizePage() {
 
     try {
 
-      const front = await captureAngle("0deg 75deg 2.5m");
+      const front = await captureAngle("0deg 75deg 2.5m",   "front");
 
-      const back  = await captureAngle("180deg 75deg 2.5m");
+      const back  = await captureAngle("180deg 75deg 2.5m", "back");
 
-      const side  = await captureAngle("90deg 75deg 2.5m");
+      const side  = await captureAngle("90deg 75deg 2.5m",  "side");
 
       return { front, back, side };
 
