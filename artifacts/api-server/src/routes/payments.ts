@@ -67,10 +67,17 @@ async function validateCheckoutCart(userId: string) {
   const cartItems = await db.select().from(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id));
   if (cartItems.length === 0) return { error: "Cart is empty" };
 
+  // Fetch both product AND customization for every item so downstream
+  // total calculations and order-item inserts include the customization charge.
   const cartItemsWithProducts = await Promise.all(
     cartItems.map(async (item) => {
       const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId));
-      return { ...item, product };
+      let customization: typeof customizationsTable.$inferSelect | null = null;
+      if (item.customizationId) {
+        const [c] = await db.select().from(customizationsTable).where(eq(customizationsTable.id, item.customizationId));
+        customization = c ?? null;
+      }
+      return { ...item, product, customization };
     }),
   );
 
@@ -80,9 +87,14 @@ async function validateCheckoutCart(userId: string) {
       return { error: `Only ${item.product.stock} unit${item.product.stock === 1 ? "" : "s"} left for "${item.product.name}"` };
   }
 
-  const itemsTotalInPaise = cartItemsWithProducts.reduce(
-    (sum, item) => sum + Math.round((item.product?.priceInPaise ?? 0) * tierMultiplier(item.quantity)) * item.quantity, 0,
-  );
+  // Per-unit price = discounted product price + customization service charge.
+  // This must match cart.ts exactly so the amount shown to the customer equals
+  // the amount charged.  Any divergence here is a payment integrity bug.
+  const itemsTotalInPaise = cartItemsWithProducts.reduce((sum, item) => {
+    const discountedProductPrice = Math.round((item.product?.priceInPaise ?? 0) * tierMultiplier(item.quantity));
+    const customizationCharge   = (item.customization as any)?.customizationChargeInPaise ?? 0;
+    return sum + (discountedProductPrice + customizationCharge) * item.quantity;
+  }, 0);
   if (itemsTotalInPaise <= 0) return { error: "Invalid cart total" };
 
   return { cart, cartItemsWithProducts, itemsTotalInPaise };
@@ -411,7 +423,11 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
         customizationId: item.customizationId ?? null,
         quantity: item.quantity,
         size: item.size,
-        priceInPaise: Math.round((item.product?.priceInPaise ?? 0) * tierMultiplier(item.quantity)),
+        // priceInPaise is the combined per-unit price: discounted product price
+        // + customization service charge.  Must mirror validateCheckoutCart()
+        // exactly so the stored line total always reconciles with order.totalInPaise.
+        priceInPaise: Math.round((item.product?.priceInPaise ?? 0) * tierMultiplier(item.quantity))
+                      + ((item.customization as any)?.customizationChargeInPaise ?? 0),
         measurements: (item as any).measurements ?? null,
       }),
     ),
@@ -773,7 +789,10 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
             customizationId: item.customizationId ?? null,
             quantity: item.quantity,
             size: item.size,
-            priceInPaise: Math.round((item.product?.priceInPaise ?? 0) * tierMultiplier(item.quantity)),
+            // priceInPaise = discounted product price + customization charge per unit.
+            // Must mirror validateCheckoutCart() exactly.
+            priceInPaise: Math.round((item.product?.priceInPaise ?? 0) * tierMultiplier(item.quantity))
+                          + ((item.customization as any)?.customizationChargeInPaise ?? 0),
             measurements: (item as any).measurements ?? null,
           }),
         ),
