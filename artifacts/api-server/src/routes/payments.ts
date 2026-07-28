@@ -16,6 +16,14 @@ import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
+/** Volume-discount multiplier matching the product-page tier table. */
+function tierMultiplier(qty: number): number {
+  if (qty >= 4) return 0.80;
+  if (qty === 3) return 0.85;
+  if (qty === 2) return 0.90;
+  return 1.0;
+}
+
 const keyId     = process.env["RAZORPAY_KEY_ID"]        ?? "";
 const keySecret = process.env["RAZORPAY_KEY_SECRET"]    ?? "";
 const webhookSecret = process.env["RAZORPAY_WEBHOOK_SECRET"] ?? "";
@@ -73,7 +81,7 @@ async function validateCheckoutCart(userId: string) {
   }
 
   const itemsTotalInPaise = cartItemsWithProducts.reduce(
-    (sum, item) => sum + (item.product?.priceInPaise ?? 0) * item.quantity, 0,
+    (sum, item) => sum + Math.round((item.product?.priceInPaise ?? 0) * tierMultiplier(item.quantity)) * item.quantity, 0,
   );
   if (itemsTotalInPaise <= 0) return { error: "Invalid cart total" };
 
@@ -403,7 +411,7 @@ router.post("/payment/order", requireAuth, async (req, res): Promise<void> => {
         customizationId: item.customizationId ?? null,
         quantity: item.quantity,
         size: item.size,
-        priceInPaise: item.product?.priceInPaise ?? 0,
+        priceInPaise: Math.round((item.product?.priceInPaise ?? 0) * tierMultiplier(item.quantity)),
         measurements: (item as any).measurements ?? null,
       }),
     ),
@@ -765,7 +773,7 @@ router.post("/payment/cod-order", requireAuth, async (req, res): Promise<void> =
             customizationId: item.customizationId ?? null,
             quantity: item.quantity,
             size: item.size,
-            priceInPaise: item.product?.priceInPaise ?? 0,
+            priceInPaise: Math.round((item.product?.priceInPaise ?? 0) * tierMultiplier(item.quantity)),
             measurements: (item as any).measurements ?? null,
           }),
         ),

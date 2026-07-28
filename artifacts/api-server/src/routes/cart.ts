@@ -5,6 +5,21 @@ import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAu
 
 const router: IRouter = Router();
 
+/**
+ * Volume-discount multiplier per item based on its own quantity.
+ * Matches the tiers shown on the product page:
+ *   1 piece  → full price
+ *   2 pieces → 10% off
+ *   3 pieces → 15% off
+ *   4+ pieces → 20% off
+ */
+function tierMultiplier(qty: number): number {
+  if (qty >= 4) return 0.80;
+  if (qty === 3) return 0.85;
+  if (qty === 2) return 0.90;
+  return 1.0;
+}
+
 async function getOrCreateCart(userId: string) {
   let [cart] = await db.select().from(cartsTable).where(eq(cartsTable.userId, userId));
   if (!cart) {
@@ -34,16 +49,29 @@ async function buildCartResponse(userId: string) {
     })
   );
 
+  // Apply volume-tier discount per item (discount is on product price only,
+  // not on the customization charge which is a service fee).
   const totalInPaise = itemsWithDetails.reduce(
+    (sum, item) => {
+      const discountedProductPrice = Math.round((item.product?.priceInPaise ?? 0) * tierMultiplier(item.quantity));
+      const customizationCharge = (item.customization as any)?.customizationChargeInPaise ?? 0;
+      return sum + (discountedProductPrice + customizationCharge) * item.quantity;
+    },
+    0
+  );
+
+  const fullPriceTotal = itemsWithDetails.reduce(
     (sum, item) => sum + ((item.product?.priceInPaise ?? 0) + ((item.customization as any)?.customizationChargeInPaise ?? 0)) * item.quantity,
     0
   );
+  const volumeDiscountInPaise = fullPriceTotal - totalInPaise;
 
   return {
     id: cart.id,
     userId: cart.userId,
     items: itemsWithDetails,
     totalInPaise,
+    volumeDiscountInPaise,
     itemCount: itemsWithDetails.reduce((sum, item) => sum + item.quantity, 0),
   };
 }

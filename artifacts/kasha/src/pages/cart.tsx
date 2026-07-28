@@ -16,6 +16,14 @@ import { useAuth } from "@clerk/react";
 
 const COUPON_KEY = "kasha_applied_coupon";
 
+/** Matches the volume-discount tiers shown on the product page. */
+function tierMultiplier(qty: number): number {
+  if (qty >= 4) return 0.80;
+  if (qty === 3) return 0.85;
+  if (qty === 2) return 0.90;
+  return 1.0;
+}
+
 export default function CartPage() {
   const queryClient = useQueryClient();
   const { getToken } = useAuth();
@@ -163,9 +171,21 @@ export default function CartPage() {
                         <Link href={`/products/${item.productId}`}>
                           <h3 className="text-[15px] font-bold text-black hover:underline">{item.product.name.replace(/\s+[—–-]\s*[A-Z]{1,3}\d+\s*$/, "")}</h3>
                         </Link>
-                        <p className="font-bold text-black whitespace-nowrap">
-                          {formatPrice(((item.product.priceInPaise) + ((item.customization as any)?.customizationChargeInPaise ?? 0)) * item.quantity)}
-                        </p>
+                        <div className="text-right">
+                          {tierMultiplier(item.quantity) < 1 && (
+                            <p className="text-[10px] text-gray-400 line-through leading-none mb-0.5">
+                              {formatPrice(((item.product.priceInPaise) + ((item.customization as any)?.customizationChargeInPaise ?? 0)) * item.quantity)}
+                            </p>
+                          )}
+                          <p className="font-bold text-black whitespace-nowrap">
+                            {formatPrice((Math.round(item.product.priceInPaise * tierMultiplier(item.quantity)) + ((item.customization as any)?.customizationChargeInPaise ?? 0)) * item.quantity)}
+                          </p>
+                          {tierMultiplier(item.quantity) < 1 && (
+                            <p className="text-[10px] text-emerald-600 font-semibold leading-none mt-0.5">
+                              {item.quantity === 2 ? "10%" : item.quantity === 3 ? "15%" : "20%"} off
+                            </p>
+                          )}
+                        </div>
                       </div>
                       <p className="text-[12px] text-gray-500">Size: {item.size}</p>
                       {item.customization && (
@@ -261,6 +281,12 @@ export default function CartPage() {
                     <span className="text-gray-500">Subtotal ({cart?.itemCount} items)</span>
                     <span className="font-semibold">{formatPrice(cart?.totalInPaise || 0)}</span>
                   </div>
+                  {(cart as any)?.volumeDiscountInPaise > 0 && (
+                    <div className="flex justify-between text-emerald-600">
+                      <span className="flex items-center gap-1 text-xs">🏷 Volume discount</span>
+                      <span className="font-semibold text-xs">−{formatPrice((cart as any).volumeDiscountInPaise)}</span>
+                    </div>
+                  )}
                   {appliedCoupon && (
                     <div className="flex justify-between text-emerald-600">
                       <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> {appliedCoupon.code}</span>

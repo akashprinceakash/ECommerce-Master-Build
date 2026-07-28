@@ -37,6 +37,14 @@ const INDIAN_STATES = [
   "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi", "Jammu and Kashmir", "Ladakh",
 ];
 
+/** Matches the volume-discount tiers shown on the product page. */
+function tierMultiplier(qty: number): number {
+  if (qty >= 4) return 0.80;
+  if (qty === 3) return 0.85;
+  if (qty === 2) return 0.90;
+  return 1.0;
+}
+
 /** GST rate for apparel (inclusive pricing): 5% < ₹2,500, 18% ≥ ₹2,500 */
 function gstRate(priceInPaise: number) {
   return priceInPaise < 250000 ? 0.05 : 0.18;
@@ -465,7 +473,7 @@ export default function CheckoutPage() {
   }
 
   // ── GST breakdown ────────────────────────────────────────────────────
-  const totalGst = cart.items.reduce((s, item) => s + calcGst((item.product.priceInPaise) + ((item.customization as any)?.customizationChargeInPaise ?? 0), item.quantity), 0);
+  const totalGst = cart.items.reduce((s, item) => s + calcGst(Math.round(item.product.priceInPaise * tierMultiplier(item.quantity)) + ((item.customization as any)?.customizationChargeInPaise ?? 0), item.quantity), 0);
   const subtotalExclGst = cart.totalInPaise - totalGst;
   const grandTotal = Math.max(0, cart.totalInPaise + (shippingRate?.chargeInPaise ?? 0) - (appliedCoupon?.discountInPaise ?? 0));
 
