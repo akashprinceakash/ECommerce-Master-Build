@@ -1631,11 +1631,21 @@ export default function CustomizePage() {
 
     const wasAutoRotating = !!mv?.hasAttribute?.("auto-rotate");
 
+    const origDecay = mv ? ((mv as any).interpolationDecay ?? 40) : 40;
+
     if (mv) {
 
       mv.removeAttribute("auto-rotate");
 
       mv.removeAttribute("auto-rotate-delay");
+
+      // Freeze camera interpolation so cameraOrbit changes snap instantly
+      // rather than smoothly animating — without this, 350ms is not enough
+      // for the camera to travel from wherever auto-rotate stopped to the
+      // target orbit, producing a rotated/angled capture instead of a clean
+      // front/back/side view.
+
+      (mv as any).interpolationDecay = Infinity;
 
       // Let one frame pass so the viewer actually stops before we set orbits.
 
@@ -1681,6 +1691,8 @@ export default function CustomizePage() {
     } finally {
 
       if (mv) {
+
+        (mv as any).interpolationDecay = origDecay;
 
         mv.cameraOrbit = "0deg 75deg 2.5m";
 
