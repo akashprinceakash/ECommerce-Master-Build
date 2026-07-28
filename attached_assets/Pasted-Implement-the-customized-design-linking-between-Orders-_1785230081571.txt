@@ -1,0 +1,46 @@
+Implement the customized design linking between Orders and Designs as follows:
+
+When a customer customizes a product and clicks "Add to Cart", the customized design can be saved in the Designs section as it is currently. However, the design should NOT be considered a confirmed/purchased design at this stage because the customer may later remove the item from the cart or abandon the checkout.
+
+Once the customer successfully completes checkout and payment, the exact customized design associated with each purchased order item must be linked to that specific order item.
+
+### Admin Order Details
+
+In Admin → Orders , 
+
+For every customized product in the order, add a "View Customization" button/link.
+
+For example, if a customer customized 4 different T-shirts, added all 4 to the cart, and successfully purchased them as Order #41, the Order #41 details page should show:
+
+* T-Shirt A → View Customization
+* T-Shirt B → View Customization
+* T-Shirt C → View Customization
+* T-Shirt D → View Customization
+
+When the admin clicks "View Customization" for T-Shirt A, it should be linked to the Designs tabit should open ONLY the exact customization/design associated with T-Shirt A in Order #41.
+
+Similarly, clicking "View Customization" for T-Shirt B should open the exact design purchased for T-Shirt B, and so on.
+
+### Important Data Relationship
+
+The implementation should maintain a direct relationship like:
+
+Order #41
+→ Order Item 1 → Product A → Design ID 101
+→ Order Item 2 → Product B → Design ID 102
+→ Order Item 3 → Product C → Design ID 103
+→ Order Item 4 → Product D → Design ID 104
+
+ so the admin can always identify exactly which customized design belongs to which purchased product.
+
+Do NOT simply show all designs associated with the customer or all designs created before checkout. The "View Customization" button must open the exact design that was purchased for that specific order item.
+
+### Multiple Quantity Handling
+
+If the customer adds multiple quantities of the SAME customized product and the customization is identical for all quantities, one design can be linked to that order item with the appropriate quantity.
+
+Please ensure the existing Designs page continues to work as it does currently. Designs created through customization/Add to Cart can remain there even if the customer does not purchase them. The main requirement is that successfully purchased customized products must be directly linked to their corresponding order items, and the admin must be able to access them from Order Details using "View Customization".
+
+Before making changes, inspect the existing order, order item, cart, checkout, payment, and design data models and reuse the existing design IDs/relationships wherever possible. Do not break the current checkout or payment flow.
+
+Also verify the implementation with a test case where 4 different customized T-shirts are added to the cart and successfully purchased in a single order. Confirm that Order #41 shows 4 separate "View Customization" links and that each link opens the correct corresponding design.

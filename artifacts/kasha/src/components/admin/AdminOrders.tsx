@@ -2,12 +2,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/adminApi";
 import { formatPrice } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect as _useEffect2 } from "react";
 import { getAssetUrl, getApiUrl } from "@/lib/api";
 import {
   Loader2, ChevronDown, ChevronRight, MapPin, CreditCard, Package,
   Eye, Download, X, Truck, RefreshCw, RotateCcw, CheckCircle2,
-  Lock, Send, MessageSquare, AlertTriangle, Printer,
+  Lock, Send, MessageSquare, AlertTriangle, Printer, Palette,
 } from "lucide-react";
 import * as fabric from "fabric";
 
@@ -916,6 +916,12 @@ function RemarksCallout({ remarks }: { remarks: string | null | undefined }) {
 }
 // ── Main component ─────────────────────────────────────────────────────────────
 
+type ViewingCustomization = {
+  customization: NonNullable<AdminOrder["items"][number]["customization"]>;
+  orderId: number;
+  productName: string | null;
+};
+
 export function AdminOrders() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -926,6 +932,7 @@ export function AdminOrders() {
   const [refundOrder, setRefundOrder] = useState<AdminOrder | null>(null);
   const [syncing, setSyncing] = useState<number | null>(null);
   const [pickingUp, setPickingUp] = useState<number | null>(null);
+  const [viewingCustomization, setViewingCustomization] = useState<ViewingCustomization | null>(null);
 
   const { data: orders = [], isLoading } = useQuery<AdminOrder[]>({
     queryKey: ["admin-orders"],
@@ -1055,7 +1062,17 @@ export function AdminOrders() {
                             <div className="font-medium">{it.product?.name ?? "Unknown product"}</div>
                             <div className="text-xs text-muted-foreground">
                               Size {it.size} · Qty {it.quantity}
-                              {it.customization && <span className="ml-2 italic text-primary">Bespoke: {it.customization.name}</span>}
+                              {it.customization && (
+                                <>
+                                  <span className="ml-2 italic text-primary">Bespoke: {it.customization.name}</span>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setViewingCustomization({ customization: it.customization!, orderId: o.id, productName: it.product?.name ?? null }); }}
+                                    className="ml-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-1.5 py-0.5 border border-primary/40 text-primary hover:bg-primary/5 transition"
+                                  >
+                                    <Palette className="w-2.5 h-2.5" /> View Customization
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </div>
                           <div className="font-mono text-sm">{formatPrice(it.priceInPaise * it.quantity)}</div>
@@ -1306,19 +1323,27 @@ export function AdminOrders() {
 
                         {c && (
                           <>
-                            {/* Design meta */}
-                            <div className="text-xs space-y-0.5 mb-3">
-                              <div><span className="text-muted-foreground">Bespoke design:</span> <span className="font-medium">{c.name}</span></div>
-                              {c.color && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-muted-foreground">Body colour:</span>
-                                  <span className="inline-block w-3 h-3 border border-border" style={{ background: c.color }} />
-                                  <span className="font-mono">{c.color}</span>
-                                </div>
-                              )}
-                              {c.partsEnabled?.presetName && (
-                                <div><span className="text-muted-foreground">Pattern / preset:</span> <span className="font-mono">{c.partsEnabled.presetName}</span></div>
-                              )}
+                            {/* Design meta + View Customization button */}
+                            <div className="flex items-start justify-between gap-3 mb-3">
+                              <div className="text-xs space-y-0.5">
+                                <div><span className="text-muted-foreground">Bespoke design:</span> <span className="font-medium">{c.name}</span></div>
+                                {c.color && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-muted-foreground">Body colour:</span>
+                                    <span className="inline-block w-3 h-3 border border-border" style={{ background: c.color }} />
+                                    <span className="font-mono">{c.color}</span>
+                                  </div>
+                                )}
+                                {c.partsEnabled?.presetName && (
+                                  <div><span className="text-muted-foreground">Pattern / preset:</span> <span className="font-mono">{c.partsEnabled.presetName}</span></div>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => setViewingCustomization({ customization: c, orderId: viewOrder.id, productName: it.product?.name ?? null })}
+                                className="flex-shrink-0 flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-3 py-1.5 border border-primary/50 text-primary hover:bg-primary/5 transition"
+                              >
+                                <Palette className="w-3 h-3" /> View Customization
+                              </button>
                             </div>
 
                             {/* All design views thumbnail strip */}
@@ -1440,6 +1465,158 @@ export function AdminOrders() {
           onSuccess={handleRefundSuccess}
         />
       )}
+
+      {/* Customization viewer modal */}
+      {viewingCustomization && (
+        <CustomizationViewerModal
+          customization={viewingCustomization.customization}
+          orderId={viewingCustomization.orderId}
+          productName={viewingCustomization.productName}
+          onClose={() => setViewingCustomization(null)}
+          onExport={async () => {
+            const { count, errors } = await exportDesignAllSides(viewingCustomization.customization, `kasha-order-${viewingCustomization.orderId}-design-${viewingCustomization.customization.id}`);
+            if (count === 0) toast({ title: "Nothing to export", description: errors.length ? errors.join("; ") : "No images saved for this design.", variant: "destructive" });
+            else toast({ title: `Exported ${count} file${count === 1 ? "" : "s"}`, description: errors.length ? `Some failed: ${errors.join("; ")}` : "PNG files downloaded." });
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Customization Viewer Modal ────────────────────────────────────────────────
+
+function CustomizationViewerModal({
+  customization,
+  orderId,
+  productName,
+  onClose,
+  onExport,
+}: {
+  customization: NonNullable<AdminOrder["items"][number]["customization"]>;
+  orderId: number;
+  productName: string | null;
+  onClose: () => void;
+  onExport: () => Promise<void>;
+}) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
+
+  _useEffect2(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialogRef.current?.focus();
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  const views: Array<{ label: string; url: string }> = [];
+  const seen = new Set<string>();
+  const tryAdd = (url: string | null | undefined, label: string) => {
+    if (url && !seen.has(url)) { seen.add(url); views.push({ label, url }); }
+  };
+  tryAdd(customization.frontImageUrl,   "Front");
+  tryAdd(customization.backImageUrl,    "Back");
+  tryAdd(customization.sideImageUrl,    "Side");
+  tryAdd(customization.previewImageUrl, "3D Preview");
+
+  const storedSpec = customization.designSpec ? (customization.designSpec as DesignSpec) : null;
+  const derivedSpec = !storedSpec ? deriveSpecFromCanvasData(customization.canvasData) : null;
+  const spec = storedSpec ?? derivedSpec;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog" aria-modal="true" tabIndex={-1}
+        className="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-border outline-none"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-white z-10">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              Customization — Order #{orderId}
+            </div>
+            <div className="font-serif text-lg font-medium leading-tight mt-0.5">
+              {productName ?? "Product"}: <span className="text-primary">{customization.name}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              disabled={exporting}
+              onClick={async () => {
+                setExporting(true);
+                try { await onExport(); } finally { setExporting(false); }
+              }}
+              className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-3 py-1.5 border border-primary bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition"
+            >
+              {exporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+              Export
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-muted rounded transition">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Colour + meta */}
+          <div className="flex items-center gap-3 text-sm">
+            {customization.color && (
+              <span
+                className="w-6 h-6 border border-border flex-shrink-0"
+                style={{ background: customization.color }}
+                title={customization.color}
+              />
+            )}
+            <div>
+              <div className="font-medium">{customization.name}</div>
+              {customization.color && <div className="text-xs text-muted-foreground font-mono">{customization.color}</div>}
+            </div>
+          </div>
+
+          {/* Design views */}
+          {views.length > 0 && (
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-3 font-semibold">Design Views</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {views.map(({ label, url }) => (
+                  <div key={url} className="text-center">
+                    <div className="aspect-square bg-white border border-border overflow-hidden flex items-center justify-center">
+                      <img src={url} alt={label} className="w-full h-full object-contain p-1" />
+                    </div>
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground mt-1">{label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Manufacturing spec */}
+          {spec
+            ? <DesignSpecCard spec={spec} legacy={!storedSpec} />
+            : (
+              <div className="p-3 bg-slate-50 border border-slate-200 text-[11px] text-muted-foreground italic">
+                No manufacturing spec recorded for this design.
+              </div>
+            )
+          }
+
+          {/* Design ID reference */}
+          <div className="text-[10px] text-muted-foreground border-t border-border pt-3">
+            Design ID: <span className="font-mono font-semibold text-foreground">{customization.id}</span>
+            {" "}· Linked to Order <span className="font-mono font-semibold text-foreground">#{orderId}</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
