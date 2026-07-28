@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Plus, Pencil, Trash2, Upload, X, Check,
   ShieldCheck, Package, Users, Eye, ArrowLeft, BarChart3, ShoppingBag, UserCog, Download, ImageIcon, Mail, Tag, Zap,
-  AlertTriangle, Power, RefreshCw,
+  AlertTriangle, Power, RefreshCw, Pause, Play, Camera,
 } from "lucide-react";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { AdminOrders } from "@/components/admin/AdminOrders";
@@ -171,6 +171,44 @@ async function apiFetch(path: string, opts?: RequestInit): Promise<any> {
 }
 
 // ── Design Left Panel ─────────────────────────────────────────────────────────
+/** Crops blank/white space and returns a centred square PNG. */
+async function trimToSquare(dataUrl: string, outSize = 1024, paddingRatio = 0.08): Promise<string> {
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = dataUrl;
+  });
+  const src = document.createElement("canvas");
+  src.width = img.naturalWidth; src.height = img.naturalHeight;
+  const sctx = src.getContext("2d")!;
+  sctx.drawImage(img, 0, 0);
+  const { data, width, height } = sctx.getImageData(0, 0, src.width, src.height);
+  let minX = width, minY = height, maxX = 0, maxY = 0;
+  const isBg = (r: number, g: number, b: number, a: number) => a < 10 || (r > 248 && g > 248 && b > 248);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      if (!isBg(data[i], data[i+1], data[i+2], data[i+3])) {
+        if (x < minX) minX = x; if (x > maxX) maxX = x;
+        if (y < minY) minY = y; if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX <= minX || maxY <= minY) return dataUrl;
+  const boxW = maxX - minX, boxH = maxY - minY;
+  const pad = Math.round(Math.max(boxW, boxH) * paddingRatio);
+  const cropX = Math.max(0, minX - pad), cropY = Math.max(0, minY - pad);
+  const cropW = Math.min(width - cropX, boxW + pad * 2);
+  const cropH = Math.min(height - cropY, boxH + pad * 2);
+  const side = Math.max(cropW, cropH);
+  const out = document.createElement("canvas");
+  out.width = outSize; out.height = outSize;
+  const octx = out.getContext("2d")!;
+  octx.fillStyle = "#ffffff"; octx.fillRect(0, 0, outSize, outSize);
+  const scale = outSize / side;
+  const dx = (outSize - cropW * scale) / 2, dy = (outSize - cropH * scale) / 2;
+  octx.drawImage(src, cropX, cropY, cropW, cropH, dx, dy, cropW * scale, cropH * scale);
+  return out.toDataURL("image/png", 1.0);
+}
+
 function DesignLeftPanel({ design, mvReady, viewerRef, textureReady, canvasDataLoading }: {
   design: UserDesign;
   mvReady: boolean;
@@ -179,6 +217,40 @@ function DesignLeftPanel({ design, mvReady, viewerRef, textureReady, canvasDataL
   canvasDataLoading: boolean;
 }) {
   const [activeView, setActiveView] = useState<"front" | "back" | "side">("front");
+  const [isPaused, setIsPaused] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const togglePause = () => {
+    const mv = viewerRef.current;
+    if (!mv) return;
+    if (isPaused) {
+      mv.setAttribute("auto-rotate", "");
+      mv.setAttribute("rotation-per-second", "8deg");
+    } else {
+      mv.removeAttribute("auto-rotate");
+      mv.removeAttribute("auto-rotate-delay");
+    }
+    setIsPaused(p => !p);
+  };
+
+  const saveThisAngle = async () => {
+    const mv = viewerRef.current;
+    if (!mv || typeof mv.toDataURL !== "function") return;
+    setIsSaving(true);
+    try {
+      const raw = mv.toDataURL("image/png", 1.0);
+      const trimmed = await trimToSquare(raw, 2048);
+      const a = document.createElement("a");
+      a.href = trimmed;
+      a.download = `${design.name ?? "design"}-angle-2048px.png`;
+      a.click();
+    } catch (e) {
+      console.warn("[admin:saveAngle] failed", e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Use previewImageUrl (3-D front render) for the FRONT tab so the
   // admin sees the same correctly-oriented shirt view as the customer.
   // frontImageUrl is the raw UV texture — mirrored and contains colour
@@ -194,7 +266,7 @@ function DesignLeftPanel({ design, mvReady, viewerRef, textureReady, canvasDataL
   // Show 3D viewer only once canvasData has loaded and contains a texture
   if (design.productModelUrl && mvReady && textureReady) {
     return (
-      <div className="flex-1 min-h-[300px] md:min-h-[500px] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
+      <div className="flex-1 min-h-[300px] md:min-h-[500px] flex items-center justify-center relative" style={{ background: "rgba(0,0,0,0.5)" }}>
         <model-viewer
           ref={viewerRef}
           src={design.productModelUrl}
@@ -207,6 +279,28 @@ function DesignLeftPanel({ design, mvReady, viewerRef, textureReady, canvasDataL
           tone-mapping="commerce"
           style={{ width: "100%", height: "100%", minHeight: "300px", "--poster-color": "transparent" } as any}
         />
+        {/* 3D viewer controls overlay */}
+        <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2 px-4">
+          <button
+            onClick={togglePause}
+            title={isPaused ? "Resume rotation" : "Pause rotation"}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium text-white transition-colors"
+            style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.15)" }}
+          >
+            {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+            {isPaused ? "Resume" : "Pause"}
+          </button>
+          <button
+            onClick={saveThisAngle}
+            disabled={isSaving}
+            title="Save current angle as high-res PNG (2048px)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium text-white transition-colors disabled:opacity-50"
+            style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.15)" }}
+          >
+            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+            Save this angle
+          </button>
+        </div>
       </div>
     );
   }

@@ -139,7 +139,7 @@ export default function CartPage() {
                       <img
                         src={item.customization.previewImageUrl}
                         alt={item.customization.name ?? item.product.name}
-                        className="w-full h-full object-contain object-center"
+                        className="w-full h-full object-cover object-center"
                       />
                     ) : item.product.thumbnailUrl ? (
                       <img
