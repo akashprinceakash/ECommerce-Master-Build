@@ -1197,7 +1197,7 @@ export default function AdminPage() {
 
         {/* ── PRODUCTS TAB ── */}
         {activeTab === "dashboard" && <AdminDashboard />}
-        {activeTab === "orders" && <AdminOrders />}
+        {activeTab === "orders" && <AdminOrders onViewCustomization={setViewingDesign} />}
         {activeTab === "users" && <AdminUsers />}
         {activeTab === "coupons" && <AdminCoupons />}
 
