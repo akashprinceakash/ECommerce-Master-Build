@@ -1,0 +1,99 @@
+Request URL
+https://9979baab-9a62-44ae-81d2-3a84fc33d65f-00-3pv6dlsgvrn8h.riker.replit.dev/api/payment/cancel/16
+Request Method
+POST
+Status Code
+404 Not Found
+Remote Address
+34.121.194.188:443
+Referrer Policy
+strict-origin-when-cross-origin
+access-control-allow-credentials
+true
+access-control-allow-origin
+https://9979baab-9a62-44ae-81d2-3a84fc33d65f-00-3pv6dlsgvrn8h.riker.replit.dev
+content-length
+161
+content-security-policy
+default-src 'none'
+content-type
+text/html; charset=utf-8
+cross-origin-opener-policy
+same-origin
+cross-origin-resource-policy
+cross-origin
+date
+Wed, 29 Jul 2026 06:40:15 GMT
+origin-agent-cluster
+?1
+ratelimit-limit
+100
+ratelimit-policy
+100;w=60
+ratelimit-remaining
+88
+ratelimit-reset
+4
+referrer-policy
+no-referrer
+replit-cluster
+riker
+strict-transport-security
+max-age=31536000; includeSubDomains
+vary
+Origin
+x-content-type-options
+nosniff
+x-dns-prefetch-control
+off
+x-download-options
+noopen
+x-frame-options
+SAMEORIGIN
+x-permitted-cross-domain-policies
+none
+x-robots-tag
+none, noindex, noarchive, nofollow, nositelinkssearchbox, noimageindex
+x-robots-tag
+none, noindex, noarchive, nofollow, nositelinkssearchbox, noimageindex
+x-xss-protection
+0
+accept
+*/*
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+en-IN,en-GB;q=0.9,en-US;q=0.8,en;q=0.7,kn;q=0.6
+authorization
+Bearer eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18zQ1F5aEN3RHZDeHpVSms1QWVmYWhCUUY1cWgiLCJvaWF0IjoxNzg1MzA3MTg2LCJ0eXAiOiJKV1QifQ.eyJhenAiOiJodHRwczovLzk5NzliYWFiLTlhNjItNDRhZS04MWQyLTNhODRmYzMzZDY1Zi0wMC0zcHY2ZGxzZ3ZybjhoLnJpa2VyLnJlcGxpdC5kZXYiLCJleHAiOjE3ODUzMDcyNDYsImZ2YSI6WzcxMjQsLTFdLCJpYXQiOjE3ODUzMDcxODYsImlzcyI6Imh0dHBzOi8vYXNzdXJpbmctZWFyd2lnLTI4LmNsZXJrLmFjY291bnRzLmRldiIsIm5iZiI6MTc4NTMwNzE3Niwic2lkIjoic2Vzc18zR3dQY2JEU2RhM2E4blNwdkFYUzNFU1JoM00iLCJzdHMiOiJhY3RpdmUiLCJzdWIiOiJ1c2VyXzNDUkV1UEMwRUdPRU9hMzE3TjRVOTdVcHpUViIsInYiOjJ9.folv7wzljTmI8ykCyUxc5eovQyvFLy0S54So8Daro__QZtmMml3qhtGz0juBMYntCjbFjqjMTaCseqkeoU7NRNJf_3XycLJIRUWpeEx_iHO-6u3k_-MdH9NhoEE-97L4cekKKdafmTZ4JqmbXVU-1SeirpkzToDOR6UhehvOielm8BUI82L8MO74CTYhIHh85gXCOY3SMegElZ1gCMPSOujeigWeRkXPfLxXDywx9mPu-2Ypq3vjHJHxKgJcd9BXhR_7VR0EiVQh-y4dMcrOLHmC9L2J-KLG4mzS-A985wwJLfSpOQpxwhjIcljqsGPZ5lHiWW90vrfv7HWQPvPXCA
+cache-control
+no-cache
+connection
+keep-alive
+content-length
+0
+content-type
+application/json
+cookie
+__client_uat_8ly6zEPs=1784879738; __client_uat=1784879738; __client_uat_8ly6zEPs=1784879738; __client_uat=1784879738; clerk_active_context=sess_3GwPcbDSda3a8nSpvAXS3ESRh3M:; rzp_unified_session_id=TJDkz8wMecI3zi; __clerk_db_jwt_8ly6zEPs=dvb_3Cq9zHlrs6dTNfxWH9cEckFIkas; __clerk_db_jwt=dvb_3Cq9zHlrs6dTNfxWH9cEckFIkas; __session=eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18zQ1F5aEN3RHZDeHpVSms1QWVmYWhCUUY1cWgiLCJvaWF0IjoxNzg1MzA3MTg2LCJ0eXAiOiJKV1QifQ.eyJhenAiOiJodHRwczovLzk5NzliYWFiLTlhNjItNDRhZS04MWQyLTNhODRmYzMzZDY1Zi0wMC0zcHY2ZGxzZ3ZybjhoLnJpa2VyLnJlcGxpdC5kZXYiLCJleHAiOjE3ODUzMDcyNDYsImZ2YSI6WzcxMjQsLTFdLCJpYXQiOjE3ODUzMDcxODYsImlzcyI6Imh0dHBzOi8vYXNzdXJpbmctZWFyd2lnLTI4LmNsZXJrLmFjY291bnRzLmRldiIsIm5iZiI6MTc4NTMwNzE3Niwic2lkIjoic2Vzc18zR3dQY2JEU2RhM2E4blNwdkFYUzNFU1JoM00iLCJzdHMiOiJhY3RpdmUiLCJzdWIiOiJ1c2VyXzNDUkV1UEMwRUdPRU9hMzE3TjRVOTdVcHpUViIsInYiOjJ9.folv7wzljTmI8ykCyUxc5eovQyvFLy0S54So8Daro__QZtmMml3qhtGz0juBMYntCjbFjqjMTaCseqkeoU7NRNJf_3XycLJIRUWpeEx_iHO-6u3k_-MdH9NhoEE-97L4cekKKdafmTZ4JqmbXVU-1SeirpkzToDOR6UhehvOielm8BUI82L8MO74CTYhIHh85gXCOY3SMegElZ1gCMPSOujeigWeRkXPfLxXDywx9mPu-2Ypq3vjHJHxKgJcd9BXhR_7VR0EiVQh-y4dMcrOLHmC9L2J-KLG4mzS-A985wwJLfSpOQpxwhjIcljqsGPZ5lHiWW90vrfv7HWQPvPXCA; __session_8ly6zEPs=eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18zQ1F5aEN3RHZDeHpVSms1QWVmYWhCUUY1cWgiLCJvaWF0IjoxNzg1MzA3MTg2LCJ0eXAiOiJKV1QifQ.eyJhenAiOiJodHRwczovLzk5NzliYWFiLTlhNjItNDRhZS04MWQyLTNhODRmYzMzZDY1Zi0wMC0zcHY2ZGxzZ3ZybjhoLnJpa2VyLnJlcGxpdC5kZXYiLCJleHAiOjE3ODUzMDcyNDYsImZ2YSI6WzcxMjQsLTFdLCJpYXQiOjE3ODUzMDcxODYsImlzcyI6Imh0dHBzOi8vYXNzdXJpbmctZWFyd2lnLTI4LmNsZXJrLmFjY291bnRzLmRldiIsIm5iZiI6MTc4NTMwNzE3Niwic2lkIjoic2Vzc18zR3dQY2JEU2RhM2E4blNwdkFYUzNFU1JoM00iLCJzdHMiOiJhY3RpdmUiLCJzdWIiOiJ1c2VyXzNDUkV1UEMwRUdPRU9hMzE3TjRVOTdVcHpUViIsInYiOjJ9.folv7wzljTmI8ykCyUxc5eovQyvFLy0S54So8Daro__QZtmMml3qhtGz0juBMYntCjbFjqjMTaCseqkeoU7NRNJf_3XycLJIRUWpeEx_iHO-6u3k_-MdH9NhoEE-97L4cekKKdafmTZ4JqmbXVU-1SeirpkzToDOR6UhehvOielm8BUI82L8MO74CTYhIHh85gXCOY3SMegElZ1gCMPSOujeigWeRkXPfLxXDywx9mPu-2Ypq3vjHJHxKgJcd9BXhR_7VR0EiVQh-y4dMcrOLHmC9L2J-KLG4mzS-A985wwJLfSpOQpxwhjIcljqsGPZ5lHiWW90vrfv7HWQPvPXCA
+host
+9979baab-9a62-44ae-81d2-3a84fc33d65f-00-3pv6dlsgvrn8h.riker.replit.dev
+origin
+https://9979baab-9a62-44ae-81d2-3a84fc33d65f-00-3pv6dlsgvrn8h.riker.replit.dev
+pragma
+no-cache
+referer
+https://9979baab-9a62-44ae-81d2-3a84fc33d65f-00-3pv6dlsgvrn8h.riker.replit.dev/orders/16
+sec-ch-ua
+"Not;A=Brand";v="8", "Chromium";v="150", "Google Chrome";v="150"
+sec-ch-ua-mobile
+?1
+sec-ch-ua-platform
+"Android"
+sec-fetch-dest
+empty
+sec-fetch-mode
+cors
+sec-fetch-site
+same-origin
+user-age
