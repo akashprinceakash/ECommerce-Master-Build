@@ -1050,7 +1050,13 @@ export function AdminOrders({ onViewCustomization }: { onViewCustomization?: (de
                     <div className="space-y-2">
                       {o.items.map(it => (
                         <div key={it.id} className="flex items-center gap-3 text-sm border border-border/50 p-2 bg-background">
-                          {it.product?.thumbnailUrl && <img src={getAssetUrl(it.product.thumbnailUrl)} alt="" className="w-12 h-12 object-cover" />}
+                          {(() => {
+                            const c = it.customization as any;
+                            const imgUrl = c?.previewImageUrl || c?.frontImageUrl
+                              ? (c.previewImageUrl || c.frontImageUrl)
+                              : it.product?.thumbnailUrl ? getAssetUrl(it.product.thumbnailUrl) : null;
+                            return imgUrl ? <img src={imgUrl} alt="" className="w-12 h-12 object-cover" /> : null;
+                          })()}
                           <div className="flex-1">
                             <div className="font-medium">{it.product?.name ?? "Unknown product"}</div>
                             <div className="text-xs text-muted-foreground">

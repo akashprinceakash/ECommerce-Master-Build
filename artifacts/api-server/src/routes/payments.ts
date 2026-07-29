@@ -589,11 +589,15 @@ router.post("/payment/cancel/:orderId", requireAuth, async (req, res): Promise<v
     .set({ status: "cancelled" })
     .where(eq(ordersTable.id, orderId));
 
+  // This is an UNPAID order — no payment was ever captured.
+  // "Discontinued" means the customer abandoned the payment attempt.
+  // This is NOT a cancellation of a confirmed/paid order and must NOT
+  // trigger any cancellation or refund policy.
   void db.insert(orderEventsTable).values({
     orderId,
     eventType: "cancelled",
-    title: "Order Cancelled",
-    description: "Cancelled by customer before payment was completed",
+    title: "Payment Discontinued",
+    description: "Customer chose not to continue with this unpaid payment attempt. No payment was captured.",
   });
 
   logger.info({ orderId, userId }, "Customer cancelled unpaid order");

@@ -210,13 +210,15 @@ export default function OrdersPage() {
                   <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
                     {order.items.map(item => (
                       <div key={item.id} className="w-16 h-20 bg-secondary flex-shrink-0 relative" title={item.product.name}>
-                        {(item.product.thumbnailUrl || item.product.modelUrl) && (
-                          <img
-                            src={getAssetUrl(item.product.thumbnailUrl || item.product.modelUrl)}
-                            alt={item.product.name}
-                            className="w-full h-full object-cover"
-                          />
-                        )}
+                        {(() => {
+                          const c = (item as any).customization;
+                          const imgUrl = c?.previewImageUrl || c?.frontImageUrl
+                            ? (c.previewImageUrl || c.frontImageUrl)
+                            : getAssetUrl(item.product.thumbnailUrl || item.product.modelUrl);
+                          return imgUrl ? (
+                            <img src={imgUrl} alt={item.product.name} className="w-full h-full object-cover" />
+                          ) : null;
+                        })()}
                       </div>
                     ))}
                   </div>
