@@ -1,0 +1,136 @@
+I need to correct my previous information. The shipping amount was actually the same in both Checkout and My Orders.
+
+Here is the exact comparison:
+
+### Checkout before clicking Pay:
+
+Product:
+Men - Golf - Polo - Solid
+
+Size:
+Custom Fit
+
+Bespoke Design:
+Men - Golf - Polo - Solid Custom
+
+Product + Customization:
+₹2,053.00
+
+Subtotal (excl. GST):
+₹1,955.24
+
+GST:
+₹97.76
+
+Shipping:
+₹196.36
+
+Courier:
+Shadowfax Surface
+
+Total:
+₹2,249.36
+
+The customer then clicked Pay, Razorpay opened successfully, and the customer clicked Exit without completing the payment.
+
+### Customer → My Orders → Order #000046:
+
+Product:
+Men - Golf - Polo - Solid
+
+Size:
+Custom Fit
+
+Bespoke Design:
+Men - Golf - Polo - Solid Custom
+
+Displayed Product Price:
+₹2,000.00
+
+Subtotal (excl. GST):
+₹1,904.76
+
+GST:
+₹95.24
+
+Shipping:
+₹196.36
+
+Total:
+₹2,196.36
+
+Status:
+Awaiting Payment
+
+### The exact issue:
+
+The shipping charge is CORRECT and matches Checkout:
+
+₹196.36 = ₹196.36
+
+The problem is the ₹53 customization charge.
+
+Checkout:
+₹2,053 = ₹2,000 product + ₹53 customization
+
+My Orders:
+₹2,000 = ₹2,000 product + ₹0 customization
+
+The final total difference is exactly ₹53:
+
+₹2,249.36 - ₹2,196.36 = ₹53
+
+So the ₹53 customization charge is either:
+
+1. Not being saved in the order when the order is created, OR
+2. Being saved in the order but not being displayed/included by the Customer My Orders page.
+
+Please investigate and identify exactly which of these two cases is happening.
+
+Trace the complete flow:
+
+Checkout
+→ Product price ₹2,000
+→ Customization charge ₹53
+→ Product + customization ₹2,053
+→ Shipping ₹196.36
+→ Total ₹2,249.36
+→ Razorpay order creation
+→ Customer exits Razorpay
+→ Order status becomes Awaiting Payment
+→ Customer opens My Orders
+
+Please check the actual database record for Order #000046 and verify:
+
+1. What product price is stored?
+2. What customization charge is stored?
+3. What `priceInPaise` is stored in the order item?
+4. Is the customization/design ID correctly associated with the order item?
+5. Is the ₹53 customization charge stored separately anywhere in the order?
+6. Is the My Orders page fetching only the base product price of ₹2,000 instead of the combined ₹2,053?
+7. Is the order total stored as ₹2,249.36 or ₹2,196.36?
+
+The expected result is that the customer-facing My Orders page should show the SAME financial information that was used during Checkout/payment:
+
+Product + Customization: ₹2,053
+Shipping: ₹196.36
+Total: ₹2,249.36
+
+The order is currently "Awaiting Payment" because the customer exited Razorpay, which is correct. However, the order details must preserve the exact checkout/payment snapshot.
+
+Also, for an "Awaiting Payment" order, the customer should have:
+
+1. Continue Payment
+
+   * Reopen Razorpay for the same unpaid order.
+   * Use the server-side stored order amount as the source of truth.
+   * Do not trust the amount sent from the frontend.
+   * Only mark the order as Confirmed after successful server-side Razorpay payment verification.
+
+2. Cancel Order
+
+   * Allow the customer to cancel the unpaid order.
+   * Change the status to Cancelled.
+   * Do not treat it as a confirmed purchase.
+
+IMPORTANT: Please do not change the code yet. First identify whether the ₹53 customization charge is actually missing from the database/order record or whether it is present but the Customer My Orders UI is failing to display/include it.
