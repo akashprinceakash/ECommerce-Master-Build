@@ -760,9 +760,11 @@ function DesignSpecCard({ spec, legacy = false }: { spec: DesignSpec; legacy?: b
               </div>
             )}
             {spec.logoUrl && (
-              <div className="flex justify-between col-span-2">
-                <span className="text-muted-foreground">Logo URL</span>
-                <a href={spec.logoUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-primary underline break-all">{spec.logoUrl}</a>
+              <div className="flex justify-between col-span-2 gap-4 min-w-0">
+                <span className="text-muted-foreground flex-shrink-0">Logo</span>
+                <span className="font-mono text-[10px] text-muted-foreground truncate max-w-[260px]" title={spec.logoUrl}>
+                  {spec.logoUrl.startsWith("data:") ? "Embedded image (base64)" : spec.logoUrl}
+                </span>
               </div>
             )}
           </>
