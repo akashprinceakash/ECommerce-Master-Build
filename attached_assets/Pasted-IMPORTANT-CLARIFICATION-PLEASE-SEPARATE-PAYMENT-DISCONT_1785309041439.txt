@@ -1,0 +1,152 @@
+IMPORTANT CLARIFICATION — PLEASE SEPARATE "PAYMENT DISCONTINUED" FROM "ORDER CANCELLED"
+
+I want to clarify the exact business logic for the Continue / Discontinue flow. Please do not treat "Discontinue" as "Cancel Order" anywhere in the system.
+
+### 1. Customer exits Razorpay without completing payment
+
+The order/payment attempt should remain:
+
+**Awaiting Payment**
+
+The customer should see:
+
+**Continue**
+→ Reopen Razorpay and continue payment for the same unpaid order.
+
+**Discontinue**
+→ The customer chooses not to continue with this payment attempt.
+
+These actions are ONLY related to the incomplete/unpaid payment attempt.
+
+---
+
+### 2. When the customer clicks "Discontinue"
+
+This should NOT:
+
+* Mark the order as "Cancelled"
+* Use the "Cancelled" order status
+* Add the order to Admin → Orders → Cancelled
+* Increase the Cancelled order count
+* Trigger the client's actual cancellation/refund workflow
+* Be treated as a customer cancelling a successfully placed/paid order
+* Trigger any refund logic, because no payment was captured
+
+Instead, create/use a separate status such as:
+
+**Payment Discontinued**
+
+or, if the current system architecture requires a payment-specific status:
+
+**Payment Abandoned**
+
+I prefer **Payment Discontinued** because it directly matches the customer's action and clearly distinguishes it from a real order cancellation.
+
+---
+
+### 3. Customer → My Orders
+
+If the customer clicks Discontinue, the order should remain visible in My Orders for history, but the status should display:
+
+**Payment Discontinued**
+
+It should NOT display:
+
+**Cancelled**
+
+The order details can show something like:
+
+"Payment was discontinued. No payment was captured for this order."
+
+The customer should no longer see the Continue button after discontinuing the payment attempt.
+
+---
+
+### 4. Admin → Orders
+
+This is very important.
+
+The screenshot currently shows the Admin Orders → Cancelled tab containing actual cancelled orders.
+
+A "Payment Discontinued" order must NOT appear in this Cancelled tab.
+
+The Admin order status categories should conceptually be:
+
+* Pending
+* Payment Failed
+* Confirmed
+* Processing
+* Ready to Ship
+* Shipped
+* Delivered
+* Cancelled — ONLY for actual order cancellations
+* Payment Discontinued — separate from Cancelled
+
+If necessary, add a separate Admin filter/tab:
+
+**PAYMENT DISCONTINUED**
+
+This should contain only orders where the customer discontinued an unpaid payment attempt.
+
+The Cancelled count should NOT increase when a customer clicks Discontinue.
+
+---
+
+### 5. Actual "Cancel Order" is completely separate
+
+The actual Cancel Order functionality should be reserved for a successfully placed/confirmed order, according to the client's Cancellation & Refund Policy.
+
+For example:
+
+Confirmed/Paid Order
+→ Customer requests cancellation before dispatch
+→ Actual Order Cancellation workflow
+→ Status becomes Cancelled
+→ Refund process applies where applicable
+
+This is completely different from:
+
+Awaiting Payment
+→ Customer clicks Discontinue
+→ Payment Discontinued
+→ No refund because no payment was captured
+
+---
+
+### 6. Final status flow
+
+Please implement/maintain this distinction:
+
+Customer clicks Pay
+→ Razorpay opens
+→ Customer exits without paying
+→ **Awaiting Payment**
+
+Then:
+
+**Continue**
+→ Continue same payment
+→ Successful payment
+→ **Confirmed**
+
+OR:
+
+**Discontinue**
+→ **Payment Discontinued**
+→ No payment captured
+→ Not shown in Admin Cancelled
+→ Not counted as Cancelled
+→ No refund
+→ Continue button removed
+
+Separately:
+
+**Confirmed/Paid Order**
+→ Actual customer cancellation request
+→ **Cancelled**
+→ Appears in Admin → Cancelled
+→ Refund process according to policy
+
+Please review the current implementation because I can see in the Admin Orders screenshot that the order status is currently being treated as "Cancelled". This needs to be corrected so that a discontinued unpaid payment attempt is completely separate from a genuine cancelled order.
+
+Also, please do not rename or reuse the existing Cancelled status for Payment Discontinued. They must remain two distinct statuses in the database, backend logic, Admin UI, Customer My Orders UI, order counts, filters, and reporting/export logic.

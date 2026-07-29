@@ -568,7 +568,10 @@ router.post("/payment/retry/:orderId", requireAuth, async (req, res): Promise<vo
 });
 
 /* ──────────────────────────────────────────────────────
-   Cancel: customer cancels an unpaid / payment_failed order
+   Discontinue: customer abandons an unpaid Razorpay payment attempt.
+   This is ONLY valid for online (non-COD) orders in pending / payment_failed
+   status. It is NOT an order cancellation and must never affect COD orders
+   or confirmed/paid orders.
 ────────────────────────────────────────────────────── */
 router.post("/payment/cancel/:orderId", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthenticatedRequest).userId;
@@ -581,26 +584,33 @@ router.post("/payment/cancel/:orderId", requireAuth, async (req, res): Promise<v
     .where(and(eq(ordersTable.id, orderId), eq(ordersTable.userId, userId)));
 
   if (!dbOrder) { res.status(404).json({ error: "Order not found" }); return; }
-  if (!["pending", "payment_failed"].includes(dbOrder.status)) {
-    res.status(409).json({ error: `Order cannot be cancelled (status: ${dbOrder.status})` }); return;
+
+  // COD orders are genuine placed orders — a customer wanting to stop a COD
+  // order must use the real Cancel Order flow. "Discontinue" only applies to
+  // incomplete online (Razorpay) payment attempts.
+  if (dbOrder.paymentMethod === "cod") {
+    res.status(409).json({ error: "This action is not available for COD orders. Please contact support to cancel a COD order." }); return;
   }
 
+  if (!["pending", "payment_failed"].includes(dbOrder.status)) {
+    res.status(409).json({ error: `Order cannot be discontinued (status: ${dbOrder.status})` }); return;
+  }
+
+  // Use a dedicated status that is completely separate from "cancelled".
+  // "payment_discontinued" must never appear in Admin → Cancelled or trigger
+  // any cancellation/refund policy — no payment was ever captured.
   await db.update(ordersTable)
-    .set({ status: "cancelled" })
+    .set({ status: "payment_discontinued" })
     .where(eq(ordersTable.id, orderId));
 
-  // This is an UNPAID order — no payment was ever captured.
-  // "Discontinued" means the customer abandoned the payment attempt.
-  // This is NOT a cancellation of a confirmed/paid order and must NOT
-  // trigger any cancellation or refund policy.
   void db.insert(orderEventsTable).values({
     orderId,
-    eventType: "cancelled",
+    eventType: "payment_discontinued",
     title: "Payment Discontinued",
-    description: "Customer chose not to continue with this unpaid payment attempt. No payment was captured.",
+    description: "Customer chose not to continue with this payment attempt. No payment was captured. This is not an order cancellation.",
   });
 
-  logger.info({ orderId, userId }, "Customer cancelled unpaid order");
+  logger.info({ orderId, userId }, "Customer discontinued unpaid online payment attempt");
   res.json({ success: true });
 });
 

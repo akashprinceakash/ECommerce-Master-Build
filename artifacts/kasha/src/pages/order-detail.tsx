@@ -28,50 +28,53 @@ function calcGst(priceInPaise: number, qty: number) {
 }
 
 const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  pending:          { label: "Awaiting Payment",   cls: "border-amber-300 text-amber-700 bg-amber-50" },
-  confirmed:        { label: "Order Confirmed",     cls: "border-emerald-300 text-emerald-700 bg-emerald-50" },
-  processing:       { label: "Processing",          cls: "border-blue-300 text-blue-700 bg-blue-50" },
-  ready_to_ship:    { label: "Ready to Ship",       cls: "border-indigo-300 text-indigo-700 bg-indigo-50" },
-  shipped:          { label: "Shipped",             cls: "border-indigo-300 text-indigo-700 bg-indigo-50" },
-  in_transit:       { label: "In Transit",          cls: "border-indigo-400 text-indigo-700 bg-indigo-50" },
-  out_for_delivery: { label: "Out for Delivery",    cls: "border-orange-300 text-orange-700 bg-orange-50" },
-  delivered:        { label: "Delivered",           cls: "border-emerald-400 text-emerald-700 bg-emerald-50" },
-  returned:         { label: "Returned",            cls: "border-rose-300 text-rose-700 bg-rose-50" },
-  cancelled:        { label: "Cancelled",           cls: "border-rose-300 text-rose-700 bg-rose-50" },
+  pending:               { label: "Awaiting Payment",      cls: "border-amber-300 text-amber-700 bg-amber-50" },
+  confirmed:             { label: "Order Confirmed",        cls: "border-emerald-300 text-emerald-700 bg-emerald-50" },
+  processing:            { label: "Processing",             cls: "border-blue-300 text-blue-700 bg-blue-50" },
+  ready_to_ship:         { label: "Ready to Ship",          cls: "border-indigo-300 text-indigo-700 bg-indigo-50" },
+  shipped:               { label: "Shipped",                cls: "border-indigo-300 text-indigo-700 bg-indigo-50" },
+  in_transit:            { label: "In Transit",             cls: "border-indigo-400 text-indigo-700 bg-indigo-50" },
+  out_for_delivery:      { label: "Out for Delivery",       cls: "border-orange-300 text-orange-700 bg-orange-50" },
+  delivered:             { label: "Delivered",              cls: "border-emerald-400 text-emerald-700 bg-emerald-50" },
+  returned:              { label: "Returned",               cls: "border-rose-300 text-rose-700 bg-rose-50" },
+  cancelled:             { label: "Cancelled",              cls: "border-rose-300 text-rose-700 bg-rose-50" },
+  payment_discontinued:  { label: "Payment Discontinued",   cls: "border-slate-300 text-slate-600 bg-slate-50" },
 };
 
 const EVENT_ICON: Record<string, LucideIcon> = {
-  order_placed:       ShoppingBag,
-  payment_verified:   CreditCard,
-  payment_confirmed:  CheckCircle2,
-  shiprocket_created: Package,
-  awb_assigned:       Tag,
-  pickup_scheduled:   MapPin,
-  picked_up:          Truck,
-  in_transit:         Truck,
-  out_for_delivery:   Navigation,
-  delivered:          CheckCircle2,
-  rto_initiated:      RotateCcw,
-  returned:           RotateCcw,
-  cancelled:          XCircle,
-  status_updated:     Clock,
+  order_placed:           ShoppingBag,
+  payment_verified:       CreditCard,
+  payment_confirmed:      CheckCircle2,
+  shiprocket_created:     Package,
+  awb_assigned:           Tag,
+  pickup_scheduled:       MapPin,
+  picked_up:              Truck,
+  in_transit:             Truck,
+  out_for_delivery:       Navigation,
+  delivered:              CheckCircle2,
+  rto_initiated:          RotateCcw,
+  returned:               RotateCcw,
+  cancelled:              XCircle,
+  payment_discontinued:   XCircle,
+  status_updated:         Clock,
 };
 
 const EVENT_COLOR: Record<string, string> = {
-  order_placed:       "text-slate-500 bg-slate-50 border-slate-200",
-  payment_verified:   "text-emerald-600 bg-emerald-50 border-emerald-200",
-  payment_confirmed:  "text-emerald-600 bg-emerald-50 border-emerald-200",
-  shiprocket_created: "text-blue-600 bg-blue-50 border-blue-200",
-  awb_assigned:       "text-blue-600 bg-blue-50 border-blue-200",
-  pickup_scheduled:   "text-orange-500 bg-orange-50 border-orange-200",
-  picked_up:          "text-orange-600 bg-orange-50 border-orange-200",
-  in_transit:         "text-indigo-600 bg-indigo-50 border-indigo-200",
-  out_for_delivery:   "text-indigo-700 bg-indigo-50 border-indigo-200",
-  delivered:          "text-emerald-600 bg-emerald-50 border-emerald-200",
-  rto_initiated:      "text-rose-500 bg-rose-50 border-rose-200",
-  returned:           "text-rose-600 bg-rose-50 border-rose-200",
-  cancelled:          "text-rose-600 bg-rose-50 border-rose-200",
-  status_updated:     "text-slate-500 bg-slate-50 border-slate-200",
+  order_placed:           "text-slate-500 bg-slate-50 border-slate-200",
+  payment_verified:       "text-emerald-600 bg-emerald-50 border-emerald-200",
+  payment_confirmed:      "text-emerald-600 bg-emerald-50 border-emerald-200",
+  shiprocket_created:     "text-blue-600 bg-blue-50 border-blue-200",
+  awb_assigned:           "text-blue-600 bg-blue-50 border-blue-200",
+  pickup_scheduled:       "text-orange-500 bg-orange-50 border-orange-200",
+  picked_up:              "text-orange-600 bg-orange-50 border-orange-200",
+  in_transit:             "text-indigo-600 bg-indigo-50 border-indigo-200",
+  out_for_delivery:       "text-indigo-700 bg-indigo-50 border-indigo-200",
+  delivered:              "text-emerald-600 bg-emerald-50 border-emerald-200",
+  rto_initiated:          "text-rose-500 bg-rose-50 border-rose-200",
+  returned:               "text-rose-600 bg-rose-50 border-rose-200",
+  cancelled:              "text-rose-600 bg-rose-50 border-rose-200",
+  payment_discontinued:   "text-slate-500 bg-slate-50 border-slate-200",
+  status_updated:         "text-slate-500 bg-slate-50 border-slate-200",
 };
 
 export default function OrderDetailPage() {
@@ -222,8 +225,11 @@ export default function OrderDetailPage() {
     );
   }
 
-  const isCompleted = order.status !== "pending" && order.status !== "cancelled";
-  const isAwaitingPayment = order.status === "pending" || order.status === "payment_failed";
+  const isCompleted = !["pending", "cancelled", "payment_discontinued"].includes(order.status);
+  // Continue/Discontinue only applies to online (Razorpay) orders that haven't paid yet.
+  // COD orders are genuine placed orders — they never have an incomplete payment attempt.
+  const isOnlineOrder = (order as any).paymentMethod !== "cod";
+  const isAwaitingPayment = isOnlineOrder && (order.status === "pending" || order.status === "payment_failed");
   const itemsTotal = order.items.reduce((s, it) => s + it.priceInPaise * it.quantity, 0);
   const shippingCharge = (order as any).shippingChargeInPaise ?? 0;
   const discountInPaise = (order as any).discountInPaise ?? 0;
@@ -327,6 +333,8 @@ export default function OrderDetailPage() {
                 <div className="text-sm text-muted-foreground py-4 pl-2">
                   {order.status === "cancelled"
                     ? "This order was cancelled."
+                    : order.status === "payment_discontinued"
+                    ? "Payment was discontinued. No payment was captured for this order."
                     : "No tracking events yet. Updates will appear here automatically."}
                 </div>
               ) : (

@@ -14,25 +14,27 @@ import { useAuth } from "@clerk/react";
 declare global { interface Window { Razorpay?: any } }
 
 const STATUS_LABEL: Record<string, string> = {
-  pending:        "Pending",
-  confirmed:      "Confirmed",
-  processing:     "Processing",
-  ready_to_ship:  "Ready to Ship",
-  shipped:        "Shipped",
-  delivered:      "Delivered",
-  cancelled:      "Cancelled",
-  payment_failed: "Payment Failed",
+  pending:               "Pending",
+  confirmed:             "Confirmed",
+  processing:            "Processing",
+  ready_to_ship:         "Ready to Ship",
+  shipped:               "Shipped",
+  delivered:             "Delivered",
+  cancelled:             "Cancelled",
+  payment_failed:        "Payment Failed",
+  payment_discontinued:  "Payment Discontinued",
 };
 
 const STATUS_CLASS: Record<string, string> = {
-  pending:        "text-amber-600",
-  confirmed:      "text-blue-600",
-  processing:     "text-sky-600",
-  ready_to_ship:  "text-indigo-600",
-  shipped:        "text-violet-600",
-  delivered:      "text-emerald-600",
-  cancelled:      "text-rose-500",
-  payment_failed: "text-red-600 font-semibold",
+  pending:               "text-amber-600",
+  confirmed:             "text-blue-600",
+  processing:            "text-sky-600",
+  ready_to_ship:         "text-indigo-600",
+  shipped:               "text-violet-600",
+  delivered:             "text-emerald-600",
+  cancelled:             "text-rose-500",
+  payment_failed:        "text-red-600 font-semibold",
+  payment_discontinued:  "text-slate-500",
 };
 
 export default function OrdersPage() {

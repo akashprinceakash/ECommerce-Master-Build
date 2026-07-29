@@ -181,26 +181,32 @@ async function exportDesignAllSides(customization: NonNullable<AdminOrder["items
 
 // ── Status config ─────────────────────────────────────────────────────────────
 
-const STATUSES = ["pending", "payment_failed", "confirmed", "processing", "ready_to_ship", "shipped", "delivered", "cancelled"] as const;
+// Statuses that appear in filter tabs and on badge labels (includes payment_discontinued)
+const STATUSES = ["pending", "payment_failed", "confirmed", "processing", "ready_to_ship", "shipped", "delivered", "cancelled", "payment_discontinued"] as const;
+// Statuses available in the Manual Status Override panel (excludes payment_discontinued —
+// that status is set only by the customer's own Discontinue action, never by admin override)
+const OVERRIDE_STATUSES = ["pending", "payment_failed", "confirmed", "processing", "ready_to_ship", "shipped", "delivered", "cancelled"] as const;
 const STATUS_COLORS: Record<string, string> = {
-  pending:         "bg-amber-100 text-amber-800 border-amber-300",
-  payment_failed:  "bg-red-100 text-red-800 border-red-400",
-  confirmed:       "bg-blue-100 text-blue-800 border-blue-300",
-  processing:      "bg-sky-100 text-sky-800 border-sky-300",
-  ready_to_ship:   "bg-indigo-100 text-indigo-800 border-indigo-300",
-  shipped:         "bg-violet-100 text-violet-800 border-violet-300",
-  delivered:       "bg-emerald-100 text-emerald-800 border-emerald-300",
-  cancelled:       "bg-rose-100 text-rose-800 border-rose-300",
+  pending:               "bg-amber-100 text-amber-800 border-amber-300",
+  payment_failed:        "bg-red-100 text-red-800 border-red-400",
+  confirmed:             "bg-blue-100 text-blue-800 border-blue-300",
+  processing:            "bg-sky-100 text-sky-800 border-sky-300",
+  ready_to_ship:         "bg-indigo-100 text-indigo-800 border-indigo-300",
+  shipped:               "bg-violet-100 text-violet-800 border-violet-300",
+  delivered:             "bg-emerald-100 text-emerald-800 border-emerald-300",
+  cancelled:             "bg-rose-100 text-rose-800 border-rose-300",
+  payment_discontinued:  "bg-slate-100 text-slate-700 border-slate-300",
 };
 const STATUS_LABEL: Record<string, string> = {
-  pending:         "Pending",
-  payment_failed:  "Payment Failed",
-  confirmed:       "Confirmed",
-  processing:      "Processing",
-  ready_to_ship:   "Ready to Ship",
-  shipped:         "Shipped",
-  delivered:       "Delivered",
-  cancelled:       "Cancelled",
+  pending:               "Pending",
+  payment_failed:        "Payment Failed",
+  confirmed:             "Confirmed",
+  processing:            "Processing",
+  ready_to_ship:         "Ready to Ship",
+  shipped:               "Shipped",
+  delivered:             "Delivered",
+  cancelled:             "Cancelled",
+  payment_discontinued:  "Payment Discontinued",
 };
 
 // ── Process Order panel ───────────────────────────────────────────────────────
@@ -233,7 +239,8 @@ function ProcessOrderPanel({
 }: ProcessOrderPanelProps) {
   const s = order.status;
   const isPending      = s === "pending";
-  const isCancelled    = s === "cancelled";
+  // Both cancelled and payment_discontinued orders have no active fulfillment path
+  const isCancelled    = s === "cancelled" || s === "payment_discontinued";
   const isConfirmed    = !isPending && !isCancelled;
   const hasShiprocket  = !!order.shiprocketOrderId;
   const hasAwb         = !!order.shiprocketAwb;          // AWB is the real gate for label + pickup
@@ -1095,8 +1102,10 @@ export function AdminOrders({ onViewCustomization }: { onViewCustomization?: (de
                       <div className="mb-2">
                         {o.razorpaySignature && o.paymentId ? (
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">✅ Payment Verified</span>
+                        ) : o.status === "payment_discontinued" ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-300">🚫 Payment Discontinued</span>
                         ) : o.status === "cancelled" ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-300">❌ Payment Failed</span>
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-300">❌ Order Cancelled</span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300">⏳ Payment Pending</span>
                         )}
@@ -1115,7 +1124,7 @@ export function AdminOrders({ onViewCustomization }: { onViewCustomization?: (de
                   </div>
 
                   {/* ── Process Order panel ── */}
-                  {o.status !== "cancelled" && (
+                  {o.status !== "cancelled" && o.status !== "payment_discontinued" && (
                     <ProcessOrderPanel
                       order={o}
                       onConfirm={() => updateStatus.mutate({ id: o.id, status: "confirmed" })}
@@ -1135,7 +1144,7 @@ export function AdminOrders({ onViewCustomization }: { onViewCustomization?: (de
                         Manual status override
                       </summary>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {STATUSES.map(s => (
+                        {OVERRIDE_STATUSES.map(s => (
                           <button
                             key={s}
                             disabled={o.status === s || updateStatus.isPending}
@@ -1147,7 +1156,7 @@ export function AdminOrders({ onViewCustomization }: { onViewCustomization?: (de
                         ))}
                       </div>
                     </details>
-                    {o.paymentId && o.status !== "cancelled" && (
+                    {o.paymentId && o.status !== "cancelled" && o.status !== "payment_discontinued" && (
                       <button
                         onClick={() => setRefundOrder(o)}
                         className="ml-auto flex items-center gap-1 text-[10px] uppercase tracking-wider px-3 py-1.5 border border-rose-400 text-rose-600 hover:bg-rose-50 transition"
@@ -1211,7 +1220,7 @@ export function AdminOrders({ onViewCustomization }: { onViewCustomization?: (de
 
           <div className="p-5 space-y-6">
             {/* Process Order panel inside modal */}
-            {viewOrder.status !== "cancelled" && (
+            {viewOrder.status !== "cancelled" && viewOrder.status !== "payment_discontinued" && (
               <ProcessOrderPanel
                 order={viewOrder}
                 onConfirm={() => { updateStatus.mutate({ id: viewOrder.id, status: "confirmed" }); setViewOrder({ ...viewOrder, status: "confirmed" }); }}
@@ -1441,7 +1450,7 @@ export function AdminOrders({ onViewCustomization }: { onViewCustomization?: (de
             </div>
 
             {/* Refund */}
-            {viewOrder.paymentId && viewOrder.status !== "cancelled" && (
+            {viewOrder.paymentId && viewOrder.status !== "cancelled" && viewOrder.status !== "payment_discontinued" && (
               <div className="border-t border-border pt-5 flex justify-end">
                 <button
                   onClick={() => setRefundOrder(viewOrder)}
