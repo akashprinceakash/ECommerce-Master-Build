@@ -885,11 +885,7 @@ function printSpecSheet(order: AdminOrder) {
       .spec-table td { padding: 5px 8px; border: 1px solid #eee; }
       .spec-table td:first-child { color: #666; width: 40%; }
       .footer { margin-top: 32px; font-size: 10px; color: #aaa; text-align: center; }
-      .print-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #1a1a18; padding: 12px 24px; display: flex; align-items: center; gap: 16px; z-index: 999; }
-      .print-btn { background: #fff; color: #1a1a18; border: none; padding: 8px 20px; font-size: 13px; font-weight: 700; cursor: pointer; letter-spacing: .04em; }
-      .print-btn:hover { background: #f0f0ee; }
-      .print-hint { font-size: 11px; color: #aaa; }
-      @media print { body { padding: 16px; } .no-print { display: none !important; } }
+      @media print { body { padding: 16px; } }
     </style></head><body>`,
     `<h1>KA.SHA \u2014 Print Specification</h1>`,
     `<div class="meta">Order #${he(order.id)} &middot; ${he(new Date(order.createdAt).toLocaleDateString("en-IN"))} &middot; Printed ${he(new Date().toLocaleString("en-IN"))}</div>`,
@@ -900,10 +896,7 @@ function printSpecSheet(order: AdminOrder) {
     `</div>`,
     rows.join(""),
     `<div class="footer">KA.SHA &mdash; Internal Use Only</div>`,
-    `<div class="print-bar no-print">`,
-    `  <button onclick="window.print()" class="print-btn">🖨&nbsp; Print Spec</button>`,
-    `  <span class="print-hint">Scroll to review all items before printing</span>`,
-    `</div>`,
+    `<script>window.onload=function(){window.print();}<\/script>`,
     `</body></html>`,
   ].join("\n");
 
