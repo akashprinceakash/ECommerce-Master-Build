@@ -568,6 +568,39 @@ router.post("/payment/retry/:orderId", requireAuth, async (req, res): Promise<vo
 });
 
 /* ──────────────────────────────────────────────────────
+   Cancel: customer cancels an unpaid / payment_failed order
+────────────────────────────────────────────────────── */
+router.post("/payment/cancel/:orderId", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).userId;
+  const orderId = parseInt(String(req.params["orderId"] ?? "0"), 10);
+  if (!orderId) { res.status(400).json({ error: "Invalid order ID" }); return; }
+
+  const [dbOrder] = await db
+    .select()
+    .from(ordersTable)
+    .where(and(eq(ordersTable.id, orderId), eq(ordersTable.userId, userId)));
+
+  if (!dbOrder) { res.status(404).json({ error: "Order not found" }); return; }
+  if (!["pending", "payment_failed"].includes(dbOrder.status)) {
+    res.status(409).json({ error: `Order cannot be cancelled (status: ${dbOrder.status})` }); return;
+  }
+
+  await db.update(ordersTable)
+    .set({ status: "cancelled" })
+    .where(eq(ordersTable.id, orderId));
+
+  void db.insert(orderEventsTable).values({
+    orderId,
+    eventType: "cancelled",
+    title: "Order Cancelled",
+    description: "Cancelled by customer before payment was completed",
+  });
+
+  logger.info({ orderId, userId }, "Customer cancelled unpaid order");
+  res.json({ success: true });
+});
+
+/* ──────────────────────────────────────────────────────
    Step 2: Client-side verify (after modal callback)
 ────────────────────────────────────────────────────── */
 router.post("/payment/verify", requireAuth, async (req, res): Promise<void> => {
