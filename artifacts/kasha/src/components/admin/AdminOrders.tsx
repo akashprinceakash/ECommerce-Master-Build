@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/adminApi";
 import { formatPrice } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { getAssetUrl, getApiUrl } from "@/lib/api";
 import {
   Loader2, ChevronDown, ChevronRight, MapPin, CreditCard, Package,
@@ -933,6 +933,25 @@ export function AdminOrders({ onViewCustomization }: { onViewCustomization?: (de
   const [refundOrder, setRefundOrder] = useState<AdminOrder | null>(null);
   const [syncing, setSyncing] = useState<number | null>(null);
   const [pickingUp, setPickingUp] = useState<number | null>(null);
+  // Tracks which order-item's Custom Fit popover is open (keyed by item id, never mixes items)
+  const [openMeasurementsItemId, setOpenMeasurementsItemId] = useState<number | null>(null);
+  const measurementsPopoverRef = useRef<HTMLDivElement | null>(null);
+
+  // Close the measurements popover when the user clicks/taps outside it
+  useEffect(() => {
+    if (openMeasurementsItemId === null) return;
+    function handleOutside(e: MouseEvent | TouchEvent) {
+      if (measurementsPopoverRef.current && !measurementsPopoverRef.current.contains(e.target as Node)) {
+        setOpenMeasurementsItemId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, [openMeasurementsItemId]);
 
   const { data: orders = [], isLoading } = useQuery<AdminOrder[]>({
     queryKey: ["admin-orders"],
@@ -1067,7 +1086,42 @@ export function AdminOrders({ onViewCustomization }: { onViewCustomization?: (de
                           <div className="flex-1">
                             <div className="font-medium">{it.product?.name ?? "Unknown product"}</div>
                             <div className="text-xs text-muted-foreground">
-                              Size {it.size} · Qty {it.quantity}
+                              {/* Custom Fit badge — clickable/tappable, per-item, no measurement mixing */}
+                              Size {(() => {
+                                const m = (it as any).measurements as Record<string, string> | undefined | null;
+                                const hasM = it.size === "Custom Fit" && m && Object.keys(m).length > 0;
+                                if (!hasM) return <span>{it.size}</span>;
+                                const isOpen = openMeasurementsItemId === it.id;
+                                return (
+                                  <span className="relative inline-block" ref={isOpen ? measurementsPopoverRef : undefined}>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); setOpenMeasurementsItemId(isOpen ? null : it.id); }}
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider border border-indigo-300 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition cursor-pointer select-none"
+                                      aria-expanded={isOpen}
+                                      aria-label="View custom measurements"
+                                    >
+                                      Custom Fit
+                                      <svg className={`w-2.5 h-2.5 transition-transform ${isOpen ? "rotate-180" : ""}`} viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M1 1l4 4 4-4"/></svg>
+                                    </button>
+                                    {isOpen && (
+                                      <div className="absolute left-0 top-full mt-1 z-50 min-w-[180px] bg-white border border-indigo-200 shadow-lg p-3">
+                                        <div className="text-[10px] uppercase tracking-wider font-semibold text-indigo-700 mb-2 border-b border-indigo-100 pb-1">
+                                          Custom Measurements — {it.product?.name ?? "this item"}
+                                        </div>
+                                        <div className="space-y-1">
+                                          {Object.entries(m!).map(([key, val]) => (
+                                            <div key={key} className="flex justify-between gap-4 text-[11px]">
+                                              <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, " $1").trim()}</span>
+                                              <span className="font-semibold text-foreground tabular-nums">{val}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </span>
+                                );
+                              })()} · Qty {it.quantity}
                               {it.customization && (
                                 <>
                                   <span className="ml-2 italic text-primary">Bespoke: {it.customization.name}</span>
