@@ -1,0 +1,30 @@
+One more important context about the shipping implementation:
+
+Earlier, the client complained that our checkout was showing a shipping charge of approximately ₹137.56, while in the Shiprocket dashboard they were seeing a much higher rate, around ₹349, for a recommended courier such as Amazon Shipping.
+
+Because of this, the shipping logic was changed so that we should use Shiprocket's recommended courier/rate instead of simply selecting the cheapest available courier rate.
+
+Please verify that the current implementation still follows this exact intended logic.
+
+The expected flow is:
+
+Customer enters destination PIN
+→ Send destination PIN + total shipment weight + dimensions + COD/prepaid status to Shiprocket
+→ Shiprocket returns available courier options
+→ Identify Shiprocket's recommended courier
+→ Use the recommended courier's `freight_charge`
+→ Return that amount to the checkout.
+
+Please verify:
+
+1. How are we identifying the "recommended" courier from Shiprocket's API response?
+2. Are we actually using the recommended courier's `freight_charge`?
+3. If Shiprocket does not mark any courier as recommended, are we falling back to the cheapest courier?
+4. Is the ₹99 currently displayed because the Shiprocket API is failing and our fallback is being triggered?
+5. Was this recommended-courier logic changed or broken in any recent Replit changes?
+6. Please compare the current implementation with the previous working implementation when we resolved the client's ₹137.56 vs ₹349 shipping-rate complaint.
+
+IMPORTANT:
+Do not change the shipping logic yet. First explain exactly how the current code selects the courier and rate, and identify why the current checkout is showing the ₹99 fallback instead of the actual Shiprocket recommended courier rate.
+
+The original business requirement is that the customer should be charged based on the Shiprocket recommended courier rate, not an arbitrary fixed ₹99 fallback and not necessarily the cheapest courier rate.
