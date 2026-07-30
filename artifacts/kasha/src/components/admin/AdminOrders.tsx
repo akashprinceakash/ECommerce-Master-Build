@@ -798,16 +798,50 @@ function he(s: string | number | null | undefined): string {
     .replace(/'/g, "&#39;");
 }
 
+/** Convert pixels → inches at 300 DPI, 2 decimal places. */
+function pxToIn(px: number): string { return (px / 300).toFixed(2); }
+
+/** Preload an image URL and resolve with its natural pixel dimensions. */
+function getImageNaturalDims(url: string): Promise<{ w: number; h: number } | null> {
+  if (!url) return Promise.resolve(null);
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload  = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+/** "2048 × 2048 px (6.83 × 6.83 in @ 300 DPI)" inline note for print views. */
+function printDimNote(dims: { w: number; h: number } | null | undefined): string {
+  if (!dims) return "";
+  return `${dims.w} × ${dims.h} px · ${pxToIn(dims.w)} × ${pxToIn(dims.h)} in @ 300 DPI`;
+}
+
 function colorCell(hex: string | null | undefined): string {
   if (!hex) return "";
   const safe = he(hex);
   return `${safe} <span style="display:inline-block;width:10px;height:10px;background:${safe};border:1px solid #ccc;vertical-align:middle"></span>`;
 }
 
-function printSpecSheet(order: AdminOrder) {
+async function printSpecSheet(order: AdminOrder) {
   const w = window.open("", "_blank", "width=800,height=900");
   if (!w) return;
   const rows: string[] = [];
+
+  // Pre-load pixel dimensions for all print-artwork views so we can show inches in the spec.
+  const allViewUrls = order.items.flatMap(it => {
+    const c = it.customization;
+    return [
+      c?.frontImageUrl && { url: c.frontImageUrl, label: "Front" },
+      c?.backImageUrl  && { url: c.backImageUrl,  label: "Back"  },
+      c?.sideImageUrl  && { url: c.sideImageUrl,  label: "Side"  },
+    ].filter(Boolean) as Array<{ url: string; label: string }>;
+  });
+  const dimResults = await Promise.all(allViewUrls.map(v => getImageNaturalDims(v.url)));
+  const viewDimsMap: Record<string, { w: number; h: number }> = {};
+  allViewUrls.forEach((v, i) => { if (dimResults[i]) viewDimsMap[v.url] = dimResults[i]!; });
+
   for (const it of order.items) {
     const c = it.customization;
     const spec: DesignSpec | null = c?.designSpec
@@ -843,7 +877,14 @@ function printSpecSheet(order: AdminOrder) {
           <span>Size: ${he(it.size)} &middot; Qty: ${he(it.quantity)}</span>
         </div>
         ${c ? `<div class="design-name">Bespoke Design: ${he(c.name)}${isLegacy ? ' <em style="color:#b45309">(spec auto-derived)</em>' : ""}</div>` : ""}
-        ${views.length > 0 ? `<div class="views">${views.map(v => `<div class="view-cell"><img src="${he(v.url)}" alt="${he(v.label)}" /><div>${he(v.label)}</div></div>`).join("")}</div>` : ""}
+        ${views.length > 0 ? `<div class="views">${views.map(v => {
+          const isPrint = v.label !== "3D Preview";
+          const d = isPrint ? viewDimsMap[v.url] : undefined;
+          const dimHtml = d
+            ? `<div class="view-dim">${he(d.w)} × ${he(d.h)} px &nbsp;&middot;&nbsp; ${he(pxToIn(d.w))} × ${he(pxToIn(d.h))} in @ 300 DPI</div>`
+            : "";
+          return `<div class="view-cell"><img src="${he(v.url)}" alt="${he(v.label)}" /><div>${he(v.label)}</div>${dimHtml}</div>`;
+        }).join("")}</div>` : ""}
         ${measurements.length > 0 ? `<table class="spec-table" style="margin-bottom:8px"><thead><tr><th colspan="2">Q Club Measurements</th></tr></thead><tbody>${measurements.map(([k, v]) => `<tr><td>${he(k.replace(/([A-Z])/g, " $1").trim())}</td><td>${he(v)}</td></tr>`).join("")}</tbody></table>` : ""}
         ${spec ? `<table class="spec-table">
           <thead><tr><th colspan="2">Manufacturing Specification</th></tr></thead>
@@ -882,6 +923,7 @@ function printSpecSheet(order: AdminOrder) {
       .view-cell { text-align: center; }
       .view-cell img { width: 120px; height: 120px; object-fit: contain; border: 1px solid #ddd; display: block; }
       .view-cell div { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; margin-top: 4px; color: #888; }
+      .view-dim { font-size: 8px; text-transform: none; letter-spacing: 0; color: #aaa; margin-top: 2px; }
       .spec-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 8px; }
       .spec-table th { background: #f5f5f5; text-align: left; padding: 6px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; border: 1px solid #ddd; }
       .spec-table td { padding: 5px 8px; border: 1px solid #eee; }
@@ -937,6 +979,8 @@ export function AdminOrders({ onViewCustomization }: { onViewCustomization?: (de
   const [pickingUp, setPickingUp] = useState<number | null>(null);
   // Tracks which order-item's Custom Fit popover is open (keyed by item id, never mixes items)
   const [openMeasurementsItemId, setOpenMeasurementsItemId] = useState<number | null>(null);
+  // Caches natural pixel dimensions of design-view images so we can show inch equivalents
+  const [imgDims, setImgDims] = useState<Record<string, { w: number; h: number }>>({});
   const measurementsPopoverRef = useRef<HTMLDivElement | null>(null);
 
   // Close the measurements popover when the user clicks/taps outside it
@@ -1252,7 +1296,7 @@ export function AdminOrders({ onViewCustomization }: { onViewCustomization?: (de
               )}
               {viewOrder.items.some(it => it.customization) && (
                 <button
-                  onClick={() => printSpecSheet(viewOrder)}
+                  onClick={() => void printSpecSheet(viewOrder)}
                   className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-3 py-1.5 border border-primary/40 text-primary hover:bg-primary/5 transition"
                 >
                   <Printer className="w-3.5 h-3.5" />
@@ -1426,14 +1470,31 @@ export function AdminOrders({ onViewCustomization }: { onViewCustomization?: (de
                                 <div className="mb-3">
                                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 font-semibold">Design Views</div>
                                   <div className="flex flex-wrap gap-2">
-                                    {views.map(({ label, url }) => (
-                                      <div key={url} className="text-center">
-                                        <div className="w-24 h-24 bg-white border border-border overflow-hidden flex items-center justify-center">
-                                          <img src={url} alt={label} className="w-full h-full object-contain" />
+                                    {views.map(({ label, url }) => {
+                                      const isPrintView = label !== "3D Preview";
+                                      const dims = imgDims[url];
+                                      return (
+                                        <div key={url} className="text-center">
+                                          <div className="w-24 h-24 bg-white border border-border overflow-hidden flex items-center justify-center">
+                                            <img
+                                              src={url} alt={label}
+                                              className="w-full h-full object-contain"
+                                              onLoad={isPrintView ? (e) => {
+                                                const el = e.currentTarget;
+                                                setImgDims(prev => ({ ...prev, [url]: { w: el.naturalWidth, h: el.naturalHeight } }));
+                                              } : undefined}
+                                            />
+                                          </div>
+                                          <div className="text-[9px] uppercase tracking-wider text-muted-foreground mt-1">{label}</div>
+                                          {isPrintView && dims && (
+                                            <div className="text-[8px] text-muted-foreground/70 mt-0.5 leading-tight">
+                                              {dims.w} × {dims.h} px<br />
+                                              {pxToIn(dims.w)} × {pxToIn(dims.h)} in @ 300 DPI
+                                            </div>
+                                          )}
                                         </div>
-                                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground mt-1">{label}</div>
-                                      </div>
-                                    ))}
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               );
