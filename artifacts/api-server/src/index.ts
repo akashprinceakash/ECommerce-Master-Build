@@ -1,6 +1,5 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { startCreditCron } from "./services/vton/creditCron";
 import { seedDefaultPackages } from "./services/creditService";
 
 // ── Global crash guards ───────────────────────────────────────────────────────
@@ -38,7 +37,6 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
 
-  // Seed credit packages (no-op if rows already exist) and start hourly balance cron.
+  // Seed credit packages (no-op if rows already exist).
   void seedDefaultPackages().catch(e => logger.error({ e }, "Failed to seed credit packages"));
-  startCreditCron();
 });

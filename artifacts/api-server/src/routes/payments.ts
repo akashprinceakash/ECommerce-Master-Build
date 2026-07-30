@@ -142,8 +142,13 @@ async function runFulfillment(
     logger.warn({ userId, e }, "Could not fetch Clerk user email");
   }
 
-  // Shiprocket + email in background
+  // Shiprocket + confirmation email in background.
+  // These two are decoupled: a Shiprocket failure must never prevent the customer
+  // from receiving their order confirmation email (critical for COD orders too).
   void (async () => {
+    // ── Step 1: Shiprocket order creation ──────────────────────────────────
+    let confirmedAwb: string | null = null;
+    let confirmedTrackingUrl: string | null = null;
     try {
       const sr = await createShiprocketOrder({
         orderId: order.id,
@@ -175,7 +180,6 @@ async function runFulfillment(
           })
           .where(eq(ordersTable.id, order.id));
 
-        // Record Shiprocket creation event
         await db.insert(orderEventsTable).values({
           orderId: order.id,
           eventType: "shiprocket_created",
@@ -185,69 +189,74 @@ async function runFulfillment(
 
         // If AWB was assigned immediately (prepaid courier), record it
         if (sr.awb) {
+          confirmedAwb = sr.awb;
+          confirmedTrackingUrl = sr.trackingUrl ?? null;
           await db.insert(orderEventsTable).values({
             orderId: order.id,
             eventType: "awb_assigned",
             title: "AWB Assigned",
             description: `Tracking: ${sr.awb}`,
           });
-          // Advance status to processing since AWB is assigned
           await db.update(ordersTable)
             .set({ status: "processing" })
             .where(eq(ordersTable.id, order.id));
         }
       }
+    } catch (e) {
+      logger.error({ orderId: order.id, e }, "Shiprocket order creation failed — confirmation email will still be sent");
+    }
 
-      if (customerEmail) {
-        let invoicePdf: Buffer | undefined;
-        try {
-          invoicePdf = await generateInvoicePdf({
-            orderNumber: order.id,
-            orderDate: order.createdAt ?? new Date(),
-            customerName: order.shippingName,
-            customerEmail,
-            shippingAddress: order.shippingAddress,
-            shippingCity: order.shippingCity,
-            shippingState: order.shippingState,
-            shippingPostalCode: order.shippingPostalCode,
-            shippingPhone: order.shippingPhone,
-            items: itemsWithProducts.map((it) => ({
-              name: it.product?.name ?? "KA.SHA Product",
-              size: it.size,
-              quantity: it.quantity,
-              priceInPaise: it.priceInPaise,
-            })),
-            shippingChargeInPaise: order.shippingChargeInPaise ?? 0,
-            totalInPaise: order.totalInPaise,
-          });
-        } catch (pdfErr) {
-          logger.error({ pdfErr, orderId: order.id }, "Invoice PDF generation failed — sending email without attachment");
-        }
-
-        await sendOrderConfirmation({
+    // ── Step 2: Order confirmation email — always fires regardless of Shiprocket ──
+    if (!customerEmail) return;
+    try {
+      let invoicePdf: Buffer | undefined;
+      try {
+        invoicePdf = await generateInvoicePdf({
           orderNumber: order.id,
+          orderDate: order.createdAt ?? new Date(),
           customerName: order.shippingName,
           customerEmail,
+          shippingAddress: order.shippingAddress,
+          shippingCity: order.shippingCity,
+          shippingState: order.shippingState,
+          shippingPostalCode: order.shippingPostalCode,
+          shippingPhone: order.shippingPhone,
           items: itemsWithProducts.map((it) => ({
             name: it.product?.name ?? "KA.SHA Product",
             size: it.size,
             quantity: it.quantity,
             priceInPaise: it.priceInPaise,
           })),
-          totalInPaise: order.totalInPaise,
           shippingChargeInPaise: order.shippingChargeInPaise ?? 0,
-          shippingAddress: order.shippingAddress,
-          shippingCity: order.shippingCity,
-          shippingState: order.shippingState,
-          shippingPostalCode: order.shippingPostalCode,
-          shippingPhone: order.shippingPhone,
-          awb: sr.awb,
-          trackingUrl: sr.trackingUrl,
-          invoicePdf,
+          totalInPaise: order.totalInPaise,
         });
+      } catch (pdfErr) {
+        logger.error({ pdfErr, orderId: order.id }, "Invoice PDF generation failed — sending email without attachment");
       }
+
+      await sendOrderConfirmation({
+        orderNumber: order.id,
+        customerName: order.shippingName,
+        customerEmail,
+        items: itemsWithProducts.map((it) => ({
+          name: it.product?.name ?? "KA.SHA Product",
+          size: it.size,
+          quantity: it.quantity,
+          priceInPaise: it.priceInPaise,
+        })),
+        totalInPaise: order.totalInPaise,
+        shippingChargeInPaise: order.shippingChargeInPaise ?? 0,
+        shippingAddress: order.shippingAddress,
+        shippingCity: order.shippingCity,
+        shippingState: order.shippingState,
+        shippingPostalCode: order.shippingPostalCode,
+        shippingPhone: order.shippingPhone,
+        awb: confirmedAwb,
+        trackingUrl: confirmedTrackingUrl,
+        invoicePdf,
+      });
     } catch (e) {
-      logger.error({ orderId: order.id, e }, "Post-payment background tasks failed");
+      logger.error({ orderId: order.id, e }, "Order confirmation email failed");
     }
   })();
 }

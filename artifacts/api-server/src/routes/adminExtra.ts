@@ -5,7 +5,7 @@ import { requireAuth, type AuthenticatedRequest } from "../middlewares/requireAu
 import { clerkClient } from "@clerk/express";
 import type { Request, Response } from "express";
 import { createShiprocketOrder, getShiprocketLabel, requestShiprocketPickup } from "../lib/shiprocket";
-import { sendOrderConfirmation, sendRefundNotification } from "../lib/email";
+import { sendOrderConfirmation, sendRefundNotification, sendOrderStatusUpdate } from "../lib/email";
 import { logger } from "../lib/logger";
 import { generateInvoicePdf } from "../lib/invoice";
 
@@ -251,6 +251,31 @@ router.patch("/admin/orders/:id/status", requireAuth, async (req, res): Promise<
   }
 
   res.json(updated);
+
+  // Send customer notification for key delivery milestone statuses (fire-and-forget)
+  const NOTIFY_STATUSES = new Set<string>(["processing", "ready_to_ship", "shipped", "delivered"]);
+  if (NOTIFY_STATUSES.has(status)) {
+    void (async () => {
+      try {
+        const clerkUser = await clerkClient.users.getUser(updated.userId);
+        const customerEmail =
+          clerkUser.emailAddresses.find(e => e.id === clerkUser.primaryEmailAddressId)?.emailAddress
+          ?? clerkUser.emailAddresses[0]?.emailAddress;
+        if (customerEmail) {
+          await sendOrderStatusUpdate({
+            orderNumber: updated.id,
+            customerName: updated.shippingName,
+            customerEmail,
+            status: status as "processing" | "ready_to_ship" | "shipped" | "delivered",
+            awb: updated.shiprocketAwb,
+            trackingUrl: updated.trackingUrl,
+          });
+        }
+      } catch (err) {
+        logger.error({ orderId: updated.id, status, err }, "Status update notification email failed");
+      }
+    })();
+  }
 });
 
 // ── MANUAL SHIPROCKET SYNC ───────────────────────────────────────────────────

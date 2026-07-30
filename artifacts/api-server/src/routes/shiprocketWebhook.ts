@@ -1,6 +1,8 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, ordersTable, orderEventsTable } from "@workspace/db";
+import { clerkClient } from "@clerk/express";
+import { sendOrderStatusUpdate } from "../lib/email";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -159,6 +161,32 @@ router.post("/webhooks/fulfillment", async (req, res) => {
     await db.insert(orderEventsTable).values({ orderId: order.id, eventType, title, description });
 
     logger.info({ orderId: order.id, eventType, newStatus: updates.status }, "Shiprocket webhook processed");
+
+    // Send customer notification email for key delivery milestones (fire-and-forget)
+    const NOTIFY_STATUSES = new Set(["processing", "ready_to_ship", "shipped", "delivered"]);
+    if (updates.status && NOTIFY_STATUSES.has(updates.status)) {
+      const finalOrder = { ...order, ...updates };
+      void (async () => {
+        try {
+          const clerkUser = await clerkClient.users.getUser(order.userId);
+          const customerEmail =
+            clerkUser.emailAddresses.find(e => e.id === clerkUser.primaryEmailAddressId)?.emailAddress
+            ?? clerkUser.emailAddresses[0]?.emailAddress;
+          if (customerEmail) {
+            await sendOrderStatusUpdate({
+              orderNumber: order.id,
+              customerName: order.shippingName,
+              customerEmail,
+              status: updates.status as "processing" | "ready_to_ship" | "shipped" | "delivered",
+              awb: finalOrder.shiprocketAwb ?? null,
+              trackingUrl: finalOrder.trackingUrl ?? null,
+            });
+          }
+        } catch (emailErr) {
+          logger.error({ orderId: order.id, status: updates.status, emailErr }, "Shiprocket webhook: status notification email failed");
+        }
+      })();
+    }
   } catch (e) {
     logger.error({ e }, "Shiprocket webhook processing error");
   }

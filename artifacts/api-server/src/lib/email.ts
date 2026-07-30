@@ -206,6 +206,134 @@ export async function sendRefundNotification(data: RefundNotificationData): Prom
   }
 }
 
+// ── Order status update (processing / ready_to_ship / shipped / delivered) ────
+
+export interface OrderStatusUpdateData {
+  orderNumber: number;
+  customerName: string;
+  customerEmail: string;
+  status: "processing" | "ready_to_ship" | "shipped" | "delivered";
+  awb?: string | null;
+  trackingUrl?: string | null;
+}
+
+const STATUS_META: Record<
+  OrderStatusUpdateData["status"],
+  { subject: string; badge: string; headline: string; body: string }
+> = {
+  processing: {
+    subject:  "Your order is being prepared",
+    badge:    "Preparing Your Order",
+    headline: "We're getting your order ready.",
+    body:     "Our team has begun processing your order and it will be dispatched shortly.",
+  },
+  ready_to_ship: {
+    subject:  "Your order is packed and ready",
+    badge:    "Ready for Pickup",
+    headline: "Your order is packed and ready to go.",
+    body:     "Your order has been carefully packed and is awaiting collection by our courier partner.",
+  },
+  shipped: {
+    subject:  "Your order is on its way",
+    badge:    "Shipped",
+    headline: "Your order is on its way.",
+    body:     "Your package has been dispatched and is heading to you.",
+  },
+  delivered: {
+    subject:  "Your order has been delivered",
+    badge:    "Delivered",
+    headline: "Your order has arrived.",
+    body:     "Your KA.SHA order has been delivered. We hope you love it.",
+  },
+};
+
+export async function sendOrderStatusUpdate(data: OrderStatusUpdateData): Promise<void> {
+  if (!resend) {
+    logger.warn("Resend not configured — skipping order status update email");
+    return;
+  }
+
+  const meta = STATUS_META[data.status];
+  const firstName = data.customerName.split(" ")[0];
+
+  const trackingSection =
+    data.trackingUrl
+      ? `<tr><td style="padding:24px 40px 0;">
+           <p style="margin:0 0 12px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#888;">Tracking</p>
+           ${data.awb ? `<p style="margin:0 0 8px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#333;">AWB: <strong>${data.awb}</strong></p>` : ""}
+           <a href="${data.trackingUrl}" style="display:inline-block;background:#111;color:#fff;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;text-decoration:none;padding:12px 28px;">
+             Track My Order
+           </a>
+         </td></tr>`
+      : "";
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+</head>
+<body style="margin:0;padding:0;background:#FAFAF7;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FAFAF7;">
+    <tr><td align="center" style="padding:40px 20px;">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #EDE9E4;">
+        <tr>
+          <td style="background:#111;padding:32px 40px;text-align:center;">
+            <p style="margin:0;font-family:'Cormorant Garamond',Garamond,'Times New Roman',serif;font-size:26px;font-weight:500;letter-spacing:0.2em;color:#fff;">KA.SHA</p>
+            <p style="margin:6px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;letter-spacing:0.25em;color:#B8925A;text-transform:uppercase;">Golf &amp; Sportswear</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:40px 40px 0;text-align:center;">
+            <p style="margin:0 0 8px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.2em;color:#B8925A;text-transform:uppercase;">${meta.badge}</p>
+            <h1 style="margin:0;font-family:'Cormorant Garamond',Garamond,'Times New Roman',serif;font-size:32px;font-weight:400;color:#111;">${meta.headline}</h1>
+            <p style="margin:12px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#666;line-height:1.6;">
+              Hi ${firstName}, ${meta.body}
+            </p>
+            <p style="margin:8px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#888;">Order #${data.orderNumber}</p>
+          </td>
+        </tr>
+        ${trackingSection}
+        <tr>
+          <td style="padding:32px 40px;text-align:center;">
+            <a href="https://kashaonline.in/orders/${data.orderNumber}" style="display:inline-block;background:#111;color:#fff;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;text-decoration:none;padding:14px 32px;">
+              View My Order
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td style="border-top:1px solid #F0EDE8;padding:24px 40px;text-align:center;">
+            <p style="margin:0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:#999;line-height:1.8;">
+              Questions? Email us at <a href="mailto:support@kashaonline.in" style="color:#B8925A;text-decoration:none;">support@kashaonline.in</a><br/>
+              KA.SHA Golf &amp; Sportswear · Shahpur Jat, New Delhi 110049
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  const text = `KA.SHA — Order #${data.orderNumber}: ${meta.subject}\n\nHi ${firstName},\n\n${meta.body}${data.awb ? `\n\nAWB: ${data.awb}` : ""}${data.trackingUrl ? `\nTrack: ${data.trackingUrl}` : ""}\n\nView your order: https://kashaonline.in/orders/${data.orderNumber}\n\nQuestions? Contact support@kashaonline.in`;
+
+  try {
+    await resend.emails.send({
+      to: data.customerEmail,
+      from: `${FROM_NAME} <${FROM_EMAIL}>`,
+      subject: `KA.SHA — Order #${data.orderNumber}: ${meta.subject}`,
+      text,
+      html,
+    });
+    logger.info({ to: data.customerEmail, orderNumber: data.orderNumber, status: data.status }, "Order status update email sent");
+  } catch (err) {
+    logger.error({ err, to: data.customerEmail, orderNumber: data.orderNumber, status: data.status }, "Failed to send order status update email");
+  }
+}
+
 export async function sendOrderConfirmation(data: OrderConfirmationData): Promise<void> {
   if (!resend) {
     logger.warn("Resend not configured (RESEND_API_KEY missing) — skipping order confirmation email");
