@@ -3,7 +3,7 @@ import { logger } from "./logger";
 
 const RESEND_API_KEY  = process.env["RESEND_API_KEY"] ?? "";
 const FROM_EMAIL      = "orders@kashaonline.in";
-const FROM_NAME       = "KA.SHA Golf & Sportswear";
+const FROM_NAME       = "Ka.Sha Golf & Sportswear";
 const ADMIN_CC_EMAIL  = "pranaysomaia715@gmail.com";
 
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
@@ -80,7 +80,7 @@ function buildHtml(d: OrderConfirmationData): string {
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #EDE9E4;">
         <tr>
           <td style="background:#111;padding:32px 40px;text-align:center;">
-            <p style="margin:0;font-family:'Cormorant Garamond',Garamond,'Times New Roman',serif;font-size:26px;font-weight:500;letter-spacing:0.2em;color:#fff;">KA.SHA</p>
+            <p style="margin:0;font-family:'Cormorant Garamond',Garamond,'Times New Roman',serif;font-size:26px;font-weight:500;letter-spacing:0.2em;color:#fff;">Ka.Sha</p>
             <p style="margin:6px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;letter-spacing:0.25em;color:#B8925A;text-transform:uppercase;">Golf &amp; Sportswear</p>
           </td>
         </tr>
@@ -89,7 +89,7 @@ function buildHtml(d: OrderConfirmationData): string {
             <p style="margin:0 0 8px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:0.2em;color:#B8925A;text-transform:uppercase;">Order Confirmed</p>
             <h1 style="margin:0;font-family:'Cormorant Garamond',Garamond,'Times New Roman',serif;font-size:32px;font-weight:400;color:#111;">Thank you, ${d.customerName.split(" ")[0]}.</h1>
             <p style="margin:12px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#666;line-height:1.6;">
-              Your order #${d.orderNumber} has been confirmed and is being prepared for dispatch.
+              Your order #${d.orderNumber} has been confirmed and is being processed. Being a site that customises all its garments specific to your requirements the courier will be shipped out in 7 working days.
             </p>
           </td>
         </tr>
@@ -128,7 +128,7 @@ function buildHtml(d: OrderConfirmationData): string {
           <td style="border-top:1px solid #F0EDE8;padding:24px 40px;text-align:center;">
             <p style="margin:0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:#999;line-height:1.8;">
               Questions? Email us at <a href="mailto:support@kashaonline.in" style="color:#B8925A;text-decoration:none;">support@kashaonline.in</a><br/>
-              KA.SHA Golf &amp; Sportswear · Shahpur Jat, New Delhi 110049
+              Ka.Sha Golf &amp; Sportswear · Shahpur Jat, New Delhi 110049
             </p>
           </td>
         </tr>
@@ -161,7 +161,7 @@ export async function sendRefundNotification(data: RefundNotificationData): Prom
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #EDE9E4;">
         <tr>
           <td style="background:#111;padding:32px 40px;text-align:center;">
-            <p style="margin:0;font-family:Garamond,serif;font-size:26px;font-weight:500;letter-spacing:0.2em;color:#fff;">KA.SHA</p>
+            <p style="margin:0;font-family:Garamond,serif;font-size:26px;font-weight:500;letter-spacing:0.2em;color:#fff;">Ka.Sha</p>
             <p style="margin:6px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;letter-spacing:0.25em;color:#B8925A;text-transform:uppercase;">Golf &amp; Sportswear</p>
           </td>
         </tr>
@@ -182,7 +182,7 @@ export async function sendRefundNotification(data: RefundNotificationData): Prom
           <td style="border-top:1px solid #F0EDE8;padding:24px 40px;text-align:center;margin-top:32px;">
             <p style="margin:0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:#999;line-height:1.8;">
               Questions? Email us at <a href="mailto:support@kashaonline.in" style="color:#B8925A;text-decoration:none;">support@kashaonline.in</a><br/>
-              KA.SHA Golf &amp; Sportswear · Shahpur Jat, New Delhi 110049
+              Ka.Sha Golf &amp; Sportswear · Shahpur Jat, New Delhi 110049
             </p>
           </td>
         </tr>
@@ -196,8 +196,8 @@ export async function sendRefundNotification(data: RefundNotificationData): Prom
       to: data.customerEmail,
       cc: ADMIN_CC_EMAIL,
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      subject: `KA.SHA — Refund Initiated for Order #${data.orderNumber}`,
-      text: `KA.SHA — Refund Initiated\n\nDear ${data.customerName},\n\nA refund of ${formatPrice(data.amountInPaise)} has been initiated for Order #${data.orderNumber}.\n\nRefund ID: ${data.razorpayRefundId}\n\nRefunds typically take 5–7 business days to reflect in your account.\n\nQuestions? Contact support@kashaonline.in`,
+      subject: `Ka.Sha — Refund Initiated for Order #${data.orderNumber}`,
+      text: `Ka.Sha — Refund Initiated\n\nDear ${data.customerName},\n\nA refund of ${formatPrice(data.amountInPaise)} has been initiated for Order #${data.orderNumber}.\n\nRefund ID: ${data.razorpayRefundId}\n\nRefunds typically take 5–7 business days to reflect in your account.\n\nQuestions? Contact support@kashaonline.in`,
       html,
     });
     logger.info({ to: data.customerEmail, orderNumber: data.orderNumber, refundId: data.razorpayRefundId }, "Refund notification email sent");
@@ -243,7 +243,7 @@ const STATUS_META: Record<
     subject:  "Your order has been delivered",
     badge:    "Delivered",
     headline: "Your order has arrived.",
-    body:     "Your KA.SHA order has been delivered. We hope you love it.",
+    body:     "Your Ka.Sha order has been delivered. We hope you love it.",
   },
 };
 
@@ -282,7 +282,7 @@ export async function sendOrderStatusUpdate(data: OrderStatusUpdateData): Promis
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #EDE9E4;">
         <tr>
           <td style="background:#111;padding:32px 40px;text-align:center;">
-            <p style="margin:0;font-family:'Cormorant Garamond',Garamond,'Times New Roman',serif;font-size:26px;font-weight:500;letter-spacing:0.2em;color:#fff;">KA.SHA</p>
+            <p style="margin:0;font-family:'Cormorant Garamond',Garamond,'Times New Roman',serif;font-size:26px;font-weight:500;letter-spacing:0.2em;color:#fff;">Ka.Sha</p>
             <p style="margin:6px 0 0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:10px;letter-spacing:0.25em;color:#B8925A;text-transform:uppercase;">Golf &amp; Sportswear</p>
           </td>
         </tr>
@@ -308,7 +308,7 @@ export async function sendOrderStatusUpdate(data: OrderStatusUpdateData): Promis
           <td style="border-top:1px solid #F0EDE8;padding:24px 40px;text-align:center;">
             <p style="margin:0;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:#999;line-height:1.8;">
               Questions? Email us at <a href="mailto:support@kashaonline.in" style="color:#B8925A;text-decoration:none;">support@kashaonline.in</a><br/>
-              KA.SHA Golf &amp; Sportswear · Shahpur Jat, New Delhi 110049
+              Ka.Sha Golf &amp; Sportswear · Shahpur Jat, New Delhi 110049
             </p>
           </td>
         </tr>
@@ -318,13 +318,13 @@ export async function sendOrderStatusUpdate(data: OrderStatusUpdateData): Promis
 </body>
 </html>`;
 
-  const text = `KA.SHA — Order #${data.orderNumber}: ${meta.subject}\n\nHi ${firstName},\n\n${meta.body}${data.awb ? `\n\nAWB: ${data.awb}` : ""}${data.trackingUrl ? `\nTrack: ${data.trackingUrl}` : ""}\n\nView your order: https://kashaonline.in/orders/${data.orderNumber}\n\nQuestions? Contact support@kashaonline.in`;
+  const text = `Ka.Sha — Order #${data.orderNumber}: ${meta.subject}\n\nHi ${firstName},\n\n${meta.body}${data.awb ? `\n\nAWB: ${data.awb}` : ""}${data.trackingUrl ? `\nTrack: ${data.trackingUrl}` : ""}\n\nView your order: https://kashaonline.in/orders/${data.orderNumber}\n\nQuestions? Contact support@kashaonline.in`;
 
   try {
     await resend.emails.send({
       to: data.customerEmail,
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      subject: `KA.SHA — Order #${data.orderNumber}: ${meta.subject}`,
+      subject: `Ka.Sha — Order #${data.orderNumber}: ${meta.subject}`,
       text,
       html,
     });
@@ -341,7 +341,7 @@ export async function sendOrderConfirmation(data: OrderConfirmationData): Promis
   }
 
   const html = buildHtml(data);
-  const text = `KA.SHA — Order #${data.orderNumber} Confirmed\n\nThank you ${data.customerName}!\n\nYour order has been confirmed. Total: ${formatPrice(data.totalInPaise)}\n\nView your orders at https://kashaonline.in/orders`;
+  const text = `Ka.Sha — Order #${data.orderNumber} Confirmed\n\nThank you ${data.customerName}!\n\nYour order has been confirmed. Total: ${formatPrice(data.totalInPaise)}\n\nView your orders at https://kashaonline.in/orders`;
 
   const attachments = data.invoicePdf
     ? [{ filename: `KASHA-Invoice-${String(data.orderNumber).padStart(6, "0")}.pdf`, content: data.invoicePdf }]
@@ -352,7 +352,7 @@ export async function sendOrderConfirmation(data: OrderConfirmationData): Promis
       to: data.customerEmail,
       cc: ADMIN_CC_EMAIL,
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      subject: `KA.SHA — Order #${data.orderNumber} Confirmed`,
+      subject: `Ka.Sha — Order #${data.orderNumber} Confirmed`,
       text,
       html,
       attachments,
